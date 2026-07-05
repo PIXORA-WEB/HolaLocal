@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "check:bundle": "node scripts/checkBundleSize.mjs",
+    "check:firebase": "node scripts/checkFirebaseInitialization.mjs",
     "check:locales": "node scripts/checkLocales.js",
     "lint": "eslint .",
     "migrate:business-private": "node scripts/migrateBusinessPrivate.js",

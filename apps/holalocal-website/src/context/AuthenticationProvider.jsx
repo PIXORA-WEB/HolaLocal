@@ -8,11 +8,16 @@ import {
   resendEmailVerification,
   sendPasswordReset,
 } from '../firebase/auth.js'
+import { getFirebaseApp } from '../firebase/config.js'
 import AuthenticationContext from './AuthenticationContext.js'
 
 const loadUserService = () => import('../services/userService.js')
 
 function AuthenticationProvider({ children }) {
+  // Validate and initialize inside the error boundary's render tree. This keeps
+  // configuration failures from becoming a pre-React white screen.
+  getFirebaseApp()
+
   const [user, setUser] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
   const [loading, setLoading] = useState(true)

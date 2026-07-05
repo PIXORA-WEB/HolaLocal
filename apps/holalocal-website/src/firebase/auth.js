@@ -4,6 +4,7 @@ import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   deleteUser,
+  getAuth,
   onAuthStateChanged,
   reload,
   sendEmailVerification,
@@ -12,18 +13,24 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth'
-import { auth } from './config.js'
+import { getFirebaseApp } from './config.js'
 
 const loadUserService = () => import('../services/userService.js')
 
 let persistencePromise
+let firebaseAuth
+
+export function getFirebaseAuth() {
+  firebaseAuth ??= getAuth(getFirebaseApp())
+  return firebaseAuth
+}
 
 function verificationActionSettings() {
   return { url: `${window.location.origin}/verify-email` }
 }
 
 function configurePersistence() {
-  persistencePromise ??= setPersistence(auth, browserLocalPersistence)
+  persistencePromise ??= setPersistence(getFirebaseAuth(), browserLocalPersistence)
   return persistencePromise
 }
 
@@ -33,7 +40,7 @@ export async function registerUser(email, password, policyConsent) {
   }
 
   await configurePersistence()
-  const credential = await createUserWithEmailAndPassword(auth, email, password)
+  const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email, password)
   const { user } = credential
 
   try {
@@ -64,7 +71,7 @@ export async function registerUser(email, password, policyConsent) {
 
 export async function loginUser(email, password) {
   await configurePersistence()
-  const credential = await signInWithEmailAndPassword(auth, email, password)
+  const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email, password)
   const { ensureUserProfile, getUserProfile, updateLastActive } = await loadUserService()
   const existingProfile = await getUserProfile(credential.user.uid)
   if (!existingProfile || (existingProfile.accountStatus === 'active' && existingProfile.deletionRequestedAt == null)) {
@@ -76,11 +83,11 @@ export async function loginUser(email, password) {
 }
 
 export async function logoutUser() {
-  await signOut(auth)
+  await signOut(getFirebaseAuth())
 }
 
 export async function sendPasswordReset(email) {
-  await sendPasswordResetEmail(auth, email)
+  await sendPasswordResetEmail(getFirebaseAuth(), email)
 }
 
 export async function resendEmailVerification(user) {
@@ -95,7 +102,7 @@ export async function reloadAuthenticationUser(user) {
 }
 
 export function observeAuthentication(callback, errorCallback) {
-  return onAuthStateChanged(auth, callback, errorCallback)
+  return onAuthStateChanged(getFirebaseAuth(), callback, errorCallback)
 }
 
 export function getAuthenticationErrorMessage(error, translate) {

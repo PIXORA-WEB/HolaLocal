@@ -5,9 +5,9 @@ import {
   ref as storageReference,
   uploadBytes,
 } from 'firebase/storage'
-import { app } from './config.js'
+import { getFirebaseApp } from './config.js'
 
-const storage = getStorage(app)
+const storage = getStorage(getFirebaseApp())
 const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 export function validateImageFile(file, maxSizeBytes = 5 * 1024 * 1024) {

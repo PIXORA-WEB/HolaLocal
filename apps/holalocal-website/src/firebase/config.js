@@ -1,7 +1,6 @@
-// Creates the website's shared Firebase instances from Vite environment variables.
-// The values point to the same Firebase project used by the HolaLocal mobile app.
+// Owns the website's single Firebase App instance. Feature clients depend on this
+// module; this module deliberately has no dependency on Auth, Firestore or Storage.
 import { getApp, getApps, initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,20 +19,26 @@ const requiredEnvironmentVariables = [
   ['VITE_FIREBASE_STORAGE_BUCKET', firebaseConfig.storageBucket],
   ['VITE_FIREBASE_MESSAGING_SENDER_ID', firebaseConfig.messagingSenderId],
   ['VITE_FIREBASE_APP_ID', firebaseConfig.appId],
-  ['VITE_FIREBASE_MEASUREMENT_ID', firebaseConfig.measurementId],
 ]
 
-const missingEnvironmentVariables = requiredEnvironmentVariables
-  .filter(([, value]) => typeof value !== 'string' || value.trim() === '')
-  .map(([name]) => name)
+let firebaseApp
 
-if (missingEnvironmentVariables.length > 0) {
-  throw new Error(
-    `Firebase configuration is incomplete. Missing required Vite environment variables: ${missingEnvironmentVariables.join(', ')}. Add them to the appropriate .env file or deployment environment.`,
-  )
+export function validateFirebaseConfiguration() {
+  const missingEnvironmentVariables = requiredEnvironmentVariables
+    .filter(([, value]) => typeof value !== 'string' || value.trim() === '')
+    .map(([name]) => name)
+
+  if (missingEnvironmentVariables.length > 0) {
+    throw new Error(
+      `Firebase configuration is incomplete. Missing required environment variable${missingEnvironmentVariables.length === 1 ? '' : 's'}: ${missingEnvironmentVariables.join(', ')}.`,
+    )
+  }
 }
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
-const auth = getAuth(app)
+export function getFirebaseApp() {
+  if (firebaseApp) return firebaseApp
 
-export { app, auth }
+  validateFirebaseConfiguration()
+  firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
+  return firebaseApp
+}
