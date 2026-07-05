@@ -794,11 +794,14 @@
 }
 
 .password-field .auth-form__label-row {
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
   margin-top: 0.5rem;
 }
 
 .password-field__toggle {
-  padding: 0.25rem 0.35rem;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.55rem;
   border: 0;
   border-radius: 0.4rem;
   color: var(--brand-blue);
@@ -1313,6 +1316,7 @@
   position: absolute;
   right: 0.45rem;
   bottom: 0.45rem;
+  min-height: 2.75rem;
   padding: 0.35rem 0.55rem;
   border: 0;
   border-radius: 999px;
@@ -1412,8 +1416,8 @@
 
 .profile-edit-dialog__header button {
   display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   place-items: center;
   border: 0;
   border-radius: 50%;
@@ -1829,14 +1833,16 @@
 
 .service-area-selector__search input {
   width: 100%;
-  padding-right: 5rem;
+  padding-right: 7.5rem;
 }
 
 .service-area-selector__search button {
   position: absolute;
   top: 50%;
-  right: 0.5rem;
-  padding: 0.35rem 0.5rem;
+  right: 0.25rem;
+  min-height: 2.75rem;
+  max-width: 7rem;
+  padding: 0.4rem 0.65rem;
   border: 0;
   border-radius: 0.45rem;
   color: var(--brand-blue);
@@ -4244,8 +4250,9 @@
 
 .site-footer__links a {
   display: inline-grid;
+  min-height: 2.75rem;
   place-items: center;
-  padding: 0.05rem 0.35rem;
+  padding: 0.5rem 0.65rem;
   font-size: 0.875rem;
   line-height: 1.4;
   transition: color 160ms ease, transform 160ms ease;
@@ -4697,6 +4704,18 @@
 
   .site-header .select-field__code {
     display: inline;
+  }
+}
+
+@media (max-width: 26rem) {
+  .account-header {
+    flex-direction: column;
+    justify-content: center;
+    padding-block: 1rem;
+  }
+
+  .account-header .brand-lockup {
+    justify-content: center;
   }
 }
 
