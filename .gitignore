@@ -1,0 +1,48 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+coverage/
+
+# Environment files: examples remain safe to commit
+.env
+.env.*
+*.local
+!.env.example
+
+# Firebase and Vercel local state / exports
+.firebase/
+.vercel/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+firebase-export*/
+emulator-data/
+emulator-export/
+
+# Credentials, private keys, and certificates
+*service-account*.json
+*serviceAccount*.json
+serviceAccountKey.json
+google-application-credentials.json
+*.pem
+*.key
+*.p12
+
+# Logs and local process output
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/*
+!.vscode/extensions.json

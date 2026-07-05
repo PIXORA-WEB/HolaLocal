@@ -1,0 +1,261 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function accountData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function hasActiveAccount() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && accountData(request.auth.uid).accountStatus == 'active'
+        && accountData(request.auth.uid).deletionRequestedAt == null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.keys().hasAll(['admin'])
+        && request.auth.token.admin == true;
+    }
+
+    function isModerator() {
+      return signedIn()
+        && ((request.auth.token.keys().hasAll(['moderator'])
+          && request.auth.token.moderator == true) || isAdmin());
+    }
+
+    function businessData(businessId) {
+      return get(/databases/$(database)/documents/businesses/$(businessId)).data;
+    }
+
+    function managesBusiness(businessId) {
+      return hasActiveAccount()
+        && (businessData(businessId).ownerId == request.auth.uid
+          || request.auth.uid in businessData(businessId).managerIds);
+    }
+
+    function hasSafePublicBusinessData(data) {
+      return data.status == 'active'
+        && data.contact is map
+        && safePublicContact(data.contact)
+        && !data.keys().hasAny(['phone', 'email', 'whatsapp', 'whatsappNumber']);
+    }
+
+    function safePublicContact(contact) {
+      return contact.keys().hasOnly([
+          'phone', 'phoneVisible', 'email', 'emailVisible', 'whatsappNumber',
+          'whatsappVisible', 'website', 'preferredContactMethod',
+          'allowCallbackRequests'
+        ])
+        && contact.phoneVisible is bool
+        && contact.emailVisible is bool
+        && contact.whatsappVisible is bool
+        && contact.allowCallbackRequests is bool
+        && (contact.phoneVisible || contact.phone == '')
+        && (contact.emailVisible || contact.email == '')
+        && (contact.whatsappVisible || contact.whatsappNumber == '')
+        && contact.preferredContactMethod in ['holalocal', 'phone', 'email', 'whatsapp'];
+    }
+
+    match /users/{userId} {
+      allow create: if isOwner(userId)
+        && request.resource.data.roles == ['customer']
+        && request.resource.data.accountStatus == 'active'
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.termsAcceptedAt == request.time
+        && request.resource.data.termsVersion == '1.0'
+        && request.resource.data.privacyAccepted == true
+        && request.resource.data.privacyAcceptedAt == request.time
+        && request.resource.data.privacyVersion == '1.0';
+      allow read: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId)
+        && hasActiveAccount()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'displayNameNormalized', 'firstName', 'lastName',
+          'photoURL', 'profilePhoto', 'preferredLocale', 'city', 'country',
+          'profileCompleted', 'businessProfileCompleted', 'businessId',
+          'roles', 'accountType', 'onboardingCompleted', 'businessProfileRequired',
+          'termsAccepted', 'termsAcceptedAt', 'termsVersion',
+          'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion',
+          'deletionRequestedAt', 'lastActiveAt', 'updatedAt'
+        ])
+        && request.resource.data.roles.hasOnly(['customer', 'business'])
+        && request.resource.data.roles.size() >= 1
+        && request.resource.data.accountType in ['customer', 'business', 'both']
+        && (request.resource.data.accountType != 'customer' || request.resource.data.roles == ['customer'])
+        && (request.resource.data.accountType != 'business' || request.resource.data.roles == ['business'])
+        && (request.resource.data.accountType != 'both' || request.resource.data.roles.hasAll(['customer', 'business']))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'termsAccepted', 'termsAcceptedAt', 'termsVersion'
+        ]) || (
+          resource.data.termsAccepted != true
+          && request.resource.data.termsAccepted == true
+          && request.resource.data.termsAcceptedAt == request.time
+          && request.resource.data.termsVersion == '1.0'
+        ))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion'
+        ]) || (
+          resource.data.privacyAccepted != true
+          && request.resource.data.privacyAccepted == true
+          && request.resource.data.privacyAcceptedAt == request.time
+          && request.resource.data.privacyVersion == '1.0'
+        ))
+        && request.resource.data.accountStatus == resource.data.accountStatus;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /businesses/{businessId} {
+      allow read: if hasSafePublicBusinessData(resource.data) || managesBusiness(businessId) || isModerator();
+      allow create: if hasActiveAccount()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.managerIds == [request.auth.uid]
+        && request.resource.data.status == 'draft'
+        && request.resource.data.verificationStatus == 'unverified'
+        && safePublicContact(request.resource.data.contact);
+      allow update: if managesBusiness(businessId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'nameNormalized', 'slug', 'tagline', 'description',
+          'primaryCategoryId', 'categoryIds', 'serviceAreas', 'serviceRadiusKm',
+          'location', 'contact', 'languages', 'primaryLanguage', 'profilePhoto',
+          'galleryImageURLs', 'galleryImages', 'galleryCount',
+          'profileCompleted', 'updatedAt'
+        ])
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.managerIds == resource.data.managerIds
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.verificationStatus == resource.data.verificationStatus
+        && safePublicContact(request.resource.data.contact);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /businessPrivate/{businessId} {
+      allow read: if managesBusiness(businessId) || isModerator();
+      allow create: if hasActiveAccount()
+        && (getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId == request.auth.uid
+          || request.auth.uid in getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.managerIds)
+        && request.resource.data.ownerId == getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId
+        && request.resource.data.managerIds == getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.managerIds;
+      allow update: if managesBusiness(businessId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contact', 'updatedAt'])
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.managerIds == resource.data.managerIds;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /conversations/{conversationId} {
+      function requestedBusiness() {
+        return get(/databases/$(database)/documents/businesses/$(request.resource.data.businessId)).data;
+      }
+
+      function validBusinessParticipant() {
+        return requestedBusiness().status == 'active'
+          && requestedBusiness().managerIds is list
+          && request.auth.uid != requestedBusiness().ownerId
+          && !(request.auth.uid in requestedBusiness().managerIds)
+          && (requestedBusiness().ownerId in request.resource.data.participantIds
+            || request.resource.data.participantIds.hasAny(requestedBusiness().managerIds));
+      }
+
+      function validParticipantState() {
+        return request.resource.data.participantState is map
+          && request.resource.data.participantState.keys().hasAll(request.resource.data.participantIds)
+          && request.resource.data.participantState.keys().hasOnly(request.resource.data.participantIds);
+      }
+
+      allow read: if hasActiveAccount() && request.auth.uid in resource.data.participantIds;
+      allow create: if hasActiveAccount()
+        && request.resource.data.keys().hasOnly([
+          'businessId', 'customerId', 'participantIds', 'participantState',
+          'lastMessage', 'lastMessageAt', 'status', 'createdAt', 'updatedAt'
+        ])
+        && request.auth.uid == request.resource.data.customerId
+        && request.auth.uid in request.resource.data.participantIds
+        && request.resource.data.participantIds is list
+        && request.resource.data.participantIds.size() == 2
+        && validBusinessParticipant()
+        && validParticipantState()
+        && request.resource.data.lastMessage == null
+        && request.resource.data.lastMessageAt == null
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if hasActiveAccount()
+        && request.auth.uid in resource.data.participantIds
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'participantState', 'lastMessage', 'lastMessageAt', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        function parentConversation() {
+          return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+        }
+        allow read: if hasActiveAccount() && request.auth.uid in parentConversation().participantIds;
+        allow create: if hasActiveAccount()
+          && request.auth.uid in parentConversation().participantIds
+          && parentConversation().status == 'active'
+          && request.resource.data.keys().hasOnly([
+            'senderId', 'type', 'text', 'attachment', 'moderationStatus',
+            'editedAt', 'deletedAt', 'createdAt'
+          ])
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.type == 'text'
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 4000
+          && request.resource.data.attachment == null
+          && request.resource.data.moderationStatus == 'visible'
+          && request.resource.data.editedAt == null
+          && request.resource.data.deletedAt == null
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+
+    match /reports/{reportId} {
+      allow create: if hasActiveAccount()
+        && request.resource.data.keys().hasOnly([
+          'reporterId', 'targetType', 'targetId', 'parentId', 'reason', 'details',
+          'evidence', 'status', 'priority', 'assignedTo', 'resolution',
+          'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.targetType == 'business'
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId.size() > 0
+        && request.resource.data.parentId == null
+        && request.resource.data.reason in [
+          'misleading_profile', 'unqualified_service', 'unsafe_behaviour',
+          'poor_conduct', 'spam_or_fake_business', 'other'
+        ]
+        && request.resource.data.status == 'open'
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 2000
+        && request.resource.data.evidence == []
+        && request.resource.data.priority == 'normal'
+        && request.resource.data.assignedTo == null
+        && request.resource.data.resolution == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow read, update, delete: if isModerator();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

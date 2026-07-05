@@ -1,0 +1,259 @@
+{
+  "nav": {
+    "primary": "Hauptnavigation",
+    "home": "Start",
+    "services": "Dienste",
+    "forBusinesses": "Für Unternehmen",
+    "search": "Suche",
+    "messages": "Nachrichten",
+    "profile": "Profil",
+    "business": "Unternehmen"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Konto erstellen",
+    "logout": "Abmelden",
+    "forgotPassword": "Passwort vergessen?",
+    "welcomeBack": "Willkommen zurück",
+    "loginTitle": "Bei HolaLocal anmelden",
+    "loginDescription": "Mit E-Mail und Passwort fortfahren.",
+    "email": "E-Mail-Adresse",
+    "password": "Passwort",
+    "loggingIn": "Anmeldung…",
+    "newUser": "Neu bei HolaLocal?",
+    "createAccount": "Konto erstellen",
+    "registration": {
+      "eyebrow": "Teil der Community werden", "title": "Konto erstellen", "description": "Beginnen Sie mit Ihrer E-Mail-Adresse und teilen Sie uns danach mit, wie Sie HolaLocal nutzen möchten.", "passwordHint": "Verwenden Sie mindestens sechs Zeichen.", "confirmPassword": "Passwort bestätigen", "passwordMismatch": "Die Passwörter stimmen nicht überein.", "consentLegend": "Rechtliche Vereinbarungen", "termsPrefix": "Ich akzeptiere die", "privacyPrefix": "Ich habe die folgende Erklärung gelesen:", "consentRequired": "Akzeptieren Sie die Bedingungen und die Datenschutzerklärung, bevor Sie Ihr Konto erstellen.", "existingAccount": "Sie haben bereits ein Konto?"
+    },
+    "verification": {
+      "eyebrow": "Schutz Ihres Kontos", "title": "E-Mail bestätigen", "description": "Wir haben einen Bestätigungslink an {{email}} gesendet. Bestätigen Sie Ihre Adresse, bevor Sie geschützte HolaLocal-Funktionen nutzen.", "sent": "Öffnen Sie den Bestätigungslink in Ihrem Posteingang.", "initialSendFailed": "Die erste E-Mail konnte nicht gesendet werden. Versuchen Sie es unten erneut.", "notVerified": "Ihre E-Mail ist noch nicht bestätigt. Öffnen Sie den Link und prüfen Sie danach erneut.", "resent": "Eine neue Bestätigungs-E-Mail wurde gesendet.", "checkedAction": "Ich habe meine E-Mail bestätigt", "resend": "Bestätigungs-E-Mail erneut senden", "resending": "Wird gesendet…"
+    }
+  },
+  "metadata": { "title": "HolaLocal Frühzugang", "pageTitle": "{{page}} · HolaLocal", "description": "Nehmen Sie am HolaLocal Frühzugang teil und helfen Sie beim Aufbau eines vertrauenswürdigen, mehrsprachigen Marktplatzes für Kunden und lokale Unternehmen in Spanien." },
+  "errors": { "application": { "title": "Es tut uns leid, etwas ist schiefgelaufen.", "description": "HolaLocal konnte diese Seite nicht laden. Laden Sie sie neu oder kehren Sie zur Startseite zurück.", "reload": "Neu laden", "home": "Zur Startseite" } },
+  "account": {
+    "fallback": "Konto",
+    "greeting": "Hallo {{name}}",
+    "navigationLabel": "Kontonavigation",
+    "profile": "Mein Profil",
+    "business": "Mein Unternehmen",
+    "messages": "Nachrichten",
+    "signIn": "Anmelden",
+    "getStarted": "Jetzt starten"
+  },
+  "messages": {
+    "title": "Nachrichten",
+    "placeholderDescription": "Ihre privaten Gespräche erscheinen hier, sobald Nachrichten verfügbar sind."
+  },
+  "profile": {
+    "title": "Profil",
+    "edit": "Profil bearbeiten",
+    "businessTools": "Unternehmenswerkzeuge",
+    "businessDashboard": "Unternehmensübersicht",
+    "editBusiness": "Unternehmensprofil bearbeiten"
+  },
+  "business": {
+    "dashboard": "Unternehmensübersicht",
+    "edit": "Unternehmen bearbeiten",
+    "subscription": "Abonnement",
+    "save": "Unternehmensprofil speichern",
+    "saving": "Wird gespeichert…",
+    "primaryLanguage": "Hauptsprache",
+    "completion": "Unternehmensprofil zu {{percent}} % vollständig",
+    "control": {
+      "loading": "Unternehmensprofil wird geladen…", "yourBusiness": "Ihr Unternehmen", "heroContext": "{{category}} · Tätig in {{location}}", "heroPrompt": "Ergänzen Sie Kategorie und Standort, damit Kunden Ihr Angebot verstehen.", "status": { "draft": "Entwurf", "pending_review": "Prüfung ausstehend", "active": "Aktiv", "suspended": "Gesperrt", "archived": "Archiviert", "deleted": "Gelöscht" }, "verification": { "unverified": "Nicht verifiziert", "pending": "Verifizierung ausstehend", "verified": "Verifiziert", "rejected": "Verifizierung abgelehnt" }, "planBadge": "{{plan}}-Tarif", "ready": "Profil bereit", "needsWork": "Einrichtung erforderlich", "completionEyebrow": "Profilfortschritt", "missingCount_one": "Noch {{count}} empfohlener Punkt", "missingCount_other": "Noch {{count}} empfohlene Punkte", "checklist": { "name": "Unternehmensname", "description": "Beschreibung", "category": "Hauptkategorie", "serviceArea": "Servicegebiet", "language": "Gesprochene Sprache", "logo": "Logo", "images": "Arbeitsfotos", "contact": "Kontaktpräferenz" }, "nextEyebrow": "Empfohlen", "nextTitle": "Nächste Schritte", "coreReady": "Ihr Kernprofil ist bereit. Sie können es vor dem Start weiter verbessern.", "nextPrompt": "Als Nächstes vervollständigen: {{item}}.", "visibilityEyebrow": "Sichtbarkeit", "visibility": { "draft": "Ihr Unternehmen ist als privater Entwurf gespeichert und noch nicht öffentlich gelistet.", "pending_review": "Ihr Profil wartet auf Prüfung und ist noch nicht öffentlich.", "active": "Ihr Profil ist aktiv und kann in öffentlichen Ergebnissen erscheinen.", "suspended": "Ihr Profil ist gesperrt und nicht öffentlich.", "archived": "Ihr Profil ist archiviert und nicht öffentlich.", "deleted": "Dieses Profil ist als gelöscht markiert und nicht öffentlich." }, "coverageEyebrow": "Gebiete und Sprachen", "coverageTitle": "Wo und wie Sie arbeiten", "primaryArea": "Hauptstandort", "serviceAreas_one": "{{count}} Servicegebiet", "serviceAreas_other": "{{count}} Servicegebiete", "primaryLanguage": "Hauptsprache", "spokenLanguages": "Gesprochene Sprachen", "notSet": "Nicht festgelegt", "addAreas": "Fügen Sie Ihre Servicegebiete hinzu.", "addLanguages": "Fügen Sie die Sprachen Ihres Unternehmens hinzu.", "accountEyebrow": "Kontoübersicht", "accountTitle": "Tarif und Verifizierung", "verificationLabel": "Verifizierung", "subscriptionLabel": "Abonnement", "quickEyebrow": "Schnellaktionen", "quickTitle": "Unternehmen verwalten", "quickDescription": "Halten Sie Profil, Kontakte und Tarif aktuell.", "contactSettings": "Kontakteinstellungen", "preview": "Öffentliches Profil ansehen", "insightsEyebrow": "Demnächst", "insightsTitle": "Unternehmensstatistiken", "insightsDescription": "Leistungsdaten erscheinen hier, sobald Marktplatzfunktionen starten.", "comingSoon": "Demnächst", "insights": { "views": "Profilaufrufe", "messages": "Kundennachrichten", "saved": "Von Kunden gespeichert", "reviews": "Bewertungen" }
+    }
+  },
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "loading": "Wird geladen…",
+    "continue": "Weiter"
+  },
+  "language": {
+    "label": "Sprache"
+  },
+  "services": {
+    "eyebrow": "Lokaler Marktplatz",
+    "title": "Lokale Dienste finden",
+    "description": "Durchsuchen Sie aktive Unternehmen nach Service, Region und Sprache. Angezeigt werden nur öffentliche Profildaten.",
+    "filtersLabel": "Servicefilter",
+    "searchLabel": "Service oder Unternehmen",
+    "searchPlaceholder": "Nach Service oder Unternehmen suchen",
+    "locationLabel": "Ort oder Region",
+    "locationPlaceholder": "Marbella, Estepona, Gibraltar…",
+    "categoryLabel": "Kategorie",
+    "allCategories": "Alle Kategorien",
+    "languageLabel": "Sprache",
+    "allLanguages": "Alle Sprachen",
+    "popularCategories": "Beliebte Kategorien",
+    "popularDescription": "Beginnen Sie mit einem häufig gesuchten lokalen Service.",
+    "categories": {
+      "cleaning": "Reinigung",
+      "plumbing": "Sanitär",
+      "gardening": "Gartenpflege",
+      "handyman": "Handwerker",
+      "airConditioning": "Klimaanlagen",
+      "petServices": "Tierbetreuung"
+    },
+    "results": "Lokale Unternehmen",
+    "resultCount_one": "{{count}} Unternehmen",
+    "resultCount_other": "{{count}} Unternehmen",
+    "clearFilters": "Filter löschen",
+    "notSpecified": "Nicht angegeben",
+    "emptyTitle": "Lokale Unternehmen folgen bald",
+    "emptyDescription": "Noch sind keine aktiven Unternehmensprofile verfügbar. Schauen Sie bald wieder vorbei.",
+    "noMatchesTitle": "Keine passenden Dienste",
+    "noMatchesDescription": "Versuchen Sie einen anderen Service, Ort, eine Kategorie oder Sprache.",
+    "loadError": "Lokale Unternehmen konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+  },
+  "appHome": {
+    "eyebrow": "Costa del Sol & Gibraltar",
+    "title": "Vertrauenswürdige Hilfe vor Ort, wenn Sie sie brauchen.",
+    "description": "Finden Sie zuverlässige Menschen für Haus, Garten, Tiere und alltägliche Arbeiten.",
+    "searchPrompt": "Welchen Service benötigen Sie?",
+    "quickEyebrow": "Loslegen",
+    "quickTitle": "Was möchten Sie tun?",
+    "categoriesTitle": "Kategorien entdecken",
+    "categoriesDescription": "Lokale Dienste nach Handwerk finden",
+    "profileTitle": "Ihr Profil",
+    "profileDescription": "Konto und Einstellungen verwalten",
+    "joinTitle": "HolaLocal beitreten",
+    "joinDescription": "Erstellen Sie ein Konto, wenn Sie bereit sind",
+    "trustEyebrow": "Auf Vertrauen aufgebaut",
+    "trustTitle": "Echte Menschen. Klare Identitäten.",
+    "trustDescription": "Stöbern Sie frei und melden Sie sich an, wenn Sie Kontakt aufnehmen möchten. Keine anonymen Nachrichten, kein Datenverkauf.",
+    "businessEyebrow": "Unternehmensbereich",
+    "businessTitle": "Lokale Präsenz verwalten",
+    "businessDescription": "Öffnen Sie Ihr Dashboard und halten Sie Ihr Profil aktuell."
+  },
+  "marketing": {
+    "hero": {
+      "eyebrow": "Lokale Dienste, sinnvoll verbunden",
+      "title": "Finden Sie zuverlässige Hilfe vor Ort – ohne Rätselraten.",
+      "description": "HolaLocal verbindet Kunden und lokale Fachleute an der Costa del Sol und in Gibraltar – mit klaren Identitäten, mehreren Sprachen und Datenschutz.",
+      "primaryAction": "Kostenloses Konto erstellen",
+      "secondaryAction": "Lokale Dienste finden",
+      "businessesLabel": "Ausgewählte lokale Unternehmensprofile",
+      "verifiedProfile": "Verifiziertes Profil",
+      "activeProfile": "Aktives Profil",
+      "locationLabel": "Servicegebiet",
+      "languagesLabel": "Sprachen",
+      "ratingCount_one": "{{count}} Bewertung",
+      "ratingCount_other": "{{count}} Bewertungen",
+      "examples": [
+        { "name": "Costa Clean Marbella", "category": "Reinigungsdienste", "area": "Marbella", "languages": ["Englisch", "Spanisch"] },
+        { "name": "Sol Garden Care", "category": "Gartenpflege", "area": "Estepona", "languages": ["Spanisch", "Englisch"] },
+        { "name": "Gibraltar Home Fix", "category": "Handwerker", "area": "Gibraltar", "languages": ["Englisch", "Spanisch"] },
+        { "name": "Mijas Pet Support", "category": "Tierbetreuung", "area": "Mijas", "languages": ["Englisch", "Niederländisch"] },
+        { "name": "Fuengirola Climate Care", "category": "Klimaanlagen", "area": "Fuengirola", "languages": ["Spanisch", "Englisch"] }
+      ]
+    },
+    "trustStrip": {
+      "label": "Vertrauensmerkmale von HolaLocal",
+      "local": "Für Costa del Sol und Gibraltar",
+      "multilingual": "Mehrsprachige Unterstützung",
+      "private": "Private Nachrichten",
+      "marketplace": "Lokaler Marktplatz"
+    },
+    "how": {
+      "eyebrow": "So funktioniert es",
+      "title": "Lokale Hilfe in drei klaren Schritten.",
+      "description": "Entdecken Sie Anbieter, prüfen Sie öffentliche Profile und nehmen Sie Kontakt auf.",
+      "browse": {
+        "title": "Stöbern",
+        "description": "Entdecken Sie lokale Dienste und Anbieter zunächst ohne Konto."
+      },
+      "connect": {
+        "title": "Kontakt aufnehmen",
+        "description": "Melden Sie sich an und sprechen Sie privat mit dem passenden Unternehmen."
+      },
+      "choose": {
+        "title": "Sicher entscheiden",
+        "description": "Vergleichen Sie klare öffentliche Angaben und wählen Sie den passenden Anbieter."
+      }
+    },
+    "journeys": {
+      "eyebrow": "Für beide Seiten",
+      "title": "Hilfe finden oder lokal sichtbar werden.",
+      "customers": {
+        "title": "Für Kunden",
+        "description": "Stöbern Sie frei, speichern Sie Profile und kontaktieren Sie den passenden Anbieter privat.",
+        "action": "Lokale Dienste finden"
+      },
+      "businesses": {
+        "title": "Für lokale Unternehmen",
+        "description": "Erstellen Sie ein professionelles Profil und machen Sie Ihre Dienste leichter auffindbar.",
+        "action": "Unternehmen verwalten"
+      }
+    },
+    "region": {
+      "eyebrow": "Für diese Küste entwickelt",
+      "title": "Costa del Sol und Gibraltar zuerst.",
+      "description": "HolaLocal orientiert sich an den Gemeinschaften, Sprachen und praktischen Bedürfnissen der Menschen, die hier leben und arbeiten."
+    },
+    "trust": {
+      "eyebrow": "Vertrauen und Datenschutz",
+      "title": "Warum Menschen HolaLocal vertrauen.",
+      "description": "Klare Grundlagen für Identität, Kommunikation und Datenschutz machen lokale Kontakte sicherer.",
+      "verified": { "title": "Verifizierte Profile", "description": "Klare Statusangaben zeigen, welches Profil Sie betrachten." },
+      "identities": { "title": "Echte Identitäten", "description": "Kontobasierte Interaktionen fördern eine verantwortungsvolle Community." },
+      "messaging": { "title": "Private Nachrichten", "description": "Kontakt findet in geschützten Gesprächen statt, nicht über öffentliche Daten." },
+      "multilingual": { "title": "Mehrsprachige Community", "description": "Sprachpräferenzen erleichtern die Kommunikation für Kunden und Unternehmen." }
+    },
+    "language": {
+      "eyebrow": "Mehrsprachig konzipiert",
+      "title": "Nutzen Sie die Sprache, die sich natürlich anfühlt.",
+      "description": "Wählen Sie Ihre Oberflächensprache. Sprachpräferenzen bereiten verantwortungsvolle Übersetzungen vor."
+    },
+    "cta": {
+      "eyebrow": "Ihr lokales Netzwerk beginnt hier",
+      "title": "Bereit, lokale Dienste einfacher zu machen?",
+      "description": "Treten Sie als Kunde, Unternehmen oder beides bei. Ein Konto funktioniert in App und Website.",
+      "action": "Jetzt starten"
+    }
+  },
+  "earlyAccess": {
+    "navigation": "Frühzugang",
+    "hero": {
+      "eyebrow": "Frühzugang · Costa del Sol & Gibraltar", "title": "Lokale Dienstleistungen, echte Menschen, klarere Kommunikation.",
+      "description": "HolaLocal schafft einen vertrauenswürdigen, mehrsprachigen Ort, an dem Sie lokale Fachkräfte finden und direkt mit ihnen sprechen können – ohne verstreute Beiträge und Empfehlungen.",
+      "customerAction": "Als Kunde teilnehmen", "businessAction": "Unternehmensprofil als Entwurf erstellen", "note": "Frühzeitig erstellte Profile verwenden Ihr echtes HolaLocal-Konto und werden in den vollständigen Dienst übernommen. Unternehmensentwürfe werden nicht öffentlich gelistet."
+    },
+    "preview": { "label": "HolaLocal Frühzugang", "badge": "Lokal zusammenkommen", "title": "Ein Konto. Zwei Möglichkeiten mitzumachen.", "customerTitle": "Suchen Sie lokale Hilfe?", "customerDescription": "Legen Sie Ihre Sprach- und Standortpräferenzen für den späteren Marktplatzzugang fest.", "businessTitle": "Bieten Sie lokale Dienstleistungen an?", "businessDescription": "Erstellen Sie jetzt Ihr echtes Unternehmensprofil und behalten Sie es privat als Entwurf." },
+    "principles": { "label": "HolaLocal Grundsätze", "local": "Lokal zuerst", "multilingual": "Mehrsprachig", "privacy": "Datenschutzbewusst", "messaging": "Direkte HolaLocal-Nachrichten" },
+    "info": {
+      "eyebrow": "HolaLocal mitgestalten", "title": "Bereiten Sie sich vor, bevor der Marktplatz öffnet", "description": "Der Frühzugang konzentriert sich auf hilfreiche Profile, lokale Bedürfnisse und einen vertrauenswürdigen Dienst.",
+      "customers": { "title": "Für Kunden", "description": "Erstellen Sie Ihr Konto, wählen Sie Ihre Sprache und teilen Sie uns mit, wo Sie Hilfe suchen.", "action": "Am Kunden-Frühzugang teilnehmen" },
+      "businesses": { "title": "Für Unternehmen", "description": "Fügen Sie Dienstleistungen, Gebiete, Sprachen und optionale öffentliche Kontaktpräferenzen als privaten Entwurf hinzu.", "action": "Profilentwurf starten" }
+    },
+    "cta": { "eyebrow": "Für die Gemeinschaft entwickelt", "title": "Gestalten Sie die Zukunft lokaler Dienstleistungen in Spanien mit.", "description": "Nehmen Sie vor dem Start teil und helfen Sie, einen vertrauenswürdigen lokalen Marktplatz für Kunden und Unternehmen aufzubauen.", "action": "Konto erstellen" },
+    "roadmap": { "eyebrow": "Was als Nächstes kommt", "title": "🚀 HolaLocal-Roadmap", "description": "Wir entwickeln HolaLocal Schritt für Schritt mit Hilfe unserer Frühzugangs-Community. Ihr Feedback gestaltet jede neue Funktion mit.", "available": { "title": "Heute verfügbar", "items": ["Kundenkonten", "Unternehmenskonten", "Unternehmensprofile", "Mehrsprachige Website", "Registrierung zum Frühzugang"] }, "coming": { "title": "Demnächst", "items": ["Automatische Nachrichtenübersetzung", "Nachrichten zwischen Kunden und Unternehmen", "Favorisierte Unternehmen", "Unternehmensverifizierung", "Bewertungen und Rezensionen", "Mobile App", "Erweiterte Suche und Filter", "Benachrichtigungen"] } },
+    "languageNotice": { "title": "🌍 Die Sprachen wachsen mit HolaLocal", "intro": "HolaLocal wird für die internationalen Gemeinschaften in ganz Spanien entwickelt.", "refining": "Während des Frühzugangs können einige Übersetzungen noch Formulierungen enthalten, die verbessert werden.", "feedback": "Ihr Feedback hilft uns, Übersetzungen zu verbessern und HolaLocal für alle einladender zu gestalten.", "selectorNote": "Einige Übersetzungen werden während des Frühzugangs noch verbessert." },
+    "footer": { "description": "Wir bauen einen vertrauenswürdigen mehrsprachigen Marktplatz auf, der Kunden mit lokalen Unternehmen in ganz Spanien verbindet." }
+  },
+  "legalPages": {
+    "version": "Frühzugang · Version 1 · Gültig ab 4. Juli 2026",
+    "privacy": { "title": "Datenschutzerklärung", "description": "Diese Erklärung erläutert, wie HolaLocal im Frühzugang mit personenbezogenen Daten umgeht.", "audience": "Für wen HolaLocal gedacht ist", "information": "Daten, die wir erheben können", "purpose": "Warum wir Daten verwenden", "profiles": "Profile im Frühzugang", "providers": "Dienstleister und Speicherung", "visibility": "Sichtbarkeit von Kontaktdaten", "deletion": "Löschung und Ihre Wahlmöglichkeiten", "security": "Sicherheit", "changes": "Änderungen der Erklärung" },
+    "terms": { "title": "Nutzungsbedingungen", "description": "Diese Bedingungen gelten, wenn Sie ein Konto erstellen oder den HolaLocal-Frühzugang nutzen.", "account": "Ihr Konto", "customers": "Kundenkonten", "businesses": "Unternehmensprofile", "prohibited": "Verbotenes Verhalten", "messaging": "Nachrichten und Übersetzung", "changes": "Änderungen, Sperrung und Entfernung", "availability": "Verfügbarkeit und Verantwortung", "law": "Anwendbares Recht" },
+    "contact": { "description": "Fragen, Feedback und hilfreiche Fehlerberichte sind beim Aufbau von HolaLocal willkommen.", "help": "Wie wir helfen können", "email": "E-Mail senden", "response": "Antwortzeiten können während des Frühzugangs variieren.", "general": "Allgemeine Anfragen", "generalText": "Fragen zu HolaLocal und dem Frühzugang.", "business": "Unternehmensanfragen", "businessText": "Hilfe bei der Vorbereitung eines Unternehmensprofils.", "bugs": "Fehlerberichte", "bugsText": "beschreiben Sie den Fehler, die verwendete Seite und das erwartete Ergebnis.", "feedback": "Feedback und Vorschläge", "feedbackText": "teilen Sie uns mit, wie HolaLocal lokal nützlicher werden kann.", "privacy": "Datenschutz oder Kontolöschung", "privacyText": "kontaktieren Sie uns über die E-Mail-Adresse Ihres Kontos, damit wir die Anfrage prüfen können." }
+  },
+  "footer": {
+    "description": "Eine vertrauenswürdige, mehrsprachige lokale Community für Dienste an der Costa del Sol und in Gibraltar.",
+    "platform": "Plattform",
+    "platformLabel": "Plattformlinks",
+    "findServices": "Dienste finden",
+    "forBusinesses": "Für Unternehmen",
+    "register": "Registrieren",
+    "legal": "Rechtliches",
+    "legalLabel": "Rechtliche Links",
+    "privacy": "Datenschutz",
+    "terms": "Bedingungen",
+    "support": "Hilfe",
+    "supportLabel": "Hilfelinks",
+    "contact": "Kontakt",
+    "helpCentre": "Hilfe-Center",
+    "language": "Sprache",
+    "copyright": "© {{year}} HolaLocal"
+  }
+}

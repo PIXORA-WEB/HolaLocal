@@ -1,0 +1,20 @@
+:root {
+  --brand-navy: #071d35;
+  --brand-blue: #087df2;
+  --brand-green: #25bd49;
+  --brand-orange: #ff7a1a;
+  --brand-purple: #6b38e8;
+  --ink: #102033;
+  --muted: #657386;
+  --canvas: #f8fafc;
+  --surface: #ffffff;
+  --surface-soft: #eef5ff;
+  --coastal-gradient: linear-gradient(135deg, #03264c, #0a4b8c);
+  --cta-gradient: linear-gradient(135deg, var(--brand-purple), #4030c9);
+  --cta-shadow: 0 1.5rem 4rem rgb(107 56 232 / 24%);
+  --line: #dfe6ef;
+  --shadow-sm: 0 0.3rem 1.25rem rgb(7 29 53 / 7%);
+  --shadow-md: 0 1.25rem 4rem rgb(7 29 53 / 13%);
+  --radius-md: 1.1rem;
+  --radius-lg: 1.75rem;
+}

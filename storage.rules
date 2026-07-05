@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasActiveAccount() {
+      let user = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+      return signedIn()
+        && user.accountStatus == 'active'
+        && user.deletionRequestedAt == null;
+    }
+
+    function validImage() {
+      return request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    function managesBusiness(businessId) {
+      let business = firestore.get(/databases/(default)/documents/businesses/$(businessId)).data;
+      return hasActiveAccount()
+        && (business.ownerId == request.auth.uid || request.auth.uid in business.managerIds);
+    }
+
+    match /users/{userId}/profile/{fileName} {
+      allow read: if hasActiveAccount();
+      allow create, update: if hasActiveAccount() && request.auth.uid == userId && validImage();
+      allow delete: if hasActiveAccount() && request.auth.uid == userId;
+    }
+
+    match /businesses/{businessId}/{folder}/{fileName} {
+      allow read: if firestore.get(/databases/(default)/documents/businesses/$(businessId)).data.status == 'active'
+        || managesBusiness(businessId);
+      allow create, update: if folder in ['logos', 'photos'] && managesBusiness(businessId) && validImage();
+      allow delete: if managesBusiness(businessId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

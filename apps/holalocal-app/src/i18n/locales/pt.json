@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "primary": "Navegação principal",
+    "home": "Início",
+    "services": "Serviços",
+    "search": "Pesquisar",
+    "messages": "Mensagens",
+    "profile": "Perfil",
+    "business": "Negócio"
+  },
+  "auth": {
+    "login": "Iniciar sessão",
+    "register": "Criar conta",
+    "logout": "Terminar sessão",
+    "forgotPassword": "Esqueceu a palavra-passe?",
+    "welcomeBack": "Bem-vindo de volta",
+    "loginTitle": "Inicie sessão no HolaLocal",
+    "loginDescription": "Use o seu e-mail e palavra-passe.",
+    "email": "Endereço de e-mail",
+    "password": "Palavra-passe",
+    "loggingIn": "A iniciar sessão…",
+    "newUser": "Novo no HolaLocal?",
+    "createAccount": "Criar uma conta"
+  },
+  "profile": {
+    "title": "Perfil",
+    "accountEyebrow": "A sua conta",
+    "accountFallback": "Conta",
+    "edit": "Editar perfil",
+    "businessTools": "Ferramentas de negócio",
+    "businessDashboard": "Painel do negócio",
+    "editBusiness": "Editar perfil do negócio"
+  },
+  "business": {
+    "dashboard": "Painel do negócio",
+    "edit": "Editar negócio",
+    "subscription": "Subscrição",
+    "save": "Guardar perfil do negócio",
+    "saving": "A guardar negócio…",
+    "primaryLanguage": "Idioma principal"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "loading": "A carregar…",
+    "continue": "Continuar"
+  },
+  "language": {
+    "label": "Idioma"
+  },
+  "appHome": {
+    "eyebrow": "Costa del Sol e Gibraltar",
+    "title": "O que podemos ajudar a encontrar?",
+    "description": "Procure serviços locais de confiança pelo que precisa e onde precisa.",
+    "serviceLabel": "Serviço",
+    "servicePlaceholder": "Limpeza, canalização, jardinagem…",
+    "locationLabel": "Localização",
+    "locationPlaceholder": "Marbella, Estepona, Gibraltar…",
+    "browseServices": "Explorar serviços",
+    "quickEyebrow": "Atalhos",
+    "quickTitle": "O seu próximo passo",
+    "categoriesTitle": "Explorar categorias",
+    "categoriesDescription": "Descubra serviços locais por área",
+    "profileTitle": "O seu perfil",
+    "profileDescription": "Gira a sua conta e preferências",
+    "joinTitle": "Junte-se ao HolaLocal",
+    "joinDescription": "Crie uma conta quando estiver pronto",
+    "trustEyebrow": "Melhores ligações",
+    "trustTitle": "Confiança, privacidade e línguas",
+    "trust": {
+      "verified": { "title": "Perfis verificados", "description": "Estados de perfil claros" },
+      "private": { "title": "Mensagens privadas", "description": "Conversas protegidas" },
+      "multilingual": { "title": "Apoio multilingue", "description": "Use a sua língua preferida" }
+    },
+    "businessTitle": "Gira a sua presença local",
+    "businessDescription": "Abra o painel e mantenha o perfil atualizado."
+  },
+  "marketing": {
+    "hero": {
+      "eyebrow": "Serviços locais, ligados com cuidado",
+      "title": "Encontre ajuda local de confiança sem incerteza.",
+      "description": "O HolaLocal liga clientes e profissionais na Costa del Sol e em Gibraltar, com identidades claras, apoio multilingue e privacidade.",
+      "primaryAction": "Criar conta grátis",
+      "secondaryAction": "Ver como funciona",
+      "proofLabel": "Vantagens do HolaLocal",
+      "proofLocal": "Foco local",
+      "proofPrivate": "Privacidade",
+      "proofMultilingual": "Multilingue",
+      "serviceHome": "Casa",
+      "serviceGarden": "Jardim",
+      "serviceCare": "Animais"
+    },
+    "services": {
+      "eyebrow": "Uma comunidade, dois percursos claros",
+      "title": "Uma forma mais simples de encontrar ajuda ou desenvolver um negócio local.",
+      "description": "Explore antes do registo. Crie uma conta quando quiser contactar ou oferecer serviços.",
+      "find": {
+        "title": "Encontre serviços locais de confiança",
+        "description": "Descubra profissionais por serviço e zona, com perfis mais claros."
+      },
+      "customers": {
+        "title": "Para clientes",
+        "description": "Guarde favoritos, gira o seu perfil e contacte negócios com uma identidade clara."
+      },
+      "businesses": {
+        "title": "Para negócios locais",
+        "description": "Crie um perfil profissional, descreva os seus serviços e gira a sua visibilidade."
+      }
+    },
+    "region": {
+      "eyebrow": "Criado para esta costa",
+      "title": "Costa del Sol e Gibraltar em primeiro lugar.",
+      "description": "O HolaLocal é pensado para as comunidades, línguas e necessidades práticas de quem vive e trabalha aqui."
+    },
+    "values": {
+      "languageLabel": "Multilingue desde a origem",
+      "languageTitle": "Use a língua que lhe é natural.",
+      "languageDescription": "Escolha a língua da interface. As preferências de comunicação preparam traduções responsáveis no futuro.",
+      "trustLabel": "Confiança e privacidade",
+      "trustTitle": "Ligação sem exposição desnecessária.",
+      "trustDescription": "Explore sem conta, partilhe poucos dados pessoais e saiba sempre com quem comunica."
+    },
+    "cta": {
+      "eyebrow": "A sua rede local começa aqui",
+      "title": "Pronto para simplificar os serviços locais?",
+      "description": "Junte-se como cliente, negócio ou ambos. Uma conta funciona na aplicação e no site.",
+      "action": "Começar"
+    }
+  },
+  "footer": {
+    "description": "Uma comunidade multilingue e de confiança para serviços locais na Costa del Sol e em Gibraltar.",
+    "navigationLabel": "Ligações legais e contacto",
+    "privacy": "Política de privacidade",
+    "terms": "Termos",
+    "contact": "Contacto",
+    "copyright": "© {{year}} HolaLocal. Desenvolvido pela PIXORA."
+  }
+}

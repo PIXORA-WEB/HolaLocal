@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "primary": "Hoofdnavigatie",
+    "home": "Home",
+    "services": "Diensten",
+    "search": "Zoeken",
+    "messages": "Berichten",
+    "profile": "Profiel",
+    "business": "Bedrijf"
+  },
+  "auth": {
+    "login": "Inloggen",
+    "register": "Account maken",
+    "logout": "Uitloggen",
+    "forgotPassword": "Wachtwoord vergeten?",
+    "welcomeBack": "Welkom terug",
+    "loginTitle": "Inloggen bij HolaLocal",
+    "loginDescription": "Ga verder met je e-mail en wachtwoord.",
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "loggingIn": "Inloggen…",
+    "newUser": "Nieuw bij HolaLocal?",
+    "createAccount": "Account maken"
+  },
+  "profile": {
+    "title": "Profiel",
+    "accountEyebrow": "Jouw account",
+    "accountFallback": "Account",
+    "edit": "Profiel bewerken",
+    "businessTools": "Bedrijfstools",
+    "businessDashboard": "Bedrijfsdashboard",
+    "editBusiness": "Bedrijfsprofiel bewerken"
+  },
+  "business": {
+    "dashboard": "Bedrijfsdashboard",
+    "edit": "Bedrijf bewerken",
+    "subscription": "Abonnement",
+    "save": "Bedrijfsprofiel opslaan",
+    "saving": "Bedrijf opslaan…",
+    "primaryLanguage": "Primaire taal"
+  },
+  "common": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "loading": "Laden…",
+    "continue": "Doorgaan"
+  },
+  "language": {
+    "label": "Taal"
+  },
+  "appHome": {
+    "eyebrow": "Costa del Sol & Gibraltar",
+    "title": "Waar kunnen we je mee helpen?",
+    "description": "Zoek betrouwbare lokale diensten op wat je nodig hebt en waar je ze nodig hebt.",
+    "serviceLabel": "Dienst",
+    "servicePlaceholder": "Schoonmaak, loodgieter, tuin…",
+    "locationLabel": "Locatie",
+    "locationPlaceholder": "Marbella, Estepona, Gibraltar…",
+    "browseServices": "Diensten bekijken",
+    "quickEyebrow": "Snelkoppelingen",
+    "quickTitle": "Je volgende stap",
+    "categoriesTitle": "Categorieën bekijken",
+    "categoriesDescription": "Ontdek lokale diensten per vakgebied",
+    "profileTitle": "Jouw profiel",
+    "profileDescription": "Beheer je account en voorkeuren",
+    "joinTitle": "Word lid van HolaLocal",
+    "joinDescription": "Maak een account wanneer je er klaar voor bent",
+    "trustEyebrow": "Betere verbindingen",
+    "trustTitle": "Vertrouwen, privacy en talen",
+    "trust": {
+      "verified": { "title": "Geverifieerde profielen", "description": "Duidelijke profielstatus" },
+      "private": { "title": "Privéberichten", "description": "Beschermde gesprekken" },
+      "multilingual": { "title": "Meertalige ondersteuning", "description": "Gebruik je voorkeurstaal" }
+    },
+    "businessTitle": "Beheer je lokale aanwezigheid",
+    "businessDescription": "Open je dashboard en houd je profiel actueel."
+  },
+  "marketing": {
+    "hero": {
+      "eyebrow": "Lokale diensten, zorgvuldig verbonden",
+      "title": "Vind betrouwbare lokale hulp zonder giswerk.",
+      "description": "HolaLocal brengt klanten en lokale professionals samen aan de Costa del Sol en in Gibraltar, met duidelijke identiteiten, meertalige ondersteuning en privacy.",
+      "primaryAction": "Maak een gratis account",
+      "secondaryAction": "Bekijk hoe het werkt",
+      "proofLabel": "HolaLocal voordelen",
+      "proofLocal": "Lokaal gericht",
+      "proofPrivate": "Privacybewust",
+      "proofMultilingual": "Meertalig",
+      "serviceHome": "Woning",
+      "serviceGarden": "Tuin",
+      "serviceCare": "Dierenzorg"
+    },
+    "services": {
+      "eyebrow": "Eén community, twee duidelijke routes",
+      "title": "Een eenvoudiger manier om hulp te vinden of een lokaal bedrijf te laten groeien.",
+      "description": "Bekijk het aanbod vóór registratie. Maak een account wanneer je wilt verbinden of diensten aanbieden.",
+      "find": {
+        "title": "Vind betrouwbare lokale diensten",
+        "description": "Ontdek professionals per dienst en regio, met duidelijkere profielen."
+      },
+      "customers": {
+        "title": "Voor klanten",
+        "description": "Bewaar favorieten, beheer je profiel en neem contact op met een duidelijke identiteit."
+      },
+      "businesses": {
+        "title": "Voor lokale bedrijven",
+        "description": "Maak een professioneel profiel, beschrijf je diensten en beheer hoe klanten je vinden."
+      }
+    },
+    "region": {
+      "eyebrow": "Gemaakt voor deze kust",
+      "title": "Costa del Sol en Gibraltar eerst.",
+      "description": "HolaLocal is gevormd rond de gemeenschappen, talen en praktische behoeften van mensen die hier wonen en werken."
+    },
+    "values": {
+      "languageLabel": "Meertalig ontworpen",
+      "languageTitle": "Gebruik de taal die natuurlijk voelt.",
+      "languageDescription": "Kies je interfacetaal. Communicatievoorkeuren bereiden verantwoorde vertaling voor.",
+      "trustLabel": "Vertrouwen en privacy",
+      "trustTitle": "Verbinding zonder onnodige blootstelling.",
+      "trustDescription": "Bekijk zonder account, deel minimale persoonsgegevens en weet altijd met wie je communiceert."
+    },
+    "cta": {
+      "eyebrow": "Je lokale netwerk begint hier",
+      "title": "Klaar om lokale diensten eenvoudiger te maken?",
+      "description": "Doe mee als klant, bedrijf of allebei. Eén account werkt in de app en op de website.",
+      "action": "Aan de slag"
+    }
+  },
+  "footer": {
+    "description": "Een betrouwbare, meertalige community voor lokale diensten aan de Costa del Sol en in Gibraltar.",
+    "navigationLabel": "Juridische en contactlinks",
+    "privacy": "Privacybeleid",
+    "terms": "Voorwaarden",
+    "contact": "Contact",
+    "copyright": "© {{year}} HolaLocal. Ontwikkeld door PIXORA."
+  }
+}
