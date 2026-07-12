@@ -53,16 +53,18 @@ service cloud.firestore {
     function safePublicContact(contact) {
       return contact.keys().hasOnly([
           'phone', 'phoneVisible', 'email', 'emailVisible', 'whatsappNumber',
-          'whatsappVisible', 'website', 'preferredContactMethod',
+          'whatsappVisible', 'website', 'websiteVisible', 'preferredContactMethod',
           'allowCallbackRequests'
         ])
         && contact.phoneVisible is bool
         && contact.emailVisible is bool
         && contact.whatsappVisible is bool
+        && contact.websiteVisible is bool
         && contact.allowCallbackRequests is bool
         && (contact.phoneVisible || contact.phone == '')
         && (contact.emailVisible || contact.email == '')
         && (contact.whatsappVisible || contact.whatsappNumber == '')
+        && (contact.websiteVisible || contact.website == '')
         && contact.preferredContactMethod in ['holalocal', 'phone', 'email', 'whatsapp'];
     }
 
