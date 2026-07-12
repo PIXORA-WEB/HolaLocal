@@ -49,6 +49,7 @@ const emptyForm = {
   email: '',
   emailVisible: false,
   website: '',
+  websiteVisible: false,
   preferredContactMethod: 'holalocal',
   allowCallbackRequests: false,
   city: '',
@@ -206,7 +207,7 @@ function EditBusinessPage() {
       setError('')
       setLoading(true)
       try {
-        const profile = await getBusinessByOwnerId(user.uid)
+        const profile = await getBusinessByOwnerId(user.uid, userProfile.businessId)
         if (!active) return
 
         const loadedLanguages = (profile?.languages ?? [userProfile.preferredLocale ?? 'en'])
@@ -233,6 +234,7 @@ function EditBusinessPage() {
           whatsappVisible: profile?.contact?.whatsappVisible === true,
           emailVisible: profile?.contact?.emailVisible === true,
           website: profile?.contact?.website ?? '',
+          websiteVisible: profile?.contact?.websiteVisible === true,
           preferredContactMethod: profile?.contact?.preferredContactMethod ?? 'holalocal',
           allowCallbackRequests: profile?.contact?.allowCallbackRequests === true,
           city: profile?.location?.locality ?? userProfile.city ?? '',
@@ -525,6 +527,7 @@ function EditBusinessPage() {
         email: form.email.trim(),
         emailVisible: form.emailVisible,
         website: form.website.trim(),
+        websiteVisible: form.websiteVisible,
         preferredContactMethod: form.preferredContactMethod,
         allowCallbackRequests: form.allowCallbackRequests,
       },
@@ -621,14 +624,14 @@ function EditBusinessPage() {
           <>
             <div className="business-logo-editor">
               <EditableImageAvatar
-                actionLabel={t(businessProfile.profilePhoto?.downloadUrl ? 'business.form.media.changeLogo' : 'business.form.media.uploadLogo')}
+                actionLabel={t(businessProfile.logoUrl ? 'business.form.media.changeLogo' : 'business.form.media.uploadLogo')}
                 className="image-avatar--business-logo"
                 disabled={logoUploading}
                 imageAlt={t('business.form.media.logoAlt', { name: form.name || t('business.control.yourBusiness') })}
-                inputLabel={t(businessProfile.profilePhoto?.downloadUrl ? 'business.form.media.changeLogo' : 'business.form.media.uploadLogo')}
+                inputLabel={t(businessProfile.logoUrl ? 'business.form.media.changeLogo' : 'business.form.media.uploadLogo')}
                 name={form.name || t('business.control.yourBusiness')}
                 onChange={handleLogoUpload}
-                src={businessProfile.profilePhoto?.downloadUrl}
+                src={businessProfile.logoUrl}
                 uploading={logoUploading}
               />
               <div className="business-logo-editor__content">
@@ -864,6 +867,14 @@ function EditBusinessPage() {
             value={form.website}
           />
           <FormFieldError id="business-website-error" message={fieldErrors.website} />
+          <label className="auth-form__check">
+            <input
+              checked={form.websiteVisible}
+              onChange={(event) => setField('websiteVisible', event.target.checked)}
+              type="checkbox"
+            />
+            <span>{t('business.form.contact.showWebsite')}</span>
+          </label>
 
           <label htmlFor="preferred-contact-method">{t('business.form.contact.preferred')}</label>
           <SelectField

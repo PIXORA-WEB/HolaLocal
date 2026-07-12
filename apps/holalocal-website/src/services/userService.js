@@ -2,6 +2,7 @@
 // Authentication credentials remain the responsibility of Firebase Auth.
 import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
+import { toWebsiteUserProfile } from './firebaseCompatibility.js'
 
 async function uploadImageFile(...args) {
   const storage = await import('../firebase/storageClient.js')
@@ -109,9 +110,14 @@ function buildNewProfile(uid, profileData = {}) {
   }
 }
 
-export async function getUserProfile(uid) {
+async function getRawUserProfile(uid) {
   const snapshot = await getDoc(userDocument(uid))
   return snapshot.exists() ? snapshot.data() : null
+}
+
+export async function getUserProfile(uid) {
+  const profile = await getRawUserProfile(uid)
+  return profile ? toWebsiteUserProfile(uid, profile) : null
 }
 
 export async function createUserProfile(uid, profileData = {}) {
@@ -229,7 +235,7 @@ export async function uploadUserProfilePhoto(uid, file) {
 export async function ensureUserProfile(firebaseUser) {
   if (!firebaseUser?.uid) throw new Error('An authenticated Firebase user is required.')
 
-  const existingProfile = await getUserProfile(firebaseUser.uid)
+  const existingProfile = await getRawUserProfile(firebaseUser.uid)
 
   if (!existingProfile) {
     return createUserProfile(firebaseUser.uid, {
@@ -266,7 +272,7 @@ export async function ensureUserProfile(firebaseUser) {
     return getUserProfile(firebaseUser.uid)
   }
 
-  return existingProfile
+  return toWebsiteUserProfile(firebaseUser.uid, existingProfile)
 }
 
 export async function updateLastActive(uid) {

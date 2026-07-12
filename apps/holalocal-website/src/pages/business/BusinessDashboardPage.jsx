@@ -65,7 +65,7 @@ function BusinessDashboardPage() {
     <section className="business-dashboard">
       <header className="business-summary">
         <div className="business-summary__media">
-          <ImageAvatar alt={t('business.form.media.logoAlt', { name: businessName })} className="image-avatar--business-logo" name={businessName} src={businessProfile?.profilePhoto?.downloadUrl} />
+          <ImageAvatar alt={t('business.form.media.logoAlt', { name: businessName })} className="image-avatar--business-logo" name={businessName} src={businessProfile?.logoUrl} />
         </div>
         <div className="business-summary__identity">
           <p className="placeholder-page__eyebrow">{t('account.business')}</p>

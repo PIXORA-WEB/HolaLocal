@@ -20,7 +20,10 @@
     "password": "Password",
     "loggingIn": "Logging in…",
     "newUser": "New to HolaLocal?",
-    "createAccount": "Create an account"
+    "createAccount": "Create an account",
+    "registration": { "consentLegend": "Legal agreements", "consentRequired": "Accept the Terms and Privacy Policy to continue.", "termsPrefix": "I agree to the", "terms": "Terms", "privacyPrefix": "I agree to the", "privacy": "Privacy Policy" },
+    "verification": { "eyebrow": "Check your inbox", "title": "Verify your email", "description": "We sent a verification link to {{email}}.", "returnInstruction": "After using the link, return to this app and check your verification status.", "check": "I have verified my email", "resend": "Resend verification email", "resent": "A new verification email has been sent.", "notVerified": "Your email is not verified yet." },
+    "errors": { "registration": "We could not create this account. Try signing in or resetting your password.", "invalidCredential": "The email or password is incorrect.", "invalidEmail": "Enter a valid email address.", "network": "Unable to connect. Try again.", "tooManyRequests": "Too many attempts. Please wait and try again.", "disabled": "This account is unavailable.", "weakPassword": "Choose a stronger password.", "generic": "Something went wrong. Please try again." }
   },
   "profile": {
     "title": "Profile",
@@ -37,7 +40,19 @@
     "subscription": "Subscription",
     "save": "Save business profile",
     "saving": "Saving business…",
-    "primaryLanguage": "Primary language"
+    "primaryLanguage": "Primary language",
+    "loading": "Loading your business profile…",
+    "setupDeferred": { "title": "Business setup is temporarily unavailable", "description": "Your business role is saved, but mobile business creation is being updated. No business data has been created or changed." },
+    "editDeferred": { "title": "Mobile business editing is being updated", "description": "You can view your business here, but mobile changes are temporarily unavailable. Manage your business through holalocal.es until the update is complete." },
+    "account": "Business account", "profileStatus": "Profile status", "setupRequired": "Setup required",
+    "complete": { "title": "Complete your business profile", "description": "Add the essential information customers need to understand your services.", "action": "Complete business profile" },
+    "readOnly": { "title": "This business is read-only on mobile", "description": "This legacy profile needs compatibility work before mobile editing is safe. Manage it through holalocal.es or contact HolaLocal Support." },
+    "trust": { "unverifiedLegacy": "No canonical verification", "noLegacyEntitlement": "No canonical subscription" },
+    "editScope": "Canonical profile fields can be edited here. Contact and media remain read-only.",
+    "contactMediaReadOnly": "Contact and media changes remain available through holalocal.es until mobile privacy handling is completed.",
+    "fields": { "name": "Business name", "tagline": "Tagline", "description": "Description", "category": "Main category", "chooseCategory": "Choose a category", "categories": "Service categories", "serviceAreas": "Service areas", "radius": "Service radius (km)", "locality": "City or locality", "region": "Region", "countryCode": "Country code", "languages": "Languages spoken" },
+    "categoryLabels": { "cleaning": "Cleaning", "plumbing": "Plumbing", "electrical": "Electrical", "gardening": "Gardening", "paintingDecorating": "Painting & Decorating", "buildingRenovation": "Building & Renovation", "handyman": "Handyman", "airConditioning": "Air Conditioning", "locksmith": "Locksmith", "pestControl": "Pest Control", "poolMaintenance": "Pool Maintenance", "petServices": "Pet Services" },
+    "errors": { "ambiguous": "We found more than one business profile for this account. No data was changed. Contact HolaLocal Support.", "invalidOwnership": "We could not safely identify your business profile.", "unsupportedLegacy": "This legacy business is read-only on mobile.", "invalidEdit": "Choose supported categories, languages and service areas before saving." }
   },
   "common": {
     "save": "Save",

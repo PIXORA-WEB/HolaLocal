@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { LANGUAGE_STORAGE_KEY } from '../../i18n/index.js'
 import {
-  getLanguageCodeFromName,
-  getLanguageNameFromCode,
+  getAuthenticatedUiLanguage,
   supportedUILanguages,
 } from '../../utils/languages.js'
 
@@ -18,22 +17,21 @@ function LanguageSwitcher() {
   useEffect(() => {
     if (!user) return
 
-    const preferredLanguageCode = getLanguageCodeFromName(userProfile?.preferredLanguage)
+    const preferredLanguageCode = getAuthenticatedUiLanguage(userProfile?.preferredLocale)
     if (!preferredLanguageCode || preferredLanguageCode === activeLanguage) return
 
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, preferredLanguageCode)
     void i18n.changeLanguage(preferredLanguageCode)
-  }, [activeLanguage, i18n, user, userProfile?.preferredLanguage])
+  }, [activeLanguage, i18n, user, userProfile?.preferredLocale])
 
   async function handleLanguageChange(event) {
     const languageCode = event.target.value
-    const languageName = getLanguageNameFromCode(languageCode)
     setError('')
     setSaving(true)
 
     try {
-      if (user && languageName && userProfile?.preferredLanguage !== languageName) {
-        await updateUserProfile({ preferredLanguage: languageName })
+      if (user && userProfile?.preferredLocale !== languageCode) {
+        await updateUserProfile({ preferredLocale: languageCode })
       }
 
       await i18n.changeLanguage(languageCode)

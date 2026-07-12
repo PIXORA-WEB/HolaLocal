@@ -1,165 +1,119 @@
-// Owns Firestore operations for the single business profile associated with a user.
-// The owner UID is also used as the document ID to prevent duplicate profiles.
-import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
+import {
+  collection, doc, getDoc, getDocs, limit as firestoreLimit,
+  query, serverTimestamp, updateDoc, where,
+} from 'firebase/firestore'
 import { db } from '../firebase/config.js'
-import { createBusinessSlug } from '../utils/business.js'
+import { resolveMobileBusinessLookup, toMobileManagedBusiness } from './businessCompatibility.js'
+import { buildCanonicalBusinessUpdate } from './businessPayloads.js'
 
-const editableBusinessFields = new Set([
-  'businessName',
-  'tagline',
-  'description',
-  'mainCategory',
-  'subcategories',
-  'phone',
-  'whatsapp',
-  'email',
-  'website',
-  'city',
-  'province',
-  'country',
-  'serviceAreas',
-  'serviceRadiusKm',
-  'languages',
-  'primaryLanguage',
-  'isActive',
-  'isVerified',
-  'isPremium',
-  'subscriptionTier',
-  'profileCompleted',
-])
+const MAX_OWNER_CANDIDATES = 21
 
 function businessDocument(businessId) {
   if (!businessId) throw new Error('A business ID is required.')
   return doc(db, 'businesses', businessId)
 }
 
-function sanitizeBusinessData(businessData) {
-  return Object.fromEntries(
-    Object.entries(businessData).filter(
-      ([field, value]) => editableBusinessFields.has(field) && value !== undefined,
-    ),
-  )
+function privateBusinessDocument(businessId) {
+  return doc(db, 'businessPrivate', businessId)
 }
 
-function buildNewBusiness(ownerId, businessData = {}) {
-  const safeData = sanitizeBusinessData(businessData)
-  const businessName = safeData.businessName ?? ''
-  const languages = safeData.languages?.length > 0 ? safeData.languages : ['English']
-  const primaryLanguage =
-    languages.find(
-      (language) => language.toLowerCase() === safeData.primaryLanguage?.toLowerCase(),
-    ) ?? languages[0]
-
-  return {
-    businessId: ownerId,
-    ownerId,
-    businessName,
-    slug: createBusinessSlug(businessName),
-    tagline: '',
-    description: '',
-    mainCategory: '',
-    subcategories: [],
-    phone: '',
-    whatsapp: '',
-    email: '',
-    website: '',
-    city: '',
-    province: '',
-    country: 'Spain',
-    serviceAreas: [],
-    serviceRadiusKm: 20,
-    logoURL: null,
-    coverImageURL: null,
-    galleryImageURLs: [],
-    isActive: true,
-    isVerified: false,
-    isPremium: false,
-    subscriptionTier: 'free',
-    profileCompleted: false,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    ...safeData,
-    languages,
-    primaryLanguage,
-  }
+async function getManagedBusinessById(businessId) {
+  const [businessSnapshot, privateSnapshot] = await Promise.all([
+    getDoc(businessDocument(businessId)),
+    getDoc(privateBusinessDocument(businessId)),
+  ])
+  if (!businessSnapshot.exists()) return null
+  return toMobileManagedBusiness(
+    businessSnapshot.id,
+    businessSnapshot.data(),
+    privateSnapshot.exists() ? privateSnapshot.data() : null,
+  )
 }
 
 export async function getBusinessById(businessId) {
-  const snapshot = await getDoc(businessDocument(businessId))
-  return snapshot.exists() ? snapshot.data() : null
+  return getManagedBusinessById(businessId)
 }
 
-export function getBusinessByOwnerId(ownerId) {
-  return getBusinessById(ownerId)
-}
-
-export async function createBusinessProfile(ownerId, businessData = {}) {
-  const reference = businessDocument(ownerId)
-
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(reference)
-
-    if (!snapshot.exists()) {
-      transaction.set(reference, buildNewBusiness(ownerId, businessData))
+async function candidateById(businessId, source, missingIsInvalid = false) {
+  if (!businessId) return { candidate: null, invalid: false }
+  try {
+    const snapshot = await getDoc(businessDocument(businessId))
+    if (!snapshot.exists()) return { candidate: null, invalid: missingIsInvalid }
+    return {
+      candidate: {
+        businessId: snapshot.id,
+        ownerId: snapshot.data().ownerId,
+        source,
+        document: snapshot.data(),
+      },
+      invalid: false,
     }
-  })
-
-  return getBusinessById(ownerId)
+  } catch (error) {
+    if (error?.code === 'permission-denied') return { candidate: null, invalid: true }
+    throw error
+  }
 }
 
-export async function updateBusinessProfile(businessId, updates) {
-  const safeUpdates = sanitizeBusinessData(updates)
-
-  if (safeUpdates.businessName !== undefined) {
-    safeUpdates.slug = createBusinessSlug(safeUpdates.businessName)
+export async function getManagedBusinessLookup(ownerId, userBusinessId = null) {
+  if (!ownerId) return { lookup: resolveMobileBusinessLookup({ ownerId }).lookup, business: null }
+  const pointer = userBusinessId
+    ? await candidateById(userBusinessId, 'user_business_id', true)
+    : { candidate: null, invalid: false }
+  const uid = userBusinessId === ownerId
+    ? pointer
+    : await candidateById(ownerId, 'owner_uid_document')
+  const ownerSnapshot = await getDocs(query(
+    collection(db, 'businesses'),
+    where('ownerId', '==', ownerId),
+    firestoreLimit(MAX_OWNER_CANDIDATES),
+  ))
+  const resolved = resolveMobileBusinessLookup({
+    ownerId,
+    pointerCandidate: pointer.candidate,
+    uidCandidate: uid.candidate,
+    ownerCandidates: ownerSnapshot.docs.map((snapshot) => ({
+      businessId: snapshot.id,
+      ownerId: snapshot.data().ownerId,
+      document: snapshot.data(),
+    })),
+    pointerInvalid: pointer.invalid,
+    uidInvalid: uid.invalid,
+  })
+  if (resolved.lookup.status !== 'found') return { lookup: resolved.lookup, business: null }
+  return {
+    lookup: resolved.lookup,
+    business: await getManagedBusinessById(resolved.lookup.businessId),
   }
+}
 
-  if (safeUpdates.languages?.length > 0) {
-    safeUpdates.primaryLanguage =
-      safeUpdates.languages.find(
-        (language) => language.toLowerCase() === safeUpdates.primaryLanguage?.toLowerCase(),
-      ) ?? safeUpdates.languages[0]
+export async function getBusinessByOwnerId(ownerId, userBusinessId = null) {
+  const result = await getManagedBusinessLookup(ownerId, userBusinessId)
+  if (result.lookup.status === 'found') return result.business
+  if (result.lookup.status === 'not_found') return null
+  const error = new Error('Business ownership could not be resolved safely.')
+  error.code = result.lookup.status === 'ambiguous'
+    ? 'business/ambiguous-ownership'
+    : 'business/invalid-ownership'
+  throw error
+}
+
+export async function updateBusinessProfile(businessId, form) {
+  const current = await getManagedBusinessById(businessId)
+  if (!current) throw Object.assign(new Error('Business profile not found.'), { code: 'business/not-found' })
+  if (!current.editSupport.supported) {
+    throw Object.assign(new Error('This legacy business is read-only on mobile.'), {
+      code: 'business/unsupported-legacy',
+    })
   }
-
+  const built = buildCanonicalBusinessUpdate(form)
+  if (!built.valid) {
+    throw Object.assign(new Error('Business edit contains unsupported values.'), {
+      code: 'business/invalid-edit', issues: built.issues,
+    })
+  }
   await updateDoc(businessDocument(businessId), {
-    ...safeUpdates,
+    ...built.payload,
     updatedAt: serverTimestamp(),
   })
-
-  return getBusinessById(businessId)
-}
-
-export async function ensureBusinessProfile(ownerId, userProfile) {
-  if (!userProfile?.roles?.includes('business')) {
-    throw new Error('A business role is required to create a business profile.')
-  }
-
-  const existingBusiness = await getBusinessByOwnerId(ownerId)
-
-  if (!existingBusiness) {
-    return createBusinessProfile(ownerId, {
-      email: userProfile.email ?? '',
-      city: userProfile.city ?? '',
-      country: userProfile.country ?? 'Spain',
-      languages: [userProfile.preferredLanguage ?? 'English'],
-    })
-  }
-
-  const defaults = buildNewBusiness(ownerId, {
-    businessName: existingBusiness.businessName ?? '',
-    languages: existingBusiness.languages?.length > 0 ? existingBusiness.languages : ['English'],
-  })
-  const missingFields = Object.fromEntries(
-    Object.entries(defaults).filter(([field]) => !Object.hasOwn(existingBusiness, field)),
-  )
-
-  if (Object.keys(missingFields).length > 0) {
-    await updateDoc(businessDocument(existingBusiness.businessId), {
-      ...missingFields,
-      updatedAt: serverTimestamp(),
-    })
-    return getBusinessById(existingBusiness.businessId)
-  }
-
-  return existingBusiness
+  return getManagedBusinessById(businessId)
 }

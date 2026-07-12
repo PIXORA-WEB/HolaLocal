@@ -1,6 +1,6 @@
-import { spokenLanguageOptions } from './languages.js'
+import { supportedAccountLanguageCodes } from './languages.js'
 
-export const languageOptions = spokenLanguageOptions
+export const languageOptions = supportedAccountLanguageCodes
 
 export function getRolesForAccountType(accountType) {
   const roles = {

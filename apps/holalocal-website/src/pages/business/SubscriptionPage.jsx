@@ -9,7 +9,7 @@ import { getBusinessByOwnerId } from '../../services/businessService.js'
 
 function SubscriptionPage() {
   const { t } = useTranslation()
-  const { user } = useAuthentication()
+  const { user, userProfile } = useAuthentication()
   const [businessProfile, setBusinessProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -18,7 +18,7 @@ function SubscriptionPage() {
   useEffect(() => {
     let active = true
 
-    getBusinessByOwnerId(user.uid)
+    getBusinessByOwnerId(user.uid, userProfile.businessId)
       .then((profile) => {
         if (active) setBusinessProfile(profile)
       })
@@ -32,7 +32,7 @@ function SubscriptionPage() {
     return () => {
       active = false
     }
-  }, [loadAttempt, t, user.uid])
+  }, [loadAttempt, t, user.uid, userProfile.businessId])
 
   if (loading) return <LoadingScreen message={t('subscription.loading')} />
 

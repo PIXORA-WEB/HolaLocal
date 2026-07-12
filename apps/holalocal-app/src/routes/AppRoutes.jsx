@@ -7,6 +7,7 @@ import CompleteProfilePage from '../pages/auth/CompleteProfilePage.jsx'
 import LoginPage from '../pages/auth/LoginPage.jsx'
 import OnboardingPage from '../pages/auth/OnboardingPage.jsx'
 import RegisterPage from '../pages/auth/RegisterPage.jsx'
+import VerificationPendingPage from '../pages/auth/VerificationPendingPage.jsx'
 import BusinessDashboardPage from '../pages/business/BusinessDashboardPage.jsx'
 import EditBusinessPage from '../pages/business/EditBusinessPage.jsx'
 import SubscriptionPage from '../pages/business/SubscriptionPage.jsx'
@@ -43,6 +44,12 @@ function AppRoutes() {
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute allowIncompleteProfile allowUnverified />}>
+          <Route element={<AuthLayout />}>
+            <Route path="verify-email" element={<VerificationPendingPage />} />
           </Route>
         </Route>
 

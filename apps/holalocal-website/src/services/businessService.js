@@ -11,6 +11,14 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
 import { createBusinessSlug } from '../utils/business.js'
+import {
+  projectPublicContact,
+} from '@holalocal/firebase-contract'
+import {
+  resolveWebsiteBusinessLookup,
+  toManagedBusinessView,
+  toPublicBusinessView,
+} from './firebaseCompatibility.js'
 
 async function uploadImageFile(...args) {
   const storage = await import('../firebase/storageClient.js')
@@ -32,6 +40,7 @@ export const BUSINESS_STATUSES = [
 ]
 
 const CONTACT_METHODS = ['holalocal', 'phone', 'email', 'whatsapp']
+const MAX_OWNER_CANDIDATES = 21
 const editableBusinessFields = new Set([
   'name',
   'tagline',
@@ -82,6 +91,7 @@ function sanitizeContact(contact = {}) {
     whatsappNumber: String(contact.whatsappNumber ?? '').trim(),
     whatsappVisible: contact.whatsappVisible === true,
     website: String(contact.website ?? '').trim(),
+    websiteVisible: contact.websiteVisible === true,
     preferredContactMethod,
     allowCallbackRequests: contact.allowCallbackRequests === true,
   }
@@ -121,59 +131,12 @@ function sanitizeBusinessData(businessData) {
   return safeData
 }
 
-function withBusinessId(snapshot) {
-  return snapshot.exists() ? { businessId: snapshot.id, ...snapshot.data() } : null
-}
-
-function publicContact(contact = {}) {
-  return {
-    phone: contact.phoneVisible === true ? contact.phone ?? '' : '',
-    email: contact.emailVisible === true ? contact.email ?? '' : '',
-    whatsappNumber: contact.whatsappVisible === true ? contact.whatsappNumber ?? '' : '',
-    website: contact.website ?? '',
-    preferredContactMethod: contact.preferredContactMethod ?? 'holalocal',
-    allowCallbackRequests: contact.allowCallbackRequests === true,
-  }
-}
-
 function storedPublicContact(contact = {}) {
-  const sanitized = sanitizeContact(contact)
-  return {
-    ...sanitized,
-    phone: sanitized.phoneVisible ? sanitized.phone : '',
-    email: sanitized.emailVisible ? sanitized.email : '',
-    whatsappNumber: sanitized.whatsappVisible ? sanitized.whatsappNumber : '',
-  }
+  return projectPublicContact(sanitizeContact(contact)).contact
 }
 
 function toPublicBusiness(snapshot) {
-  const business = snapshot.data()
-  const languages = getStringList(business.languages)
-  const locality = business.location?.locality ?? ''
-
-  return {
-    businessId: snapshot.id,
-    ownerId: business.ownerId,
-    name: business.name ?? '',
-    category: business.primaryCategoryId ?? '',
-    serviceArea: locality || business.serviceAreas?.[0] || '',
-    serviceAreas: getStringList(business.serviceAreas),
-    languages,
-    primaryLanguage: business.primaryLanguage ?? languages[0] ?? '',
-    description: business.description ?? '',
-    tagline: business.tagline ?? '',
-    services: getStringList(business.categoryIds),
-    galleryUrls: getStringList(business.galleryImageURLs),
-    contact: publicContact(business.contact),
-    status: business.status,
-    verificationStatus: business.verificationStatus ?? 'unverified',
-    subscriptionTier: business.subscription?.tier ?? 'free',
-    subscriptionStatus: business.subscription?.status ?? 'none',
-    ratingAverage: typeof business.ratingAverage === 'number' ? business.ratingAverage : null,
-    ratingCount: typeof business.ratingCount === 'number' ? business.ratingCount : 0,
-    logoUrl: business.profilePhoto?.downloadUrl ?? null,
-    profileComplete: business.profileCompleted === true,
-  }
+  return toPublicBusinessView(snapshot.id, snapshot.data())
 }
 
 export async function getActivePublicBusinesses(maxResults = 60) {
@@ -184,7 +147,7 @@ export async function getActivePublicBusinesses(maxResults = 60) {
     firestoreLimit(resultLimit),
   ))
 
-  return snapshot.docs.map(toPublicBusiness).filter((business) => business.name)
+  return snapshot.docs.map(toPublicBusiness).filter((business) => business?.name)
 }
 
 export async function getFeaturedActiveBusinesses(maxResults = 60) {
@@ -194,7 +157,7 @@ export async function getFeaturedActiveBusinesses(maxResults = 60) {
 
 export async function getPublicBusinessById(businessId) {
   const snapshot = await getDoc(businessDocument(businessId))
-  if (!snapshot.exists() || snapshot.data().status !== 'active') return null
+  if (!snapshot.exists()) return null
   return toPublicBusiness(snapshot)
 }
 
@@ -244,7 +207,8 @@ function buildNewBusiness(ownerId, businessData = {}) {
 }
 
 export async function getBusinessById(businessId) {
-  return withBusinessId(await getDoc(businessDocument(businessId)))
+  const snapshot = await getDoc(businessDocument(businessId))
+  return snapshot.exists() ? toManagedBusinessView(snapshot.id, snapshot.data()) : null
 }
 
 async function getManagedBusinessById(businessId) {
@@ -252,21 +216,76 @@ async function getManagedBusinessById(businessId) {
     getDoc(businessDocument(businessId)),
     getDoc(privateBusinessDocument(businessId)),
   ])
-  const business = withBusinessId(businessSnapshot)
-  if (!business) return null
-  return privateSnapshot.exists()
-    ? { ...business, contact: privateSnapshot.data().contact ?? business.contact }
-    : business
+  if (!businessSnapshot.exists()) return null
+  return toManagedBusinessView(
+    businessSnapshot.id,
+    businessSnapshot.data(),
+    privateSnapshot.exists() ? privateSnapshot.data() : null,
+  )
 }
 
-export async function getBusinessByOwnerId(ownerId) {
-  if (!ownerId) return null
+async function candidateById(businessId, source, missingIsInvalid = false) {
+  if (!businessId) return { candidate: null, invalid: false }
+  try {
+    const snapshot = await getDoc(businessDocument(businessId))
+    if (!snapshot.exists()) return { candidate: null, invalid: missingIsInvalid }
+    return {
+      candidate: {
+        businessId: snapshot.id,
+        ownerId: snapshot.data().ownerId,
+        source,
+        document: snapshot.data(),
+      },
+      invalid: false,
+    }
+  } catch (error) {
+    if (error?.code === 'permission-denied') return { candidate: null, invalid: true }
+    throw error
+  }
+}
+
+export async function getManagedBusinessLookup(ownerId, userBusinessId = null) {
+  if (!ownerId) return resolveWebsiteBusinessLookup({ ownerId })
+  const pointerResult = userBusinessId
+    ? await candidateById(userBusinessId, 'user_business_id', true)
+    : { candidate: null, invalid: false }
+  const uidResult = userBusinessId === ownerId
+    ? pointerResult
+    : await candidateById(ownerId, 'owner_uid_document')
   const snapshot = await getDocs(query(
     collection(db, 'businesses'),
     where('ownerId', '==', ownerId),
-    firestoreLimit(1),
+    firestoreLimit(MAX_OWNER_CANDIDATES),
   ))
-  return snapshot.empty ? null : getManagedBusinessById(snapshot.docs[0].id)
+  const resolved = resolveWebsiteBusinessLookup({
+    ownerId,
+    pointerCandidate: pointerResult.candidate,
+    uidCandidate: uidResult.candidate,
+    ownerCandidates: snapshot.docs.map((businessSnapshot) => ({
+      businessId: businessSnapshot.id,
+      ownerId: businessSnapshot.data().ownerId,
+      source: 'owner_id_query',
+      document: businessSnapshot.data(),
+    })),
+    pointerInvalid: pointerResult.invalid,
+    uidInvalid: uidResult.invalid,
+  })
+  if (resolved.lookup.status !== 'found') return { ...resolved, business: null }
+  return {
+    ...resolved,
+    business: await getManagedBusinessById(resolved.lookup.businessId),
+  }
+}
+
+export async function getBusinessByOwnerId(ownerId, userBusinessId = null) {
+  const result = await getManagedBusinessLookup(ownerId, userBusinessId)
+  if (result.lookup.status === 'found') return result.business
+  if (result.lookup.status === 'not_found') return null
+  const error = new Error('Business ownership could not be resolved safely.')
+  error.code = result.lookup.status === 'ambiguous'
+    ? 'business/ambiguous-ownership'
+    : 'business/invalid-ownership'
+  throw error
 }
 
 export async function createBusinessProfile(ownerId, businessData = {}) {
@@ -381,7 +400,7 @@ export async function ensureBusinessProfile(ownerId, userProfile) {
     throw new Error('A business role is required to create a business profile.')
   }
 
-  return (await getBusinessByOwnerId(ownerId)) ?? createBusinessProfile(ownerId, {
+  return (await getBusinessByOwnerId(ownerId, userProfile.businessId)) ?? createBusinessProfile(ownerId, {
     contact: { email: userProfile.email ?? '' },
     location: {
       locality: userProfile.city ?? '',

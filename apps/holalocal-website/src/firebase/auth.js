@@ -114,6 +114,7 @@ export function getAuthenticationErrorMessage(error, translate) {
     'auth/too-many-requests': 'auth.errors.tooManyRequests',
     'auth/user-disabled': 'auth.errors.userDisabled',
     'auth/weak-password': 'auth.errors.weakPassword',
+    'business/ambiguous-ownership': 'business.compatibility.ownershipConflict',
   }
   const key = keys[error?.code] ?? 'auth.errors.generic'
   return translate ? translate(key) : key
