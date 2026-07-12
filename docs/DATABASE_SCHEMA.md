@@ -7,6 +7,35 @@ feature implementation. It is a data contract, not an implementation. The
 example documents below are type-oriented templates containing placeholders;
 they are not mock records or seed data.
 
+Phase 1A Batch 1 defines the approved target contract in
+`shared/firebase-contract`. Batch 2A integrates it at website read boundaries;
+Batch 2B1 integrates mobile user reads and canonical mobile account writes;
+Batch 2B2 integrates supported mobile business reads and edits. Production data
+has not been audited, repaired, or migrated, and deployed Firebase rules have not
+been tightened for all target trust boundaries. Legacy fields remain
+transitional until separately authorised audit and migration work.
+
+Batch 2B2 makes mobile business reads contract-compatible and permits canonical
+owner-editable profile updates only for existing documents whose ownership,
+lifecycle, and public-contact shape already satisfy current rules. Sparse
+legacy records remain read-only. Mobile does not change business IDs, create
+businesses, write trusted state, or repair documents automatically.
+
+Batch 3 adds strictly read-only Firebase audit tooling for a future authorised
+production inspection. The tooling has not been run against production, no
+production conclusions have been established, and it does not create
+`businessOwners/{uid}` mappings, migrate data, change indexes, tighten rules,
+or clean up legacy fields. Any generated audit report contains operational
+document paths and must be treated as confidential.
+
+Contact and media editing remain deferred. Current rules also still list
+`galleryCount`, `slug`, `nameNormalized`, and transitional
+`profileCompleted` as owner-writable even though the target classifies them as
+derived; the mobile builder excludes them, and future separately authorised
+rule tightening must close those server-side gaps. Completion status is a
+presentation derivation from required business fields, not a publication,
+verification, subscription, or public-read trust boundary.
+
 The design supports customers, service providers, and users who have both
 roles. It favors bounded documents, query-driven denormalization, cursor-based
 pagination, and collections that can scale independently to hundreds of
@@ -64,6 +93,7 @@ Each document stores one account profile. A user may have `customer`,
 | `email` | `string` | Yes | Account email; readable only by the owner and authorized staff. |
 | `emailVerified` | `boolean` | Yes | Mirrored Auth verification state for rules/UI convenience. |
 | `roles` | `array<string>` | Yes | Bounded set containing `customer`, `business`, or both. |
+| `businessId` | `string \| null` | Yes | Trusted-only convenience pointer matching `businessOwners/{uid}`. |
 | `profilePhoto` | `map \| null` | No | `{ path, downloadUrl, width, height, updatedAt }`; `path` is canonical. |
 | `preferredLocale` | `string` | Yes | Locale such as `en`, `es`, or a future supported locale. |
 | `accountStatus` | `string` | Yes | Account lifecycle status. |
@@ -111,8 +141,12 @@ unbounded list of business/favourite/conversation IDs in this document.
 - `users/{uid}` corresponds one-to-one with Firebase Authentication `{uid}`.
 - `businesses.ownerId`, review authorship, conversation participants,
   favourites, reports, and notification recipients reference this ID.
-- A user may own/manage multiple businesses; those relationships are queried
-  from `businesses`, not stored as an unbounded array on the user.
+- The initial product permits one owned business per user. The target
+  `businessOwners/{uid}` document is the uniqueness boundary.
+  `users/{uid}.businessId` is a trusted-only convenience pointer.
+- Existing UID-based business IDs may remain authoritative when the future
+  production audit confirms that they are the correct record. New business
+  creation will eventually use trusted atomic logic and opaque IDs.
 
 ### Recommended indexes
 
@@ -128,11 +162,17 @@ metadata.
 ## 2. `businesses`
 
 **Collection path:** `businesses/{businessId}`  
-**Document ID:** Firestore auto ID
+**Document ID:** stable Firestore ID; new target records use opaque auto IDs,
+while an audited legacy owner-UID ID may remain authoritative
 
 One document represents one service-provider profile. Rating totals and review
 counts are derived values maintained by trusted backend processes when review
 functionality is implemented.
+
+The long-term identifier is a stable opaque Firestore ID. During compatibility
+and migration, an existing owner-UID document ID may remain stable; documents
+must not be renamed merely to make their ID opaque. Ownership is represented by
+`ownerId`, not inferred solely from the document ID.
 
 ### Fields
 
@@ -147,8 +187,12 @@ functionality is implemented.
 | `primaryCategoryId` | `string` | Yes | Main category used for navigation and filtering. |
 | `categoryIds` | `array<string>` | Yes | Bounded, deduplicated service-category IDs. |
 | `serviceAreas` | `array<string>` | Yes | Bounded normalized area IDs/slugs. |
+| `customServiceAreas` | `map<string, string>` | No | Original labels for deterministic custom area IDs; no automatic place merging. |
+| `languages` | `array<string>` | Yes | Supported language codes or deterministic custom language IDs. |
+| `languageLabels` | `map<string, string>` | No | Original labels for custom language IDs. |
+| `primaryLanguage` | `string` | Yes | A value present in `languages`. |
 | `location` | `map` | No | `{ geopoint, geohash, locality, region, countryCode }`; exact address may be private. |
-| `contact` | `map` | Yes | Public-safe contact projection: `{ phone, phoneVisible, email, emailVisible, whatsappNumber, whatsappVisible, website, preferredContactMethod, allowCallbackRequests }`. Hidden values must be empty here. |
+| `contact` | `map` | Yes | Public-safe contact projection: `{ phone, phoneVisible, email, emailVisible, whatsappNumber, whatsappVisible, website, websiteVisible, preferredContactMethod, allowCallbackRequests }`. Hidden values must be empty here. |
 | `profilePhoto` | `map \| null` | No | Logo metadata `{ path, downloadUrl, width, height, updatedAt }`. |
 | `coverPhoto` | `map \| null` | No | Cover image metadata with the same shape. |
 | `galleryCount` | `number` | Yes | Derived count; gallery items should later use a subcollection if unbounded. |
@@ -242,6 +286,22 @@ this path. The matching `businesses/{businessId}.contact` map is a public
 projection and contains phone, email, or WhatsApp values only when its
 visibility flag is enabled. Clients must update both documents atomically and
 must never treat presentation-layer hiding as a privacy boundary.
+
+The target private document also owns visibility settings, preferred contact
+method, callback preferences, and any private address. A public value is copied
+only when its visibility flag is explicitly true; missing visibility means
+hidden. Legacy top-level contact fields require a controlled future migration.
+
+## 2a. `businessOwners`
+
+**Collection path:** `businessOwners/{uid}`
+**Document ID:** owner Firebase Authentication UID
+
+The trusted mapping contains `ownerId`, `businessId`, `createdAt`, and
+`updatedAt`. Future trusted atomic creation must create the business, mapping,
+and user pointer consistently. Neither Batch 1 nor the Batch 2A website
+integration reads or writes this collection; no backfill or Firebase rule
+change has occurred.
 
 ## 3. `categories`
 
