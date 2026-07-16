@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import {
   resolveWebsiteBusinessLookup,
+  isPublicBusinessEligible,
   toManagedBusinessView,
   toPublicBusinessView,
   toWebsiteUserProfile,
@@ -21,10 +22,12 @@ const canonicalContact = {
 function canonicalBusiness(overrides = {}) {
   return {
     ownerId: 'owner-1', managerIds: ['owner-1'], name: 'Canonical Business',
+    description: 'A complete canonical business profile.',
     primaryCategoryId: 'cleaning', categoryIds: ['cleaning'], serviceAreas: ['marbella'],
-    languages: ['en'], primaryLanguage: 'en', location: { locality: 'Marbella', countryCode: 'ES' },
+    languages: ['en'], primaryLanguage: 'en', location: { locality: 'Marbella', region: 'Málaga', countryCode: 'ES' },
     contact: canonicalContact, status: 'draft', verificationStatus: 'unverified',
     subscription: { tier: 'free', status: 'none' }, profileCompleted: true,
+    publishedAt: null,
     ...overrides,
   }
 }
@@ -73,14 +76,59 @@ test('roles win conflicts so accountType cannot grant additional access', () => 
 })
 
 test('canonical managed and public business views remain compatible', () => {
-  const raw = canonicalBusiness({ status: 'active', ratingAverage: 4.5, ratingCount: 2 })
+  const raw = canonicalBusiness({ status: 'active', publishedAt: new TimestampFixture(), ratingAverage: 4.5, ratingCount: 2 })
   const managed = toManagedBusinessView('business-1', raw)
   const publicView = toPublicBusinessView('business-1', raw)
+  assert.equal(isPublicBusinessEligible(raw), true)
   assert.equal(managed.name, 'Canonical Business')
   assert.equal(managed.businessId, 'business-1')
   assert.equal(publicView.name, 'Canonical Business')
   assert.equal(publicView.status, 'active')
   assert.equal(publicView.ratingAverage, 4.5)
+})
+
+test('public directory eligibility only allows active safe records', () => {
+  for (const status of ['draft', 'pending_review', 'rejected', 'suspended', 'archived', 'deleted']) {
+    const raw = canonicalBusiness({ status })
+    assert.equal(isPublicBusinessEligible(raw), false)
+    assert.equal(toPublicBusinessView(`business-${status}`, canonicalBusiness({ status })), null)
+  }
+  assert.equal(isPublicBusinessEligible(canonicalBusiness({
+    status: 'active',
+    publishedAt: new TimestampFixture(),
+    deletedAt: new TimestampFixture(),
+  })), false)
+  assert.equal(isPublicBusinessEligible(canonicalBusiness({
+    status: 'active',
+    publishedAt: new TimestampFixture(),
+    deletionRequestedAt: new TimestampFixture(),
+  })), false)
+
+  const activeLegacyShape = {
+    ownerId: 'owner-1',
+    managerIds: ['owner-1'],
+    businessName: 'Legacy Named Business',
+    mainCategory: 'Cleaning',
+    subcategories: ['Cleaning'],
+    serviceAreas: ['Málaga'],
+    languages: ['English'],
+    primaryLanguage: 'English',
+    city: 'Málaga',
+    status: 'active',
+    publishedAt: new TimestampFixture(),
+    verificationStatus: 'unverified',
+    subscription: { tier: 'free', status: 'none' },
+    isVerified: true,
+    isPremium: true,
+    email: 'private@example.invalid',
+    contact: {
+      ...canonicalContact,
+      website: 'https://example.invalid',
+      websiteVisible: false,
+    },
+  }
+  const publicView = toPublicBusinessView('legacy-canonical-active', activeLegacyShape)
+  assert.equal(publicView, null)
 })
 
 test('legacy UID business is owner-readable without trust or media promotion', () => {
@@ -112,15 +160,15 @@ test('legacy UID business is owner-readable without trust or media promotion', (
 
 test('legacy top-level contacts never enter an otherwise canonical public view', () => {
   const publicView = toPublicBusinessView('business-1', canonicalBusiness({
-    status: 'active', contact: undefined, phone: '000000000', email: 'legacy@example.invalid',
+    status: 'active', publishedAt: new TimestampFixture(), contact: undefined, phone: '000000000', email: 'legacy@example.invalid',
   }))
-  assert.equal(publicView.contact.phone, '')
-  assert.equal(publicView.contact.email, '')
+  assert.equal(publicView, null)
 })
 
-test('public contact projection defaults private and requires explicit visibility', () => {
+test('public contact eligibility rejects hidden values and allows explicit visibility', () => {
   const hidden = toPublicBusinessView('business-hidden', canonicalBusiness({
     status: 'active',
+    publishedAt: new TimestampFixture(),
     contact: {
       ...canonicalContact,
       phone: '000000000',
@@ -129,13 +177,11 @@ test('public contact projection defaults private and requires explicit visibilit
       website: 'https://example.invalid',
     },
   }))
-  assert.deepEqual(
-    [hidden.contact.phone, hidden.contact.email, hidden.contact.whatsappNumber, hidden.contact.website],
-    ['', '', '', ''],
-  )
+  assert.equal(hidden, null)
 
   const visible = toPublicBusinessView('business-visible', canonicalBusiness({
     status: 'active',
+    publishedAt: new TimestampFixture(),
     contact: {
       ...canonicalContact,
       phone: '000000000',
@@ -227,10 +273,12 @@ test('compatibility adapters remain isolated from canonical write builders', asy
   assert.match(userService, /sanitizeProfileData\(updates\)/)
   assert.match(businessService, /sanitizeBusinessData\(updates\)/)
   assert.match(businessService, /projectPublicContact\(sanitizeContact\(contact\)\)\.contact/)
-  assert.match(businessService, /business\.contact = storedPublicContact\(privateContact\)/)
+  assert.match(businessService, /ensureOwnerBusinessCallable\(\)/)
+  assert.match(businessService, /if \(privateContact\) safeUpdates\.contact = storedPublicContact\(privateContact\)/)
   assert.match(businessService, /websiteVisible: contact\.websiteVisible === true/)
   assert.doesNotMatch(userService, /transaction\.(?:set|update)\([^\n]*toWebsiteUserProfile/)
   assert.doesNotMatch(businessService, /transaction\.(?:set|update)\([^\n]*toManagedBusinessView/)
+  assert.doesNotMatch(businessService, /transaction\.set\(reference/)
 })
 
 test('canonical customer, business and combined roles retain route-facing semantics', () => {
@@ -242,6 +290,8 @@ test('canonical customer, business and combined roles retain route-facing semant
     const profile = toWebsiteUserProfile(`user-${accountType}`, {
       email: `${accountType}@example.invalid`, accountType, roles,
       preferredLocale: 'en', accountStatus: 'active', profileCompleted: true,
+      firstName: accountType, lastName: 'User', displayName: `${accountType} User`,
+      city: 'Marbella', country: 'Spain',
       onboardingCompleted: true,
     })
     assert.equal(profile.roles.includes('business'), hasBusiness)

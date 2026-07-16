@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import AuthLayout from '../components/layout/AuthLayout.jsx'
 import MetadataManager from '../components/common/MetadataManager.jsx'
@@ -19,16 +19,12 @@ const BusinessDashboardPage = lazy(() => import('../pages/business/BusinessDashb
 const EditBusinessPage = lazy(() => import('../pages/business/EditBusinessPage.jsx'))
 const SubscriptionPage = lazy(() => import('../pages/business/SubscriptionPage.jsx'))
 const ContactPage = lazy(() => import('../pages/ContactPage.jsx'))
-const EarlyAccessPage = lazy(() => import('../pages/EarlyAccessPage.jsx'))
+const HomePage = lazy(() => import('../pages/HomePage.jsx'))
 const ProfilePage = lazy(() => import('../pages/customer/ProfilePage.jsx'))
 const MessagesPage = lazy(() => import('../pages/MessagesPage.jsx'))
 const PrivacyPage = lazy(() => import('../pages/PrivacyPage.jsx'))
+const ServicesPage = lazy(() => import('../pages/ServicesPage.jsx'))
 const TermsPage = lazy(() => import('../pages/TermsPage.jsx'))
-
-const loadDevelopmentHome = () => import('../pages/HomePage.jsx')
-const loadDevelopmentServices = () => import('../pages/ServicesPage.jsx')
-const DevelopmentHomePage = import.meta.env.DEV ? lazy(loadDevelopmentHome) : null
-const DevelopmentServicesPage = import.meta.env.DEV ? lazy(loadDevelopmentServices) : null
 
 function RouteLoadingFallback() {
   const { t } = useTranslation()
@@ -45,20 +41,28 @@ function SignInRedirect() {
   return <Navigate replace state={location.state} to={`/login${location.search}`} />
 }
 
-function AppRoutes() {
-  const developmentMode = import.meta.env.DEV
+function LegacyBusinessRedirect() {
+  const { businessId } = useParams()
+  const location = useLocation()
+  const target = businessId
+    ? `/services/${encodeURIComponent(businessId)}${location.search}`
+    : `/services${location.search}`
 
+  return <Navigate replace to={target} />
+}
+
+function AppRoutes() {
   return (
     <BrowserRouter>
       <MetadataManager />
       <Suspense fallback={<RouteLoadingFallback />}>
       <Routes>
         <Route element={<SiteLayout />}>
-          <Route index element={<EarlyAccessPage />} />
-          {developmentMode && <Route path="dev-home" element={<DevelopmentHomePage />} />}
-          {developmentMode && <Route path="dev-services" element={<DevelopmentServicesPage />} />}
-          {developmentMode && <Route path="dev-services/:businessId" element={<DevelopmentServicesPage />} />}
-          {developmentMode && <Route path="dev-businesses" element={<DevelopmentServicesPage />} />}
+          <Route index element={<HomePage />} />
+          <Route path="services" element={<ServicesPage />} />
+          <Route path="services/:businessId" element={<ServicesPage />} />
+          <Route path="businesses" element={<LegacyBusinessRedirect />} />
+          <Route path="businesses/:businessId" element={<LegacyBusinessRedirect />} />
           <Route path="privacy" element={<PrivacyPage />} />
           <Route path="terms" element={<TermsPage />} />
           <Route path="contact" element={<ContactPage />} />

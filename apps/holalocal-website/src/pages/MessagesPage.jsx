@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  hasOwnerOnlyConversationParticipants,
+  isConversationUnreadForUser,
+  normalizeMessageTranslation,
+  selectMessageDisplayText,
+  shouldShowTranslatedMessage,
+} from '@holalocal/firebase-contract'
 import AccessibleDialog from '../components/common/AccessibleDialog.jsx'
 import { ImageAvatar } from '../components/common/PublicBusinessCard.jsx'
 import LoadingScreen from '../components/common/LoadingScreen.jsx'
@@ -9,9 +16,11 @@ import useAuthentication from '../hooks/useAuthentication.js'
 import { getPublicBusinessById } from '../services/businessService.js'
 import {
   getConversationForUser,
-  getConversationsForUser,
   hideConversationForUser,
+  markConversationReadForUser,
+  createMessageRequestId,
   sendTextMessage,
+  subscribeToConversationsForUser,
   subscribeToMessages,
 } from '../services/conversationService.js'
 
@@ -27,8 +36,7 @@ function formatMessageTime(timestamp) {
   }).format(date)
 }
 
-async function loadConversationSummaries(userId) {
-  const conversations = await getConversationsForUser(userId)
+async function enrichConversationSummaries(conversations) {
   const businesses = new Map()
 
   await Promise.all(conversations.map(async (conversation) => {
@@ -37,10 +45,14 @@ async function loadConversationSummaries(userId) {
     }
   }))
 
-  return conversations.map((conversation) => ({
-    ...conversation,
-    business: businesses.get(conversation.businessId),
-  }))
+  return conversations
+    .map((conversation) => ({
+      ...conversation,
+      business: businesses.get(conversation.businessId),
+    }))
+    .filter((conversation) => (
+      hasOwnerOnlyConversationParticipants(conversation, conversation.business?.ownerId)
+    ))
 }
 
 function MessagesPage() {
@@ -49,6 +61,8 @@ function MessagesPage() {
   const navigate = useNavigate()
   const { user, userProfile } = useAuthentication()
   const messagesEndRef = useRef(null)
+  const readMarkersRef = useRef(new Set())
+  const pendingSendRef = useRef(null)
   const [conversations, setConversations] = useState([])
   const [inboxLoading, setInboxLoading] = useState(true)
   const [conversation, setConversation] = useState(null)
@@ -63,26 +77,43 @@ function MessagesPage() {
   const [inboxAttempt, setInboxAttempt] = useState(0)
   const [conversationAttempt, setConversationAttempt] = useState(0)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [originalMessageIds, setOriginalMessageIds] = useState(() => new Set())
 
   useEffect(() => {
     let active = true
+    let requestId = 0
 
-    loadConversationSummaries(user.uid)
-      .then((items) => {
+    const unsubscribe = subscribeToConversationsForUser(
+      user.uid,
+      (items) => {
+        const currentRequest = requestId + 1
+        requestId = currentRequest
+        enrichConversationSummaries(items)
+          .then((summaries) => {
+            if (active && currentRequest === requestId) {
+              setConversations(summaries)
+              setError('')
+              setInboxLoading(false)
+            }
+          })
+          .catch((loadError) => {
+            if (active && currentRequest === requestId) {
+              setError(loadError.message || t('messages.errors.loadConversations'))
+              setInboxLoading(false)
+            }
+          })
+      },
+      (loadError) => {
         if (active) {
-          setConversations(items)
-          setError('')
+          setError(loadError.message || t('messages.errors.loadConversations'))
+          setInboxLoading(false)
         }
-      })
-      .catch((loadError) => {
-        if (active) setError(loadError.message || t('messages.errors.loadConversations'))
-      })
-      .finally(() => {
-        if (active) setInboxLoading(false)
-      })
+      },
+    )
 
     return () => {
       active = false
+      unsubscribe()
     }
   }, [inboxAttempt, t, user.uid])
 
@@ -134,16 +165,36 @@ function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    if (!conversationId || !user.uid) return
+    const currentConversation = conversations.find((item) => item.conversationId === conversationId) ?? conversation
+    if (!isConversationUnreadForUser(currentConversation, user.uid)) return
+
+    const marker = `${conversationId}:${currentConversation.lastMessage?.messageId ?? ''}:${currentConversation.lastMessageAt?.toMillis?.() ?? ''}`
+    if (readMarkersRef.current.has(marker)) return
+    readMarkersRef.current.add(marker)
+
+    markConversationReadForUser(conversationId, user.uid).catch(() => {
+      readMarkersRef.current.delete(marker)
+    })
+  }, [conversation, conversationId, conversations, user.uid])
+
   async function handleSend(event) {
     event.preventDefault()
-    if (!conversationId || !messageText.trim()) return
+    const normalizedText = messageText.trim()
+    if (!conversationId || !normalizedText) return
+
+    const pendingSend = pendingSendRef.current?.text === normalizedText
+      ? pendingSendRef.current
+      : { text: normalizedText, requestId: createMessageRequestId() }
+    pendingSendRef.current = pendingSend
 
     setSending(true)
     setError('')
     try {
-      await sendTextMessage(conversationId, user.uid, messageText)
+      await sendTextMessage(conversationId, user.uid, normalizedText, pendingSend.requestId)
+      pendingSendRef.current = null
       setMessageText('')
-      setConversations(await loadConversationSummaries(user.uid))
     } catch (sendError) {
       setError(sendError.message || t('messages.errors.send'))
     } finally {
@@ -168,6 +219,15 @@ function MessagesPage() {
     } finally {
       setHiding(false)
     }
+  }
+
+  function toggleOriginalMessage(messageId) {
+    setOriginalMessageIds((current) => {
+      const next = new Set(current)
+      if (next.has(messageId)) next.delete(messageId)
+      else next.add(messageId)
+      return next
+    })
   }
 
   const customerLanguage = userProfile?.preferredLocale ?? t('messages.preferredLanguageFallback')
@@ -213,21 +273,32 @@ function MessagesPage() {
           ) : conversations.length > 0 ? (
             <nav>
               {conversations.map((item) => (
-                <Link
-                  className={item.conversationId === conversationId ? 'is-active' : ''}
-                  key={item.conversationId}
-                  to={`/messages/${item.conversationId}`}
-                >
-                  <ImageAvatar
-                    className="image-avatar--conversation"
-                    name={item.business?.name || t('messages.businessFallback')}
-                    src={item.business?.logoUrl}
-                  />
-                  <span>
-                    <strong>{item.business?.name || t('messages.localBusiness')}</strong>
-                    <small>{item.lastMessage?.preview || t('messages.noMessages')}</small>
-                  </span>
-                </Link>
+                (() => {
+                  const isUnread = isConversationUnreadForUser(item, user.uid)
+                  const businessName = item.business?.name || t('messages.localBusiness')
+                  return (
+                    <Link
+                      aria-label={isUnread ? t('messages.unreadConversation', { name: businessName }) : undefined}
+                      className={[
+                        item.conversationId === conversationId ? 'is-active' : '',
+                        isUnread ? 'is-unread' : '',
+                      ].filter(Boolean).join(' ')}
+                      key={item.conversationId}
+                      to={`/messages/${item.conversationId}`}
+                    >
+                      <ImageAvatar
+                        className="image-avatar--conversation"
+                        name={item.business?.name || t('messages.businessFallback')}
+                        src={item.business?.logoUrl}
+                      />
+                      <span>
+                        <strong>{businessName}</strong>
+                        <small>{item.lastMessage?.preview || t('messages.noMessages')}</small>
+                      </span>
+                      <time>{formatMessageTime(item.lastMessageAt ?? item.createdAt)}</time>
+                    </Link>
+                  )
+                })()
               ))}
             </nav>
           ) : (
@@ -289,9 +360,31 @@ function MessagesPage() {
               <div className="message-list" aria-live="polite">
                 {messages.length > 0 ? messages.map((message) => {
                   const isOwn = message.senderId === user.uid
+                  const translation = normalizeMessageTranslation(message.translation)
+                  const canShowTranslation = shouldShowTranslatedMessage(message, user.uid)
+                  const showOriginal = originalMessageIds.has(message.messageId)
+                  const visibleText = selectMessageDisplayText(message, user.uid, showOriginal)
                   return (
                     <article className={isOwn ? 'message-bubble is-own' : 'message-bubble'} key={message.messageId}>
-                      <p>{message.text}</p>
+                      <p>{visibleText}</p>
+                      {canShowTranslation && (
+                        <div className="message-translation-controls">
+                          <span>{t('messages.translation.completed')}</span>
+                          <button
+                            aria-label={showOriginal ? t('messages.translation.viewTranslation') : t('messages.translation.viewOriginal')}
+                            onClick={() => toggleOriginalMessage(message.messageId)}
+                            type="button"
+                          >
+                            {showOriginal ? t('messages.translation.viewTranslation') : t('messages.translation.viewOriginal')}
+                          </button>
+                        </div>
+                      )}
+                      {!isOwn && translation.status === 'processing' && (
+                        <small className="message-translation-status">{t('messages.translation.processing')}</small>
+                      )}
+                      {!isOwn && translation.status === 'failed' && (
+                        <small className="message-translation-status">{t('messages.translation.failed')}</small>
+                      )}
                       <time>{formatMessageTime(message.createdAt)}</time>
                     </article>
                   )

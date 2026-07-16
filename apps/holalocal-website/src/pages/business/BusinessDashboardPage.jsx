@@ -6,7 +6,7 @@ import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { ImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
-import { ensureBusinessProfile } from '../../services/businessService.js'
+import { ensureBusinessProfile, submitBusinessForReview } from '../../services/businessService.js'
 import { formatLanguageList, getLanguageNameFromCode } from '../../utils/languages.js'
 import { getBusinessProfileCompletion } from '../../utils/businessCompletion.js'
 import { getBusinessCategoryLabel } from '../../utils/business.js'
@@ -20,6 +20,9 @@ function BusinessDashboardPage() {
   const [businessProfile, setBusinessProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [submitError, setSubmitError] = useState('')
+  const [submitSuccess, setSubmitSuccess] = useState('')
+  const [submittingForReview, setSubmittingForReview] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
 
   useEffect(() => {
@@ -42,6 +45,22 @@ function BusinessDashboardPage() {
     return () => { active = false }
   }, [loadAttempt, t, user.uid, userProfile])
 
+  async function handleSubmitForReview() {
+    if (!businessProfile?.businessId) return
+    setSubmittingForReview(true)
+    setSubmitError('')
+    setSubmitSuccess('')
+    try {
+      const submittedBusiness = await submitBusinessForReview(businessProfile.businessId)
+      setBusinessProfile(submittedBusiness)
+      setSubmitSuccess(t('business.control.submitSuccess'))
+    } catch (submissionError) {
+      setSubmitError(submissionError.message || t('business.control.submitError'))
+    } finally {
+      setSubmittingForReview(false)
+    }
+  }
+
   if (loading) return <LoadingScreen message={t('business.control.loading')} />
   if (error) {
     return <RecoveryMessage message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} />
@@ -56,6 +75,7 @@ function BusinessDashboardPage() {
   const languages = businessProfile?.languages ?? []
   const primaryLanguage = businessProfile?.primaryLanguage || languages[0]
   const completion = getBusinessProfileCompletion(businessProfile)
+  const canSubmitForReview = ['draft', 'rejected'].includes(status) && completion.ready
   const hasHeroContext = Boolean(businessProfile?.primaryCategoryId && locality)
   const additionalAreaCount = serviceAreas.filter(
     (area) => area.trim().toLocaleLowerCase() !== locality.trim().toLocaleLowerCase(),
@@ -112,7 +132,20 @@ function BusinessDashboardPage() {
             <h2>{t('business.control.nextTitle')}</h2>
           </header>
           <p>{completion.ready ? t('business.control.coreReady') : t('business.control.nextPrompt', { item: t(`business.control.checklist.${completion.nextRecommendation}`) })}</p>
-          <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>
+          {submitError && <p className="form-message form-message--error" role="alert">{submitError}</p>}
+          {submitSuccess && <p className="form-message form-message--success" role="status">{submitSuccess}</p>}
+          {canSubmitForReview ? (
+            <button
+              className="button button--primary"
+              disabled={submittingForReview}
+              onClick={() => void handleSubmitForReview()}
+              type="button"
+            >
+              {submittingForReview ? t('common.loading') : t('business.control.submitForReview')}
+            </button>
+          ) : (
+            <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>
+          )}
         </article>
 
         <article className={`account-card business-dashboard__card business-dashboard__card--visibility business-dashboard__card--${status}`}>

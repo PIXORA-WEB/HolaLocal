@@ -12,6 +12,8 @@ function usage() {
   --project-id <firebase-project> \\
   --confirm-project <same-project> \\
   --audit-report <firebase-audit-report.json> \\
+  --expected-target-count <count> \\
+  --max-mutations <count> \\
   --output-dir <private-output-dir>
 
 This is a read-only dry run. It has no apply, write, repair or migration mode.`
@@ -32,6 +34,8 @@ async function main(argv = process.argv.slice(2)) {
     projectId: options.projectId,
     auditReport: options.auditReport,
     businessId: options.businessId,
+    expectedTargetCount: options.expectedTargetCount,
+    maxMutations: options.maxMutations,
   })
   await writeContactPrivacyRepairReports(options.outputDir, report)
   console.log(humanSummary(report))

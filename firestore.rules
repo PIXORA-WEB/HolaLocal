@@ -45,9 +45,40 @@ service cloud.firestore {
 
     function hasSafePublicBusinessData(data) {
       return data.status == 'active'
+        && data.publishedAt != null
+        && data.deletedAt == null
+        && data.deletionRequestedAt == null
         && data.contact is map
         && safePublicContact(data.contact)
+        && hasCompletePublicBusinessProfile(data)
         && !data.keys().hasAny(['phone', 'email', 'whatsapp', 'whatsappNumber']);
+    }
+
+    function hasCompletePublicBusinessProfile(data) {
+      return data.ownerId is string
+        && data.ownerId.size() > 0
+        && data.managerIds is list
+        && data.ownerId in data.managerIds
+        && data.name is string
+        && data.name.size() > 0
+        && data.description is string
+        && data.description.size() > 0
+        && data.primaryCategoryId is string
+        && data.primaryCategoryId.size() > 0
+        && data.categoryIds is list
+        && data.categoryIds.size() > 0
+        && data.serviceAreas is list
+        && data.serviceAreas.size() > 0
+        && data.languages is list
+        && data.languages.size() > 0
+        && data.primaryLanguage in data.languages
+        && data.location is map
+        && data.location.locality is string
+        && data.location.locality.size() > 0
+        && data.location.region is string
+        && data.location.region.size() > 0
+        && data.location.countryCode is string
+        && data.location.countryCode.size() > 0;
     }
 
     function safePublicContact(contact) {
@@ -61,41 +92,151 @@ service cloud.firestore {
         && contact.whatsappVisible is bool
         && contact.websiteVisible is bool
         && contact.allowCallbackRequests is bool
+        && contact.phone is string
+        && contact.email is string
+        && contact.whatsappNumber is string
+        && contact.website is string
         && (contact.phoneVisible || contact.phone == '')
         && (contact.emailVisible || contact.email == '')
         && (contact.whatsappVisible || contact.whatsappNumber == '')
         && (contact.websiteVisible || contact.website == '')
-        && contact.preferredContactMethod in ['holalocal', 'phone', 'email', 'whatsapp'];
+        && contact.preferredContactMethod in ['holalocal', 'phone', 'email', 'whatsapp']
+        && (contact.preferredContactMethod == 'holalocal'
+          || (contact.preferredContactMethod == 'phone' && contact.phoneVisible && contact.phone.size() > 0)
+          || (contact.preferredContactMethod == 'email' && contact.emailVisible && contact.email.size() > 0)
+          || (contact.preferredContactMethod == 'whatsapp' && contact.whatsappVisible && contact.whatsappNumber.size() > 0));
     }
 
-    match /users/{userId} {
-      allow create: if isOwner(userId)
+    function validPrivateContact(contact) {
+      return contact is map
+        && contact.keys().hasOnly([
+          'phone', 'phoneVisible', 'email', 'emailVisible', 'whatsappNumber',
+          'whatsappVisible', 'website', 'websiteVisible', 'preferredContactMethod',
+          'allowCallbackRequests'
+        ])
+        && contact.phone is string
+        && contact.phoneVisible is bool
+        && contact.email is string
+        && contact.emailVisible is bool
+        && contact.whatsappNumber is string
+        && contact.whatsappVisible is bool
+        && contact.website is string
+        && contact.websiteVisible is bool
+        && contact.preferredContactMethod in ['holalocal', 'phone', 'email', 'whatsapp']
+        && contact.allowCallbackRequests is bool;
+    }
+
+    function validUserCreate(userId) {
+      return request.resource.data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'displayNameNormalized', 'firstName', 'lastName',
+          'photoURL', 'profilePhoto', 'preferredLocale', 'accountType', 'roles', 'city',
+          'country', 'accountStatus', 'profileCompleted', 'onboardingCompleted',
+          'businessProfileRequired', 'businessProfileCompleted', 'businessId',
+          'createdAt', 'updatedAt', 'lastActiveAt', 'termsAccepted', 'termsAcceptedAt',
+          'termsVersion', 'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion',
+          'deletionRequestedAt', 'deletionScheduledFor', 'anonymizedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'uid', 'email', 'displayName', 'displayNameNormalized', 'preferredLocale',
+          'accountType', 'roles', 'accountStatus', 'profileCompleted',
+          'onboardingCompleted', 'businessProfileRequired', 'businessProfileCompleted',
+          'createdAt', 'updatedAt', 'termsAccepted', 'termsAcceptedAt', 'termsVersion',
+          'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion'
+        ])
+        && request.resource.data.uid == userId
+        && request.resource.data.email is string
         && request.resource.data.roles == ['customer']
+        && request.resource.data.accountType == 'customer'
         && request.resource.data.accountStatus == 'active'
-        && request.resource.data.termsAccepted == true
-        && request.resource.data.termsAcceptedAt == request.time
-        && request.resource.data.termsVersion == '1.0'
-        && request.resource.data.privacyAccepted == true
-        && request.resource.data.privacyAcceptedAt == request.time
-        && request.resource.data.privacyVersion == '1.0';
-      allow read: if isOwner(userId) || isAdmin();
-      allow update: if isOwner(userId)
-        && hasActiveAccount()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        && request.resource.data.profileCompleted == false
+        && request.resource.data.onboardingCompleted == false
+        && request.resource.data.businessProfileRequired == false
+        && request.resource.data.businessProfileCompleted == false
+        && request.resource.data.businessId == null
+        && request.resource.data.deletionRequestedAt == null
+        && request.resource.data.deletionScheduledFor == null
+        && request.resource.data.anonymizedAt == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function validProfileCompletedUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileCompleted'])
+        || request.resource.data.profileCompleted == false
+        || (
+          resource.data.profileCompleted == false
+          && request.resource.data.profileCompleted == true
+          && request.resource.data.firstName is string
+          && request.resource.data.firstName.size() > 0
+          && request.resource.data.lastName is string
+          && request.resource.data.lastName.size() > 0
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() > 0
+          && request.resource.data.preferredLocale is string
+          && request.resource.data.preferredLocale.size() > 0
+          && request.resource.data.city is string
+          && request.resource.data.city.size() > 0
+          && request.resource.data.country is string
+          && request.resource.data.country.size() > 0
+        );
+    }
+
+    function validUserCompletionState() {
+      return request.resource.data.profileCompleted != true || (
+        request.resource.data.firstName is string
+        && request.resource.data.firstName.size() > 0
+        && request.resource.data.lastName is string
+        && request.resource.data.lastName.size() > 0
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.preferredLocale is string
+        && request.resource.data.preferredLocale.size() > 0
+        && request.resource.data.city is string
+        && request.resource.data.city.size() > 0
+        && request.resource.data.country is string
+        && request.resource.data.country.size() > 0
+      );
+    }
+
+    function validCustomerOnboardingUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'accountType', 'onboardingCompleted'
+        ])
+        || (
+          request.resource.data.roles == resource.data.roles
+          && request.resource.data.roles == ['customer']
+          && request.resource.data.accountType == 'customer'
+          && request.resource.data.onboardingCompleted == true
+        );
+    }
+
+    function validUserOwnerUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName', 'displayNameNormalized', 'firstName', 'lastName',
           'photoURL', 'profilePhoto', 'preferredLocale', 'city', 'country',
-          'profileCompleted', 'businessProfileCompleted', 'businessId',
-          'roles', 'accountType', 'onboardingCompleted', 'businessProfileRequired',
+          'profileCompleted', 'accountType', 'onboardingCompleted',
           'termsAccepted', 'termsAcceptedAt', 'termsVersion',
           'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion',
           'deletionRequestedAt', 'lastActiveAt', 'updatedAt'
         ])
-        && request.resource.data.roles.hasOnly(['customer', 'business'])
-        && request.resource.data.roles.size() >= 1
-        && request.resource.data.accountType in ['customer', 'business', 'both']
-        && (request.resource.data.accountType != 'customer' || request.resource.data.roles == ['customer'])
-        && (request.resource.data.accountType != 'business' || request.resource.data.roles == ['business'])
-        && (request.resource.data.accountType != 'both' || request.resource.data.roles.hasAll(['customer', 'business']))
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && (!resource.data.keys().hasAny(['emailVerified'])
+          || request.resource.data.emailVerified == resource.data.emailVerified)
+        && request.resource.data.roles == resource.data.roles
+        && request.resource.data.businessId == resource.data.businessId
+        && request.resource.data.businessProfileRequired == resource.data.businessProfileRequired
+        && request.resource.data.businessProfileCompleted == resource.data.businessProfileCompleted
+        && request.resource.data.accountStatus == resource.data.accountStatus
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.deletionScheduledFor == resource.data.deletionScheduledFor
+        && request.resource.data.anonymizedAt == resource.data.anonymizedAt
+        && request.resource.data.updatedAt == request.time
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastActiveAt'])
+          || request.resource.data.lastActiveAt == request.time)
+        && validUserCompletionState()
+        && validProfileCompletedUpdate()
+        && validCustomerOnboardingUpdate()
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'termsAccepted', 'termsAcceptedAt', 'termsVersion'
         ]) || (
@@ -111,34 +252,206 @@ service cloud.firestore {
           && request.resource.data.privacyAccepted == true
           && request.resource.data.privacyAcceptedAt == request.time
           && request.resource.data.privacyVersion == '1.0'
-        ))
-        && request.resource.data.accountStatus == resource.data.accountStatus;
-      allow update: if isAdmin();
+        ));
+    }
+
+    function validBusinessKeys(data) {
+      return data.keys().hasOnly([
+        'ownerId', 'managerIds', 'name', 'nameNormalized', 'slug', 'tagline',
+        'description', 'primaryCategoryId', 'categoryIds', 'serviceAreas',
+        'serviceRadiusKm', 'location', 'contact', 'languages', 'primaryLanguage',
+        'profilePhoto', 'coverPhoto', 'galleryImageURLs', 'galleryImages',
+        'galleryCount', 'ratingAverage', 'ratingCount', 'status',
+        'verificationStatus', 'verifiedAt', 'subscription', 'profileCompleted',
+        'publishedAt', 'submittedAt', 'deletionRequestedAt', 'deletedAt',
+        'createdAt', 'updatedAt'
+      ]);
+    }
+
+    function validBusinessCreate() {
+      return validBusinessKeys(request.resource.data)
+        && request.resource.data.keys().hasAll([
+          'ownerId', 'managerIds', 'name', 'nameNormalized', 'slug', 'tagline',
+          'description', 'primaryCategoryId', 'categoryIds', 'serviceAreas',
+          'serviceRadiusKm', 'location', 'contact', 'languages', 'primaryLanguage',
+          'galleryImageURLs', 'galleryImages', 'galleryCount', 'ratingAverage',
+          'ratingCount', 'status', 'verificationStatus', 'subscription',
+          'profileCompleted', 'publishedAt', 'submittedAt', 'deletionRequestedAt',
+          'deletedAt', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.managerIds == [request.auth.uid]
+        && request.resource.data.status == 'draft'
+        && request.resource.data.verificationStatus == 'unverified'
+        && request.resource.data.profileCompleted == false
+        && request.resource.data.publishedAt == null
+        && request.resource.data.submittedAt == null
+        && request.resource.data.deletionRequestedAt == null
+        && request.resource.data.deletedAt == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.galleryCount == 0
+        && request.resource.data.ratingAverage == 0
+        && request.resource.data.ratingCount == 0
+        && request.resource.data.subscription is map
+        && safePublicContact(request.resource.data.contact);
+    }
+
+    function immutableBusinessIdentity() {
+      return request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.managerIds == resource.data.managerIds
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function validBusinessDraftEdit() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'tagline', 'description', 'primaryCategoryId', 'categoryIds',
+          'serviceAreas', 'serviceRadiusKm', 'location', 'contact', 'languages',
+          'primaryLanguage', 'profilePhoto', 'galleryImageURLs', 'galleryImages',
+          'updatedAt'
+        ])
+        && validBusinessKeys(request.resource.data)
+        && immutableBusinessIdentity()
+        && resource.data.status in ['draft', 'rejected']
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.verificationStatus == resource.data.verificationStatus
+        && request.resource.data.verifiedAt == resource.data.verifiedAt
+        && request.resource.data.subscription == resource.data.subscription
+        && request.resource.data.profileCompleted == resource.data.profileCompleted
+        && request.resource.data.galleryCount == resource.data.galleryCount
+        && request.resource.data.ratingAverage == resource.data.ratingAverage
+        && request.resource.data.ratingCount == resource.data.ratingCount
+        && request.resource.data.publishedAt == resource.data.publishedAt
+        && request.resource.data.submittedAt == resource.data.submittedAt
+        && request.resource.data.deletionRequestedAt == resource.data.deletionRequestedAt
+        && request.resource.data.deletedAt == resource.data.deletedAt
+        && request.resource.data.updatedAt == request.time
+        && safePublicContact(request.resource.data.contact)
+        && (request.resource.data.status != 'active' || hasSafePublicBusinessData(request.resource.data));
+    }
+
+    function validBusinessSubmitForReview() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'submittedAt', 'updatedAt'
+        ])
+        && validBusinessKeys(request.resource.data)
+        && immutableBusinessIdentity()
+        && resource.data.status in ['draft', 'rejected']
+        && request.resource.data.status == 'pending_review'
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.publishedAt == resource.data.publishedAt
+        && request.resource.data.verificationStatus == resource.data.verificationStatus
+        && request.resource.data.verifiedAt == resource.data.verifiedAt
+        && request.resource.data.subscription == resource.data.subscription
+        && request.resource.data.profileCompleted == resource.data.profileCompleted
+        && request.resource.data.galleryCount == resource.data.galleryCount
+        && request.resource.data.ratingAverage == resource.data.ratingAverage
+        && request.resource.data.ratingCount == resource.data.ratingCount
+        && request.resource.data.deletionRequestedAt == resource.data.deletionRequestedAt
+        && request.resource.data.deletedAt == resource.data.deletedAt
+        && safePublicContact(request.resource.data.contact)
+        && hasCompletePublicBusinessProfile(request.resource.data);
+    }
+
+    function validBusinessOwnerUpdate() {
+      return resource.data.status in ['draft', 'rejected']
+        && (
+          (request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+            && validBusinessSubmitForReview())
+          || (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+            && validBusinessDraftEdit())
+        );
+    }
+
+    function validBusinessTransition() {
+      return (resource.data.status == 'pending_review' && request.resource.data.status in ['active', 'rejected'])
+        || (resource.data.status == 'active' && request.resource.data.status in ['suspended', 'archived'])
+        || (resource.data.status == 'suspended' && request.resource.data.status == 'active')
+        || (resource.data.status == request.resource.data.status);
+    }
+
+    function validTransitionTimestamps() {
+      return (request.resource.data.status != 'active'
+          || resource.data.status == 'active'
+          || request.resource.data.publishedAt == request.time)
+        && (request.resource.data.verificationStatus != 'verified'
+          || resource.data.verificationStatus == 'verified'
+          || request.resource.data.verifiedAt == request.time)
+        && (request.resource.data.status != 'rejected'
+          || resource.data.status == 'rejected'
+          || request.resource.data.submittedAt == resource.data.submittedAt);
+    }
+
+    function validModeratorPublicationUpdate() {
+      return isModerator()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'verificationStatus', 'verifiedAt', 'publishedAt',
+          'submittedAt', 'updatedAt'
+        ])
+        && validBusinessKeys(request.resource.data)
+        && immutableBusinessIdentity()
+        && request.resource.data.updatedAt == request.time
+        && resource.data.status != 'deleted'
+        && request.resource.data.status in ['draft', 'pending_review', 'rejected', 'active', 'suspended', 'archived', 'deleted']
+        && request.resource.data.verificationStatus in ['unverified', 'pending', 'verified', 'rejected']
+        && validBusinessTransition()
+        && (request.resource.data.status != 'active' || hasSafePublicBusinessData(request.resource.data))
+        && request.resource.data.deletionRequestedAt == resource.data.deletionRequestedAt
+        && request.resource.data.deletedAt == resource.data.deletedAt
+        && validTransitionTimestamps();
+    }
+
+    function validBusinessPrivateCreate(businessId) {
+      return request.resource.data.keys().hasOnly([
+          'ownerId', 'managerIds', 'contact', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'ownerId', 'managerIds', 'contact', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.ownerId == getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId
+        && request.resource.data.managerIds == getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.managerIds
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && validPrivateContact(request.resource.data.contact);
+    }
+
+    function validBusinessPrivateUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contact', 'updatedAt'])
+        && request.resource.data.keys().hasOnly([
+          'ownerId', 'managerIds', 'contact', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.managerIds == resource.data.managerIds
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && validPrivateContact(request.resource.data.contact);
+    }
+
+    match /users/{userId} {
+      allow create: if isOwner(userId)
+        && validUserCreate(userId)
+        && request.resource.data.roles == ['customer']
+        && request.resource.data.accountStatus == 'active'
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.termsAcceptedAt == request.time
+        && request.resource.data.termsVersion == '1.0'
+        && request.resource.data.privacyAccepted == true
+        && request.resource.data.privacyAcceptedAt == request.time
+        && request.resource.data.privacyVersion == '1.0';
+      allow read: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId)
+        && hasActiveAccount()
+        && validUserOwnerUpdate();
       allow delete: if false;
     }
 
     match /businesses/{businessId} {
       allow read: if hasSafePublicBusinessData(resource.data) || managesBusiness(businessId) || isModerator();
-      allow create: if hasActiveAccount()
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.managerIds == [request.auth.uid]
-        && request.resource.data.status == 'draft'
-        && request.resource.data.verificationStatus == 'unverified'
-        && safePublicContact(request.resource.data.contact);
+      allow create: if false;
       allow update: if managesBusiness(businessId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'name', 'nameNormalized', 'slug', 'tagline', 'description',
-          'primaryCategoryId', 'categoryIds', 'serviceAreas', 'serviceRadiusKm',
-          'location', 'contact', 'languages', 'primaryLanguage', 'profilePhoto',
-          'galleryImageURLs', 'galleryImages', 'galleryCount',
-          'profileCompleted', 'updatedAt'
-        ])
-        && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.managerIds == resource.data.managerIds
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.verificationStatus == resource.data.verificationStatus
-        && safePublicContact(request.resource.data.contact);
-      allow update: if isAdmin();
+        && validBusinessOwnerUpdate();
+      allow update: if validModeratorPublicationUpdate();
       allow delete: if false;
     }
 
@@ -147,13 +460,9 @@ service cloud.firestore {
       allow create: if hasActiveAccount()
         && (getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId == request.auth.uid
           || request.auth.uid in getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.managerIds)
-        && request.resource.data.ownerId == getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId
-        && request.resource.data.managerIds == getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.managerIds;
+        && validBusinessPrivateCreate(businessId);
       allow update: if managesBusiness(businessId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contact', 'updatedAt'])
-        && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.managerIds == resource.data.managerIds;
-      allow update: if isAdmin();
+        && validBusinessPrivateUpdate();
       allow delete: if false;
     }
 
@@ -162,13 +471,45 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/businesses/$(request.resource.data.businessId)).data;
       }
 
+      function storedBusiness() {
+        return get(/databases/$(database)/documents/businesses/$(resource.data.businessId)).data;
+      }
+
       function validBusinessParticipant() {
-        return requestedBusiness().status == 'active'
+        return hasSafePublicBusinessData(requestedBusiness())
           && requestedBusiness().managerIds is list
           && request.auth.uid != requestedBusiness().ownerId
           && !(request.auth.uid in requestedBusiness().managerIds)
-          && (requestedBusiness().ownerId in request.resource.data.participantIds
-            || request.resource.data.participantIds.hasAny(requestedBusiness().managerIds));
+          && request.resource.data.participantIds.hasAll([
+            request.resource.data.customerId,
+            requestedBusiness().ownerId
+          ])
+          && request.resource.data.participantIds.hasOnly([
+            request.resource.data.customerId,
+            requestedBusiness().ownerId
+          ]);
+      }
+
+      function validStoredConversation() {
+        return resource.data.businessId is string
+          && resource.data.customerId is string
+          && resource.data.participantIds is list
+          && resource.data.participantIds.size() == 2
+          && resource.data.status == 'active'
+          && storedBusiness().ownerId is string
+          && resource.data.customerId != storedBusiness().ownerId
+          && resource.data.participantIds.hasAll([
+            resource.data.customerId,
+            storedBusiness().ownerId
+          ])
+          && resource.data.participantIds.hasOnly([
+            resource.data.customerId,
+            storedBusiness().ownerId
+          ]);
+      }
+
+      function validConversationId() {
+        return conversationId == request.resource.data.customerId + '__' + request.resource.data.businessId;
       }
 
       function validParticipantState() {
@@ -177,53 +518,157 @@ service cloud.firestore {
           && request.resource.data.participantState.keys().hasOnly(request.resource.data.participantIds);
       }
 
-      allow read: if hasActiveAccount() && request.auth.uid in resource.data.participantIds;
+      function validInitialParticipantState(participantId) {
+        return request.resource.data.participantState[participantId] is map
+          && request.resource.data.participantState[participantId].keys().hasOnly([
+            'lastReadAt', 'archivedAt', 'mutedUntil', 'deletedAt'
+          ])
+          && request.resource.data.participantState[participantId].lastReadAt == null
+          && request.resource.data.participantState[participantId].archivedAt == null
+          && request.resource.data.participantState[participantId].mutedUntil == null
+          && request.resource.data.participantState[participantId].deletedAt == null;
+      }
+
+      function otherParticipantId() {
+        return resource.data.participantIds[0] == request.auth.uid
+          ? resource.data.participantIds[1]
+          : resource.data.participantIds[0];
+      }
+
+      function validOwnParticipantStateUpdate() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'participantState', 'updatedAt'
+          ])
+          && request.resource.data.participantState is map
+          && request.resource.data.participantState.keys().hasAll(resource.data.participantState.keys())
+          && request.resource.data.participantState.keys().hasOnly(resource.data.participantState.keys())
+          && request.resource.data.participantState[otherParticipantId()] == resource.data.participantState[otherParticipantId()]
+          && request.resource.data.participantState[request.auth.uid] is map
+          && request.resource.data.participantState[request.auth.uid].keys().hasOnly([
+            'lastReadAt', 'archivedAt', 'mutedUntil', 'deletedAt'
+          ])
+          && (request.resource.data.participantState[request.auth.uid].lastReadAt == resource.data.participantState[request.auth.uid].lastReadAt
+            || request.resource.data.participantState[request.auth.uid].lastReadAt == request.time)
+          && request.resource.data.participantState[request.auth.uid].mutedUntil == resource.data.participantState[request.auth.uid].mutedUntil
+          && (request.resource.data.participantState[request.auth.uid].archivedAt == null
+            || request.resource.data.participantState[request.auth.uid].archivedAt == request.time
+            || request.resource.data.participantState[request.auth.uid].archivedAt == resource.data.participantState[request.auth.uid].archivedAt)
+          && (request.resource.data.participantState[request.auth.uid].deletedAt == null
+            || request.resource.data.participantState[request.auth.uid].deletedAt == request.time
+            || request.resource.data.participantState[request.auth.uid].deletedAt == resource.data.participantState[request.auth.uid].deletedAt)
+          && request.resource.data.updatedAt == request.time;
+      }
+
+      function previewMessagePath() {
+        return /databases/$(database)/documents/conversations/$(conversationId)/messages/$(request.resource.data.lastMessage.messageId);
+      }
+
+      function validMessageCreatedAt(data) {
+        return data.createdAt is timestamp
+          && data.createdAt <= request.time
+          && data.createdAt >= request.time - duration.value(5, 'm');
+      }
+
+      function validTextMessageData(data) {
+        return data.keys().hasOnly([
+            'senderId', 'type', 'text', 'attachment', 'moderationStatus',
+            'editedAt', 'deletedAt', 'createdAt'
+          ])
+          && data.senderId == request.auth.uid
+          && data.type == 'text'
+          && data.text is string
+          && data.text.matches('.*\\S.*')
+          && data.text.size() <= 4000
+          && data.attachment == null
+          && data.moderationStatus == 'visible'
+          && data.editedAt == null
+          && data.deletedAt == null
+          && validMessageCreatedAt(data);
+      }
+
+      function validMessagePreviewUpdate() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastMessage', 'lastMessageAt', 'updatedAt'
+          ])
+          && request.resource.data.lastMessage is map
+          && request.resource.data.lastMessage.keys().hasOnly([
+            'messageId', 'senderId', 'type', 'preview', 'createdAt'
+          ])
+          && request.resource.data.lastMessage.messageId is string
+          && existsAfter(previewMessagePath())
+          && validTextMessageData(getAfter(previewMessagePath()).data)
+          && request.resource.data.lastMessage.senderId == getAfter(previewMessagePath()).data.senderId
+          && request.resource.data.lastMessage.type == getAfter(previewMessagePath()).data.type
+          && request.resource.data.lastMessage.preview == getAfter(previewMessagePath()).data.text
+          && request.resource.data.lastMessage.createdAt == getAfter(previewMessagePath()).data.createdAt
+          && request.resource.data.lastMessageAt == getAfter(previewMessagePath()).data.createdAt
+          && (resource.data.lastMessageAt == null || request.resource.data.lastMessageAt >= resource.data.lastMessageAt)
+          && request.resource.data.updatedAt == request.time;
+      }
+
+      allow read: if hasActiveAccount()
+        && validStoredConversation()
+        && request.auth.uid in resource.data.participantIds;
       allow create: if hasActiveAccount()
         && request.resource.data.keys().hasOnly([
           'businessId', 'customerId', 'participantIds', 'participantState',
           'lastMessage', 'lastMessageAt', 'status', 'createdAt', 'updatedAt'
         ])
         && request.auth.uid == request.resource.data.customerId
+        && validConversationId()
         && request.auth.uid in request.resource.data.participantIds
         && request.resource.data.participantIds is list
         && request.resource.data.participantIds.size() == 2
         && validBusinessParticipant()
         && validParticipantState()
+        && validInitialParticipantState(request.auth.uid)
+        && validInitialParticipantState(request.resource.data.participantIds[0] == request.auth.uid
+          ? request.resource.data.participantIds[1]
+          : request.resource.data.participantIds[0])
         && request.resource.data.lastMessage == null
         && request.resource.data.lastMessageAt == null
         && request.resource.data.status == 'active'
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       allow update: if hasActiveAccount()
+        && validStoredConversation()
         && request.auth.uid in resource.data.participantIds
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'participantState', 'lastMessage', 'lastMessageAt', 'updatedAt'
-        ])
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.participantIds == resource.data.participantIds
+        && request.resource.data.businessId == resource.data.businessId
+        && request.resource.data.customerId == resource.data.customerId
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validOwnParticipantStateUpdate();
       allow delete: if false;
 
       match /messages/{messageId} {
         function parentConversation() {
           return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
         }
-        allow read: if hasActiveAccount() && request.auth.uid in parentConversation().participantIds;
-        allow create: if hasActiveAccount()
-          && request.auth.uid in parentConversation().participantIds
-          && parentConversation().status == 'active'
-          && request.resource.data.keys().hasOnly([
-            'senderId', 'type', 'text', 'attachment', 'moderationStatus',
-            'editedAt', 'deletedAt', 'createdAt'
-          ])
-          && request.resource.data.senderId == request.auth.uid
-          && request.resource.data.type == 'text'
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 4000
-          && request.resource.data.attachment == null
-          && request.resource.data.moderationStatus == 'visible'
-          && request.resource.data.editedAt == null
-          && request.resource.data.deletedAt == null
-          && request.resource.data.createdAt == request.time;
+        function parentBusiness() {
+          return get(/databases/$(database)/documents/businesses/$(parentConversation().businessId)).data;
+        }
+        function validParentConversation() {
+          return parentConversation().businessId is string
+            && parentConversation().customerId is string
+            && parentConversation().participantIds is list
+            && parentConversation().participantIds.size() == 2
+            && parentConversation().status == 'active'
+            && parentBusiness().ownerId is string
+            && parentConversation().customerId != parentBusiness().ownerId
+            && parentConversation().participantIds.hasAll([
+              parentConversation().customerId,
+              parentBusiness().ownerId
+            ])
+            && parentConversation().participantIds.hasOnly([
+              parentConversation().customerId,
+              parentBusiness().ownerId
+            ]);
+        }
+        allow read: if hasActiveAccount()
+          && validParentConversation()
+          && request.auth.uid in parentConversation().participantIds;
+        allow create: if false;
         allow update, delete: if false;
       }
     }

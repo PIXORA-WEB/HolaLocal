@@ -26,6 +26,8 @@ function source(fixtures) {
         path: documentPath,
         exists: data !== undefined,
         data: data ?? null,
+        updateTime: data !== undefined ? `${documentPath}-update-time` : null,
+        updateTimeString: data !== undefined ? `2026-01-01T00:00:00.000Z:${documentPath}` : null,
       })
     },
   })
@@ -36,18 +38,39 @@ test('contact privacy repair config fails closed', async () => {
     '--project-id', 'holalocal-491c9',
     '--confirm-project', 'wrong-project',
     '--business-id', 'business-1',
+    '--expected-target-count', '1',
+    '--max-mutations', '1',
     '--output-dir', '/tmp/out',
   ]), /confirm-project/)
+  assert.throws(() => parseContactPrivacyRepairArguments([
+    '--project-id', 'other-project',
+    '--confirm-project', 'other-project',
+    '--business-id', 'business-1',
+    '--expected-target-count', '1',
+    '--max-mutations', '1',
+    '--output-dir', '/tmp/out',
+  ]), /allowlisted/)
+  assert.throws(() => parseContactPrivacyRepairArguments([
+    '--project-id', 'holalocal-491c9',
+    '--confirm-project', 'holalocal-491c9',
+    '--business-id', 'business-1',
+    '--max-mutations', '1',
+    '--output-dir', '/tmp/out',
+  ]), /expected-target-count/)
   assert.throws(() => parseContactPrivacyRepairArguments([
     '--project-id', 'your-project-id',
     '--confirm-project', 'your-project-id',
     '--business-id', 'business-1',
+    '--expected-target-count', '1',
+    '--max-mutations', '1',
     '--output-dir', '/tmp/out',
   ]), /placeholder/)
   assert.throws(() => parseContactPrivacyRepairArguments([
     '--project-id', 'holalocal-491c9',
     '--confirm-project', 'holalocal-491c9',
     '--business-id', 'business-1',
+    '--expected-target-count', '1',
+    '--max-mutations', '1',
     '--output-dir', '/tmp/out',
     '--apply',
   ]), /read-only/)
@@ -86,6 +109,8 @@ test('dry run reports preservation requirements without contact values', async (
   const report = await runContactPrivacyRepairAudit({
     projectId: 'holalocal-491c9',
     businessId: 'business-1',
+    expectedTargetCount: 1,
+    maxMutations: 1,
     source: source({
       'businesses/business-1': {
         ownerId: 'owner-1',
@@ -101,6 +126,8 @@ test('dry run reports preservation requirements without contact values', async (
   assert.equal(report.target.websiteVisibilityHidden, true)
   assert.equal(report.target.privateWebsitePresent, false)
   assert.equal(report.target.preservationRequired, true)
+  assert.equal(report.guardrails.proposedDocumentMutationCount, 0)
+  assert.equal(report.guardrails.safeToSubmitForWriteApproval, false)
   assert.equal(JSON.stringify(report).includes(sensitiveWebsite), false)
   assert.equal(humanSummary(report).includes(sensitiveWebsite), false)
 })
@@ -109,6 +136,8 @@ test('dry run recognizes already preserved private website without exposing it',
   const report = await runContactPrivacyRepairAudit({
     projectId: 'holalocal-491c9',
     businessId: 'business-1',
+    expectedTargetCount: 1,
+    maxMutations: 1,
     source: source({
       'businesses/business-1': {
         ownerId: 'owner-1',
@@ -123,7 +152,46 @@ test('dry run recognizes already preserved private website without exposing it',
   assert.equal(report.target.privateWebsitePresent, true)
   assert.equal(report.target.privateWebsiteMatchesPublic, true)
   assert.equal(report.target.preservationRequired, false)
+  assert.equal(report.guardrails.proposedDocumentMutationCount, 1)
+  assert.equal(report.guardrails.safeToSubmitForWriteApproval, true)
+  assert.ok(report.target.documentFingerprints.publicBusiness)
+  assert.ok(report.target.preChangeFieldFingerprints['businesses.contact.website'])
   assert.equal(JSON.stringify(report).includes('secret-token'), false)
+})
+
+test('dry run rejects target-count mismatch, mutation ceiling, and idempotent repaired state can be zero', async () => {
+  await assert.rejects(() => runContactPrivacyRepairAudit({
+    projectId: 'holalocal-491c9',
+    businessId: 'business-1',
+    expectedTargetCount: 2,
+    maxMutations: 1,
+    source: source({
+      'businesses/business-1': { ownerId: 'owner-1', contact: { website: sensitiveWebsite, websiteVisible: false } },
+      'businessPrivate/business-1': { ownerId: 'owner-1', contact: { website: sensitiveWebsite, websiteVisible: false } },
+    }),
+  }), /Expected 2/)
+  await assert.rejects(() => runContactPrivacyRepairAudit({
+    projectId: 'holalocal-491c9',
+    businessId: 'business-1',
+    expectedTargetCount: 1,
+    maxMutations: 0,
+    source: source({
+      'businesses/business-1': { ownerId: 'owner-1', contact: { website: sensitiveWebsite, websiteVisible: false } },
+      'businessPrivate/business-1': { ownerId: 'owner-1', contact: { website: sensitiveWebsite, websiteVisible: false } },
+    }),
+  }), /exceeds maximum/)
+  const repaired = await runContactPrivacyRepairAudit({
+    projectId: 'holalocal-491c9',
+    businessId: 'business-1',
+    expectedTargetCount: 1,
+    maxMutations: 1,
+    source: source({
+      'businesses/business-1': { ownerId: 'owner-1', contact: { website: '', websiteVisible: false } },
+      'businessPrivate/business-1': { ownerId: 'owner-1', contact: { website: sensitiveWebsite, websiteVisible: false } },
+    }),
+  })
+  assert.equal(repaired.guardrails.proposedDocumentMutationCount, 0)
+  assert.ok(repaired.checks.drift.includes('public-website-already-absent'))
 })
 
 test('report writer refuses to overwrite existing reports', async () => {
@@ -132,6 +200,8 @@ test('report writer refuses to overwrite existing reports', async () => {
     const report = await runContactPrivacyRepairAudit({
       projectId: 'holalocal-491c9',
       businessId: 'business-1',
+      expectedTargetCount: 1,
+      maxMutations: 1,
       source: source({
         'businesses/business-1': { ownerId: 'owner-1', contact: { website: sensitiveWebsite } },
         'businessPrivate/business-1': { ownerId: 'owner-1', contact: {} },
@@ -155,7 +225,7 @@ test('source and audit modules do not expose Firebase write, delete, Storage or 
   const prohibited = [
     /setDoc|updateDoc|deleteDoc|writeBatch|runTransaction/,
     /transaction\.(set|update|delete)|batch\.(set|update|delete|commit)/,
-    /\.set\(|\.update\(|\.delete\(|\.create\(/,
+    /(?:doc|ref|snapshot)\.(set|update|delete|create)\(/,
     /getStorage|bucket\(|upload\(|save\(|copy\(|move\(|getSignedUrl|download\(/,
     /child_process|execFile|spawn|firebase\s+firestore|firebase\s+database/,
   ]

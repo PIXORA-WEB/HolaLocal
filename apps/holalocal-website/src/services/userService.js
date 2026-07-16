@@ -2,6 +2,7 @@
 // Authentication credentials remain the responsibility of Firebase Auth.
 import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
+import { updateAccountRoleCallable } from '../firebase/functionsClient.js'
 import { toWebsiteUserProfile } from './firebaseCompatibility.js'
 
 async function uploadImageFile(...args) {
@@ -25,8 +26,6 @@ const editableProfileFields = new Set([
   'city',
   'country',
   'profileCompleted',
-  'businessProfileCompleted',
-  'businessId',
   'termsAccepted',
   'termsAcceptedAt',
   'termsVersion',
@@ -35,12 +34,6 @@ const editableProfileFields = new Set([
   'privacyVersion',
   'deletionRequestedAt',
 ])
-
-const accountTypes = {
-  customer: ['customer'],
-  business: ['business'],
-  both: ['customer', 'business'],
-}
 
 const consentFields = new Set([
   'termsAccepted',
@@ -160,48 +153,12 @@ export async function updateUserProfile(uid, updates) {
 }
 
 export async function configureAccountType(uid, accountType) {
-  const roles = accountTypes[accountType]
-  if (!roles) throw new Error('Choose a valid account type.')
-
-  const reference = userDocument(uid)
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(reference)
-    if (!snapshot.exists()) throw new Error('User profile not found.')
-
-    transaction.update(reference, {
-      accountType,
-      roles,
-      onboardingCompleted: true,
-      businessProfileRequired: roles.includes('business'),
-      businessProfileCompleted: snapshot.data().businessProfileCompleted === true,
-      updatedAt: serverTimestamp(),
-    })
-  })
-
+  await updateAccountRoleCallable({ accountType })
   return getUserProfile(uid)
 }
 
 export async function enableBusinessRole(uid) {
-  const reference = userDocument(uid)
-
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(reference)
-    if (!snapshot.exists()) throw new Error('User profile not found.')
-
-    const profile = snapshot.data()
-    const existingRoles = Array.isArray(profile.roles) ? profile.roles : ['customer']
-    const roles = [...new Set([...existingRoles, 'business'])]
-
-    transaction.update(reference, {
-      accountType: roles.includes('customer') ? 'both' : 'business',
-      roles,
-      onboardingCompleted: true,
-      businessProfileRequired: true,
-      businessProfileCompleted: profile.businessProfileCompleted === true,
-      updatedAt: serverTimestamp(),
-    })
-  })
-
+  await updateAccountRoleCallable({ accountType: 'both' })
   return getUserProfile(uid)
 }
 
@@ -278,5 +235,6 @@ export async function ensureUserProfile(firebaseUser) {
 export async function updateLastActive(uid) {
   await updateDoc(userDocument(uid), {
     lastActiveAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   })
 }

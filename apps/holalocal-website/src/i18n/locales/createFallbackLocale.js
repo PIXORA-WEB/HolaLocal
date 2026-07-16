@@ -7,6 +7,12 @@ export function createFallbackLocale(fallback, overrides) {
     account: { ...fallback.account, ...overrides.account },
     language: { ...fallback.language, ...overrides.language },
     business: { ...fallback.business, ...overrides.business },
+    services: {
+      ...fallback.services,
+      ...overrides.services,
+      categories: { ...fallback.services.categories, ...overrides.services?.categories },
+      authPrompt: { ...fallback.services.authPrompt, ...overrides.services?.authPrompt },
+    },
     earlyAccess: {
       ...fallback.earlyAccess,
       ...overrides.earlyAccess,

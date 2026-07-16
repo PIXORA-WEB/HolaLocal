@@ -1,9 +1,10 @@
 // Owns all reads and writes for Firestore user profile documents.
 // Authentication credentials remain the responsibility of Firebase Auth.
 import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
-import { db } from '../firebase/config.js'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '../firebase/config.js'
 import { toMobileUserProfile } from './userCompatibility.js'
-import { buildProfileUpdates, buildRegistrationProfile, buildRoleUpdates } from './userPayloads.js'
+import { buildProfileUpdates, buildRegistrationProfile } from './userPayloads.js'
 
 function userDocument(uid) {
   if (!uid) throw new Error('A user ID is required.')
@@ -36,15 +37,8 @@ export async function updateUserProfile(uid, updates) {
 }
 
 export async function configureAccountType(uid, accountType) {
-  const reference = userDocument(uid)
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(reference)
-    if (!snapshot.exists()) throw new Error('User profile not found.')
-    transaction.update(reference, {
-      ...buildRoleUpdates(accountType, snapshot.data().businessProfileCompleted),
-      updatedAt: serverTimestamp(),
-    })
-  })
+  const updateAccountRole = httpsCallable(functions, 'updateAccountRole')
+  await updateAccountRole({ accountType })
   return getUserProfile(uid)
 }
 
@@ -55,5 +49,5 @@ export async function ensureUserProfile(firebaseUser) {
 }
 
 export async function updateLastActive(uid) {
-  await updateDoc(userDocument(uid), { lastActiveAt: serverTimestamp() })
+  await updateDoc(userDocument(uid), { lastActiveAt: serverTimestamp(), updatedAt: serverTimestamp() })
 }

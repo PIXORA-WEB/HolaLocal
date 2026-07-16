@@ -2,13 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { toMobileUserProfile } from '../src/services/userCompatibility.js'
+import { toWebsiteUserProfile } from '../../holalocal-website/src/services/firebaseCompatibility.js'
 import { completeRegistration } from '../src/firebase/registrationFlow.js'
 import { protectedAccountDecision, publicAccountDestination } from '../src/routes/accountRoutePolicy.js'
+import { hasCompleteUserProfile } from '@holalocal/firebase-contract'
 import {
   POLICY_VERSION,
   buildProfileUpdates,
   buildRegistrationProfile,
-  buildRoleUpdates,
   resolveRegistrationLocale,
 } from '../src/services/userPayloads.js'
 import { getAuthenticatedUiLanguage, getLanguageDisplayName } from '../src/utils/languages.js'
@@ -60,7 +61,8 @@ test('registration payload is explicit and rule-compatible', () => {
   assert.equal(payload.preferredLocale, 'en')
   assert.equal(payload.termsVersion, '1.0')
   assert.equal(payload.termsAcceptedAt, timestamp)
-  for (const field of ['password', 'surprise', 'isVerified', 'isPremium', 'preferredLanguage', 'deletedAt', 'businessId']) {
+  assert.equal(payload.businessId, null)
+  for (const field of ['password', 'surprise', 'isVerified', 'isPremium', 'preferredLanguage', 'deletedAt']) {
     assert.equal(field in payload, false)
   }
 })
@@ -78,17 +80,37 @@ test('registration preserves supported locales and explicitly handles invalid va
   assert.deepEqual(resolveRegistrationLocale(null), { locale: 'en', issue: null })
 })
 
-test('profile and role builders reject legacy or trusted fields', () => {
+test('profile builder rejects legacy or trusted fields', () => {
   assert.deepEqual(buildProfileUpdates({
     displayName: ' Test User ', preferredLocale: 'uk', isVerified: true,
-    isPremium: true, businessId: 'forbidden', deletedAt: timestamp,
+    isPremium: true, businessId: 'forbidden', businessProfileCompleted: true, deletedAt: timestamp,
   }), {
     displayName: ' Test User ', displayNameNormalized: 'test user', preferredLocale: 'uk',
   })
   assert.throws(() => buildProfileUpdates({ preferredLocale: 'English' }))
   assert.throws(() => buildProfileUpdates({ compatibility: { writeSafe: false } }))
-  assert.deepEqual(buildRoleUpdates('both').roles, ['customer', 'business'])
-  assert.throws(() => buildRoleUpdates('admin'))
+})
+
+test('website and mobile derive profile completion from the same canonical fields', () => {
+  const staleComplete = {
+    uid: 'user-1',
+    roles: ['customer'],
+    accountType: 'customer',
+    accountStatus: 'active',
+    profileCompleted: true,
+    firstName: '',
+    lastName: 'Customer',
+    displayName: 'Customer',
+    preferredLocale: 'en',
+    city: 'Marbella',
+    country: 'Spain',
+  }
+  assert.equal(hasCompleteUserProfile(staleComplete), false)
+  assert.equal(toMobileUserProfile('user-1', staleComplete).profileCompleted, false)
+  assert.equal(toWebsiteUserProfile('user-1', staleComplete).profileCompleted, false)
+  const complete = { ...staleComplete, firstName: 'Casey' }
+  assert.equal(toMobileUserProfile('user-1', complete).profileCompleted, true)
+  assert.equal(toWebsiteUserProfile('user-1', complete).profileCompleted, true)
 })
 
 test('verification is Auth-based and business creation remains disabled', async () => {
@@ -166,4 +188,21 @@ test('login and password reset continue using Firebase Auth operations', async (
   const authSource = await readFile(new URL('../src/firebase/auth.js', import.meta.url), 'utf8')
   assert.match(authSource, /signInWithEmailAndPassword\(auth, email, password\)/)
   assert.match(authSource, /sendPasswordResetEmail\(auth, email\)/)
+})
+
+test('mobile account type changes use trusted callable instead of direct role writes', async () => {
+  const [serviceSource, payloadSource, onboardingSource, dashboardSource, businessServiceSource] = await Promise.all([
+    readFile(new URL('../src/services/userService.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/services/userPayloads.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/auth/OnboardingPage.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/business/BusinessDashboardPage.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/services/businessService.js', import.meta.url), 'utf8'),
+  ])
+  assert.match(serviceSource, /httpsCallable\(functions, 'updateAccountRole'\)/)
+  assert.match(onboardingSource, /navigate\(requiresBusinessProfile \? '\/business\/dashboard' : '\/profile'/)
+  assert.match(dashboardSource, /business\.setupDeferred\.title/)
+  assert.match(dashboardSource, /if \(!businessProfile\)/)
+  assert.doesNotMatch(businessServiceSource, /createBusinessProfile|ensureBusinessProfile|transaction\.set/)
+  assert.doesNotMatch(payloadSource, /buildRoleUpdates/)
+  assert.doesNotMatch(payloadSource, /validateRoles/)
 })

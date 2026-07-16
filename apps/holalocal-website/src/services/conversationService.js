@@ -1,25 +1,31 @@
 import {
-  addDoc,
   collection,
   doc,
   FieldPath,
   getDoc,
   getDocs,
-  limit,
   limitToLast,
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
-  writeBatch,
 } from 'firebase/firestore'
+import {
+  buildConversationId,
+  CONVERSATION_STATUS_ACTIVE,
+  getConversationActivityTime,
+  hasOwnerOnlyConversationParticipants,
+  isConversationHiddenForUser,
+  MAX_MESSAGE_LENGTH,
+} from '@holalocal/firebase-contract'
+import { sendMessageCallable } from '../firebase/functionsClient.js'
 import { db } from '../firebase/firestoreClient.js'
+import { getPublicBusinessById } from './businessService.js'
 
-const MAX_CONVERSATIONS = 50
 const MAX_MESSAGES = 100
-const MAX_MESSAGE_LENGTH = 4000
 
 function conversationDocument(conversationId) {
   if (!conversationId) throw new Error('A conversation ID is required.')
@@ -39,74 +45,139 @@ function participantState() {
   }
 }
 
-export async function findOrCreateConversation(customerId, business) {
-  if (!customerId) throw new Error('You must be logged in to message a business.')
-  if (!business?.businessId || !business.ownerId) {
-    throw new Error('This business cannot receive messages yet.')
-  }
-  if (business.ownerId === customerId) {
-    throw new Error('You cannot start a customer conversation with your own business.')
-  }
+function isCompatibleConversation(snapshot, customerId, businessId) {
+  const conversation = snapshot.data()
+  return conversation.customerId === customerId
+    && conversation.businessId === businessId
+    && conversation.status === CONVERSATION_STATUS_ACTIVE
+}
 
-  // This bounded ownership query avoids requiring a new composite index. A future
-  // trusted backend transaction can provide stronger uniqueness guarantees.
-  const existingSnapshot = await getDocs(query(
-    collection(db, 'conversations'),
-    where('customerId', '==', customerId),
-    limit(MAX_CONVERSATIONS),
-  ))
-  const existingConversation = existingSnapshot.docs.find((snapshot) => {
-    const conversation = snapshot.data()
-    return conversation.businessId === business.businessId && conversation.status === 'active'
-  })
+function isRestorableForUser(snapshot, userId) {
+  const currentState = snapshot.data().participantState?.[userId]
+  return Boolean(currentState?.deletedAt || currentState?.archivedAt)
+}
 
-  if (existingConversation) {
-    const currentState = existingConversation.data().participantState?.[customerId]
-    if (currentState?.deletedAt || currentState?.archivedAt) {
-      await restoreConversationForUser(existingConversation.id, customerId)
-    }
-    return existingConversation.id
-  }
-
-  const participantIds = [...new Set([customerId, business.ownerId])]
+function buildInitialConversation(customerId, business) {
+  const participantIds = [customerId, business.ownerId]
   const participantStates = Object.fromEntries(
     participantIds.map((participantId) => [participantId, participantState()]),
   )
-  const reference = await addDoc(collection(db, 'conversations'), {
+
+  return {
     businessId: business.businessId,
     customerId,
     participantIds,
     participantState: participantStates,
     lastMessage: null,
     lastMessageAt: null,
-    status: 'active',
+    status: CONVERSATION_STATUS_ACTIVE,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+  }
+}
+
+async function findExistingConversation(customerId, businessId) {
+  const snapshot = await getDocs(query(
+    collection(db, 'conversations'),
+    where('customerId', '==', customerId),
+  ))
+
+  return snapshot.docs.filter((conversation) => (
+    isCompatibleConversation(conversation, customerId, businessId)
+  ))
+}
+
+export async function getOrCreateConversationForBusiness(customerId, business) {
+  if (!customerId) throw new Error('You must be logged in to message a business.')
+  if (!business?.businessId || !business.ownerId) {
+    throw new Error('This business cannot receive messages yet.')
+  }
+  if (business.status !== CONVERSATION_STATUS_ACTIVE) {
+    throw new Error('This business is not currently available for messages.')
+  }
+  if (business.ownerId === customerId) {
+    throw new Error('You cannot start a customer conversation with your own business.')
+  }
+
+  const canonicalConversationId = buildConversationId(customerId, business.businessId)
+  const existingConversations = await findExistingConversation(customerId, business.businessId)
+
+  if (existingConversations.length > 1) {
+    throw new Error('Multiple matching conversations need manual review before messaging can continue.')
+  }
+
+  if (existingConversations.length === 1) {
+    const [existingConversation] = existingConversations
+    if (isRestorableForUser(existingConversation, customerId)) {
+      await restoreConversationForUser(existingConversation.id, customerId)
+    }
+    return existingConversation.id
+  }
+
+  await runTransaction(db, async (transaction) => {
+    const reference = conversationDocument(canonicalConversationId)
+    const snapshot = await transaction.get(reference)
+    if (snapshot.exists()) {
+      if (!isCompatibleConversation(snapshot, customerId, business.businessId)) {
+        throw new Error('The existing conversation identity does not match this business.')
+      }
+      return
+    }
+
+    transaction.set(reference, buildInitialConversation(customerId, business))
   })
 
-  return reference.id
+  return canonicalConversationId
+}
+
+export const findOrCreateConversation = getOrCreateConversationForBusiness
+
+function conversationFromSnapshot(snapshot) {
+  return { conversationId: snapshot.id, ...snapshot.data() }
+}
+
+function visibleConversationsForUser(conversations, userId) {
+  return conversations
+    .filter((conversation) => (
+      conversation.status !== 'blocked' &&
+      !isConversationHiddenForUser(conversation, userId)
+    ))
+    .sort((first, second) => (
+      getConversationActivityTime(second) - getConversationActivityTime(first)
+    ))
+}
+
+function isOwnerOnlyConversationForBusiness(conversation, business) {
+  return Boolean(business?.ownerId)
+    && hasOwnerOnlyConversationParticipants(conversation, business.ownerId)
+}
+
+function conversationsForUserQuery(userId) {
+  return query(
+    collection(db, 'conversations'),
+    where('participantIds', 'array-contains', userId),
+  )
 }
 
 export async function getConversationsForUser(userId) {
   if (!userId) return []
 
-  const snapshot = await getDocs(query(
-    collection(db, 'conversations'),
-    where('participantIds', 'array-contains', userId),
-    limit(MAX_CONVERSATIONS),
-  ))
+  const snapshot = await getDocs(conversationsForUserQuery(userId))
 
-  return snapshot.docs
-    .map((conversation) => ({ conversationId: conversation.id, ...conversation.data() }))
-    .filter((conversation) => (
-      conversation.status !== 'blocked' &&
-      !conversation.participantState?.[userId]?.deletedAt
-    ))
-    .sort((first, second) => {
-      const firstTime = first.lastMessageAt?.toMillis?.() ?? first.createdAt?.toMillis?.() ?? 0
-      const secondTime = second.lastMessageAt?.toMillis?.() ?? second.createdAt?.toMillis?.() ?? 0
-      return secondTime - firstTime
-    })
+  return visibleConversationsForUser(snapshot.docs.map(conversationFromSnapshot), userId)
+}
+
+export function subscribeToConversationsForUser(userId, onConversations, onError) {
+  if (!userId) return () => undefined
+
+  return onSnapshot(
+    conversationsForUserQuery(userId),
+    (snapshot) => onConversations(visibleConversationsForUser(
+      snapshot.docs.map(conversationFromSnapshot),
+      userId,
+    )),
+    onError,
+  )
 }
 
 export async function getConversationForUser(conversationId, userId) {
@@ -116,6 +187,10 @@ export async function getConversationForUser(conversationId, userId) {
 
   const conversation = snapshot.data()
   if (!conversation.participantIds?.includes(userId)) {
+    throw new Error('You do not have access to this conversation.')
+  }
+  const business = await getPublicBusinessById(conversation.businessId)
+  if (!isOwnerOnlyConversationForBusiness(conversation, business)) {
     throw new Error('You do not have access to this conversation.')
   }
 
@@ -151,6 +226,17 @@ export async function restoreConversationForUser(conversationId, userId) {
   )
 }
 
+export async function markConversationReadForUser(conversationId, userId) {
+  if (!conversationId || !userId) return
+  await updateDoc(
+    conversationDocument(conversationId),
+    new FieldPath('participantState', userId, 'lastReadAt'),
+    serverTimestamp(),
+    'updatedAt',
+    serverTimestamp(),
+  )
+}
+
 export function subscribeToMessages(conversationId, onMessages, onError) {
   const messagesQuery = query(
     messageCollection(conversationId),
@@ -167,64 +253,23 @@ export function subscribeToMessages(conversationId, onMessages, onError) {
   )
 }
 
-export async function sendTextMessage(conversationId, senderId, text) {
+export function createMessageRequestId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`
+}
+
+export async function sendTextMessage(conversationId, senderId, text, requestId = createMessageRequestId()) {
+  if (!senderId) throw new Error('You must be logged in to send a message.')
   const normalizedText = String(text ?? '').trim()
   if (!normalizedText) throw new Error('Enter a message before sending.')
   if (normalizedText.length > MAX_MESSAGE_LENGTH) {
     throw new Error(`Messages must be ${MAX_MESSAGE_LENGTH.toLocaleString()} characters or fewer.`)
   }
 
-  const conversationRef = conversationDocument(conversationId)
-  const conversationSnapshot = await getDoc(conversationRef)
-  if (!conversationSnapshot.exists()) throw new Error('Conversation not found.')
-
-  const conversation = conversationSnapshot.data()
-  if (!conversation.participantIds?.includes(senderId)) {
-    throw new Error('You do not have access to this conversation.')
-  }
-  if (conversation.status !== 'active') {
-    throw new Error('This conversation is not currently active.')
-  }
-
-  const messageRef = doc(messageCollection(conversationId))
-  const batch = writeBatch(db)
-  const participantRestorationFields = conversation.participantIds.flatMap((participantId) => [
-    new FieldPath('participantState', participantId, 'deletedAt'),
-    null,
-    new FieldPath('participantState', participantId, 'archivedAt'),
-    null,
-  ])
-  // Translation metadata is intentionally omitted until the shared app schema,
-  // security rules, consent flow, and translation provider are implemented.
-  batch.set(messageRef, {
-    senderId,
-    type: 'text',
+  const result = await sendMessageCallable({
+    conversationId,
+    requestId,
     text: normalizedText,
-    attachment: null,
-    moderationStatus: 'visible',
-    editedAt: null,
-    deletedAt: null,
-    createdAt: serverTimestamp(),
   })
-  // New activity restores the bounded thread for both participants so a reply
-  // is not silently missed. Messages and moderation history remain untouched.
-  batch.update(
-    conversationRef,
-    'lastMessage',
-    {
-      messageId: messageRef.id,
-      senderId,
-      type: 'text',
-      preview: normalizedText.slice(0, 160),
-      createdAt: serverTimestamp(),
-    },
-    'lastMessageAt',
-    serverTimestamp(),
-    ...participantRestorationFields,
-    'updatedAt',
-    serverTimestamp(),
-  )
-
-  await batch.commit()
-  return messageRef.id
+  return result.data?.messageId
 }

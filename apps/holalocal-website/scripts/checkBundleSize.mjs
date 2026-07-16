@@ -37,6 +37,12 @@ if (initialGzip > budgetBytes) {
 
 // Ensure the build produced route chunks, rather than folding every page into the entry.
 const assets = await readdir(join(dist, 'assets'))
-if (!assets.some((file) => file.startsWith('EarlyAccessPage-'))) {
-  throw new Error('Expected an Early Access route chunk in the production build.')
+if (!assets.some((file) => file.startsWith('HomePage-'))) {
+  throw new Error('Expected a homepage route chunk in the production build.')
+}
+if (!assets.some((file) => file.startsWith('ServicesPage-'))) {
+  throw new Error('Expected a services route chunk in the production build.')
+}
+if (assets.some((file) => file.startsWith('EarlyAccessPage-'))) {
+  throw new Error('Early Access route chunk should not be present in the production build.')
 }

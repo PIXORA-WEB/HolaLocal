@@ -7,7 +7,7 @@ import BusinessReportDialog from '../components/common/BusinessReportDialog.jsx'
 import PublicBusinessCard from '../components/common/PublicBusinessCard.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
 import { getActivePublicBusinesses } from '../services/businessService.js'
-import { findOrCreateConversation } from '../services/conversationService.js'
+import { getOrCreateConversationForBusiness } from '../services/conversationService.js'
 import { createBusinessReport } from '../services/reportService.js'
 import { getLanguageNameFromCode } from '../utils/languages.js'
 import SelectField from '../components/common/SelectField.jsx'
@@ -139,7 +139,7 @@ function ServicesPage() {
   function closeBusiness() {
     setMessagingError('')
     if (currentLocation.state?.fromServices && window.history.state?.idx > 0) navigate(-1)
-    else navigate(`/dev-services${currentLocation.search}`)
+    else navigate(`/services${currentLocation.search}`)
   }
 
   async function handleMessageBusiness() {
@@ -152,7 +152,7 @@ function ServicesPage() {
     setMessaging(true)
     setMessagingError('')
     try {
-      const conversationId = await findOrCreateConversation(user.uid, selectedBusiness)
+      const conversationId = await getOrCreateConversationForBusiness(user.uid, selectedBusiness)
       navigate(`/messages/${conversationId}`)
     } catch (conversationError) {
       setMessagingError(conversationError.message || 'Unable to open this conversation.')
@@ -242,7 +242,7 @@ function ServicesPage() {
         {error && (
           <div className="services-state services-state--error" role="alert">
             <p>{error}</p>
-            <Link className="button button--secondary" to={`/dev-services${currentLocation.search}`}>
+            <Link className="button button--secondary" to={`/services${currentLocation.search}`}>
               Back to results
             </Link>
           </div>
@@ -251,7 +251,7 @@ function ServicesPage() {
           <div className="services-state">
             <h1>Business unavailable</h1>
             <p>This business profile could not be found or is no longer active.</p>
-            <Link className="button button--secondary" to={`/dev-services${currentLocation.search}`}>
+            <Link className="button button--secondary" to={`/services${currentLocation.search}`}>
               Back to results
             </Link>
           </div>
@@ -369,6 +369,9 @@ function ServicesPage() {
           <div className="services-state">
             <h3>{t('services.emptyTitle')}</h3>
             <p>{t('services.emptyDescription')}</p>
+            <Link className="button button--secondary" to="/register?intent=business">
+              {t('services.emptyAction')}
+            </Link>
           </div>
         )}
         {!loading && !error && businesses.length > 0 && filteredBusinesses.length === 0 && (
@@ -388,7 +391,7 @@ function ServicesPage() {
                 key={business.businessId}
                 linkState={{ fromServices: true }}
                 onSelect={selectBusiness}
-                to={`/dev-services/${business.businessId}${currentLocation.search}`}
+                to={`/services/${business.businessId}${currentLocation.search}`}
               />
             ))}
           </div>

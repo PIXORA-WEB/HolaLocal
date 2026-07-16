@@ -6,7 +6,7 @@ function ContactPage() {
 
   return (
     <PlaceholderPage
-      eyebrow={`HolaLocal · ${t('earlyAccess.navigation')}`}
+      eyebrow="HolaLocal"
       title={t('footer.contact')}
       description={t('legalPages.contact.description')}
     >

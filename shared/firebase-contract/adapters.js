@@ -2,6 +2,7 @@ import { ACCOUNT_STATUSES, BUSINESS_STATUSES, SUBSCRIPTION_STATUSES, USER_ROLES,
 import { detectUnsafePublicContact } from './contact.js'
 import { ISSUE_CODES, issue } from './issues.js'
 import { normalizePrimaryLanguage, normalizeServiceAreas } from './normalization.js'
+import { hasCompleteUserProfile } from './account.js'
 
 function clone(value) {
   if (Array.isArray(value)) return value.map(clone)
@@ -83,7 +84,7 @@ export function adaptUserDocument(documentId, rawDocument = {}) {
       businessId: typeof raw.businessId === 'string' && raw.businessId.trim() ? raw.businessId.trim() : null,
       accountStatus: ACCOUNT_STATUSES.includes(raw.accountStatus) ? raw.accountStatus : null,
       completion: {
-        profileCompleted: raw.profileCompleted === true,
+        profileCompleted: hasCompleteUserProfile(raw),
         onboardingCompleted: raw.onboardingCompleted === true,
         businessProfileRequired: raw.businessProfileRequired === true,
         businessProfileCompleted: raw.businessProfileCompleted === true,

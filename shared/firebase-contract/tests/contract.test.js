@@ -3,12 +3,16 @@ import assert from 'node:assert/strict'
 import {
   ACCOUNT_STATUSES, BUSINESS_STATUSES, CONTACT_METHODS, ISSUE_CODES, SUBSCRIPTION_STATUSES,
   SUPPORTED_LANGUAGE_CODES, USER_ROLES, VERIFICATION_STATUSES, adaptBusinessDocument,
-  adaptUserDocument, ambiguousBusinesses, businessNotFound, detectUnsafePublicContact,
-  foundBusiness, invalidMapping, isCustomIdentifier, normalizeLanguage, normalizeLanguages,
+  adaptUserDocument, ambiguousBusinesses, buildConversationId, businessNotFound, detectUnsafePublicContact,
+  foundBusiness, getConversationActivityTime, hasOwnerOnlyConversationParticipants, invalidMapping,
+  hasCompleteUserProfile, isConversationHiddenForUser, isConversationUnreadForUser, isCustomIdentifier,
+  isPublicBusinessEligible, normalizeLanguage, normalizeLanguages,
   normalizePrimaryLanguage, normalizeServiceAreas, ownerMismatch, projectPublicContact,
+  MESSAGE_TRANSLATION_REASONS, MESSAGE_TRANSLATION_STATUSES, normalizeMessageTranslation,
+  selectMessageDisplayText, shouldAdvanceConversationPreview, shouldShowTranslatedMessage,
   validateAccountStatus, validateBusinessOwnerMapping, validateBusinessStatus,
   validateManagerIds, validateOwnerWritablePayload, validatePrimaryLanguage, validateRoles,
-  validateSubscriptionStatus, validateVerificationStatus,
+  validateSubscriptionStatus, validateVerificationStatus, isConversationIdFor, MAX_MESSAGE_LENGTH,
 } from '../index.js'
 
 const hasIssue = (result, code) => result.issues.some((entry) => entry.code === code)
@@ -19,8 +23,163 @@ test('controlled values match the approved contract', () => {
   assert.deepEqual(CONTACT_METHODS, ['holalocal', 'phone', 'email', 'whatsapp'])
   assert.ok(ACCOUNT_STATUSES.includes('deletion_pending'))
   assert.ok(BUSINESS_STATUSES.includes('pending_review'))
+  assert.ok(BUSINESS_STATUSES.includes('rejected'))
   assert.ok(VERIFICATION_STATUSES.includes('rejected'))
   assert.ok(SUBSCRIPTION_STATUSES.includes('past_due'))
+})
+
+test('user profile completion is derived from canonical profile fields', () => {
+  const profile = {
+    firstName: 'Casey',
+    lastName: 'Customer',
+    displayName: 'Casey Customer',
+    preferredLocale: 'en',
+    city: 'Marbella',
+    country: 'Spain',
+    profileCompleted: false,
+  }
+
+  assert.equal(hasCompleteUserProfile(profile), true)
+  assert.equal(hasCompleteUserProfile({ ...profile, city: '' }), false)
+  assert.equal(hasCompleteUserProfile({ ...profile, profileCompleted: true, firstName: '' }), false)
+})
+
+test('messaging translation helpers normalize backend-managed translation state', () => {
+  assert.deepEqual(MESSAGE_TRANSLATION_STATUSES, ['processing', 'completed', 'not_required', 'failed'])
+  assert.ok(MESSAGE_TRANSLATION_REASONS.includes('provider_unavailable'))
+
+  const translated = {
+    senderId: 'owner',
+    text: 'Original text',
+    translation: {
+      status: 'completed',
+      sourceLanguage: 'en',
+      targetLanguage: 'es',
+      translatedText: 'Texto traducido',
+      reason: null,
+      processingStartedAt: null,
+      processingLeaseUntil: null,
+      attemptId: null,
+      updatedAt: 1,
+    },
+  }
+
+  assert.equal(shouldShowTranslatedMessage(translated, 'customer'), true)
+  assert.equal(shouldShowTranslatedMessage(translated, 'owner'), false)
+  assert.equal(selectMessageDisplayText(translated, 'customer'), 'Texto traducido')
+  assert.equal(selectMessageDisplayText(translated, 'customer', true), 'Original text')
+  assert.equal(selectMessageDisplayText(translated, 'owner'), 'Original text')
+  assert.equal(normalizeMessageTranslation({ status: 'completed', translatedText: 42 }).translatedText, null)
+  assert.equal(normalizeMessageTranslation({ status: 'unknown' }).valid, false)
+})
+
+test('messaging helpers build deterministic customer and business conversation IDs', () => {
+  const conversationId = buildConversationId('customer-1', 'business-1')
+  assert.equal(conversationId, 'customer-1__business-1')
+  assert.equal(isConversationIdFor(conversationId, 'customer-1', 'business-1'), true)
+  assert.equal(isConversationIdFor(conversationId, 'customer-2', 'business-1'), false)
+  assert.equal(MAX_MESSAGE_LENGTH, 4000)
+
+  assert.throws(() => buildConversationId('', 'business-1'))
+  assert.throws(() => buildConversationId('customer-1', 'business/1'))
+})
+
+test('conversation preview ordering is monotonic for concurrent sends', () => {
+  const older = new Date('2026-07-14T10:00:00.000Z')
+  const newer = new Date('2026-07-14T10:00:00.010Z')
+
+  assert.equal(shouldAdvanceConversationPreview(null, older), true)
+  assert.equal(shouldAdvanceConversationPreview(older, newer), true)
+  assert.equal(shouldAdvanceConversationPreview(newer, older), false)
+  assert.equal(shouldAdvanceConversationPreview(newer, newer), true)
+  assert.equal(shouldAdvanceConversationPreview(newer, null), false)
+})
+
+test('messaging helpers derive unread state from participant read timestamps', () => {
+  const conversation = {
+    lastMessage: { senderId: 'owner', createdAt: 2000 },
+    lastMessageAt: 2000,
+    createdAt: 1000,
+    participantState: {
+      customer: { lastReadAt: 1000, deletedAt: null },
+      owner: { lastReadAt: null, deletedAt: null },
+    },
+  }
+
+  assert.equal(isConversationUnreadForUser(conversation, 'customer'), true)
+  assert.equal(isConversationUnreadForUser({
+    ...conversation,
+    lastMessage: { senderId: 'customer', createdAt: 2000 },
+  }, 'customer'), false)
+  assert.equal(isConversationUnreadForUser({
+    ...conversation,
+    participantState: { customer: { lastReadAt: null, deletedAt: null } },
+  }, 'customer'), true)
+  assert.equal(isConversationHiddenForUser({
+    ...conversation,
+    participantState: { customer: { lastReadAt: 1000, deletedAt: 1500 } },
+  }, 'customer'), true)
+  assert.equal(isConversationUnreadForUser({
+    ...conversation,
+    participantState: { customer: { lastReadAt: 1000, deletedAt: 1500 } },
+  }, 'customer'), false)
+  assert.equal(getConversationActivityTime(conversation), 2000)
+})
+
+test('messaging helpers require exactly customer and business owner participants', () => {
+  assert.equal(hasOwnerOnlyConversationParticipants({
+    customerId: 'customer',
+    participantIds: ['customer', 'owner'],
+  }, 'owner'), true)
+  assert.equal(hasOwnerOnlyConversationParticipants({
+    customerId: 'customer',
+    participantIds: ['customer', 'manager'],
+  }, 'owner'), false)
+  assert.equal(hasOwnerOnlyConversationParticipants({
+    customerId: 'customer',
+    participantIds: ['customer', 'owner', 'manager'],
+  }, 'owner'), false)
+  assert.equal(hasOwnerOnlyConversationParticipants({
+    customerId: 'owner',
+    participantIds: ['owner'],
+  }, 'owner'), false)
+})
+
+test('public business eligibility requires publication, complete canonical fields and safe contact', () => {
+  const contact = {
+    phone: '', phoneVisible: false,
+    email: '', emailVisible: false,
+    whatsappNumber: '', whatsappVisible: false,
+    website: '', websiteVisible: false,
+    preferredContactMethod: 'holalocal',
+    allowCallbackRequests: false,
+  }
+  const business = {
+    ownerId: 'owner',
+    managerIds: ['owner'],
+    name: 'Published business',
+    description: 'A complete profile.',
+    primaryCategoryId: 'Cleaning',
+    categoryIds: ['Cleaning'],
+    serviceAreas: ['marbella'],
+    languages: ['en', 'es'],
+    primaryLanguage: 'en',
+    location: { locality: 'Marbella', region: 'Málaga', countryCode: 'ES' },
+    contact,
+    status: 'active',
+    publishedAt: 1,
+  }
+
+  assert.equal(isPublicBusinessEligible(business), true)
+  assert.equal(isPublicBusinessEligible({ ...business, publishedAt: null }), false)
+  assert.equal(isPublicBusinessEligible({ ...business, status: 'pending_review' }), false)
+  assert.equal(isPublicBusinessEligible({ ...business, deletedAt: 1 }), false)
+  assert.equal(isPublicBusinessEligible({ ...business, deletionRequestedAt: 1 }), false)
+  assert.equal(isPublicBusinessEligible({ ...business, description: '' }), false)
+  assert.equal(isPublicBusinessEligible({
+    ...business,
+    contact: { ...contact, email: 'hidden@example.invalid', emailVisible: false },
+  }), false)
 })
 
 test('all codes, locale variants, labels, case and whitespace normalize', () => {

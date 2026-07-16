@@ -1,11 +1,10 @@
-import { ISSUE_CODES, SUPPORTED_LANGUAGE_CODES, normalizeLanguage, validateRoles } from '@holalocal/firebase-contract'
+import { ISSUE_CODES, SUPPORTED_LANGUAGE_CODES, normalizeLanguage } from '@holalocal/firebase-contract'
 
 export const POLICY_VERSION = '1.0'
 
 const profileFields = new Set([
   'displayName', 'firstName', 'lastName', 'photoURL', 'profilePhoto',
   'preferredLocale', 'city', 'country', 'profileCompleted',
-  'businessProfileCompleted',
 ])
 
 function normalizeName(value) {
@@ -36,6 +35,7 @@ export function buildRegistrationProfile(uid, profileData = {}, serverTimestamp)
     displayNameNormalized: normalizeName(displayName), firstName: '', lastName: '',
     photoURL: null, profilePhoto: null, preferredLocale, accountType: 'customer',
     roles: ['customer'], city: '', country: 'Spain', accountStatus: 'active',
+    businessId: null,
     profileCompleted: false, onboardingCompleted: false, businessProfileRequired: false,
     businessProfileCompleted: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     lastActiveAt: serverTimestamp(), termsAccepted: true, termsAcceptedAt: serverTimestamp(),
@@ -57,15 +57,4 @@ export function buildProfileUpdates(updates = {}) {
     throw new Error('Choose a supported language.')
   }
   return safe
-}
-
-export function buildRoleUpdates(accountType, currentBusinessComplete = false) {
-  const mappings = { customer: ['customer'], business: ['business'], both: ['customer', 'business'] }
-  const roles = mappings[accountType]
-  if (!roles || !validateRoles(roles).valid) throw new Error('Choose a valid account type.')
-  return {
-    accountType, roles, onboardingCompleted: true,
-    businessProfileRequired: roles.includes('business'),
-    businessProfileCompleted: currentBusinessComplete === true,
-  }
 }

@@ -1,5 +1,7 @@
 import { resolveKnownCredentialProjectIds } from '../testDataCleanupAudit/config.js'
 
+export const PRODUCTION_PROJECT_ID = 'holalocal-491c9'
+
 const PLACEHOLDER_IDS = new Set(['demo', 'test', 'your-project-id', 'project-id', 'firebase-project-id'])
 const WRITE_LIKE_FLAGS = /^--(apply|write|fix|migrate|cleanup|execute|run|remove|destroy|purge|repair)(=|$)/
 
@@ -9,7 +11,9 @@ export function parseContactPrivacyRepairArguments(values) {
     businessId: '',
     confirmProject: '',
     emulator: false,
+    expectedTargetCount: null,
     help: false,
+    maxMutations: null,
     outputDir: '',
     projectId: '',
   }
@@ -32,6 +36,10 @@ export function parseContactPrivacyRepairArguments(values) {
     else if (value.startsWith('--audit-report=')) options.auditReport = value.slice(15)
     else if (value === '--business-id') options.businessId = next()
     else if (value.startsWith('--business-id=')) options.businessId = value.slice(14)
+    else if (value === '--expected-target-count') options.expectedTargetCount = Number(next())
+    else if (value.startsWith('--expected-target-count=')) options.expectedTargetCount = Number(value.slice(24))
+    else if (value === '--max-mutations') options.maxMutations = Number(next())
+    else if (value.startsWith('--max-mutations=')) options.maxMutations = Number(value.slice(16))
     else if (value === '--output-dir') options.outputDir = next()
     else if (value.startsWith('--output-dir=')) options.outputDir = value.slice(13)
     else if (WRITE_LIKE_FLAGS.test(value)) throw new Error(`${value} is not supported. This tool is read-only.`)
@@ -47,11 +55,20 @@ export function validateContactPrivacyRepairOptions(options) {
   if (!/^[a-z][a-z0-9-]{4,62}$/.test(projectId) || PLACEHOLDER_IDS.has(projectId)) {
     throw new Error('Refusing to run with an invalid or placeholder project ID.')
   }
+  if (!options.emulator && projectId !== PRODUCTION_PROJECT_ID) {
+    throw new Error(`Production contact privacy repair dry runs are allowlisted only for ${PRODUCTION_PROJECT_ID}.`)
+  }
   if (!options.emulator && options.confirmProject !== projectId) {
     throw new Error('Non-emulator dry runs require --confirm-project exactly matching --project-id.')
   }
   if (!options.auditReport && !options.businessId) {
     throw new Error('Provide --audit-report or --business-id for the narrow privacy check.')
+  }
+  if (!Number.isInteger(options.expectedTargetCount) || options.expectedTargetCount < 0) {
+    throw new Error('Missing required --expected-target-count integer.')
+  }
+  if (!Number.isInteger(options.maxMutations) || options.maxMutations < 0) {
+    throw new Error('Missing required --max-mutations integer.')
   }
   if (!options.outputDir || typeof options.outputDir !== 'string') throw new Error('Missing required --output-dir.')
   return { ...options, projectId }

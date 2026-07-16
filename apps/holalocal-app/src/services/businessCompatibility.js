@@ -10,7 +10,7 @@ import {
 import { CANONICAL_BUSINESS_CATEGORIES, computeBusinessProfileCompleted } from './businessPayloads.js'
 
 const SOURCE_PRIORITY = ['user_business_id', 'owner_uid_document', 'owner_id_query']
-const BUSINESS_STATUSES = new Set(['draft', 'pending_review', 'active', 'suspended', 'archived', 'deleted'])
+const BUSINESS_STATUSES = new Set(['draft', 'pending_review', 'rejected', 'active', 'suspended', 'archived', 'deleted'])
 const VERIFICATION_STATUSES = new Set(['unverified', 'pending', 'verified', 'rejected'])
 const CONTACT_KEYS = new Set([
   'phone', 'phoneVisible', 'email', 'emailVisible', 'whatsappNumber',

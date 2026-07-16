@@ -16,14 +16,20 @@ export function createContactPrivacyExecutionSource({ projectId }) {
         path,
         exists: snapshot.exists,
         data: snapshot.exists ? snapshot.data() : null,
+        updateTime: snapshot.updateTime ?? null,
+        updateTimeString: snapshot.updateTime?.toDate().toISOString() ?? null,
       })
     },
-    async clearHiddenPublicWebsite(path) {
+    async clearHiddenPublicWebsite(path, precondition = {}) {
       await db.doc(path).update({
         'contact.website': '',
         'contact.websiteVisible': false,
+      }, precondition.lastUpdateTime ? { lastUpdateTime: precondition.lastUpdateTime } : undefined)
+      return Object.freeze({
+        status: 'updated',
+        fields: ['contact.website', 'contact.websiteVisible'],
+        precondition: precondition.lastUpdateTime ? 'lastUpdateTime' : 'none',
       })
-      return Object.freeze({ status: 'updated', fields: ['contact.website', 'contact.websiteVisible'] })
     },
   })
 }

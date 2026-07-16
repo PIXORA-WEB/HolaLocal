@@ -14,8 +14,8 @@ function PrivacyPage() {
         <h2>{t('legalPages.privacy.audience')}</h2>
         <p>
           HolaLocal is being developed for customers looking for local services and for businesses
-          and self-employed professionals offering services across Spain. Early Access lets people
-          create real accounts and prepare profiles before the full marketplace launches.
+          and self-employed professionals offering services across Spain. HolaLocal lets people
+          create real accounts, manage profiles and connect through the local marketplace.
         </p>
       </section>
 
@@ -38,7 +38,7 @@ function PrivacyPage() {
         <p>
           We use information to create and protect accounts, provide profile and messaging features,
           prepare business listings, remember language and location preferences, respond to support
-          requests, prevent abuse, investigate reports and improve the Early Access experience.
+          requests, prevent abuse, investigate reports and improve the HolaLocal experience.
         </p>
       </section>
 
@@ -94,7 +94,7 @@ function PrivacyPage() {
       <section>
         <h2>{t('legalPages.privacy.changes')}</h2>
         <p>
-          HolaLocal will evolve during Early Access. We may update this policy when features, providers
+          HolaLocal will continue to evolve. We may update this policy when features, providers
           or legal requirements change. The version and effective date at the top will identify the current
           policy, and material changes will be communicated where appropriate.
         </p>

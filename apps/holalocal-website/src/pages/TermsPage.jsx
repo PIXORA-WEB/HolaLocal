@@ -11,11 +11,11 @@ function TermsPage() {
       description={t('legalPages.terms.description')}
     >
       <section>
-        <h2>{t('earlyAccess.navigation')}</h2>
+        <h2>{t('legalPages.terms.platform')}</h2>
         <p>
-          HolaLocal is still being developed. Features may be incomplete, changed, paused or removed,
-          and the full public marketplace is not yet launched. By taking part, you agree to use the
-          service responsibly and understand that the experience will continue to evolve.
+          HolaLocal is a developing local marketplace. Features may be changed, paused or removed
+          as the service evolves. By taking part, you agree to use the service responsibly and
+          understand that the experience will continue to improve.
         </p>
       </section>
 
@@ -45,8 +45,8 @@ function TermsPage() {
           images, qualifications and claims accurate and current.
         </p>
         <p>
-          Early Access business profiles normally remain drafts. A draft is not a public listing, approval,
-          endorsement or verified status. Publishing and review processes may be introduced later, and we
+          Draft business profiles are not public listings, approvals, endorsements or verified statuses.
+          Publishing and review processes may be introduced or updated, and we
           may ask for further information before a profile becomes public.
         </p>
       </section>

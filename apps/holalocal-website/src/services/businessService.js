@@ -4,14 +4,16 @@ import {
   getDoc,
   getDocs,
   limit as firestoreLimit,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
   where,
 } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
-import { createBusinessSlug } from '../utils/business.js'
+import { ensureOwnerBusinessCallable } from '../firebase/functionsClient.js'
 import {
+  hasCompletePublicBusinessProfile,
   projectPublicContact,
 } from '@holalocal/firebase-contract'
 import {
@@ -33,6 +35,7 @@ async function deleteImageFile(...args) {
 export const BUSINESS_STATUSES = [
   'draft',
   'pending_review',
+  'rejected',
   'active',
   'suspended',
   'archived',
@@ -56,7 +59,6 @@ const editableBusinessFields = new Set([
   'profilePhoto',
   'galleryImageURLs',
   'galleryImages',
-  'profileCompleted',
 ])
 
 function businessDocument(businessId) {
@@ -116,8 +118,6 @@ function sanitizeBusinessData(businessData) {
   if (safeData.location) safeData.location = sanitizeLocation(safeData.location)
   if (safeData.name !== undefined) {
     safeData.name = safeData.name.trim()
-    safeData.nameNormalized = normalize(safeData.name)
-    safeData.slug = createBusinessSlug(safeData.name)
   }
   if (safeData.categoryIds) safeData.categoryIds = getStringList(safeData.categoryIds)
   if (safeData.serviceAreas) safeData.serviceAreas = getStringList(safeData.serviceAreas)
@@ -144,6 +144,8 @@ export async function getActivePublicBusinesses(maxResults = 60) {
   const snapshot = await getDocs(query(
     collection(db, 'businesses'),
     where('status', '==', 'active'),
+    where('publishedAt', '!=', null),
+    orderBy('publishedAt', 'desc'),
     firestoreLimit(resultLimit),
   ))
 
@@ -159,51 +161,6 @@ export async function getPublicBusinessById(businessId) {
   const snapshot = await getDoc(businessDocument(businessId))
   if (!snapshot.exists()) return null
   return toPublicBusiness(snapshot)
-}
-
-function buildNewBusiness(ownerId, businessData = {}) {
-  const safeData = sanitizeBusinessData(businessData)
-  const languages = safeData.languages?.length ? safeData.languages : ['en']
-
-  return {
-    ownerId,
-    managerIds: [ownerId],
-    name: '',
-    nameNormalized: '',
-    slug: '',
-    tagline: '',
-    description: '',
-    primaryCategoryId: '',
-    categoryIds: [],
-    serviceAreas: [],
-    serviceRadiusKm: 20,
-    location: sanitizeLocation(),
-    contact: sanitizeContact(),
-    languages,
-    primaryLanguage: languages[0],
-    profilePhoto: null,
-    galleryImageURLs: [],
-    galleryImages: [],
-    galleryCount: 0,
-    ratingAverage: 0,
-    ratingCount: 0,
-    status: 'draft',
-    verificationStatus: 'unverified',
-    verifiedAt: null,
-    subscription: {
-      tier: 'free',
-      status: 'none',
-      provider: null,
-      currentPeriodEnd: null,
-    },
-    profileCompleted: false,
-    publishedAt: null,
-    deletionRequestedAt: null,
-    deletedAt: null,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    ...safeData,
-  }
 }
 
 export async function getBusinessById(businessId) {
@@ -288,25 +245,14 @@ export async function getBusinessByOwnerId(ownerId, userBusinessId = null) {
   throw error
 }
 
-export async function createBusinessProfile(ownerId, businessData = {}) {
+export async function createBusinessProfile(ownerId) {
   const existingBusiness = await getBusinessByOwnerId(ownerId)
   if (existingBusiness) return existingBusiness
 
-  const reference = doc(collection(db, 'businesses'))
-  const business = buildNewBusiness(ownerId, businessData)
-  const privateContact = sanitizeContact(businessData.contact)
-  business.contact = storedPublicContact(privateContact)
-  await runTransaction(db, async (transaction) => {
-    transaction.set(reference, business)
-    transaction.set(privateBusinessDocument(reference.id), {
-      ownerId,
-      managerIds: [ownerId],
-      contact: privateContact,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-  })
-  return getManagedBusinessById(reference.id)
+  const result = await ensureOwnerBusinessCallable()
+  const businessId = result.data?.businessId
+  if (!businessId) throw new Error('Business profile could not be created.')
+  return getManagedBusinessById(businessId)
 }
 
 export async function updateBusinessProfile(businessId, updates) {
@@ -340,6 +286,27 @@ export async function updateBusinessProfile(businessId, updates) {
       updatedAt: serverTimestamp(),
     })
     transaction.set(privateRef, privateUpdates, { merge: true })
+  })
+  return getManagedBusinessById(businessId)
+}
+
+export async function submitBusinessForReview(businessId) {
+  await runTransaction(db, async (transaction) => {
+    const businessRef = businessDocument(businessId)
+    const snapshot = await transaction.get(businessRef)
+    if (!snapshot.exists()) throw new Error('Business profile not found.')
+    const business = snapshot.data()
+    if (!['draft', 'rejected'].includes(business.status)) {
+      throw new Error('Only draft or rejected business profiles can be submitted for review.')
+    }
+    if (!hasCompletePublicBusinessProfile(business)) {
+      throw new Error('Complete the required business profile fields before submitting for review.')
+    }
+    transaction.update(businessRef, {
+      status: 'pending_review',
+      submittedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
   })
   return getManagedBusinessById(businessId)
 }
@@ -400,12 +367,5 @@ export async function ensureBusinessProfile(ownerId, userProfile) {
     throw new Error('A business role is required to create a business profile.')
   }
 
-  return (await getBusinessByOwnerId(ownerId, userProfile.businessId)) ?? createBusinessProfile(ownerId, {
-    contact: { email: userProfile.email ?? '' },
-    location: {
-      locality: userProfile.city ?? '',
-      countryCode: userProfile.country === 'Spain' ? 'ES' : '',
-    },
-    languages: [userProfile.preferredLocale ?? 'en'],
-  })
+  return (await getBusinessByOwnerId(ownerId, userProfile.businessId)) ?? createBusinessProfile(ownerId)
 }

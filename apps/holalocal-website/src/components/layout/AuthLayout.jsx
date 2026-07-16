@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import SiteFooter from './SiteFooter.jsx'
 import SiteHeader from './SiteHeader.jsx'
 
 function AuthLayout() {
@@ -11,6 +12,7 @@ function AuthLayout() {
       <main className="account-content" id="main-content">
         <Outlet />
       </main>
+      <SiteFooter />
     </div>
   )
 }

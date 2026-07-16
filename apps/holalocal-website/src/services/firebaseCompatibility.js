@@ -7,9 +7,12 @@ import {
   foundBusiness,
   invalidMapping,
   isCustomIdentifier,
+  isPublicBusinessEligible as sharedPublicBusinessEligible,
   ownerMismatch,
   projectPublicContact,
 } from '@holalocal/firebase-contract'
+
+export { isPublicBusinessEligible } from '@holalocal/firebase-contract'
 
 const ACCOUNT_TYPES = new Set(['customer', 'business', 'both'])
 const SOURCE_PRIORITY = [
@@ -132,7 +135,7 @@ function publicContact(contact = {}) {
 export function toPublicBusinessView(documentId, rawDocument) {
   const adapted = adaptBusinessDocument(documentId, rawDocument)
   const business = adapted.business
-  if (business.status !== 'active') return null
+  if (!sharedPublicBusinessEligible(rawDocument)) return null
 
   const languages = displayCompatibilityValues(business.languageValues, 'language')
   const serviceAreas = displayCompatibilityValues(business.serviceAreaValues, 'area')

@@ -5,7 +5,7 @@ export const FIREBASE_CONTRACT_SCHEMA_VERSION = TARGET_FIREBASE_CONTRACT_VERSION
 export const USER_ROLES = Object.freeze(['customer', 'business'])
 export const ACCOUNT_STATUSES = Object.freeze(['active', 'suspended', 'deletion_pending', 'deleted'])
 export const BUSINESS_STATUSES = Object.freeze([
-  'draft', 'pending_review', 'active', 'suspended', 'archived', 'deleted',
+  'draft', 'pending_review', 'rejected', 'active', 'suspended', 'archived', 'deleted',
 ])
 export const VERIFICATION_STATUSES = Object.freeze(['unverified', 'pending', 'verified', 'rejected'])
 export const SUBSCRIPTION_STATUSES = Object.freeze([

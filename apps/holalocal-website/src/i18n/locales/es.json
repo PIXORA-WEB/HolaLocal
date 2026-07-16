@@ -7,7 +7,9 @@
     "search": "Buscar",
     "messages": "Mensajes",
     "profile": "Perfil",
-    "business": "Negocio"
+    "business": "Negocio",
+    "findServices": "Encontrar servicios",
+    "join": "Únete a HolaLocal"
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -23,14 +25,44 @@
     "newUser": "¿Nuevo en HolaLocal?",
     "createAccount": "Crear una cuenta",
     "registration": {
-      "eyebrow": "Únete a la comunidad", "title": "Crea tu cuenta", "description": "Empieza con tu correo y después dinos cómo quieres usar HolaLocal.", "passwordHint": "Usa al menos seis caracteres.", "confirmPassword": "Confirmar contraseña", "passwordMismatch": "Las contraseñas no coinciden.", "consentLegend": "Acuerdos legales", "termsPrefix": "Acepto los", "privacyPrefix": "He leído la", "consentRequired": "Acepta los Términos y la Política de privacidad antes de crear tu cuenta.", "existingAccount": "¿Ya tienes una cuenta?"
+      "eyebrow": "Únete a la comunidad",
+      "title": "Crea tu cuenta",
+      "description": "Empieza con tu correo y después dinos cómo quieres usar HolaLocal.",
+      "passwordHint": "Usa al menos seis caracteres.",
+      "confirmPassword": "Confirmar contraseña",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "consentLegend": "Acuerdos legales",
+      "termsPrefix": "Acepto los",
+      "privacyPrefix": "He leído la",
+      "consentRequired": "Acepta los Términos y la Política de privacidad antes de crear tu cuenta.",
+      "existingAccount": "¿Ya tienes una cuenta?"
     },
     "verification": {
-      "eyebrow": "Protegemos tu cuenta", "title": "Verifica tu correo", "description": "Hemos enviado un enlace de verificación a {{email}}. Verifica tu dirección antes de usar las funciones protegidas de HolaLocal.", "sent": "Revisa tu bandeja de entrada y abre el enlace de verificación.", "initialSendFailed": "No pudimos enviar el primer correo. Usa la opción de reenvío para intentarlo de nuevo.", "notVerified": "Tu correo aún no está verificado. Abre el enlace y vuelve a comprobarlo.", "resent": "Se ha enviado un nuevo correo de verificación.", "checkedAction": "Ya he verificado mi correo", "resend": "Reenviar correo de verificación", "resending": "Enviando…"
+      "eyebrow": "Protegemos tu cuenta",
+      "title": "Verifica tu correo",
+      "description": "Hemos enviado un enlace de verificación a {{email}}. Verifica tu dirección antes de usar las funciones protegidas de HolaLocal.",
+      "sent": "Revisa tu bandeja de entrada y abre el enlace de verificación.",
+      "initialSendFailed": "No pudimos enviar el primer correo. Usa la opción de reenvío para intentarlo de nuevo.",
+      "notVerified": "Tu correo aún no está verificado. Abre el enlace y vuelve a comprobarlo.",
+      "resent": "Se ha enviado un nuevo correo de verificación.",
+      "checkedAction": "Ya he verificado mi correo",
+      "resend": "Reenviar correo de verificación",
+      "resending": "Enviando…"
     }
   },
-  "metadata": { "title": "Acceso anticipado a HolaLocal", "pageTitle": "{{page}} · HolaLocal", "description": "Únete al acceso anticipado de HolaLocal y ayuda a crear un mercado multilingüe y fiable que conecte clientes con empresas locales de toda España." },
-  "errors": { "application": { "title": "Lo sentimos, algo ha ido mal.", "description": "HolaLocal no ha podido cargar esta página. Vuelve a cargarla o regresa al inicio para intentarlo de nuevo.", "reload": "Volver a cargar", "home": "Volver al inicio" } },
+  "metadata": {
+    "title": "HolaLocal",
+    "pageTitle": "{{page}} · HolaLocal",
+    "description": "Encuentra servicios locales de confianza y conecta con empresas locales en la Costa del Sol y Gibraltar."
+  },
+  "errors": {
+    "application": {
+      "title": "Lo sentimos, algo ha ido mal.",
+      "description": "HolaLocal no ha podido cargar esta página. Vuelve a cargarla o regresa al inicio para intentarlo de nuevo.",
+      "reload": "Volver a cargar",
+      "home": "Volver al inicio"
+    }
+  },
   "account": {
     "fallback": "Cuenta",
     "greeting": "Hola {{name}}",
@@ -43,7 +75,16 @@
   },
   "messages": {
     "title": "Mensajes",
-    "placeholderDescription": "Tus conversaciones privadas aparecerán aquí cuando se lance la mensajería."
+    "placeholderDescription": "Tus conversaciones privadas aparecerán aquí cuando se lance la mensajería.",
+    "unreadConversation": "Conversación sin leer con {{name}}",
+    "unreadCount": "Conversaciones sin leer: {{count}}",
+    "translation": {
+      "processing": "Traducción pendiente",
+      "completed": "Traducido",
+      "failed": "Traducción no disponible. Se muestra el original.",
+      "viewOriginal": "Ver original",
+      "viewTranslation": "Ver traducción"
+    }
   },
   "profile": {
     "title": "Perfil",
@@ -61,13 +102,92 @@
     "primaryLanguage": "Idioma principal",
     "completion": "Perfil de empresa completado al {{percent}}%",
     "control": {
-      "loading": "Cargando tu perfil de empresa…", "yourBusiness": "Tu empresa", "heroContext": "{{category}} · Servicio en {{location}}", "heroContextAreas_one": "{{category}} · Servicio en {{location}} + {{count}} zona", "heroContextAreas_other": "{{category}} · Servicio en {{location}} + {{count}} zonas", "heroPrompt": "Completa la categoría y la ubicación para que los clientes sepan qué ofreces.",
-      "status": { "draft": "Borrador", "pending_review": "Pendiente de revisión", "active": "Activo", "suspended": "Suspendido", "archived": "Archivado", "deleted": "Eliminado" }, "verification": { "unverified": "Sin verificar", "pending": "Verificación pendiente", "verified": "Verificado", "rejected": "Verificación rechazada" },
-      "planBadge": "Plan {{plan}}", "ready": "Perfil preparado", "needsWork": "Configuración pendiente", "completionEyebrow": "Progreso del perfil", "missingCount_one": "Queda {{count}} elemento recomendado", "missingCount_other": "Quedan {{count}} elementos recomendados",
-      "checklist": { "name": "Nombre de empresa", "description": "Descripción", "category": "Categoría principal", "serviceArea": "Zona de servicio", "language": "Idioma hablado", "logo": "Logotipo", "images": "Imágenes de trabajos", "contact": "Preferencia de contacto" },
-      "nextEyebrow": "Recomendado", "nextTitle": "Próximos pasos", "coreReady": "Tu perfil principal está listo. Puedes seguir mejorándolo antes del lanzamiento.", "nextPrompt": "Siguiente paso: completa {{item}}.", "visibilityEyebrow": "Visibilidad de la empresa", "visibility": { "draft": "Tu empresa está guardada como borrador privado y todavía no aparece públicamente.", "pending_review": "Tu perfil está pendiente de revisión y todavía no aparece públicamente.", "active": "Tu perfil está activo y puede aparecer en los resultados públicos.", "suspended": "Tu perfil está suspendido y no aparece públicamente.", "archived": "Tu perfil está archivado y no aparece públicamente.", "deleted": "Este perfil está marcado como eliminado y no aparece públicamente." }, "visibilitySteps": { "saved": "Guardado", "private": "Privado", "visibleToYou": "Visible para ti", "notPublic": "Aún no aparece públicamente", "comingLater": "La publicación llegará más adelante" },
-      "coverageEyebrow": "Cobertura e idiomas", "coverageTitle": "Dónde y cómo trabajas", "primaryArea": "Ubicación principal", "serviceAreas_one": "{{count}} zona de servicio", "serviceAreas_other": "{{count}} zonas de servicio", "primaryLanguage": "Idioma principal", "spokenLanguages": "Idiomas hablados", "notSet": "Sin configurar", "addAreas": "Añade zonas para que los clientes sepan dónde trabajas.", "addLanguages": "Añade los idiomas que habla tu empresa.",
-      "accountEyebrow": "Resumen de cuenta", "accountTitle": "Plan y verificación", "verificationLabel": "Verificación", "subscriptionLabel": "Suscripción", "quickEyebrow": "Acciones rápidas", "quickTitle": "Gestiona tu empresa", "quickDescription": "Mantén actualizado tu perfil, preferencias de contacto y plan.", "contactSettings": "Ajustes de contacto", "preview": "Vista previa del perfil público", "insightsEyebrow": "Próximamente", "insightsTitle": "Estadísticas del negocio", "insightsDescription": "La información de rendimiento aparecerá aquí cuando se lancen las funciones del mercado.", "comingSoon": "Próximamente", "insights": { "views": "Visitas al perfil", "messages": "Mensajes de clientes", "saved": "Guardado por clientes", "reviews": "Reseñas", "contactClicks": "Clics de contacto" }
+      "loading": "Cargando tu perfil de empresa…",
+      "yourBusiness": "Tu empresa",
+      "heroContext": "{{category}} · Servicio en {{location}}",
+      "heroContextAreas_one": "{{category}} · Servicio en {{location}} + {{count}} zona",
+      "heroContextAreas_other": "{{category}} · Servicio en {{location}} + {{count}} zonas",
+      "heroPrompt": "Completa la categoría y la ubicación para que los clientes sepan qué ofreces.",
+      "status": {
+        "draft": "Borrador",
+        "pending_review": "Pendiente de revisión",
+        "active": "Activo",
+        "suspended": "Suspendido",
+        "archived": "Archivado",
+        "deleted": "Eliminado"
+      },
+      "verification": {
+        "unverified": "Sin verificar",
+        "pending": "Verificación pendiente",
+        "verified": "Verificado",
+        "rejected": "Verificación rechazada"
+      },
+      "planBadge": "Plan {{plan}}",
+      "ready": "Perfil preparado",
+      "needsWork": "Configuración pendiente",
+      "completionEyebrow": "Progreso del perfil",
+      "missingCount_one": "Queda {{count}} elemento recomendado",
+      "missingCount_other": "Quedan {{count}} elementos recomendados",
+      "checklist": {
+        "name": "Nombre de empresa",
+        "description": "Descripción",
+        "category": "Categoría principal",
+        "serviceArea": "Zona de servicio",
+        "language": "Idioma hablado",
+        "logo": "Logotipo",
+        "images": "Imágenes de trabajos",
+        "contact": "Preferencia de contacto"
+      },
+      "nextEyebrow": "Recomendado",
+      "nextTitle": "Próximos pasos",
+      "coreReady": "Tu perfil principal está listo. Puedes seguir mejorándolo antes del lanzamiento.",
+      "nextPrompt": "Siguiente paso: completa {{item}}.",
+      "visibilityEyebrow": "Visibilidad de la empresa",
+      "visibility": {
+        "draft": "Tu empresa está guardada como borrador privado y todavía no aparece públicamente.",
+        "pending_review": "Tu perfil está pendiente de revisión y todavía no aparece públicamente.",
+        "active": "Tu perfil está activo y puede aparecer en los resultados públicos.",
+        "suspended": "Tu perfil está suspendido y no aparece públicamente.",
+        "archived": "Tu perfil está archivado y no aparece públicamente.",
+        "deleted": "Este perfil está marcado como eliminado y no aparece públicamente."
+      },
+      "visibilitySteps": {
+        "saved": "Guardado",
+        "private": "Privado",
+        "visibleToYou": "Visible para ti",
+        "notPublic": "Aún no aparece públicamente",
+        "comingLater": "La publicación llegará más adelante"
+      },
+      "coverageEyebrow": "Cobertura e idiomas",
+      "coverageTitle": "Dónde y cómo trabajas",
+      "primaryArea": "Ubicación principal",
+      "serviceAreas_one": "{{count}} zona de servicio",
+      "serviceAreas_other": "{{count}} zonas de servicio",
+      "primaryLanguage": "Idioma principal",
+      "spokenLanguages": "Idiomas hablados",
+      "notSet": "Sin configurar",
+      "addAreas": "Añade zonas para que los clientes sepan dónde trabajas.",
+      "addLanguages": "Añade los idiomas que habla tu empresa.",
+      "accountEyebrow": "Resumen de cuenta",
+      "accountTitle": "Plan y verificación",
+      "verificationLabel": "Verificación",
+      "subscriptionLabel": "Suscripción",
+      "quickEyebrow": "Acciones rápidas",
+      "quickTitle": "Gestiona tu empresa",
+      "quickDescription": "Mantén actualizado tu perfil, preferencias de contacto y plan.",
+      "contactSettings": "Ajustes de contacto",
+      "preview": "Vista previa del perfil público",
+      "insightsEyebrow": "Próximamente",
+      "insightsTitle": "Estadísticas del negocio",
+      "insightsDescription": "La información de rendimiento aparecerá aquí cuando se lancen las funciones del mercado.",
+      "comingSoon": "Próximamente",
+      "insights": {
+        "views": "Visitas al perfil",
+        "messages": "Mensajes de clientes",
+        "saved": "Guardado por clientes",
+        "reviews": "Reseñas",
+        "contactClicks": "Clics de contacto"
+      }
     }
   },
   "common": {
@@ -107,11 +227,12 @@
     "resultCount_other": "{{count}} negocios",
     "clearFilters": "Borrar filtros",
     "notSpecified": "Sin especificar",
-    "emptyTitle": "Próximamente habrá negocios locales",
-    "emptyDescription": "Aún no hay perfiles de negocio activos. Vuelve a consultarlo pronto.",
+    "emptyTitle": "Todavía no hay negocios publicados.",
+    "emptyDescription": "Vuelve pronto o registra tu negocio para preparar un perfil para revisión.",
     "noMatchesTitle": "No hay servicios coincidentes",
     "noMatchesDescription": "Prueba otro servicio, zona, categoría o idioma.",
-    "loadError": "No hemos podido cargar los negocios locales. Inténtalo de nuevo."
+    "loadError": "No hemos podido cargar los negocios locales. Inténtalo de nuevo.",
+    "emptyAction": "Registrar un negocio"
   },
   "appHome": {
     "eyebrow": "Costa del Sol y Gibraltar",
@@ -148,11 +269,51 @@
       "ratingCount_one": "{{count}} reseña",
       "ratingCount_other": "{{count}} reseñas",
       "examples": [
-        { "name": "Costa Clean Marbella", "category": "Servicios de limpieza", "area": "Marbella", "languages": ["Inglés", "Español"] },
-        { "name": "Sol Garden Care", "category": "Jardinería", "area": "Estepona", "languages": ["Español", "Inglés"] },
-        { "name": "Gibraltar Home Fix", "category": "Manitas", "area": "Gibraltar", "languages": ["Inglés", "Español"] },
-        { "name": "Mijas Pet Support", "category": "Servicios para mascotas", "area": "Mijas", "languages": ["Inglés", "Neerlandés"] },
-        { "name": "Fuengirola Climate Care", "category": "Aire acondicionado", "area": "Fuengirola", "languages": ["Español", "Inglés"] }
+        {
+          "name": "Costa Clean Marbella",
+          "category": "Servicios de limpieza",
+          "area": "Marbella",
+          "languages": [
+            "Inglés",
+            "Español"
+          ]
+        },
+        {
+          "name": "Sol Garden Care",
+          "category": "Jardinería",
+          "area": "Estepona",
+          "languages": [
+            "Español",
+            "Inglés"
+          ]
+        },
+        {
+          "name": "Gibraltar Home Fix",
+          "category": "Manitas",
+          "area": "Gibraltar",
+          "languages": [
+            "Inglés",
+            "Español"
+          ]
+        },
+        {
+          "name": "Mijas Pet Support",
+          "category": "Servicios para mascotas",
+          "area": "Mijas",
+          "languages": [
+            "Inglés",
+            "Neerlandés"
+          ]
+        },
+        {
+          "name": "Fuengirola Climate Care",
+          "category": "Aire acondicionado",
+          "area": "Fuengirola",
+          "languages": [
+            "Español",
+            "Inglés"
+          ]
+        }
       ]
     },
     "trustStrip": {
@@ -202,10 +363,22 @@
       "eyebrow": "Confianza y privacidad",
       "title": "Por qué la gente confía en HolaLocal.",
       "description": "Una base cuidada de identidad, comunicación y privacidad hace más clara cada conexión local.",
-      "verified": { "title": "Perfiles verificados", "description": "Los estados claros ayudan a entender qué perfil estás consultando." },
-      "identities": { "title": "Identidades reales", "description": "Las interacciones con cuenta favorecen una comunidad más responsable." },
-      "messaging": { "title": "Mensajería privada", "description": "El contacto ocurre en conversaciones protegidas, no mediante datos personales públicos." },
-      "multilingual": { "title": "Comunidad multilingüe", "description": "Las preferencias de idioma ayudan a clientes y negocios a comunicarse mejor." }
+      "verified": {
+        "title": "Perfiles verificados",
+        "description": "Los estados claros ayudan a entender qué perfil estás consultando."
+      },
+      "identities": {
+        "title": "Identidades reales",
+        "description": "Las interacciones con cuenta favorecen una comunidad más responsable."
+      },
+      "messaging": {
+        "title": "Mensajería privada",
+        "description": "El contacto ocurre en conversaciones protegidas, no mediante datos personales públicos."
+      },
+      "multilingual": {
+        "title": "Comunidad multilingüe",
+        "description": "Las preferencias de idioma ayudan a clientes y negocios a comunicarse mejor."
+      }
     },
     "language": {
       "eyebrow": "Multilingüe desde el diseño",
@@ -230,26 +403,125 @@
       "note": "Los perfiles anticipados utilizan tu cuenta real de HolaLocal y continuarán en el servicio completo. Los perfiles de empresa en borrador no aparecen públicamente."
     },
     "preview": {
-      "label": "Acceso anticipado a HolaLocal", "badge": "Uniendo a la comunidad local", "title": "Una cuenta. Dos formas de participar.",
-      "customerTitle": "¿Buscas ayuda local?", "customerDescription": "Configura tus preferencias de idioma y ubicación para preparar tu acceso al mercado.",
-      "businessTitle": "¿Ofreces servicios locales?", "businessDescription": "Crea ahora tu perfil real de empresa y mantenlo privado como borrador."
+      "label": "Acceso anticipado a HolaLocal",
+      "badge": "Uniendo a la comunidad local",
+      "title": "Una cuenta. Dos formas de participar.",
+      "customerTitle": "¿Buscas ayuda local?",
+      "customerDescription": "Configura tus preferencias de idioma y ubicación para preparar tu acceso al mercado.",
+      "businessTitle": "¿Ofreces servicios locales?",
+      "businessDescription": "Crea ahora tu perfil real de empresa y mantenlo privado como borrador."
     },
-    "principles": { "label": "Principios de HolaLocal", "local": "Prioridad local", "multilingual": "Multilingüe", "privacy": "Privacidad ante todo", "messaging": "Mensajería directa de HolaLocal" },
+    "principles": {
+      "label": "Principios de HolaLocal",
+      "local": "Prioridad local",
+      "multilingual": "Multilingüe",
+      "privacy": "Privacidad ante todo",
+      "messaging": "Mensajería directa de HolaLocal"
+    },
     "info": {
-      "eyebrow": "Ayuda a dar forma a HolaLocal", "title": "Prepárate antes de que abra el mercado", "description": "El acceso anticipado se centra en perfiles útiles, necesidades locales y un servicio en el que confiar.",
-      "customers": { "title": "Para clientes", "description": "Crea tu cuenta, elige tu idioma y dinos dónde buscas ayuda.", "action": "Unirme al acceso anticipado" },
-      "businesses": { "title": "Para empresas", "description": "Añade tus servicios, cobertura, idiomas y preferencias opcionales de contacto público como borrador privado.", "action": "Crear un perfil en borrador" }
+      "eyebrow": "Ayuda a dar forma a HolaLocal",
+      "title": "Prepárate antes de que abra el mercado",
+      "description": "El acceso anticipado se centra en perfiles útiles, necesidades locales y un servicio en el que confiar.",
+      "customers": {
+        "title": "Para clientes",
+        "description": "Crea tu cuenta, elige tu idioma y dinos dónde buscas ayuda.",
+        "action": "Unirme al acceso anticipado"
+      },
+      "businesses": {
+        "title": "Para empresas",
+        "description": "Añade tus servicios, cobertura, idiomas y preferencias opcionales de contacto público como borrador privado.",
+        "action": "Crear un perfil en borrador"
+      }
     },
-    "cta": { "eyebrow": "Creado para la comunidad", "title": "Ayuda a dar forma al futuro de los servicios locales en España.", "description": "Únete antes del lanzamiento y ayuda a crear un mercado local fiable para clientes y empresas.", "action": "Crea tu cuenta" },
-    "roadmap": { "eyebrow": "Lo que viene", "title": "🚀 Hoja de ruta de HolaLocal", "description": "Estamos construyendo HolaLocal paso a paso con la ayuda de nuestra comunidad de acceso anticipado. Tus comentarios ayudan a dar forma a cada nueva función.", "available": { "title": "Disponible hoy", "items": ["Cuentas de clientes", "Cuentas de empresas", "Perfiles de empresa", "Sitio web multilingüe", "Registro de acceso anticipado"] }, "coming": { "title": "Próximamente", "items": ["Traducción automática de mensajes", "Mensajería entre clientes y empresas", "Empresas favoritas", "Verificación de empresas", "Reseñas y valoraciones", "Aplicación móvil", "Búsqueda y filtros avanzados", "Notificaciones"] } },
-    "languageNotice": { "title": "🌍 Los idiomas crecen con HolaLocal", "intro": "HolaLocal se está creando para las comunidades internacionales de toda España.", "refining": "Durante el acceso anticipado, algunas traducciones pueden contener textos que aún estamos mejorando.", "feedback": "Tus comentarios nos ayudan a mejorar las traducciones y a hacer que HolaLocal sea más acogedor para todos.", "selectorNote": "Algunas traducciones todavía se están mejorando durante el acceso anticipado." },
-    "footer": { "description": "Estamos creando un mercado multilingüe y fiable que conecta a clientes con empresas locales de toda España." }
+    "cta": {
+      "eyebrow": "Creado para la comunidad",
+      "title": "Ayuda a dar forma al futuro de los servicios locales en España.",
+      "description": "Únete antes del lanzamiento y ayuda a crear un mercado local fiable para clientes y empresas.",
+      "action": "Crea tu cuenta"
+    },
+    "roadmap": {
+      "eyebrow": "Lo que viene",
+      "title": "🚀 Hoja de ruta de HolaLocal",
+      "description": "Estamos construyendo HolaLocal paso a paso con la ayuda de nuestra comunidad de acceso anticipado. Tus comentarios ayudan a dar forma a cada nueva función.",
+      "available": {
+        "title": "Disponible hoy",
+        "items": [
+          "Cuentas de clientes",
+          "Cuentas de empresas",
+          "Perfiles de empresa",
+          "Sitio web multilingüe",
+          "Registro de acceso anticipado"
+        ]
+      },
+      "coming": {
+        "title": "Próximamente",
+        "items": [
+          "Traducción automática de mensajes",
+          "Mensajería entre clientes y empresas",
+          "Empresas favoritas",
+          "Verificación de empresas",
+          "Reseñas y valoraciones",
+          "Aplicación móvil",
+          "Búsqueda y filtros avanzados",
+          "Notificaciones"
+        ]
+      }
+    },
+    "languageNotice": {
+      "title": "🌍 Los idiomas crecen con HolaLocal",
+      "intro": "HolaLocal se está creando para las comunidades internacionales de toda España.",
+      "refining": "Durante el acceso anticipado, algunas traducciones pueden contener textos que aún estamos mejorando.",
+      "feedback": "Tus comentarios nos ayudan a mejorar las traducciones y a hacer que HolaLocal sea más acogedor para todos.",
+      "selectorNote": "Algunas traducciones todavía se están mejorando durante el acceso anticipado."
+    },
+    "footer": {
+      "description": "Estamos creando un mercado multilingüe y fiable que conecta a clientes con empresas locales de toda España."
+    }
   },
   "legalPages": {
-    "version": "Acceso anticipado · Versión 1 · Vigente desde el 4 de julio de 2026",
-    "privacy": { "title": "Política de privacidad", "description": "Esta política explica cómo HolaLocal trata la información personal durante el acceso anticipado.", "audience": "Para quién es HolaLocal", "information": "Información que podemos recopilar", "purpose": "Por qué usamos la información", "profiles": "Perfiles de acceso anticipado", "providers": "Proveedores y almacenamiento", "visibility": "Visibilidad de contacto", "deletion": "Eliminación y tus opciones", "security": "Seguridad", "changes": "Cambios en la política" },
-    "terms": { "title": "Términos de uso", "description": "Estos términos se aplican al crear una cuenta o usar el acceso anticipado de HolaLocal.", "account": "Tu cuenta", "customers": "Cuentas de clientes", "businesses": "Perfiles de empresa", "prohibited": "Conductas prohibidas", "messaging": "Mensajería y traducción", "changes": "Cambios, suspensión y eliminación", "availability": "Disponibilidad y responsabilidad", "law": "Legislación aplicable" },
-    "contact": { "description": "Agradecemos tus preguntas, comentarios e informes de errores mientras construimos HolaLocal.", "help": "Cómo podemos ayudarte", "email": "Escríbenos", "response": "Los tiempos de respuesta pueden variar durante el acceso anticipado.", "general": "Consultas generales", "generalText": "preguntas sobre HolaLocal y el acceso anticipado.", "business": "Consultas de empresas", "businessText": "ayuda para preparar un perfil empresarial.", "bugs": "Informes de errores", "bugsText": "indica qué ocurrió, qué página usabas y qué esperabas.", "feedback": "Comentarios y sugerencias", "feedbackText": "cuéntanos cómo hacer HolaLocal más útil.", "privacy": "Privacidad o eliminación de cuenta", "privacyText": "escríbenos desde el email de tu cuenta para verificar la solicitud." }
+    "version": "Versión 1 · Vigente desde el 4 de julio de 2026",
+    "privacy": {
+      "title": "Política de privacidad",
+      "description": "Esta política explica cómo HolaLocal trata la información personal al usar la plataforma.",
+      "audience": "Para quién es HolaLocal",
+      "information": "Información que podemos recopilar",
+      "purpose": "Por qué usamos la información",
+      "profiles": "Perfiles de clientes y empresas",
+      "providers": "Proveedores y almacenamiento",
+      "visibility": "Visibilidad de contacto",
+      "deletion": "Eliminación y tus opciones",
+      "security": "Seguridad",
+      "changes": "Cambios en la política"
+    },
+    "terms": {
+      "title": "Términos de uso",
+      "description": "Estos términos se aplican al crear una cuenta o usar la plataforma HolaLocal.",
+      "platform": "La plataforma HolaLocal",
+      "account": "Tu cuenta",
+      "customers": "Cuentas de clientes",
+      "businesses": "Perfiles de empresa",
+      "prohibited": "Conductas prohibidas",
+      "messaging": "Mensajería y traducción",
+      "changes": "Cambios, suspensión y eliminación",
+      "availability": "Disponibilidad y responsabilidad",
+      "law": "Legislación aplicable"
+    },
+    "contact": {
+      "description": "Agradecemos tus preguntas, comentarios e informes de errores.",
+      "help": "Cómo podemos ayudarte",
+      "email": "Escríbenos",
+      "response": "Los tiempos de respuesta pueden variar mientras crece la plataforma.",
+      "general": "Consultas generales",
+      "generalText": "preguntas sobre HolaLocal.",
+      "business": "Consultas de empresas",
+      "businessText": "ayuda para gestionar un perfil empresarial.",
+      "bugs": "Informes de errores",
+      "bugsText": "indica qué ocurrió, qué página usabas y qué esperabas.",
+      "feedback": "Comentarios y sugerencias",
+      "feedbackText": "cuéntanos cómo hacer HolaLocal más útil.",
+      "privacy": "Privacidad o eliminación de cuenta",
+      "privacyText": "escríbenos desde el email de tu cuenta para verificar la solicitud."
+    }
   },
   "footer": {
     "description": "Una comunidad local multilingüe y de confianza para encontrar y ofrecer servicios en la Costa del Sol y Gibraltar.",
@@ -267,6 +539,9 @@
     "contact": "Contacto",
     "helpCentre": "Centro de ayuda",
     "language": "Idioma",
-    "copyright": "© {{year}} HolaLocal"
+    "copyright": "© {{year}} HolaLocal",
+    "account": "Cuenta",
+    "accountLabel": "Enlaces de cuenta",
+    "poweredBy": "Impulsado por PIXORA"
   }
 }

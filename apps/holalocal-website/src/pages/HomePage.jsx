@@ -11,8 +11,8 @@ const howItWorksCards = [
 ]
 
 const journeyCards = [
-  { key: 'customers', icon: 'people', to: '/register' },
-  { key: 'businesses', icon: 'briefcase', to: '/business/dashboard' },
+  { key: 'customers', icon: 'people', to: '/services' },
+  { key: 'businesses', icon: 'briefcase', to: '/register?intent=business' },
 ]
 
 const trustCards = [
@@ -117,8 +117,8 @@ function HomePage() {
           <h1>{t('marketing.hero.title')}</h1>
           <p className="marketing-hero__lead">{t('marketing.hero.description')}</p>
           <div className="marketing-actions">
-            <Link className="button button--primary" to="/register">{t('marketing.hero.primaryAction')}</Link>
-            <Link className="button button--secondary" to="/dev-services">{t('marketing.hero.secondaryAction')}</Link>
+            <Link className="button button--primary" to="/register?intent=customer">{t('marketing.hero.primaryAction')}</Link>
+            <Link className="button button--secondary" to="/services">{t('marketing.hero.secondaryAction')}</Link>
           </div>
         </div>
         <div className="marketing-hero__visual" aria-label={t('marketing.hero.businessesLabel')}>
@@ -127,7 +127,7 @@ function HomePage() {
               ariaLabel={business.isDemo ? undefined : `View ${business.name} profile`}
               business={business}
               key={business.businessId}
-              to={business.isDemo ? undefined : `/dev-services/${business.businessId}`}
+              to={business.isDemo ? undefined : `/services/${business.businessId}`}
               variant="hero"
             />
           ))}
@@ -214,7 +214,7 @@ function HomePage() {
           <h2>{t('marketing.cta.title')}</h2>
           <p>{t('marketing.cta.description')}</p>
         </div>
-        <Link className="button button--light" to="/register">{t('marketing.cta.action')}</Link>
+        <Link className="button button--light" to="/register?intent=customer">{t('marketing.cta.action')}</Link>
       </section>
     </div>
   )

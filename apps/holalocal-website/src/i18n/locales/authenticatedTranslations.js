@@ -43,8 +43,9 @@ function createPack(d) {
       categories: categories(d.categories),
       control: {
         status: {
-          draft: d.statuses[0], pending_review: d.statuses[1], active: d.statuses[2],
-          suspended: d.statuses[3], archived: d.statuses[4], deleted: d.statuses[5],
+          draft: d.statuses[0], pending_review: d.statuses[1], rejected: d.statuses[2],
+          active: d.statuses[3], suspended: d.statuses[4], archived: d.statuses[5],
+          deleted: d.statuses[6],
         },
       },
       form: {

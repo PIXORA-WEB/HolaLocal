@@ -122,7 +122,7 @@ function CheckboxGroup({ error, id, legend, name, options, selectedValues, onTog
 
 function EditBusinessPage() {
   const { t } = useTranslation()
-  const { signOutUser, updateUserProfile, user, userProfile } = useAuthentication()
+  const { signOutUser, user, userProfile } = useAuthentication()
   const navigate = useNavigate()
   const [businessProfile, setBusinessProfile] = useState(null)
   const [form, setForm] = useState(emptyForm)
@@ -540,7 +540,6 @@ function EditBusinessPage() {
       serviceRadiusKm: Number(form.serviceRadiusKm),
       languages,
       primaryLanguage,
-      profileCompleted: true,
     }
 
     try {
@@ -548,10 +547,6 @@ function EditBusinessPage() {
         ? await updateBusinessProfile(businessProfile.businessId, businessData)
         : await createBusinessProfile(user.uid, businessData)
 
-      await updateUserProfile({
-        businessProfileCompleted: true,
-        businessId: savedBusiness.businessId,
-      })
       setBusinessProfile(savedBusiness)
       setInitialDraftSignature(currentDraftSignature)
       setSaveSuccess(true)

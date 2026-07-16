@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -21,6 +22,37 @@ import {
 const businessPath = 'businesses/business-1'
 const privatePath = 'businessPrivate/business-1'
 const privateWebsite = 'https://private.example.invalid/path?token=secret'
+const publicUpdateTime = '2026-01-01T00:00:00.000Z'
+
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, stable(value[key])]))
+  }
+  return value
+}
+
+function fingerprint(value) {
+  return createHash('sha256').update(JSON.stringify(stable(value))).digest('hex')
+}
+
+function fieldFingerprint(document, pathText) {
+  const value = pathText.split('.').reduce((current, key) => current?.[key], document)
+  return value === undefined ? null : fingerprint(value)
+}
+
+const defaultBusiness = {
+  ownerId: 'owner-1',
+  status: 'active',
+  verificationStatus: 'unverified',
+  contact: { website: privateWebsite, websiteVisible: false, email: '', emailVisible: false },
+  name: 'Business',
+}
+
+const defaultPrivate = {
+  ownerId: 'owner-1',
+  contact: { website: privateWebsite, websiteVisible: false },
+}
 
 function approvedReport(overrides = {}) {
   return {
@@ -28,6 +60,13 @@ function approvedReport(overrides = {}) {
       projectId: 'holalocal-491c9',
       complete: true,
       mode: 'read-only',
+    },
+    guardrails: {
+      expectedTargetCount: 1,
+      actualTargetCount: 1,
+      maxMutations: 1,
+      proposedDocumentMutationCount: 1,
+      safeToSubmitForWriteApproval: true,
     },
     target: {
       businessPath,
@@ -40,6 +79,18 @@ function approvedReport(overrides = {}) {
       privateWebsiteMatchesPublic: true,
       preservationRequired: false,
       publicFieldToRemoveLater: `${businessPath}.contact.website`,
+      publicUpdateTime,
+      documentFingerprints: {
+        publicBusiness: fingerprint(defaultBusiness),
+        privateBusiness: fingerprint(defaultPrivate),
+      },
+      preChangeFieldFingerprints: {
+        'businesses.contact.website': fieldFingerprint(defaultBusiness, 'contact.website'),
+        'businesses.contact.websiteVisible': fieldFingerprint(defaultBusiness, 'contact.websiteVisible'),
+        'businessPrivate.contact.website': fieldFingerprint(defaultPrivate, 'contact.website'),
+        'businesses.ownerId': fieldFingerprint(defaultBusiness, 'ownerId'),
+        'businessPrivate.ownerId': fieldFingerprint(defaultPrivate, 'ownerId'),
+      },
     },
     findings: [],
     ...overrides,
@@ -61,17 +112,8 @@ function options(overrides = {}) {
 
 function fakeSource(fixtures = {}) {
   const documents = {
-    [businessPath]: {
-      ownerId: 'owner-1',
-      status: 'active',
-      verificationStatus: 'unverified',
-      contact: { website: privateWebsite, websiteVisible: false, email: '', emailVisible: false },
-      name: 'Business',
-    },
-    [privatePath]: {
-      ownerId: 'owner-1',
-      contact: { website: privateWebsite, websiteVisible: false },
-    },
+    [businessPath]: structuredClone(defaultBusiness),
+    [privatePath]: structuredClone(defaultPrivate),
     ...fixtures,
   }
   const updates = []
@@ -83,10 +125,12 @@ function fakeSource(fixtures = {}) {
         path: documentPath,
         exists: documents[documentPath] !== undefined,
         data: documents[documentPath] ?? null,
+        updateTime: documents[documentPath] !== undefined ? `${documentPath}-precondition` : null,
+        updateTimeString: documents[documentPath] !== undefined ? publicUpdateTime : null,
       })
     },
-    async clearHiddenPublicWebsite(documentPath) {
-      updates.push({ path: documentPath, fields: ['contact.website', 'contact.websiteVisible'] })
+    async clearHiddenPublicWebsite(documentPath, precondition) {
+      updates.push({ path: documentPath, fields: ['contact.website', 'contact.websiteVisible'], precondition })
       documents[documentPath] = {
         ...documents[documentPath],
         contact: { ...documents[documentPath].contact, website: '', websiteVisible: false },
@@ -112,6 +156,13 @@ test('execution config defaults to dry-run and fails closed for project and conf
     '--business-path', businessPath,
     '--output-dir', '/private/out',
   ]), /confirm-project/)
+  assert.throws(() => parseContactPrivacyExecutionArguments([
+    '--project-id', 'other-project',
+    '--confirm-project', 'other-project',
+    '--approved-dry-run-report', '/private/report.json',
+    '--business-path', businessPath,
+    '--output-dir', '/private/out',
+  ]), /allowlisted/)
   assert.throws(() => parseContactPrivacyExecutionArguments([
     '--apply',
     '--project-id', 'holalocal-491c9',
@@ -144,6 +195,14 @@ test('approved dry-run verification rejects mismatched or non-narrow reports', (
     approvedReport({ target: { ...approvedReport().target, preservationRequired: true } }),
     options(),
   ), /private-preservation-required/)
+  assert.throws(() => verifyApprovedContactPrivacyDryRun(
+    approvedReport({ guardrails: { ...approvedReport().guardrails, actualTargetCount: 2 } }),
+    options(),
+  ), /actual-target-count-mismatch/)
+  assert.throws(() => verifyApprovedContactPrivacyDryRun(
+    approvedReport({ target: { ...approvedReport().target, documentFingerprints: {} } }),
+    options(),
+  ), /missing-public-fingerprint/)
   assert.throws(() => verifyApprovedContactPrivacyDryRun(approvedReport(), options({ businessPath: 'businesses/other' })), /business-path-mismatch/)
 })
 
@@ -173,7 +232,11 @@ test('apply changes only the hidden public website projection', async () => {
     now: () => '2026-01-01T00:00:00.000Z',
   })
   assert.equal(report.metadata.status, 'complete')
-  assert.deepEqual(source.updates, [{ path: businessPath, fields: ['contact.website', 'contact.websiteVisible'] }])
+  assert.deepEqual(source.updates, [{
+    path: businessPath,
+    fields: ['contact.website', 'contact.websiteVisible'],
+    precondition: { lastUpdateTime: `${businessPath}-precondition` },
+  }])
   assert.equal(source.documents[businessPath].contact.website, '')
   assert.equal(source.documents[businessPath].contact.websiteVisible, false)
   assert.equal(source.documents[businessPath].status, before.status)
@@ -208,7 +271,26 @@ test('execution refuses state drift, missing private website, visible state and 
     websiteVisibilityHidden: true,
     publicPrivateOwnerMatch: true,
     publicPrivateWebsiteMatch: true,
+    publicUpdateTime,
+    documentFingerprints: approvedReport().target.documentFingerprints,
+    preChangeFieldFingerprints: approvedReport().target.preChangeFieldFingerprints,
   }), [])
+  assert.ok(currentStateDrift(approvedReport({
+    target: { ...approvedReport().target, documentFingerprints: { ...approvedReport().target.documentFingerprints, publicBusiness: 'wrong' } },
+  }), {
+    businessPath,
+    privatePath,
+    publicBusinessExists: true,
+    privateBusinessExists: true,
+    publicWebsitePresent: true,
+    privateWebsitePresent: true,
+    websiteVisibilityHidden: true,
+    publicPrivateOwnerMatch: true,
+    publicPrivateWebsiteMatch: true,
+    publicUpdateTime,
+    documentFingerprints: approvedReport().target.documentFingerprints,
+    preChangeFieldFingerprints: approvedReport().target.preChangeFieldFingerprints,
+  }).includes('public-business-fingerprint-drift'))
 })
 
 test('execution report writer refuses overwrite and redacts sensitive values', async () => {

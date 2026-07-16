@@ -1,6 +1,7 @@
 import { resolveKnownCredentialProjectIds } from '../testDataCleanupAudit/config.js'
 
 export const CONFIRMATION_PHRASE = 'REMOVE CONFIRMED HIDDEN PUBLIC WEBSITE'
+export const PRODUCTION_PROJECT_ID = 'holalocal-491c9'
 
 const PLACEHOLDER_IDS = new Set(['demo', 'test', 'your-project-id', 'project-id', 'firebase-project-id'])
 const WRITE_LIKE_FLAGS = /^--(write|fix|migrate|cleanup|execute|run|remove|destroy|purge|delete)(=|$)/
@@ -53,6 +54,9 @@ export function validateContactPrivacyExecutionOptions(options) {
   const projectId = options.projectId.trim()
   if (!/^[a-z][a-z0-9-]{4,62}$/.test(projectId) || PLACEHOLDER_IDS.has(projectId)) {
     throw new Error('Refusing to run with an invalid or placeholder project ID.')
+  }
+  if (!options.emulator && projectId !== PRODUCTION_PROJECT_ID) {
+    throw new Error(`Production contact privacy repair runs are allowlisted only for ${PRODUCTION_PROJECT_ID}.`)
   }
   if (!options.emulator && options.confirmProject !== projectId) {
     throw new Error('Non-emulator repair runs require --confirm-project exactly matching --project-id.')

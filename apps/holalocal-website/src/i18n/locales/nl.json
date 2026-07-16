@@ -7,7 +7,9 @@
     "search": "Zoeken",
     "messages": "Berichten",
     "profile": "Profiel",
-    "business": "Bedrijf"
+    "business": "Bedrijf",
+    "findServices": "Diensten vinden",
+    "join": "Word lid van HolaLocal"
   },
   "auth": {
     "login": "Inloggen",
@@ -23,14 +25,44 @@
     "newUser": "Nieuw bij HolaLocal?",
     "createAccount": "Account maken",
     "registration": {
-      "eyebrow": "Word lid van de community", "title": "Maak je account", "description": "Begin met je e-mailadres en vertel daarna hoe je HolaLocal wilt gebruiken.", "passwordHint": "Gebruik minimaal zes tekens.", "confirmPassword": "Wachtwoord bevestigen", "passwordMismatch": "De wachtwoorden komen niet overeen.", "consentLegend": "Juridische afspraken", "termsPrefix": "Ik ga akkoord met de", "privacyPrefix": "Ik heb het volgende gelezen:", "consentRequired": "Accepteer de voorwaarden en het privacybeleid voordat je je account maakt.", "existingAccount": "Heb je al een account?"
+      "eyebrow": "Word lid van de community",
+      "title": "Maak je account",
+      "description": "Begin met je e-mailadres en vertel daarna hoe je HolaLocal wilt gebruiken.",
+      "passwordHint": "Gebruik minimaal zes tekens.",
+      "confirmPassword": "Wachtwoord bevestigen",
+      "passwordMismatch": "De wachtwoorden komen niet overeen.",
+      "consentLegend": "Juridische afspraken",
+      "termsPrefix": "Ik ga akkoord met de",
+      "privacyPrefix": "Ik heb het volgende gelezen:",
+      "consentRequired": "Accepteer de voorwaarden en het privacybeleid voordat je je account maakt.",
+      "existingAccount": "Heb je al een account?"
     },
     "verification": {
-      "eyebrow": "Je account beschermen", "title": "Verifieer je e-mail", "description": "We hebben een verificatielink gestuurd naar {{email}}. Verifieer je adres voordat je beveiligde HolaLocal-functies gebruikt.", "sent": "Controleer je inbox en open de verificatielink.", "initialSendFailed": "De eerste e-mail kon niet worden verzonden. Probeer het hieronder opnieuw.", "notVerified": "Je e-mail is nog niet geverifieerd. Open de link en controleer daarna opnieuw.", "resent": "Er is een nieuwe verificatie-e-mail verzonden.", "checkedAction": "Ik heb mijn e-mail geverifieerd", "resend": "Verificatie-e-mail opnieuw sturen", "resending": "Verzenden…"
+      "eyebrow": "Je account beschermen",
+      "title": "Verifieer je e-mail",
+      "description": "We hebben een verificatielink gestuurd naar {{email}}. Verifieer je adres voordat je beveiligde HolaLocal-functies gebruikt.",
+      "sent": "Controleer je inbox en open de verificatielink.",
+      "initialSendFailed": "De eerste e-mail kon niet worden verzonden. Probeer het hieronder opnieuw.",
+      "notVerified": "Je e-mail is nog niet geverifieerd. Open de link en controleer daarna opnieuw.",
+      "resent": "Er is een nieuwe verificatie-e-mail verzonden.",
+      "checkedAction": "Ik heb mijn e-mail geverifieerd",
+      "resend": "Verificatie-e-mail opnieuw sturen",
+      "resending": "Verzenden…"
     }
   },
-  "metadata": { "title": "HolaLocal Early Access", "pageTitle": "{{page}} · HolaLocal", "description": "Doe mee met HolaLocal Early Access en help een betrouwbare meertalige marktplaats op te bouwen die klanten en lokale bedrijven in Spanje verbindt." },
-  "errors": { "application": { "title": "Het spijt ons, er is iets misgegaan.", "description": "HolaLocal kon deze pagina niet laden. Laad opnieuw of ga terug naar de startpagina.", "reload": "Opnieuw laden", "home": "Terug naar home" } },
+  "metadata": {
+    "title": "HolaLocal",
+    "pageTitle": "{{page}} · HolaLocal",
+    "description": "Vind betrouwbare lokale diensten en kom in contact met lokale bedrijven aan de Costa del Sol en in Gibraltar."
+  },
+  "errors": {
+    "application": {
+      "title": "Het spijt ons, er is iets misgegaan.",
+      "description": "HolaLocal kon deze pagina niet laden. Laad opnieuw of ga terug naar de startpagina.",
+      "reload": "Opnieuw laden",
+      "home": "Terug naar home"
+    }
+  },
   "account": {
     "fallback": "Account",
     "greeting": "Hoi {{name}}",
@@ -43,7 +75,16 @@
   },
   "messages": {
     "title": "Berichten",
-    "placeholderDescription": "Je privégesprekken verschijnen hier zodra berichten beschikbaar zijn."
+    "placeholderDescription": "Je privégesprekken verschijnen hier zodra berichten beschikbaar zijn.",
+    "unreadConversation": "Ongelezen gesprek met {{name}}",
+    "unreadCount": "Ongelezen gesprekken: {{count}}",
+    "translation": {
+      "processing": "Vertaling in behandeling",
+      "completed": "Vertaald",
+      "failed": "Vertaling niet beschikbaar. Origineel wordt getoond.",
+      "viewOriginal": "Origineel bekijken",
+      "viewTranslation": "Vertaling bekijken"
+    }
   },
   "profile": {
     "title": "Profiel",
@@ -61,7 +102,82 @@
     "primaryLanguage": "Primaire taal",
     "completion": "Bedrijfsprofiel {{percent}}% voltooid",
     "control": {
-      "loading": "Je bedrijfsprofiel laden…", "yourBusiness": "Jouw bedrijf", "heroContext": "{{category}} · Actief in {{location}}", "heroPrompt": "Vul je categorie en locatie in zodat klanten weten wat je aanbiedt.", "status": { "draft": "Concept", "pending_review": "Wacht op beoordeling", "active": "Actief", "suspended": "Opgeschort", "archived": "Gearchiveerd", "deleted": "Verwijderd" }, "verification": { "unverified": "Niet geverifieerd", "pending": "Verificatie in behandeling", "verified": "Geverifieerd", "rejected": "Verificatie afgewezen" }, "planBadge": "{{plan}}-abonnement", "ready": "Profiel klaar", "needsWork": "Instelling vereist", "completionEyebrow": "Profielvoortgang", "missingCount_one": "Nog {{count}} aanbevolen onderdeel", "missingCount_other": "Nog {{count}} aanbevolen onderdelen", "checklist": { "name": "Bedrijfsnaam", "description": "Beschrijving", "category": "Hoofdcategorie", "serviceArea": "Werkgebied", "language": "Gesproken taal", "logo": "Bedrijfslogo", "images": "Werkfoto’s", "contact": "Contactvoorkeur" }, "nextEyebrow": "Aanbevolen", "nextTitle": "Volgende stappen", "coreReady": "Je kernprofiel is klaar. Je kunt het vóór de lancering blijven verbeteren.", "nextPrompt": "Vul nu {{item}} in.", "visibilityEyebrow": "Zichtbaarheid bedrijf", "visibility": { "draft": "Je bedrijf is opgeslagen als privéconcept en wordt nog niet openbaar vermeld.", "pending_review": "Je profiel wacht op beoordeling en is nog niet openbaar.", "active": "Je profiel is actief en kan in openbare resultaten verschijnen.", "suspended": "Je profiel is opgeschort en niet openbaar.", "archived": "Je profiel is gearchiveerd en niet openbaar.", "deleted": "Dit profiel is als verwijderd gemarkeerd en niet openbaar." }, "coverageEyebrow": "Gebieden en talen", "coverageTitle": "Waar en hoe je werkt", "primaryArea": "Hoofdlocatie", "serviceAreas_one": "{{count}} werkgebied", "serviceAreas_other": "{{count}} werkgebieden", "primaryLanguage": "Primaire taal", "spokenLanguages": "Gesproken talen", "notSet": "Niet ingesteld", "addAreas": "Voeg werkgebieden toe.", "addLanguages": "Voeg de talen van je bedrijf toe.", "accountEyebrow": "Accountoverzicht", "accountTitle": "Abonnement en verificatie", "verificationLabel": "Verificatie", "subscriptionLabel": "Abonnement", "quickEyebrow": "Snelle acties", "quickTitle": "Beheer je bedrijf", "quickDescription": "Houd je profiel, contactvoorkeuren en abonnement actueel.", "contactSettings": "Contactinstellingen", "preview": "Openbaar profiel bekijken", "insightsEyebrow": "Binnenkort", "insightsTitle": "Bedrijfsinzichten", "insightsDescription": "Prestatiegegevens verschijnen hier wanneer marktplaatsfuncties starten.", "comingSoon": "Binnenkort", "insights": { "views": "Profielweergaven", "messages": "Klantberichten", "saved": "Opgeslagen door klanten", "reviews": "Beoordelingen" }
+      "loading": "Je bedrijfsprofiel laden…",
+      "yourBusiness": "Jouw bedrijf",
+      "heroContext": "{{category}} · Actief in {{location}}",
+      "heroPrompt": "Vul je categorie en locatie in zodat klanten weten wat je aanbiedt.",
+      "status": {
+        "draft": "Concept",
+        "pending_review": "Wacht op beoordeling",
+        "active": "Actief",
+        "suspended": "Opgeschort",
+        "archived": "Gearchiveerd",
+        "deleted": "Verwijderd"
+      },
+      "verification": {
+        "unverified": "Niet geverifieerd",
+        "pending": "Verificatie in behandeling",
+        "verified": "Geverifieerd",
+        "rejected": "Verificatie afgewezen"
+      },
+      "planBadge": "{{plan}}-abonnement",
+      "ready": "Profiel klaar",
+      "needsWork": "Instelling vereist",
+      "completionEyebrow": "Profielvoortgang",
+      "missingCount_one": "Nog {{count}} aanbevolen onderdeel",
+      "missingCount_other": "Nog {{count}} aanbevolen onderdelen",
+      "checklist": {
+        "name": "Bedrijfsnaam",
+        "description": "Beschrijving",
+        "category": "Hoofdcategorie",
+        "serviceArea": "Werkgebied",
+        "language": "Gesproken taal",
+        "logo": "Bedrijfslogo",
+        "images": "Werkfoto’s",
+        "contact": "Contactvoorkeur"
+      },
+      "nextEyebrow": "Aanbevolen",
+      "nextTitle": "Volgende stappen",
+      "coreReady": "Je kernprofiel is klaar. Je kunt het vóór de lancering blijven verbeteren.",
+      "nextPrompt": "Vul nu {{item}} in.",
+      "visibilityEyebrow": "Zichtbaarheid bedrijf",
+      "visibility": {
+        "draft": "Je bedrijf is opgeslagen als privéconcept en wordt nog niet openbaar vermeld.",
+        "pending_review": "Je profiel wacht op beoordeling en is nog niet openbaar.",
+        "active": "Je profiel is actief en kan in openbare resultaten verschijnen.",
+        "suspended": "Je profiel is opgeschort en niet openbaar.",
+        "archived": "Je profiel is gearchiveerd en niet openbaar.",
+        "deleted": "Dit profiel is als verwijderd gemarkeerd en niet openbaar."
+      },
+      "coverageEyebrow": "Gebieden en talen",
+      "coverageTitle": "Waar en hoe je werkt",
+      "primaryArea": "Hoofdlocatie",
+      "serviceAreas_one": "{{count}} werkgebied",
+      "serviceAreas_other": "{{count}} werkgebieden",
+      "primaryLanguage": "Primaire taal",
+      "spokenLanguages": "Gesproken talen",
+      "notSet": "Niet ingesteld",
+      "addAreas": "Voeg werkgebieden toe.",
+      "addLanguages": "Voeg de talen van je bedrijf toe.",
+      "accountEyebrow": "Accountoverzicht",
+      "accountTitle": "Abonnement en verificatie",
+      "verificationLabel": "Verificatie",
+      "subscriptionLabel": "Abonnement",
+      "quickEyebrow": "Snelle acties",
+      "quickTitle": "Beheer je bedrijf",
+      "quickDescription": "Houd je profiel, contactvoorkeuren en abonnement actueel.",
+      "contactSettings": "Contactinstellingen",
+      "preview": "Openbaar profiel bekijken",
+      "insightsEyebrow": "Binnenkort",
+      "insightsTitle": "Bedrijfsinzichten",
+      "insightsDescription": "Prestatiegegevens verschijnen hier wanneer marktplaatsfuncties starten.",
+      "comingSoon": "Binnenkort",
+      "insights": {
+        "views": "Profielweergaven",
+        "messages": "Klantberichten",
+        "saved": "Opgeslagen door klanten",
+        "reviews": "Beoordelingen"
+      }
     }
   },
   "common": {
@@ -101,11 +217,12 @@
     "resultCount_other": "{{count}} bedrijven",
     "clearFilters": "Filters wissen",
     "notSpecified": "Niet opgegeven",
-    "emptyTitle": "Lokale bedrijven volgen binnenkort",
-    "emptyDescription": "Er zijn nog geen actieve bedrijfsprofielen. Kijk binnenkort opnieuw.",
+    "emptyTitle": "Er staan nog geen bedrijven openbaar vermeld.",
+    "emptyDescription": "Kom binnenkort terug of registreer je bedrijf om een profiel voor beoordeling voor te bereiden.",
     "noMatchesTitle": "Geen passende diensten",
     "noMatchesDescription": "Probeer een andere dienst, regio, categorie of taal.",
-    "loadError": "Lokale bedrijven konden niet worden geladen. Probeer het opnieuw."
+    "loadError": "Lokale bedrijven konden niet worden geladen. Probeer het opnieuw.",
+    "emptyAction": "Bedrijf registreren"
   },
   "appHome": {
     "eyebrow": "Costa del Sol & Gibraltar",
@@ -142,11 +259,51 @@
       "ratingCount_one": "{{count}} beoordeling",
       "ratingCount_other": "{{count}} beoordelingen",
       "examples": [
-        { "name": "Costa Clean Marbella", "category": "Schoonmaakdiensten", "area": "Marbella", "languages": ["Engels", "Spaans"] },
-        { "name": "Sol Garden Care", "category": "Tuinonderhoud", "area": "Estepona", "languages": ["Spaans", "Engels"] },
-        { "name": "Gibraltar Home Fix", "category": "Klusjesman", "area": "Gibraltar", "languages": ["Engels", "Spaans"] },
-        { "name": "Mijas Pet Support", "category": "Dierenservice", "area": "Mijas", "languages": ["Engels", "Nederlands"] },
-        { "name": "Fuengirola Climate Care", "category": "Airconditioning", "area": "Fuengirola", "languages": ["Spaans", "Engels"] }
+        {
+          "name": "Costa Clean Marbella",
+          "category": "Schoonmaakdiensten",
+          "area": "Marbella",
+          "languages": [
+            "Engels",
+            "Spaans"
+          ]
+        },
+        {
+          "name": "Sol Garden Care",
+          "category": "Tuinonderhoud",
+          "area": "Estepona",
+          "languages": [
+            "Spaans",
+            "Engels"
+          ]
+        },
+        {
+          "name": "Gibraltar Home Fix",
+          "category": "Klusjesman",
+          "area": "Gibraltar",
+          "languages": [
+            "Engels",
+            "Spaans"
+          ]
+        },
+        {
+          "name": "Mijas Pet Support",
+          "category": "Dierenservice",
+          "area": "Mijas",
+          "languages": [
+            "Engels",
+            "Nederlands"
+          ]
+        },
+        {
+          "name": "Fuengirola Climate Care",
+          "category": "Airconditioning",
+          "area": "Fuengirola",
+          "languages": [
+            "Spaans",
+            "Engels"
+          ]
+        }
       ]
     },
     "trustStrip": {
@@ -196,10 +353,22 @@
       "eyebrow": "Vertrouwen en privacy",
       "title": "Waarom mensen HolaLocal vertrouwen.",
       "description": "Heldere keuzes rond identiteit, communicatie en privacy maken elk lokaal contact duidelijker.",
-      "verified": { "title": "Geverifieerde profielen", "description": "Duidelijke statussen laten zien welk profiel je bekijkt." },
-      "identities": { "title": "Echte identiteiten", "description": "Interacties via accounts ondersteunen een verantwoordelijkere community." },
-      "messaging": { "title": "Privéberichten", "description": "Contact loopt via beschermde gesprekken, niet via openbare persoonsgegevens." },
-      "multilingual": { "title": "Meertalige community", "description": "Taalvoorkeuren helpen klanten en bedrijven makkelijker communiceren." }
+      "verified": {
+        "title": "Geverifieerde profielen",
+        "description": "Duidelijke statussen laten zien welk profiel je bekijkt."
+      },
+      "identities": {
+        "title": "Echte identiteiten",
+        "description": "Interacties via accounts ondersteunen een verantwoordelijkere community."
+      },
+      "messaging": {
+        "title": "Privéberichten",
+        "description": "Contact loopt via beschermde gesprekken, niet via openbare persoonsgegevens."
+      },
+      "multilingual": {
+        "title": "Meertalige community",
+        "description": "Taalvoorkeuren helpen klanten en bedrijven makkelijker communiceren."
+      }
     },
     "language": {
       "eyebrow": "Meertalig ontworpen",
@@ -216,27 +385,133 @@
   "earlyAccess": {
     "navigation": "Vroege toegang",
     "hero": {
-      "eyebrow": "Vroege toegang · Costa del Sol & Gibraltar", "title": "Lokale diensten, echte mensen, duidelijkere communicatie.",
+      "eyebrow": "Vroege toegang · Costa del Sol & Gibraltar",
+      "title": "Lokale diensten, echte mensen, duidelijkere communicatie.",
       "description": "HolaLocal bouwt aan een vertrouwde, meertalige plek om lokale vakmensen te vinden en rechtstreeks met hen te spreken, zonder afhankelijk te zijn van verspreide berichten en aanbevelingen.",
-      "customerAction": "Meedoen als klant", "businessAction": "Conceptbedrijfsprofiel maken", "note": "Vroege profielen gebruiken je echte HolaLocal-account en gaan mee naar de volledige dienst. Conceptbedrijfsprofielen worden niet openbaar vermeld."
+      "customerAction": "Meedoen als klant",
+      "businessAction": "Conceptbedrijfsprofiel maken",
+      "note": "Vroege profielen gebruiken je echte HolaLocal-account en gaan mee naar de volledige dienst. Conceptbedrijfsprofielen worden niet openbaar vermeld."
     },
-    "preview": { "label": "Vroege toegang tot HolaLocal", "badge": "Lokaal samenkomen", "title": "Eén account. Twee manieren om mee te doen.", "customerTitle": "Lokale hulp nodig?", "customerDescription": "Stel je taal- en locatievoorkeuren in ter voorbereiding op toegang tot de marktplaats.", "businessTitle": "Bied je lokale diensten aan?", "businessDescription": "Bouw nu je echte bedrijfsprofiel en houd het privé als concept." },
-    "principles": { "label": "Principes van HolaLocal", "local": "Lokaal voorop", "multilingual": "Meertalig", "privacy": "Privacybewust", "messaging": "Directe HolaLocal-berichten" },
+    "preview": {
+      "label": "Vroege toegang tot HolaLocal",
+      "badge": "Lokaal samenkomen",
+      "title": "Eén account. Twee manieren om mee te doen.",
+      "customerTitle": "Lokale hulp nodig?",
+      "customerDescription": "Stel je taal- en locatievoorkeuren in ter voorbereiding op toegang tot de marktplaats.",
+      "businessTitle": "Bied je lokale diensten aan?",
+      "businessDescription": "Bouw nu je echte bedrijfsprofiel en houd het privé als concept."
+    },
+    "principles": {
+      "label": "Principes van HolaLocal",
+      "local": "Lokaal voorop",
+      "multilingual": "Meertalig",
+      "privacy": "Privacybewust",
+      "messaging": "Directe HolaLocal-berichten"
+    },
     "info": {
-      "eyebrow": "Help HolaLocal vormgeven", "title": "Bereid je voor voordat de marktplaats opent", "description": "Vroege toegang draait om nuttige profielen, lokale behoeften en een betrouwbare dienst.",
-      "customers": { "title": "Voor klanten", "description": "Maak je account aan, kies je taal en vertel ons waar je hulp zoekt.", "action": "Meedoen met vroege toegang" },
-      "businesses": { "title": "Voor bedrijven", "description": "Voeg je diensten, werkgebied, talen en optionele openbare contactvoorkeuren toe als privéconcept.", "action": "Conceptprofiel starten" }
+      "eyebrow": "Help HolaLocal vormgeven",
+      "title": "Bereid je voor voordat de marktplaats opent",
+      "description": "Vroege toegang draait om nuttige profielen, lokale behoeften en een betrouwbare dienst.",
+      "customers": {
+        "title": "Voor klanten",
+        "description": "Maak je account aan, kies je taal en vertel ons waar je hulp zoekt.",
+        "action": "Meedoen met vroege toegang"
+      },
+      "businesses": {
+        "title": "Voor bedrijven",
+        "description": "Voeg je diensten, werkgebied, talen en optionele openbare contactvoorkeuren toe als privéconcept.",
+        "action": "Conceptprofiel starten"
+      }
     },
-    "cta": { "eyebrow": "Gebouwd voor de gemeenschap", "title": "Help de toekomst van lokale diensten in Spanje vormgeven.", "description": "Doe mee vóór de lancering en help een betrouwbare lokale marktplaats voor klanten en bedrijven op te bouwen.", "action": "Maak je account aan" },
-    "roadmap": { "eyebrow": "Wat eraan komt", "title": "🚀 HolaLocal-roadmap", "description": "We bouwen HolaLocal stap voor stap met hulp van onze community voor vroege toegang. Jouw feedback helpt elke nieuwe functie vorm te geven.", "available": { "title": "Vandaag beschikbaar", "items": ["Klantaccounts", "Bedrijfsaccounts", "Bedrijfsprofielen", "Meertalige website", "Registratie voor vroege toegang"] }, "coming": { "title": "Binnenkort", "items": ["Automatische berichtvertaling", "Berichten tussen klanten en bedrijven", "Favoriete bedrijven", "Bedrijfsverificatie", "Beoordelingen en waarderingen", "Mobiele app", "Geavanceerd zoeken en filteren", "Meldingen"] } },
-    "languageNotice": { "title": "🌍 Talen groeien mee met HolaLocal", "intro": "HolaLocal wordt gebouwd voor de internationale gemeenschappen in heel Spanje.", "refining": "Tijdens vroege toegang kunnen sommige vertalingen nog formuleringen bevatten die worden verbeterd.", "feedback": "Jouw feedback helpt ons vertalingen te verbeteren en HolaLocal voor iedereen toegankelijker te maken.", "selectorNote": "Sommige vertalingen worden tijdens vroege toegang nog verbeterd." },
-    "footer": { "description": "We bouwen aan een vertrouwde meertalige marktplaats die klanten verbindt met lokale bedrijven in heel Spanje." }
+    "cta": {
+      "eyebrow": "Gebouwd voor de gemeenschap",
+      "title": "Help de toekomst van lokale diensten in Spanje vormgeven.",
+      "description": "Doe mee vóór de lancering en help een betrouwbare lokale marktplaats voor klanten en bedrijven op te bouwen.",
+      "action": "Maak je account aan"
+    },
+    "roadmap": {
+      "eyebrow": "Wat eraan komt",
+      "title": "🚀 HolaLocal-roadmap",
+      "description": "We bouwen HolaLocal stap voor stap met hulp van onze community voor vroege toegang. Jouw feedback helpt elke nieuwe functie vorm te geven.",
+      "available": {
+        "title": "Vandaag beschikbaar",
+        "items": [
+          "Klantaccounts",
+          "Bedrijfsaccounts",
+          "Bedrijfsprofielen",
+          "Meertalige website",
+          "Registratie voor vroege toegang"
+        ]
+      },
+      "coming": {
+        "title": "Binnenkort",
+        "items": [
+          "Automatische berichtvertaling",
+          "Berichten tussen klanten en bedrijven",
+          "Favoriete bedrijven",
+          "Bedrijfsverificatie",
+          "Beoordelingen en waarderingen",
+          "Mobiele app",
+          "Geavanceerd zoeken en filteren",
+          "Meldingen"
+        ]
+      }
+    },
+    "languageNotice": {
+      "title": "🌍 Talen groeien mee met HolaLocal",
+      "intro": "HolaLocal wordt gebouwd voor de internationale gemeenschappen in heel Spanje.",
+      "refining": "Tijdens vroege toegang kunnen sommige vertalingen nog formuleringen bevatten die worden verbeterd.",
+      "feedback": "Jouw feedback helpt ons vertalingen te verbeteren en HolaLocal voor iedereen toegankelijker te maken.",
+      "selectorNote": "Sommige vertalingen worden tijdens vroege toegang nog verbeterd."
+    },
+    "footer": {
+      "description": "We bouwen aan een vertrouwde meertalige marktplaats die klanten verbindt met lokale bedrijven in heel Spanje."
+    }
   },
   "legalPages": {
-    "version": "Vroege toegang · Versie 1 · Geldig vanaf 4 juli 2026",
-    "privacy": { "title": "Privacybeleid", "description": "Dit beleid legt uit hoe HolaLocal tijdens vroege toegang met persoonsgegevens omgaat.", "audience": "Voor wie HolaLocal is", "information": "Informatie die we kunnen verzamelen", "purpose": "Waarom we informatie gebruiken", "profiles": "Profielen voor vroege toegang", "providers": "Dienstverleners en opslag", "visibility": "Zichtbaarheid van contactgegevens", "deletion": "Verwijdering en je keuzes", "security": "Beveiliging", "changes": "Wijzigingen in het beleid" },
-    "terms": { "title": "Gebruiksvoorwaarden", "description": "Deze voorwaarden gelden wanneer je een account maakt of vroege toegang tot HolaLocal gebruikt.", "account": "Je account", "customers": "Klantaccounts", "businesses": "Bedrijfsprofielen", "prohibited": "Verboden gedrag", "messaging": "Berichten en vertaling", "changes": "Wijzigingen, opschorting en verwijdering", "availability": "Beschikbaarheid en verantwoordelijkheid", "law": "Toepasselijk recht" },
-    "contact": { "description": "Vragen, feedback en nuttige bugmeldingen zijn welkom terwijl we HolaLocal bouwen.", "help": "Hoe we kunnen helpen", "email": "E-mail ons", "response": "Reactietijden kunnen tijdens vroege toegang variëren.", "general": "Algemene vragen", "generalText": "vragen over HolaLocal en vroege toegang.", "business": "Zakelijke vragen", "businessText": "hulp bij het voorbereiden van een bedrijfsprofiel.", "bugs": "Bugmeldingen", "bugsText": "vertel wat er gebeurde, welke pagina je gebruikte en wat je verwachtte.", "feedback": "Feedback en suggesties", "feedbackText": "deel wat HolaLocal lokaal nuttiger zou maken.", "privacy": "Privacy of account verwijderen", "privacyText": "neem contact op via het e-mailadres van je account zodat we het verzoek kunnen verifiëren." }
+    "version": "Versie 1 · Geldig vanaf 4 juli 2026",
+    "privacy": {
+      "title": "Privacybeleid",
+      "description": "Dit beleid legt uit hoe HolaLocal met persoonsgegevens omgaat wanneer je het platform gebruikt.",
+      "audience": "Voor wie HolaLocal is",
+      "information": "Informatie die we kunnen verzamelen",
+      "purpose": "Waarom we informatie gebruiken",
+      "profiles": "Klant- en bedrijfsprofielen",
+      "providers": "Dienstverleners en opslag",
+      "visibility": "Zichtbaarheid van contactgegevens",
+      "deletion": "Verwijdering en je keuzes",
+      "security": "Beveiliging",
+      "changes": "Wijzigingen in het beleid"
+    },
+    "terms": {
+      "title": "Gebruiksvoorwaarden",
+      "description": "Deze voorwaarden gelden wanneer je een account maakt of het HolaLocal-platform gebruikt.",
+      "platform": "Het HolaLocal-platform",
+      "account": "Je account",
+      "customers": "Klantaccounts",
+      "businesses": "Bedrijfsprofielen",
+      "prohibited": "Verboden gedrag",
+      "messaging": "Berichten en vertaling",
+      "changes": "Wijzigingen, opschorting en verwijdering",
+      "availability": "Beschikbaarheid en verantwoordelijkheid",
+      "law": "Toepasselijk recht"
+    },
+    "contact": {
+      "description": "Vragen, feedback en nuttige bugmeldingen zijn welkom.",
+      "help": "Hoe we kunnen helpen",
+      "email": "E-mail ons",
+      "response": "Reactietijden kunnen variëren terwijl het platform groeit.",
+      "general": "Algemene vragen",
+      "generalText": "vragen over HolaLocal.",
+      "business": "Zakelijke vragen",
+      "businessText": "hulp bij het beheren van een bedrijfsprofiel.",
+      "bugs": "Bugmeldingen",
+      "bugsText": "vertel wat er gebeurde, welke pagina je gebruikte en wat je verwachtte.",
+      "feedback": "Feedback en suggesties",
+      "feedbackText": "deel wat HolaLocal lokaal nuttiger zou maken.",
+      "privacy": "Privacy of account verwijderen",
+      "privacyText": "neem contact op via het e-mailadres van je account zodat we het verzoek kunnen verifiëren."
+    }
   },
   "footer": {
     "description": "Een betrouwbare, meertalige lokale community voor diensten aan de Costa del Sol en in Gibraltar.",
@@ -254,6 +529,9 @@
     "contact": "Contact",
     "helpCentre": "Helpcentrum",
     "language": "Taal",
-    "copyright": "© {{year}} HolaLocal"
+    "copyright": "© {{year}} HolaLocal",
+    "account": "Account",
+    "accountLabel": "Accountlinks",
+    "poweredBy": "Mogelijk gemaakt door PIXORA"
   }
 }

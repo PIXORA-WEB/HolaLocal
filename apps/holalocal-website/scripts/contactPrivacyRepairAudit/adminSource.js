@@ -16,6 +16,8 @@ export function createContactPrivacyRepairSource({ projectId }) {
         path,
         exists: snapshot.exists,
         data: snapshot.exists ? snapshot.data() : null,
+        updateTime: snapshot.updateTime ?? null,
+        updateTimeString: snapshot.updateTime?.toDate().toISOString() ?? null,
       })
     },
   })
