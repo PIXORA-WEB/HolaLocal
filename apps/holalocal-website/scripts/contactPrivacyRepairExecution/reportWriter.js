@@ -18,7 +18,8 @@ export function humanSummary(report) {
     `Private document exists: ${report.currentState.privateBusinessExists ? 'yes' : 'no'}`,
     `Public website present before repair: ${report.currentState.publicWebsitePresent ? 'yes' : 'no'}`,
     `Private website present before repair: ${report.currentState.privateWebsitePresent ? 'yes' : 'no'}`,
-    `Planned fields: ${report.plannedOperation.fields.join(', ')}`,
+    `Checked fields: ${report.plannedOperation.checkedFields.join(', ')}`,
+    `Mutated fields: ${report.plannedOperation.mutatedFields.join(', ')}`,
     `Executed operations: ${report.executedOperations.length}`,
     '',
   ].join('\n')

@@ -130,12 +130,19 @@ function fakeSource(fixtures = {}) {
       })
     },
     async clearHiddenPublicWebsite(documentPath, precondition) {
-      updates.push({ path: documentPath, fields: ['contact.website', 'contact.websiteVisible'], precondition })
+      updates.push({
+        path: documentPath,
+        payload: { 'contact.website': 'delete' },
+        mutatedFields: ['contact.website'],
+        precondition,
+      })
       documents[documentPath] = {
         ...documents[documentPath],
-        contact: { ...documents[documentPath].contact, website: '', websiteVisible: false },
+        contact: Object.fromEntries(
+          Object.entries(documents[documentPath].contact).filter(([key]) => key !== 'website'),
+        ),
       }
-      return Object.freeze({ status: 'updated', fields: ['contact.website', 'contact.websiteVisible'] })
+      return Object.freeze({ status: 'updated', mutatedFields: ['contact.website'] })
     },
   }
 }
@@ -200,6 +207,14 @@ test('approved dry-run verification rejects mismatched or non-narrow reports', (
     options(),
   ), /actual-target-count-mismatch/)
   assert.throws(() => verifyApprovedContactPrivacyDryRun(
+    approvedReport({ guardrails: { ...approvedReport().guardrails, proposedDocumentMutationCount: 2 } }),
+    options(),
+  ), /unexpected-mutation-count/)
+  assert.throws(() => verifyApprovedContactPrivacyDryRun(
+    approvedReport({ guardrails: { ...approvedReport().guardrails, maxMutations: 0 } }),
+    options(),
+  ), /mutation-ceiling-too-low/)
+  assert.throws(() => verifyApprovedContactPrivacyDryRun(
     approvedReport({ target: { ...approvedReport().target, documentFingerprints: {} } }),
     options(),
   ), /missing-public-fingerprint/)
@@ -217,11 +232,22 @@ test('dry-run revalidates state and does not write', async () => {
   assert.equal(report.metadata.status, 'dry-run')
   assert.equal(report.executedOperations.length, 0)
   assert.equal(source.updates.length, 0)
+  assert.deepEqual(report.plannedOperation.checkedFields, [
+    'contact.website',
+    'contact.websiteVisible',
+    'businessPrivate.contact.website',
+    'ownerId',
+    'businessPrivate.ownerId',
+  ])
+  assert.deepEqual(report.plannedOperation.mutatedFields, ['contact.website'])
+  assert.deepEqual(report.plannedOperation.mutation, { 'contact.website': 'delete' })
   assert.equal(JSON.stringify(report).includes(privateWebsite), false)
   assert.equal(humanSummary(report).includes(privateWebsite), false)
+  assert.match(humanSummary(report), /Checked fields: contact\.website, contact\.websiteVisible/)
+  assert.match(humanSummary(report), /Mutated fields: contact\.website/)
 })
 
-test('apply changes only the hidden public website projection', async () => {
+test('apply deletes only the hidden public website projection', async () => {
   const source = fakeSource()
   const before = structuredClone(source.documents[businessPath])
   const beforePrivate = structuredClone(source.documents[privatePath])
@@ -234,21 +260,57 @@ test('apply changes only the hidden public website projection', async () => {
   assert.equal(report.metadata.status, 'complete')
   assert.deepEqual(source.updates, [{
     path: businessPath,
-    fields: ['contact.website', 'contact.websiteVisible'],
+    payload: { 'contact.website': 'delete' },
+    mutatedFields: ['contact.website'],
     precondition: { lastUpdateTime: `${businessPath}-precondition` },
   }])
-  assert.equal(source.documents[businessPath].contact.website, '')
-  assert.equal(source.documents[businessPath].contact.websiteVisible, false)
+  assert.equal('website' in source.documents[businessPath].contact, false)
+  assert.equal(source.documents[businessPath].contact.websiteVisible, before.contact.websiteVisible)
+  assert.deepEqual(report.plannedOperation.checkedFields, [
+    'contact.website',
+    'contact.websiteVisible',
+    'businessPrivate.contact.website',
+    'ownerId',
+    'businessPrivate.ownerId',
+  ])
+  assert.deepEqual(report.plannedOperation.mutatedFields, ['contact.website'])
+  assert.deepEqual(report.executedOperations, [{ status: 'updated', mutatedFields: ['contact.website'] }])
   assert.equal(source.documents[businessPath].status, before.status)
   assert.equal(source.documents[businessPath].verificationStatus, before.verificationStatus)
   assert.equal(source.documents[businessPath].contact.email, before.contact.email)
   assert.deepEqual(source.documents[privatePath], beforePrivate)
 })
 
+test('already-repaired state is blocked as drift with zero mutations', async () => {
+  const source = fakeSource({
+    [businessPath]: {
+      ...defaultBusiness,
+      contact: { websiteVisible: false, email: '', emailVisible: false },
+    },
+  })
+  const report = await runContactPrivacyRepairExecution({
+    approvedReport: approvedReport(),
+    options: options({ apply: true, confirmationPhrase: CONFIRMATION_PHRASE }),
+    source,
+    now: () => '2026-01-01T00:00:00.000Z',
+  })
+  assert.equal(report.metadata.status, 'blocked-drift')
+  assert.ok(report.drift.includes('publicWebsitePresent-drift'))
+  assert.ok(report.drift.includes('businesses.contact.website-fingerprint-drift'))
+  assert.equal(report.executedOperations.length, 0)
+  assert.equal(source.updates.length, 0)
+})
+
 test('execution refuses state drift, missing private website, visible state and owner mismatch', async () => {
   for (const [label, fixtures, expected] of [
     ['missing private website', { [privatePath]: { ownerId: 'owner-1', contact: { website: '' } } }, 'privateWebsitePresent-drift'],
     ['visible website', { [businessPath]: { ownerId: 'owner-1', contact: { website: privateWebsite, websiteVisible: true } } }, 'websiteVisibilityHidden-drift'],
+    ['websiteVisible fingerprint drift', {
+      [businessPath]: {
+        ...defaultBusiness,
+        contact: { ...defaultBusiness.contact, websiteVisible: null },
+      },
+    }, 'businesses.contact.websiteVisible-fingerprint-drift'],
     ['owner mismatch', { [privatePath]: { ownerId: 'owner-2', contact: { website: privateWebsite } } }, 'publicPrivateOwnerMatch-drift'],
   ]) {
     const report = await runContactPrivacyRepairExecution({
@@ -318,7 +380,7 @@ test('execution source does not expose Storage, Authentication or document-delet
     '../scripts/contactPrivacyRepairExecution/config.js',
   ]
   const prohibited = [
-    /deleteDoc|\.delete\(|deleteUser|getAuth|getStorage|bucket\(/,
+    /deleteDoc|\.doc\([^)]*\)\.delete\(|deleteUser|getAuth|getStorage|bucket\(/,
     /upload\(|save\(|copy\(|move\(|getSignedUrl|download\(/,
     /collection\(|listDocuments|listCollections|where\(/,
     /child_process|execFile|spawn|firebase\s+firestore|firebase\s+database/,

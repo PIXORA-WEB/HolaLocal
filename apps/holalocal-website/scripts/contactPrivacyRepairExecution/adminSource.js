@@ -1,4 +1,5 @@
 import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app'
+import { FieldValue } from 'firebase-admin/firestore'
 import { getFirestore } from 'firebase-admin/firestore'
 
 export function createContactPrivacyExecutionSource({ projectId }) {
@@ -22,12 +23,11 @@ export function createContactPrivacyExecutionSource({ projectId }) {
     },
     async clearHiddenPublicWebsite(path, precondition = {}) {
       await db.doc(path).update({
-        'contact.website': '',
-        'contact.websiteVisible': false,
+        'contact.website': FieldValue.delete(),
       }, precondition.lastUpdateTime ? { lastUpdateTime: precondition.lastUpdateTime } : undefined)
       return Object.freeze({
         status: 'updated',
-        fields: ['contact.website', 'contact.websiteVisible'],
+        mutatedFields: ['contact.website'],
         precondition: precondition.lastUpdateTime ? 'lastUpdateTime' : 'none',
       })
     },

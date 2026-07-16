@@ -10,10 +10,12 @@ Dry-run is the default. Applying the repair requires:
 - the exact affected `businesses/{businessId}` path from that private report;
 - `--confirm-repair "REMOVE CONFIRMED HIDDEN PUBLIC WEBSITE"`.
 
-The only apply operation is:
+The only apply mutation is:
 
-- set `businesses/{businessId}.contact.website` to `""`;
-- set `businesses/{businessId}.contact.websiteVisible` to `false`.
+- delete `businesses/{businessId}.contact.website`.
+
+The matching `contact.websiteVisible` value is checked through the approved dry-run
+fingerprint and drift preconditions, but it is not written by this tool.
 
 The tool does not delete documents, modify Authentication, modify Storage, change private contact values, update trust fields, or use collection-wide writes.
 

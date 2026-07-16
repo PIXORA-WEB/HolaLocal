@@ -152,8 +152,15 @@ export async function runContactPrivacyRepairExecution({
   const drift = currentStateDrift(approvedReport, currentState)
   const plannedOperation = {
     path: options.businessPath,
-    fields: ['contact.website', 'contact.websiteVisible'],
-    values: { 'contact.website': '', 'contact.websiteVisible': false },
+    checkedFields: [
+      'contact.website',
+      'contact.websiteVisible',
+      'businessPrivate.contact.website',
+      'ownerId',
+      'businessPrivate.ownerId',
+    ],
+    mutatedFields: ['contact.website'],
+    mutation: { 'contact.website': 'delete' },
   }
   const executedOperations = []
   let status = options.apply ? 'complete' : 'dry-run'
