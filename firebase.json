@@ -9,7 +9,10 @@
   "functions": [
     {
       "source": "functions",
-      "runtime": "nodejs20"
+      "runtime": "nodejs20",
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run prepare:firebase-contract"
+      ]
     }
   ],
   "emulators": {
