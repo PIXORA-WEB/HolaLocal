@@ -17,6 +17,10 @@ import {
 initializeApp()
 
 export const MESSAGE_TRANSLATION_REGION = 'europe-west1'
+export const PUBLIC_CALLABLE_OPTIONS = {
+  region: MESSAGE_TRANSLATION_REGION,
+  invoker: 'public',
+}
 
 export const translateCreatedMessage = onDocumentCreated(
   {
@@ -38,7 +42,7 @@ export const translateCreatedMessage = onDocumentCreated(
 )
 
 export const updateAccountRole = onCall(
-  { region: MESSAGE_TRANSLATION_REGION },
+  PUBLIC_CALLABLE_OPTIONS,
   async (request) => transitionAccountRole({
     uid: request.auth?.uid,
     emailVerified: request.auth?.token?.email_verified === true,
@@ -48,7 +52,7 @@ export const updateAccountRole = onCall(
 )
 
 export const ensureOwnerBusiness = onCall(
-  { region: MESSAGE_TRANSLATION_REGION },
+  PUBLIC_CALLABLE_OPTIONS,
   async (request) => runEnsureOwnerBusiness({
     uid: request.auth?.uid,
     emailVerified: request.auth?.token?.email_verified === true,
@@ -57,7 +61,7 @@ export const ensureOwnerBusiness = onCall(
 )
 
 export const sendMessage = onCall(
-  { region: MESSAGE_TRANSLATION_REGION },
+  PUBLIC_CALLABLE_OPTIONS,
   async (request) => sendConversationMessage({
     uid: request.auth?.uid,
     conversationId: request.data?.conversationId,
@@ -68,7 +72,7 @@ export const sendMessage = onCall(
 )
 
 export const moderateBusiness = onCall(
-  { region: MESSAGE_TRANSLATION_REGION },
+  PUBLIC_CALLABLE_OPTIONS,
   async (request) => runBusinessModeration({
     uid: request.auth?.uid,
     claims: request.auth?.token,
