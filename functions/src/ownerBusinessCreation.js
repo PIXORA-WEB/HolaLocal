@@ -4,6 +4,13 @@ import { hasCompleteUserProfile } from '@holalocal/firebase-contract'
 
 const CONTACT_METHODS = new Set(['holalocal', 'phone', 'email', 'whatsapp'])
 
+function requireValidUid(uid) {
+  if (typeof uid !== 'string' || !uid.trim() || uid.includes('/')) {
+    throw new HttpsError('unauthenticated', 'auth-required')
+  }
+  return uid.trim()
+}
+
 function sanitizeContact(contact = {}) {
   const preferredContactMethod = CONTACT_METHODS.has(contact.preferredContactMethod)
     ? contact.preferredContactMethod
@@ -41,10 +48,10 @@ function sanitizeLocation(profile = {}) {
 }
 
 function assertEligibleUser({ uid, emailVerified, profile }) {
-  if (!uid) throw new HttpsError('unauthenticated', 'auth-required')
+  const safeUid = requireValidUid(uid)
   if (emailVerified !== true) throw new HttpsError('failed-precondition', 'email-verification-required')
   if (!profile) throw new HttpsError('failed-precondition', 'profile-not-found')
-  if (profile.uid !== uid) throw new HttpsError('permission-denied', 'uid-mismatch')
+  if (profile.uid !== safeUid) throw new HttpsError('permission-denied', 'uid-mismatch')
   if (profile.accountStatus !== 'active' || profile.deletionRequestedAt != null) {
     throw new HttpsError('failed-precondition', 'account-not-active')
   }
@@ -121,19 +128,20 @@ async function hasManagedOnlyBusiness(db, uid) {
 }
 
 export async function ensureOwnerBusiness({ uid, emailVerified, db }) {
-  if (!uid) throw new HttpsError('unauthenticated', 'auth-required')
-  const userRef = db.doc(`users/${uid}`)
-  const deterministicBusinessRef = db.doc(`businesses/${uid}`)
-  const deterministicPrivateRef = db.doc(`businessPrivate/${uid}`)
+  const safeUid = requireValidUid(uid)
+  if (emailVerified !== true) throw new HttpsError('failed-precondition', 'email-verification-required')
+  const userRef = db.doc(`users/${safeUid}`)
+  const deterministicBusinessRef = db.doc(`businesses/${safeUid}`)
+  const deterministicPrivateRef = db.doc(`businessPrivate/${safeUid}`)
 
   const [userSnapshot, ownedBusiness, managesOtherBusiness] = await Promise.all([
     userRef.get(),
-    getSingleOwnedBusiness(db, uid),
-    hasManagedOnlyBusiness(db, uid),
+    getSingleOwnedBusiness(db, safeUid),
+    hasManagedOnlyBusiness(db, safeUid),
   ])
 
   const profile = userSnapshot.exists ? userSnapshot.data() : null
-  assertEligibleUser({ uid, emailVerified, profile })
+  assertEligibleUser({ uid: safeUid, emailVerified, profile })
 
   if (ownedBusiness) {
     return { ok: true, businessId: ownedBusiness.id, created: false }
@@ -150,10 +158,10 @@ export async function ensureOwnerBusiness({ uid, emailVerified, db }) {
     ])
     if (businessSnapshot.exists) {
       const business = businessSnapshot.data()
-      if (business.ownerId !== uid) throw new HttpsError('failed-precondition', 'business-id-conflict')
+      if (business.ownerId !== safeUid) throw new HttpsError('failed-precondition', 'business-id-conflict')
       return
     }
-    const documents = buildDraftBusiness(uid, profile)
+    const documents = buildDraftBusiness(safeUid, profile)
     transaction.set(deterministicBusinessRef, documents.business)
     if (!privateSnapshot.exists) transaction.set(deterministicPrivateRef, documents.privateBusiness)
     created = true

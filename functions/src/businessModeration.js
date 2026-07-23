@@ -14,6 +14,13 @@ function isTrustedModerator(claims = {}) {
   return claims.moderator === true || claims.admin === true
 }
 
+function requireValidUid(uid) {
+  if (typeof uid !== 'string' || !uid.trim() || uid.includes('/')) {
+    throw new HttpsError('unauthenticated', 'auth-required')
+  }
+  return uid.trim()
+}
+
 function safeBusinessId(value) {
   if (typeof value !== 'string' || !value.trim() || value.includes('/')) {
     throw new HttpsError('invalid-argument', 'invalid-business-id')
@@ -32,7 +39,7 @@ function assertTransition({ operation, business }) {
 }
 
 export async function moderateBusiness({ uid, claims, businessId, operation, db }) {
-  if (!uid) throw new HttpsError('unauthenticated', 'auth-required')
+  requireValidUid(uid)
   if (!isTrustedModerator(claims)) throw new HttpsError('permission-denied', 'moderator-claim-required')
   const safeId = safeBusinessId(businessId)
   const businessRef = db.doc(`businesses/${safeId}`)

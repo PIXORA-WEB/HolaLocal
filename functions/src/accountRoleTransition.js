@@ -8,6 +8,13 @@ const ACCOUNT_ROLE_MAP = Object.freeze({
   both: Object.freeze(['customer', 'business']),
 })
 
+function requireValidUid(uid) {
+  if (typeof uid !== 'string' || !uid.trim() || uid.includes('/')) {
+    throw new HttpsError('unauthenticated', 'auth-required')
+  }
+  return uid.trim()
+}
+
 export function buildAccountRoleTransition({
   uid,
   emailVerified,
@@ -15,11 +22,11 @@ export function buildAccountRoleTransition({
   accountType,
   hasManagedBusiness = false,
 }) {
-  if (!uid) throw new HttpsError('unauthenticated', 'auth-required')
+  const safeUid = requireValidUid(uid)
   if (emailVerified !== true) throw new HttpsError('failed-precondition', 'email-verification-required')
   if (!ACCOUNT_ROLE_MAP[accountType]) throw new HttpsError('invalid-argument', 'invalid-account-type')
   if (!profile) throw new HttpsError('failed-precondition', 'profile-not-found')
-  if (profile.uid !== uid) throw new HttpsError('permission-denied', 'uid-mismatch')
+  if (profile.uid !== safeUid) throw new HttpsError('permission-denied', 'uid-mismatch')
   if (profile.accountStatus !== 'active' || profile.deletionRequestedAt != null) {
     throw new HttpsError('failed-precondition', 'account-not-active')
   }
@@ -50,15 +57,19 @@ async function hasManagedBusinessForUser(db, uid) {
 }
 
 export async function transitionAccountRole({ uid, emailVerified, accountType, db }) {
-  const userRef = db.doc(`users/${uid}`)
+  const safeUid = requireValidUid(uid)
+  if (emailVerified !== true) throw new HttpsError('failed-precondition', 'email-verification-required')
+  if (!ACCOUNT_ROLE_MAP[accountType]) throw new HttpsError('invalid-argument', 'invalid-account-type')
+
+  const userRef = db.doc(`users/${safeUid}`)
   const hasManagedBusiness = accountType === 'customer'
-    ? await hasManagedBusinessForUser(db, uid)
+    ? await hasManagedBusinessForUser(db, safeUid)
     : false
   let update
   await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(userRef)
     update = buildAccountRoleTransition({
-      uid,
+      uid: safeUid,
       emailVerified,
       profile: snapshot.exists ? snapshot.data() : null,
       accountType,

@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
-import { onCall } from 'firebase-functions/v2/https'
+import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { transitionAccountRole } from './accountRoleTransition.js'
 import { moderateBusiness as runBusinessModeration } from './businessModeration.js'
 import { createFirestoreTranslationSource } from './firestoreTranslationSource.js'
@@ -20,6 +20,55 @@ export const MESSAGE_TRANSLATION_REGION = 'europe-west1'
 export const PUBLIC_CALLABLE_OPTIONS = {
   region: MESSAGE_TRANSLATION_REGION,
   invoker: 'public',
+}
+
+function requireCallableUid(request) {
+  const uid = request.auth?.uid
+  if (typeof uid !== 'string' || !uid.trim() || uid.includes('/')) {
+    throw new HttpsError('unauthenticated', 'Authentication is required.')
+  }
+  return uid.trim()
+}
+
+export async function handleUpdateAccountRole(request, db) {
+  const uid = requireCallableUid(request)
+  return transitionAccountRole({
+    uid,
+    emailVerified: request.auth?.token?.email_verified === true,
+    accountType: request.data?.accountType,
+    db: db ?? getFirestore(),
+  })
+}
+
+export async function handleEnsureOwnerBusiness(request, db) {
+  const uid = requireCallableUid(request)
+  return runEnsureOwnerBusiness({
+    uid,
+    emailVerified: request.auth?.token?.email_verified === true,
+    db: db ?? getFirestore(),
+  })
+}
+
+export async function handleSendMessage(request, db) {
+  const uid = requireCallableUid(request)
+  return sendConversationMessage({
+    uid,
+    conversationId: request.data?.conversationId,
+    requestId: request.data?.requestId,
+    text: request.data?.text,
+    db: db ?? getFirestore(),
+  })
+}
+
+export async function handleModerateBusiness(request, db) {
+  const uid = requireCallableUid(request)
+  return runBusinessModeration({
+    uid,
+    claims: request.auth?.token,
+    businessId: request.data?.businessId,
+    operation: request.data?.operation,
+    db: db ?? getFirestore(),
+  })
 }
 
 export const translateCreatedMessage = onDocumentCreated(
@@ -43,41 +92,20 @@ export const translateCreatedMessage = onDocumentCreated(
 
 export const updateAccountRole = onCall(
   PUBLIC_CALLABLE_OPTIONS,
-  async (request) => transitionAccountRole({
-    uid: request.auth?.uid,
-    emailVerified: request.auth?.token?.email_verified === true,
-    accountType: request.data?.accountType,
-    db: getFirestore(),
-  }),
+  async (request) => handleUpdateAccountRole(request),
 )
 
 export const ensureOwnerBusiness = onCall(
   PUBLIC_CALLABLE_OPTIONS,
-  async (request) => runEnsureOwnerBusiness({
-    uid: request.auth?.uid,
-    emailVerified: request.auth?.token?.email_verified === true,
-    db: getFirestore(),
-  }),
+  async (request) => handleEnsureOwnerBusiness(request),
 )
 
 export const sendMessage = onCall(
   PUBLIC_CALLABLE_OPTIONS,
-  async (request) => sendConversationMessage({
-    uid: request.auth?.uid,
-    conversationId: request.data?.conversationId,
-    requestId: request.data?.requestId,
-    text: request.data?.text,
-    db: getFirestore(),
-  }),
+  async (request) => handleSendMessage(request),
 )
 
 export const moderateBusiness = onCall(
   PUBLIC_CALLABLE_OPTIONS,
-  async (request) => runBusinessModeration({
-    uid: request.auth?.uid,
-    claims: request.auth?.token,
-    businessId: request.data?.businessId,
-    operation: request.data?.operation,
-    db: getFirestore(),
-  }),
+  async (request) => handleModerateBusiness(request),
 )

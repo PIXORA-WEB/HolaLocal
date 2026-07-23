@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildAccountRoleTransition } from '../src/accountRoleTransition.js'
+import { buildAccountRoleTransition, transitionAccountRole } from '../src/accountRoleTransition.js'
 
 const completeProfile = Object.freeze({
   uid: 'user-1',
@@ -80,6 +80,34 @@ test('trusted account role transition rejects unauthenticated and unverified req
     profile: completeProfile,
     accountType: 'customer',
   }), (error) => codeFrom(error) === 'failed-precondition')
+})
+
+test('trusted account role transition never queries managed businesses without a valid uid', async () => {
+  const db = {
+    doc() {
+      throw new Error('doc() should not be reached with an invalid uid.')
+    },
+    collection() {
+      throw new Error('collection() should not be reached with an invalid uid.')
+    },
+    runTransaction() {
+      throw new Error('transaction should not be reached with an invalid uid.')
+    },
+  }
+
+  await assert.rejects(() => transitionAccountRole({
+    uid: undefined,
+    emailVerified: true,
+    accountType: 'customer',
+    db,
+  }), (error) => codeFrom(error) === 'unauthenticated')
+
+  await assert.rejects(() => transitionAccountRole({
+    uid: 'bad/user',
+    emailVerified: true,
+    accountType: 'customer',
+    db,
+  }), (error) => codeFrom(error) === 'unauthenticated')
 })
 
 test('trusted account role transition rejects arbitrary roles and invalid account state', () => {

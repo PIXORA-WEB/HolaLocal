@@ -8,6 +8,13 @@ import {
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,80}$/
 
+function requireValidUid(uid) {
+  if (typeof uid !== 'string' || !uid.trim() || uid.includes('/')) {
+    throw new HttpsError('unauthenticated', 'auth-required')
+  }
+  return uid.trim()
+}
+
 function assertStringId(value, code, message) {
   if (typeof value !== 'string' || !value.trim() || value.includes('/')) {
     throw new HttpsError(code, message)
@@ -83,11 +90,11 @@ export async function sendConversationMessage({
   db,
   now = () => Timestamp.now(),
 }) {
-  if (!uid) throw new HttpsError('unauthenticated', 'auth-required')
+  const safeUid = requireValidUid(uid)
   const safeConversationId = assertStringId(conversationId, 'invalid-argument', 'invalid-conversation-id')
   const safeRequestId = validateRequestId(requestId)
   const normalizedText = normalizeText(text)
-  const messageId = buildIdempotentMessageId(uid, safeRequestId)
+  const messageId = buildIdempotentMessageId(safeUid, safeRequestId)
   const conversationRef = db.doc(`conversations/${safeConversationId}`)
   const messageRef = conversationRef.collection('messages').doc(messageId)
 
@@ -100,17 +107,17 @@ export async function sendConversationMessage({
     const businessSnapshot = await transaction.get(db.doc(`businesses/${conversation.businessId}`))
     if (!businessSnapshot.exists) throw new HttpsError('failed-precondition', 'conversation-business-not-found')
     const business = businessSnapshot.data()
-    assertConversationAccess({ conversation, business, uid })
+    assertConversationAccess({ conversation, business, uid: safeUid })
 
     const existingMessageSnapshot = await transaction.get(messageRef)
     if (existingMessageSnapshot.exists) {
       const existingMessage = existingMessageSnapshot.data()
-      if (!sameLogicalMessage(existingMessage, uid, normalizedText, safeRequestId)) {
+      if (!sameLogicalMessage(existingMessage, safeUid, normalizedText, safeRequestId)) {
         throw new HttpsError('already-exists', 'message-request-id-conflict')
       }
       if (shouldAdvanceConversationPreview(conversation.lastMessageAt, existingMessage.createdAt)) {
         transaction.update(conversationRef, {
-          lastMessage: messagePreview(messageId, uid, normalizedText, existingMessage.createdAt),
+          lastMessage: messagePreview(messageId, safeUid, normalizedText, existingMessage.createdAt),
           lastMessageAt: existingMessage.createdAt,
           updatedAt: now(),
         })
@@ -121,7 +128,7 @@ export async function sendConversationMessage({
 
     const createdAt = now()
     const message = {
-      senderId: uid,
+      senderId: safeUid,
       requestId: safeRequestId,
       type: 'text',
       text: normalizedText,
@@ -135,7 +142,7 @@ export async function sendConversationMessage({
     transaction.set(messageRef, message)
     if (shouldAdvanceConversationPreview(conversation.lastMessageAt, createdAt)) {
       transaction.update(conversationRef, {
-        lastMessage: messagePreview(messageId, uid, normalizedText, createdAt),
+        lastMessage: messagePreview(messageId, safeUid, normalizedText, createdAt),
         lastMessageAt: createdAt,
         updatedAt: createdAt,
       })
