@@ -4,14 +4,13 @@ import {
   getDoc,
   getDocs,
   limit as firestoreLimit,
-  orderBy,
   query,
   runTransaction,
   serverTimestamp,
   where,
 } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
-import { ensureOwnerBusinessCallable } from '../firebase/functionsClient.js'
+import { ensureOwnerBusinessCallable, listPublicBusinessesCallable } from '../firebase/functionsClient.js'
 import {
   hasCompletePublicBusinessProfile,
   projectPublicContact,
@@ -141,15 +140,10 @@ function toPublicBusiness(snapshot) {
 
 export async function getActivePublicBusinesses(maxResults = 60) {
   const resultLimit = Math.min(Math.max(Number(maxResults) || 1, 1), 100)
-  const snapshot = await getDocs(query(
-    collection(db, 'businesses'),
-    where('status', '==', 'active'),
-    where('publishedAt', '!=', null),
-    orderBy('publishedAt', 'desc'),
-    firestoreLimit(resultLimit),
-  ))
-
-  return snapshot.docs.map(toPublicBusiness).filter((business) => business?.name)
+  const result = await listPublicBusinessesCallable({ maxResults: resultLimit })
+  return Array.isArray(result.data?.businesses)
+    ? result.data.businesses.filter((business) => business?.businessId && business?.name)
+    : []
 }
 
 export async function getFeaturedActiveBusinesses(maxResults = 60) {
@@ -181,7 +175,7 @@ async function getManagedBusinessById(businessId) {
   )
 }
 
-async function candidateById(businessId, source, missingIsInvalid = false) {
+async function candidateById(businessId, source, { missingIsInvalid = false, permissionDeniedIsInvalid = false } = {}) {
   if (!businessId) return { candidate: null, invalid: false }
   try {
     const snapshot = await getDoc(businessDocument(businessId))
@@ -196,7 +190,9 @@ async function candidateById(businessId, source, missingIsInvalid = false) {
       invalid: false,
     }
   } catch (error) {
-    if (error?.code === 'permission-denied') return { candidate: null, invalid: true }
+    if (error?.code === 'permission-denied') {
+      return { candidate: null, invalid: permissionDeniedIsInvalid }
+    }
     throw error
   }
 }
@@ -204,7 +200,10 @@ async function candidateById(businessId, source, missingIsInvalid = false) {
 export async function getManagedBusinessLookup(ownerId, userBusinessId = null) {
   if (!ownerId) return resolveWebsiteBusinessLookup({ ownerId })
   const pointerResult = userBusinessId
-    ? await candidateById(userBusinessId, 'user_business_id', true)
+    ? await candidateById(userBusinessId, 'user_business_id', {
+      missingIsInvalid: true,
+      permissionDeniedIsInvalid: true,
+    })
     : { candidate: null, invalid: false }
   const uidResult = userBusinessId === ownerId
     ? pointerResult
@@ -245,10 +244,7 @@ export async function getBusinessByOwnerId(ownerId, userBusinessId = null) {
   throw error
 }
 
-export async function createBusinessProfile(ownerId) {
-  const existingBusiness = await getBusinessByOwnerId(ownerId)
-  if (existingBusiness) return existingBusiness
-
+export async function createBusinessProfile() {
   const result = await ensureOwnerBusinessCallable()
   const businessId = result.data?.businessId
   if (!businessId) throw new Error('Business profile could not be created.')
@@ -367,5 +363,12 @@ export async function ensureBusinessProfile(ownerId, userProfile) {
     throw new Error('A business role is required to create a business profile.')
   }
 
-  return (await getBusinessByOwnerId(ownerId, userProfile.businessId)) ?? createBusinessProfile(ownerId)
+  if (userProfile.businessId) {
+    const existingBusiness = await getManagedBusinessById(userProfile.businessId)
+    if (existingBusiness) return existingBusiness
+    const error = new Error('Business ownership could not be resolved safely.')
+    error.code = 'business/invalid-ownership'
+    throw error
+  }
+  return createBusinessProfile()
 }

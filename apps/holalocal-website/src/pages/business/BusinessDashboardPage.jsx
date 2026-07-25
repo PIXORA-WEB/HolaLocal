@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LoadingScreen from '../../components/common/LoadingScreen.jsx'
@@ -16,7 +16,7 @@ const insightKeys = ['views', 'messages', 'saved', 'reviews', 'contactClicks']
 
 function BusinessDashboardPage() {
   const { t } = useTranslation()
-  const { user, userProfile } = useAuthentication()
+  const { refreshUserProfile, user, userProfile } = useAuthentication()
   const [businessProfile, setBusinessProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -24,6 +24,10 @@ function BusinessDashboardPage() {
   const [submitSuccess, setSubmitSuccess] = useState('')
   const [submittingForReview, setSubmittingForReview] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const attemptedProfileRefreshBusinessIdRef = useRef(null)
+  const userId = user.uid
+  const userBusinessId = userProfile?.businessId ?? null
+  const hasBusinessRole = userProfile?.roles?.includes('business') === true
 
   useEffect(() => {
     let active = true
@@ -32,8 +36,19 @@ function BusinessDashboardPage() {
       setError('')
       setLoading(true)
       try {
-        const profile = await ensureBusinessProfile(user.uid, userProfile)
+        const profile = await ensureBusinessProfile(userId, {
+          businessId: userBusinessId,
+          roles: hasBusinessRole ? ['business'] : [],
+        })
         if (active) setBusinessProfile(profile)
+        if (
+          profile?.businessId
+          && profile.businessId !== userBusinessId
+          && attemptedProfileRefreshBusinessIdRef.current !== profile.businessId
+        ) {
+          attemptedProfileRefreshBusinessIdRef.current = profile.businessId
+          await refreshUserProfile({ uid: userId }, { background: true }).catch(() => undefined)
+        }
       } catch (loadError) {
         if (active) setError(getAuthenticationErrorMessage(loadError, t))
       } finally {
@@ -43,7 +58,7 @@ function BusinessDashboardPage() {
 
     void loadBusinessProfile()
     return () => { active = false }
-  }, [loadAttempt, t, user.uid, userProfile])
+  }, [hasBusinessRole, loadAttempt, refreshUserProfile, t, userBusinessId, userId])
 
   async function handleSubmitForReview() {
     if (!businessProfile?.businessId) return

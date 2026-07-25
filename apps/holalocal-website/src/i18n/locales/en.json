@@ -212,6 +212,20 @@
     "compatibility": {
       "ownershipConflict": "We found more than one business profile associated with this account. Your data has not been changed. Please contact HolaLocal Support."
     },
+    "categories": {
+      "cleaning": "Cleaning",
+      "plumbing": "Plumbing",
+      "electrical": "Electrical",
+      "gardening": "Gardening",
+      "paintingDecorating": "Painting and decorating",
+      "buildingRenovation": "Building and renovation",
+      "handyman": "Handyman",
+      "airConditioning": "Air conditioning",
+      "locksmith": "Locksmith",
+      "pestControl": "Pest control",
+      "poolMaintenance": "Pool maintenance",
+      "petServices": "Pet services"
+    },
     "control": {
       "loading": "Loading your business profile…",
       "yourBusiness": "Your business",
@@ -425,7 +439,26 @@
     "optional": "optional",
     "delete": "Delete",
     "uploading": "Uploading…",
-    "close": "Close"
+    "close": "Close",
+    "other": "Other"
+  },
+  "locations": {
+    "groups": {
+      "malaga": "Málaga province / Costa del Sol",
+      "cadiz": "Cádiz province / Campo de Gibraltar",
+      "gibraltar": "Gibraltar",
+      "other": "Other"
+    },
+    "provinces": {
+      "malaga": "Málaga province",
+      "cadiz": "Cádiz province",
+      "gibraltar": "Gibraltar",
+      "other": "Other"
+    },
+    "countries": {
+      "ES": "Spain",
+      "GI": "Gibraltar"
+    }
   },
   "validation": {
     "email": "Enter a valid email address.",

@@ -16,6 +16,7 @@ test('message translation trigger pins the Firestore region to europe-west1', as
   assert.match(source, /ensureOwnerBusiness = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /sendMessage = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /moderateBusiness = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
+  assert.match(source, /listPublicBusinesses = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /process\.env\[TRANSLATION_PROVIDER_CONFIG\]/)
   assert.doesNotMatch(source, /FUNCTIONS_REGION/)
   assert.doesNotMatch(source, /process\.env\.[A-Z_]*REGION/)
@@ -28,7 +29,7 @@ test('only callable functions opt in to public Cloud Run invocation', async () =
   assert.match(source, /translateCreatedMessage = onDocumentCreated\(\s*\{\s*document: 'conversations\/\{conversationId\}\/messages\/\{messageId\}',\s*region: MESSAGE_TRANSLATION_REGION,\s*\}/s)
   assert.doesNotMatch(source, /translateCreatedMessage = onDocumentCreated\(\s*PUBLIC_CALLABLE_OPTIONS/s)
 
-  for (const callableName of ['updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'moderateBusiness']) {
+  for (const callableName of ['updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'moderateBusiness', 'listPublicBusinesses']) {
     assert.match(source, new RegExp(`${callableName} = onCall\\(\\s*PUBLIC_CALLABLE_OPTIONS,`, 's'))
   }
 })

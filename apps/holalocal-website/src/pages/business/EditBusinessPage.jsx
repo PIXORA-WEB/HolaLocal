@@ -11,9 +11,8 @@ import FormFieldError from '../../components/common/FormFieldError.jsx'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import {
-  createBusinessProfile,
   deleteBusinessGalleryImage,
-  getBusinessByOwnerId,
+  ensureBusinessProfile,
   uploadBusinessGalleryImages,
   uploadBusinessLogo,
   updateBusinessProfile,
@@ -30,6 +29,7 @@ import {
 import { getLanguageNameFromCode, normalizeLanguageCode } from '../../utils/languages.js'
 import { getBusinessProfileCompletion } from '../../utils/businessCompletion.js'
 import {
+  getServiceAreaGroupLabel,
   getServiceAreaLabel,
   normalizeCountryCode,
   normalizeProvinceId,
@@ -122,7 +122,7 @@ function CheckboxGroup({ error, id, legend, name, options, selectedValues, onTog
 
 function EditBusinessPage() {
   const { t } = useTranslation()
-  const { signOutUser, user, userProfile } = useAuthentication()
+  const { refreshUserProfile, signOutUser, user, userProfile } = useAuthentication()
   const navigate = useNavigate()
   const [businessProfile, setBusinessProfile] = useState(null)
   const [form, setForm] = useState(emptyForm)
@@ -143,6 +143,13 @@ function EditBusinessPage() {
   const mediaRetryRef = useRef(null)
   const [initialDraftSignature, setInitialDraftSignature] = useState(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const attemptedProfileRefreshBusinessIdRef = useRef(null)
+  const userId = user.uid
+  const userBusinessId = userProfile?.businessId ?? null
+  const hasBusinessRole = userProfile?.roles?.includes('business') === true
+  const userEmail = userProfile?.email ?? ''
+  const userCity = userProfile?.city ?? ''
+  const userPreferredLocale = userProfile?.preferredLocale ?? 'en'
   const categoryListboxOptions = [
     { label: t('business.form.selectCategory'), value: '' },
     ...businessCategoryOptions.map((category) => ({
@@ -159,16 +166,15 @@ function EditBusinessPage() {
     label: getBusinessCategoryLabel(category.value, t),
   }))
   const localizedServiceAreaOptions = serviceAreaOptions.map((area) => {
-    const translatedGroup = t(`locations.groups.${area.group}`)
     return {
       ...area,
-      groupLabel: typeof translatedGroup === 'string' ? translatedGroup : area.group,
+      groupLabel: getServiceAreaGroupLabel(area.group, t),
       label: getServiceAreaLabel(area.value, t),
     }
   })
   const localizedLanguageOptions = businessLanguageOptions.map((language) => ({
     ...language,
-    label: language.value === 'other' ? t('common.other') : language.label,
+    label: language.value === 'other' ? t('common.other', { defaultValue: 'Other' }) : language.label,
   }))
   const galleryImages = businessProfile?.galleryImages?.length > 0
     ? businessProfile.galleryImages
@@ -179,7 +185,7 @@ function EditBusinessPage() {
   )
   const isDirty = initialDraftSignature !== null && initialDraftSignature !== currentDraftSignature
   const countryListboxOptions = countryOptions.map((country) => ({
-    label: t(country.labelKey),
+    label: t(country.labelKey, { defaultValue: country.defaultLabel }),
     value: country.value,
   }))
   const contactMethodOptions = [
@@ -207,10 +213,13 @@ function EditBusinessPage() {
       setError('')
       setLoading(true)
       try {
-        const profile = await getBusinessByOwnerId(user.uid, userProfile.businessId)
+        const profile = await ensureBusinessProfile(userId, {
+          businessId: userBusinessId,
+          roles: hasBusinessRole ? ['business'] : [],
+        })
         if (!active) return
 
-        const loadedLanguages = (profile?.languages ?? [userProfile.preferredLocale ?? 'en'])
+        const loadedLanguages = (profile?.languages ?? [userPreferredLocale])
           .map(normalizeLanguageCode)
         const preparedSubcategories = prepareCustomSelection(
           profile?.categoryIds ?? [],
@@ -227,7 +236,7 @@ function EditBusinessPage() {
 
         const nextForm = {
           ...emptyForm,
-          email: profile?.contact?.email ?? userProfile.email ?? '',
+          email: profile?.contact?.email ?? userEmail,
           phone: profile?.contact?.phone ?? '',
           phoneVisible: profile?.contact?.phoneVisible === true,
           whatsappNumber: profile?.contact?.whatsappNumber ?? '',
@@ -237,7 +246,7 @@ function EditBusinessPage() {
           websiteVisible: profile?.contact?.websiteVisible === true,
           preferredContactMethod: profile?.contact?.preferredContactMethod ?? 'holalocal',
           allowCallbackRequests: profile?.contact?.allowCallbackRequests === true,
-          city: profile?.location?.locality ?? userProfile.city ?? '',
+          city: profile?.location?.locality ?? userCity,
           province: normalizeProvinceId(profile?.location?.region ?? ''),
           country: normalizeCountryCode(profile?.location?.countryCode ?? 'ES'),
           primaryLanguage: profile?.primaryLanguage ?? loadedLanguages[0] ?? 'en',
@@ -258,6 +267,14 @@ function EditBusinessPage() {
           preparedServiceAreas.customValue,
           preparedLanguages.customValue,
         ))
+        if (
+          profile?.businessId
+          && profile.businessId !== userBusinessId
+          && attemptedProfileRefreshBusinessIdRef.current !== profile.businessId
+        ) {
+          attemptedProfileRefreshBusinessIdRef.current = profile.businessId
+          await refreshUserProfile({ uid: userId }, { background: true }).catch(() => undefined)
+        }
       } catch (loadError) {
         if (active) setError(getAuthenticationErrorMessage(loadError, t))
       } finally {
@@ -270,7 +287,17 @@ function EditBusinessPage() {
     return () => {
       active = false
     }
-  }, [loadAttempt, t, user.uid, userProfile])
+  }, [
+    hasBusinessRole,
+    loadAttempt,
+    refreshUserProfile,
+    t,
+    userBusinessId,
+    userCity,
+    userEmail,
+    userId,
+    userPreferredLocale,
+  ])
 
   useEffect(() => {
     if (!isDirty) return undefined
@@ -543,9 +570,11 @@ function EditBusinessPage() {
     }
 
     try {
-      const savedBusiness = businessProfile
-        ? await updateBusinessProfile(businessProfile.businessId, businessData)
-        : await createBusinessProfile(user.uid, businessData)
+      const editableBusiness = businessProfile ?? await ensureBusinessProfile(userId, {
+        businessId: userBusinessId,
+        roles: hasBusinessRole ? ['business'] : [],
+      })
+      const savedBusiness = await updateBusinessProfile(editableBusiness.businessId, businessData)
 
       setBusinessProfile(savedBusiness)
       setInitialDraftSignature(currentDraftSignature)

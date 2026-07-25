@@ -24,6 +24,13 @@ class FakeDocRef {
   get() {
     return Promise.resolve(this.database.snapshot(this.path))
   }
+
+  update(update) {
+    const current = this.database.store.get(this.path)
+    if (!current) throw new Error(`Missing document: ${this.path}`)
+    this.database.store.set(this.path, { ...current, ...update })
+    return Promise.resolve()
+  }
 }
 
 class FakeCollectionRef {
@@ -31,6 +38,7 @@ class FakeCollectionRef {
     this.database = database
     this.path = path
     this.filters = []
+    this.order = null
     this.limitCount = Infinity
   }
 
@@ -41,6 +49,15 @@ class FakeCollectionRef {
   where(field, operator, value) {
     const next = new FakeCollectionRef(this.database, this.path)
     next.filters = [...this.filters, { field, operator, value }]
+    next.order = this.order
+    next.limitCount = this.limitCount
+    return next
+  }
+
+  orderBy(field, direction = 'asc') {
+    const next = new FakeCollectionRef(this.database, this.path)
+    next.filters = this.filters
+    next.order = { field, direction }
     next.limitCount = this.limitCount
     return next
   }
@@ -48,6 +65,7 @@ class FakeCollectionRef {
   limit(count) {
     const next = new FakeCollectionRef(this.database, this.path)
     next.filters = this.filters
+    next.order = this.order
     next.limitCount = count
     return next
   }
@@ -60,8 +78,19 @@ class FakeCollectionRef {
       documents = documents.filter((snapshot) => {
         const value = snapshot.data()?.[filter.field]
         if (filter.operator === '==') return value === filter.value
+        if (filter.operator === '!=') return value !== filter.value
         if (filter.operator === 'array-contains') return Array.isArray(value) && value.includes(filter.value)
         throw new Error(`Unsupported fake query operator: ${filter.operator}`)
+      })
+    }
+    if (this.order) {
+      const direction = this.order.direction === 'desc' ? -1 : 1
+      documents.sort((first, second) => {
+        const left = first.data()?.[this.order.field]
+        const right = second.data()?.[this.order.field]
+        const leftTime = typeof left?.toMillis === 'function' ? left.toMillis() : Number(new Date(left))
+        const rightTime = typeof right?.toMillis === 'function' ? right.toMillis() : Number(new Date(right))
+        return (leftTime - rightTime) * direction
       })
     }
     documents = documents.slice(0, this.limitCount)

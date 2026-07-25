@@ -1,26 +1,41 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import LoadingScreen from '../../components/common/LoadingScreen.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
-import { getBusinessByOwnerId } from '../../services/businessService.js'
+import { ensureBusinessProfile } from '../../services/businessService.js'
 
 function SubscriptionPage() {
   const { t } = useTranslation()
-  const { user, userProfile } = useAuthentication()
+  const { refreshUserProfile, user, userProfile } = useAuthentication()
   const [businessProfile, setBusinessProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const attemptedProfileRefreshBusinessIdRef = useRef(null)
+  const userId = user.uid
+  const userBusinessId = userProfile?.businessId ?? null
+  const hasBusinessRole = userProfile?.roles?.includes('business') === true
 
   useEffect(() => {
     let active = true
 
-    getBusinessByOwnerId(user.uid, userProfile.businessId)
-      .then((profile) => {
+    ensureBusinessProfile(userId, {
+      businessId: userBusinessId,
+      roles: hasBusinessRole ? ['business'] : [],
+    })
+      .then(async (profile) => {
         if (active) setBusinessProfile(profile)
+        if (
+          profile?.businessId
+          && profile.businessId !== userBusinessId
+          && attemptedProfileRefreshBusinessIdRef.current !== profile.businessId
+        ) {
+          attemptedProfileRefreshBusinessIdRef.current = profile.businessId
+          await refreshUserProfile({ uid: userId }, { background: true }).catch(() => undefined)
+        }
       })
       .catch((loadError) => {
         if (active) setError(getAuthenticationErrorMessage(loadError, t))
@@ -32,7 +47,7 @@ function SubscriptionPage() {
     return () => {
       active = false
     }
-  }, [loadAttempt, t, user.uid, userProfile.businessId])
+  }, [hasBusinessRole, loadAttempt, refreshUserProfile, t, userBusinessId, userId])
 
   if (loading) return <LoadingScreen message={t('subscription.loading')} />
 

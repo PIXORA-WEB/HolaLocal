@@ -21,7 +21,7 @@ export const businessLanguageOptions = spokenLanguageOptions
 
 export function getBusinessCategoryLabel(value, translate) {
   const option = businessCategoryOptions.find((category) => category.value === value)
-  return option ? translate(option.labelKey) : value
+  return option ? translate(option.labelKey, { defaultValue: option.value }) : value
 }
 
 export function createBusinessSlug(name) {

@@ -8,6 +8,21 @@ import {
   toPublicBusinessView,
   toWebsiteUserProfile,
 } from '../src/services/firebaseCompatibility.js'
+import {
+  businessCategoryOptions,
+  countryOptions,
+  getBusinessCategoryLabel,
+  serviceAreaOptions,
+} from '../src/utils/business.js'
+import { supportedUILanguages } from '../src/utils/languages.js'
+import {
+  getServiceAreaGroupLabel,
+  getServiceAreaLabel,
+  serviceAreaGroupLabels,
+  serviceAreaLabels,
+} from '../src/utils/locations.js'
+import { authenticatedTranslations } from '../src/i18n/locales/authenticatedTranslations.js'
+import { mergeLocale } from '../src/i18n/locales/mergeLocale.js'
 
 class TimestampFixture {
   toDate() { return new Date(0) }
@@ -17,6 +32,30 @@ const canonicalContact = {
   phone: '', phoneVisible: false, email: '', emailVisible: false,
   whatsappNumber: '', whatsappVisible: false, website: '', websiteVisible: false,
   preferredContactMethod: 'holalocal', allowCallbackRequests: false,
+}
+
+const jsonLocaleCodes = new Set(['en', 'es', 'fr', 'de', 'nl', 'pt'])
+const localeRoot = new URL('../src/i18n/locales/', import.meta.url)
+
+async function readJsonLocale(code) {
+  return JSON.parse(await readFile(new URL(`${code}.json`, localeRoot), 'utf8'))
+}
+
+async function readBaseLocale(code, english) {
+  if (jsonLocaleCodes.has(code)) return readJsonLocale(code)
+  return english
+}
+
+function getPath(resource, key) {
+  return key.split('.').reduce((current, part) => current?.[part], resource)
+}
+
+function translatorFor(resource) {
+  return (key, options = {}) => {
+    const value = getPath(resource, key)
+    if (typeof value === 'string') return value
+    return options.defaultValue ?? key
+  }
 }
 
 function canonicalBusiness(overrides = {}) {
@@ -217,6 +256,69 @@ test('business editor includes all four explicit public-contact visibility contr
   assert.equal(translations.business.form.contact.showWebsite, 'Show website on my public profile')
 })
 
+test('business editor controlled option labels resolve for every supported locale', async () => {
+  const [english, editor] = await Promise.all([
+    readJsonLocale('en'),
+    readFile(new URL('../src/pages/business/EditBusinessPage.jsx', import.meta.url), 'utf8'),
+  ])
+  const rawKeys = [
+    'business.categories.cleaning',
+    'locations.countries.ES',
+    'locations.groups.malaga',
+    'locations.groups.cadiz',
+    'locations.groups.gibraltar',
+    'locations.groups.other',
+    'common.other',
+  ]
+  const categoryIds = businessCategoryOptions.map((option) => option.value)
+  const countryIds = countryOptions.map((option) => option.value)
+  const serviceAreaIds = serviceAreaOptions.map((option) => option.value)
+  const serviceAreaGroups = [...new Set(serviceAreaOptions.map((option) => option.group))]
+
+  assert.deepEqual(categoryIds, [
+    'Cleaning', 'Plumbing', 'Electrical', 'Gardening', 'Painting & Decorating',
+    'Building & Renovation', 'Handyman', 'Air Conditioning', 'Locksmith',
+    'Pest Control', 'Pool Maintenance', 'Pet Services', 'Other',
+  ])
+  assert.deepEqual(countryIds, ['ES', 'GI'])
+  assert.equal(serviceAreaIds.includes('marbella'), true)
+  assert.equal(serviceAreaIds.includes('other'), true)
+
+  for (const { code } of supportedUILanguages) {
+    const baseLocale = await readBaseLocale(code, english)
+    const resource = mergeLocale(
+      english,
+      baseLocale,
+      authenticatedTranslations[code],
+      { locations: { areas: serviceAreaLabels } },
+    )
+    const translate = translatorFor(resource)
+
+    assert.equal(translate('common.other') === 'common.other', false, `${code}: common.other resolves`)
+    for (const key of rawKeys) {
+      assert.notEqual(translate(key), key, `${code}: ${key} resolves`)
+    }
+    for (const option of businessCategoryOptions) {
+      assert.notEqual(getBusinessCategoryLabel(option.value, translate), option.labelKey, `${code}: ${option.labelKey}`)
+    }
+    for (const option of countryOptions) {
+      assert.notEqual(translate(option.labelKey, { defaultValue: option.defaultLabel }), option.labelKey, `${code}: ${option.labelKey}`)
+    }
+    for (const group of serviceAreaGroups) {
+      assert.notEqual(getServiceAreaGroupLabel(group, translate), `locations.groups.${group}`, `${code}: locations.groups.${group}`)
+      assert.notEqual(getServiceAreaGroupLabel(group, translate), group, `${code}: group ${group} is not a raw id`)
+    }
+    for (const option of serviceAreaOptions) {
+      assert.notEqual(getServiceAreaLabel(option.value, translate), option.labelKey, `${code}: ${option.labelKey}`)
+    }
+  }
+
+  assert.doesNotMatch(editor, /label:\s*['"](?:Spain|Málaga|Cádiz|Gibraltar|Other)['"]/)
+  assert.match(editor, /t\(country\.labelKey, \{ defaultValue: country\.defaultLabel \}\)/)
+  assert.match(editor, /getServiceAreaGroupLabel\(area\.group, t\)/)
+  assert.match(editor, /t\('common\.other', \{ defaultValue: 'Other' \}\)/)
+})
+
 test('lookup accepts a valid user pointer and deduplicates the same owner-query document', () => {
   const document = canonicalBusiness()
   const result = resolveWebsiteBusinessLookup({
@@ -231,12 +333,27 @@ test('lookup accepts a valid user pointer and deduplicates the same owner-query 
 
 test('lookup reports invalid pointers and owner mismatches without selecting them', () => {
   assert.equal(resolveWebsiteBusinessLookup({ ownerId: 'owner-1', pointerInvalid: true }).lookup.status, 'invalid_mapping')
+  assert.equal(resolveWebsiteBusinessLookup({ ownerId: 'owner-1', uidInvalid: true }).lookup.status, 'invalid_mapping')
   const mismatch = resolveWebsiteBusinessLookup({
     ownerId: 'owner-1',
     pointerCandidate: { businessId: 'other-business', ownerId: 'other-owner', document: {} },
   })
   assert.equal(mismatch.lookup.status, 'owner_mismatch')
   assert.equal(mismatch.document, null)
+})
+
+test('lookup treats inaccessible speculative UID document as absent for new business users', () => {
+  const result = resolveWebsiteBusinessLookup({
+    ownerId: 'owner-1',
+    pointerCandidate: null,
+    uidCandidate: null,
+    ownerCandidates: [],
+    pointerInvalid: false,
+    uidInvalid: false,
+  })
+
+  assert.equal(result.lookup.status, 'not_found')
+  assert.equal(result.document, null)
 })
 
 test('lookup supports UID and owner-query fallbacks', () => {
@@ -279,6 +396,55 @@ test('compatibility adapters remain isolated from canonical write builders', asy
   assert.doesNotMatch(userService, /transaction\.(?:set|update)\([^\n]*toWebsiteUserProfile/)
   assert.doesNotMatch(businessService, /transaction\.(?:set|update)\([^\n]*toManagedBusinessView/)
   assert.doesNotMatch(businessService, /transaction\.set\(reference/)
+})
+
+test('business creation uses the trusted callable without browser owner discovery', async () => {
+  const businessService = await readFile(new URL('../src/services/businessService.js', import.meta.url), 'utf8')
+  const createBusinessProfileSource = businessService.match(
+    /export async function createBusinessProfile\(\) \{[\s\S]*?\n\}/,
+  )?.[0] ?? ''
+  const ensureBusinessProfileSource = businessService.match(
+    /export async function ensureBusinessProfile\(ownerId, userProfile\) \{[\s\S]*?return createBusinessProfile\(\)\n\}/,
+  )?.[0] ?? ''
+
+  assert.match(businessService, /candidateById\(businessId, source, \{ missingIsInvalid = false, permissionDeniedIsInvalid = false \} = \{\}\)/)
+  assert.match(businessService, /candidateById\(userBusinessId, 'user_business_id', \{\s*missingIsInvalid: true,\s*permissionDeniedIsInvalid: true,\s*\}\)/s)
+  assert.match(businessService, /candidateById\(ownerId, 'owner_uid_document'\)/)
+  assert.match(businessService, /if \(result\.lookup\.status === 'not_found'\) return null/)
+  assert.match(createBusinessProfileSource, /const result = await ensureOwnerBusinessCallable\(\)/)
+  assert.doesNotMatch(createBusinessProfileSource, /getBusinessByOwnerId\(/)
+  assert.match(createBusinessProfileSource, /const businessId = result\.data\?\.businessId/)
+  assert.match(createBusinessProfileSource, /if \(!businessId\) throw new Error\('Business profile could not be created\.'\)/)
+  assert.match(createBusinessProfileSource, /return getManagedBusinessById\(businessId\)/)
+  assert.match(ensureBusinessProfileSource, /if \(!userProfile\?\.roles\?\.includes\('business'\)\)/)
+  assert.match(ensureBusinessProfileSource, /if \(userProfile\.businessId\) \{\s*const existingBusiness = await getManagedBusinessById\(userProfile\.businessId\)/s)
+  assert.doesNotMatch(ensureBusinessProfileSource, /getBusinessByOwnerId\(|getManagedBusinessLookup\(/)
+  assert.match(ensureBusinessProfileSource, /return createBusinessProfile\(\)/)
+  assert.doesNotMatch(businessService, /addDoc\(|setDoc\(|doc\(collection\(db, 'businesses'\)\)/)
+})
+
+test('public directory uses the callable while exact public document reads stay direct', async () => {
+  const [businessService, functionsClient, servicesPage] = await Promise.all([
+    readFile(new URL('../src/services/businessService.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/firebase/functionsClient.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/ServicesPage.jsx', import.meta.url), 'utf8'),
+  ])
+  const activeDirectorySource = businessService.match(
+    /export async function getActivePublicBusinesses\(maxResults = 60\) \{[\s\S]*?\n\}/,
+  )?.[0] ?? ''
+  const publicDetailSource = businessService.match(
+    /export async function getPublicBusinessById\(businessId\) \{[\s\S]*?\n\}/,
+  )?.[0] ?? ''
+
+  assert.match(functionsClient, /httpsCallable\(functions, 'listPublicBusinesses'\)/)
+  assert.match(activeDirectorySource, /listPublicBusinessesCallable\(\{ maxResults: resultLimit \}\)/)
+  assert.doesNotMatch(activeDirectorySource, /collection\(db, 'businesses'\)|getDocs\(|where\(|orderBy\(/)
+  assert.match(activeDirectorySource, /return Array\.isArray\(result\.data\?\.businesses\)/)
+  assert.match(servicesPage, /setBusinesses\(activeBusinesses\)/)
+  assert.match(servicesPage, /services\.emptyTitle/)
+
+  assert.match(publicDetailSource, /getDoc\(businessDocument\(businessId\)\)/)
+  assert.match(publicDetailSource, /toPublicBusiness\(snapshot\)/)
 })
 
 test('canonical customer, business and combined roles retain route-facing semantics', () => {

@@ -127,6 +127,12 @@ async function hasManagedOnlyBusiness(db, uid) {
   return snapshot.docs.some((document) => document.data().ownerId !== uid)
 }
 
+function assertBusinessPointer(profile, businessId) {
+  if (profile.businessId != null && profile.businessId !== businessId) {
+    throw new HttpsError('failed-precondition', 'business-pointer-conflict')
+  }
+}
+
 export async function ensureOwnerBusiness({ uid, emailVerified, db }) {
   const safeUid = requireValidUid(uid)
   if (emailVerified !== true) throw new HttpsError('failed-precondition', 'email-verification-required')
@@ -144,6 +150,10 @@ export async function ensureOwnerBusiness({ uid, emailVerified, db }) {
   assertEligibleUser({ uid: safeUid, emailVerified, profile })
 
   if (ownedBusiness) {
+    assertBusinessPointer(profile, ownedBusiness.id)
+    if (profile.businessId !== ownedBusiness.id) {
+      await userRef.update({ businessId: ownedBusiness.id })
+    }
     return { ok: true, businessId: ownedBusiness.id, created: false }
   }
   if (managesOtherBusiness) {
@@ -159,13 +169,17 @@ export async function ensureOwnerBusiness({ uid, emailVerified, db }) {
     if (businessSnapshot.exists) {
       const business = businessSnapshot.data()
       if (business.ownerId !== safeUid) throw new HttpsError('failed-precondition', 'business-id-conflict')
+      assertBusinessPointer(profile, safeUid)
+      if (profile.businessId !== safeUid) transaction.update(userRef, { businessId: safeUid })
       return
     }
+    assertBusinessPointer(profile, safeUid)
     const documents = buildDraftBusiness(safeUid, profile)
     transaction.set(deterministicBusinessRef, documents.business)
     if (!privateSnapshot.exists) transaction.set(deterministicPrivateRef, documents.privateBusiness)
+    transaction.update(userRef, { businessId: safeUid })
     created = true
   })
 
-  return { ok: true, businessId: uid, created }
+  return { ok: true, businessId: safeUid, created }
 }

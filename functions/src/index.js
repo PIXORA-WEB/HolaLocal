@@ -8,6 +8,7 @@ import { createFirestoreTranslationSource } from './firestoreTranslationSource.j
 import { processMessageTranslation } from './messageTranslation.js'
 import { sendConversationMessage } from './messageSending.js'
 import { ensureOwnerBusiness as runEnsureOwnerBusiness } from './ownerBusinessCreation.js'
+import { listPublicBusinesses as runListPublicBusinesses } from './publicBusinessDirectory.js'
 import {
   TRANSLATION_PROVIDER_CONFIG,
   createTranslationProvider,
@@ -71,6 +72,13 @@ export async function handleModerateBusiness(request, db) {
   })
 }
 
+export async function handleListPublicBusinesses(request, db) {
+  return runListPublicBusinesses({
+    maxResults: request.data?.maxResults,
+    db: db ?? getFirestore(),
+  })
+}
+
 export const translateCreatedMessage = onDocumentCreated(
   {
     document: 'conversations/{conversationId}/messages/{messageId}',
@@ -108,4 +116,9 @@ export const sendMessage = onCall(
 export const moderateBusiness = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleModerateBusiness(request),
+)
+
+export const listPublicBusinesses = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleListPublicBusinesses(request),
 )

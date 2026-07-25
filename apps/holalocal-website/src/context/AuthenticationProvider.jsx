@@ -25,13 +25,14 @@ function AuthenticationProvider({ children }) {
   const [sessionError, setSessionError] = useState('')
   const [emailVerified, setEmailVerified] = useState(false)
 
-  const refreshUserProfile = useCallback(async (firebaseUser = user) => {
+  const refreshUserProfile = useCallback(async (firebaseUser = user, options = {}) => {
+    const background = options.background === true
     if (!firebaseUser) {
       setUserProfile(null)
       return null
     }
 
-    setProfileLoading(true)
+    if (!background) setProfileLoading(true)
 
     try {
       const { getUserProfile } = await loadUserService()
@@ -39,7 +40,7 @@ function AuthenticationProvider({ children }) {
       setUserProfile(profile)
       return profile
     } finally {
-      setProfileLoading(false)
+      if (!background) setProfileLoading(false)
     }
   }, [user])
 

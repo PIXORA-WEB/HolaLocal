@@ -16,6 +16,12 @@ const businessServicePath = path.resolve(__dirname, '../src/services/businessSer
 const businessRoutePath = path.resolve(__dirname, '../src/routes/BusinessRoute.jsx')
 const onboardingPath = path.resolve(__dirname, '../src/pages/auth/OnboardingPage.jsx')
 const functionsClientPath = path.resolve(__dirname, '../src/firebase/functionsClient.js')
+const businessDashboardPath = path.resolve(__dirname, '../src/pages/business/BusinessDashboardPage.jsx')
+const editBusinessPath = path.resolve(__dirname, '../src/pages/business/EditBusinessPage.jsx')
+const subscriptionPath = path.resolve(__dirname, '../src/pages/business/SubscriptionPage.jsx')
+const authenticationProviderPath = path.resolve(__dirname, '../src/context/AuthenticationProvider.jsx')
+const protectedRoutePath = path.resolve(__dirname, '../src/routes/ProtectedRoute.jsx')
+const profilePagePath = path.resolve(__dirname, '../src/pages/customer/ProfilePage.jsx')
 
 test('public production routes use the full homepage and services pages', async () => {
   const source = await readFile(routesPath, 'utf8')
@@ -87,17 +93,35 @@ test('services page uses the shared directory implementation and safe states', a
   assert.match(source, /services\.loadError/)
   assert.match(source, /to=\{`\/services\/\$\{business\.businessId\}/)
   assert.match(businessService, /toPublicBusiness\(snapshot\)/)
-  assert.match(businessService, /filter\(\(business\) => business\?\.name\)/)
+  assert.match(businessService, /listPublicBusinessesCallable\(\{ maxResults: resultLimit \}\)/)
   assert.doesNotMatch(source, /example-|isDemo/)
 })
 
 test('account onboarding uses the trusted callable instead of direct role writes', async () => {
-  const [userService, functionsClient, onboarding, businessRoute, businessService] = await Promise.all([
+  const [
+    userService,
+    functionsClient,
+    onboarding,
+    businessRoute,
+    businessService,
+    businessDashboard,
+    editBusiness,
+    subscription,
+    authenticationProvider,
+    protectedRoute,
+    profilePage,
+  ] = await Promise.all([
     readFile(userServicePath, 'utf8'),
     readFile(functionsClientPath, 'utf8'),
     readFile(onboardingPath, 'utf8'),
     readFile(businessRoutePath, 'utf8'),
     readFile(businessServicePath, 'utf8'),
+    readFile(businessDashboardPath, 'utf8'),
+    readFile(editBusinessPath, 'utf8'),
+    readFile(subscriptionPath, 'utf8'),
+    readFile(authenticationProviderPath, 'utf8'),
+    readFile(protectedRoutePath, 'utf8'),
+    readFile(profilePagePath, 'utf8'),
   ])
 
   assert.match(functionsClient, /httpsCallable\(functions, 'updateAccountRole'\)/)
@@ -107,9 +131,35 @@ test('account onboarding uses the trusted callable instead of direct role writes
   assert.match(onboarding, /navigate\(requiresBusinessProfile \? '\/business\/dashboard' : '\/profile'/)
   assert.match(businessRoute, /userProfile\?\.roles\?\.includes\('business'\)/)
   assert.match(functionsClient, /httpsCallable\(functions, 'ensureOwnerBusiness'\)/)
-  assert.match(businessService, /getBusinessByOwnerId\(ownerId\)/)
+  assert.match(businessService, /if \(userProfile\.businessId\)/)
+  assert.match(businessService, /getManagedBusinessById\(userProfile\.businessId\)/)
   assert.match(businessService, /ensureOwnerBusinessCallable\(\)/)
   assert.match(businessService, /return getManagedBusinessById\(businessId\)/)
+  assert.match(businessService, /return createBusinessProfile\(\)/)
+  assert.match(businessDashboard, /ensureBusinessProfile\(userId, \{\s*businessId: userBusinessId,\s*roles: hasBusinessRole \? \['business'\] : \[\],\s*\}\)/s)
+  assert.match(editBusiness, /ensureBusinessProfile\(userId, \{\s*businessId: userBusinessId,\s*roles: hasBusinessRole \? \['business'\] : \[\],\s*\}\)/s)
+  assert.match(subscription, /ensureBusinessProfile\(userId, \{\s*businessId: userBusinessId,\s*roles: hasBusinessRole \? \['business'\] : \[\],\s*\}\)/s)
+  for (const source of [businessDashboard, editBusiness, subscription]) {
+    assert.match(source, /const attemptedProfileRefreshBusinessIdRef = useRef\(null\)/)
+    assert.match(source, /profile\?\.businessId\s*&& profile\.businessId !== userBusinessId\s*&& attemptedProfileRefreshBusinessIdRef\.current !== profile\.businessId/s)
+    assert.match(source, /attemptedProfileRefreshBusinessIdRef\.current = profile\.businessId\s*await refreshUserProfile\(\{ uid: userId \}, \{ background: true \}\)\.catch\(\(\) => undefined\)/s)
+    assert.doesNotMatch(source, /\}, \[[^\]]*\buser,\s*user\.uid[^\]]*\]\)/s)
+    assert.doesNotMatch(source, /\}, \[[^\]]*\buserProfile\b[^\]]*\]\)/s)
+    assert.doesNotMatch(source, /refreshUserProfile\(user\)/)
+  }
+  assert.match(authenticationProvider, /refreshUserProfile = useCallback\(async \(firebaseUser = user, options = \{\}\)/)
+  assert.match(authenticationProvider, /const background = options\.background === true/)
+  assert.match(authenticationProvider, /if \(!background\) setProfileLoading\(true\)/)
+  assert.match(authenticationProvider, /if \(!background\) setProfileLoading\(false\)/)
+  assert.match(protectedRoute, /if \(loading \|\| profileLoading\) return <LoadingScreen \/>/)
+  assert.match(businessRoute, /if \(loading \|\| profileLoading\) return <LoadingScreen \/>/)
+  assert.match(profilePage, /refreshUserProfile\(user\)/)
+  assert.doesNotMatch(profilePage, /refreshUserProfile\(user, \{ background: true \}\)/)
+  assert.match(businessDashboard, /\}, \[hasBusinessRole, loadAttempt, refreshUserProfile, t, userBusinessId, userId\]\)/)
+  assert.match(subscription, /\}, \[hasBusinessRole, loadAttempt, refreshUserProfile, t, userBusinessId, userId\]\)/)
+  assert.match(editBusiness, /hasBusinessRole,\s*loadAttempt,\s*refreshUserProfile,\s*t,\s*userBusinessId,\s*userCity,\s*userEmail,\s*userId,\s*userPreferredLocale,/s)
+  assert.doesNotMatch(editBusiness, /getBusinessByOwnerId\(|createBusinessProfile\(/)
+  assert.doesNotMatch(subscription, /getBusinessByOwnerId\(/)
   assert.doesNotMatch(businessService, /doc\(collection\(db, 'businesses'\)\)/)
   assert.doesNotMatch(businessService, /transaction\.set\(reference/)
 })

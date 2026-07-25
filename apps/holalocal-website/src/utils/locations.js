@@ -12,15 +12,15 @@ export function normalizeLocationSearchText(value) {
 }
 
 export const provinceOptions = [
-  { value: 'malaga', labelKey: 'locations.provinces.malaga' },
-  { value: 'cadiz', labelKey: 'locations.provinces.cadiz' },
-  { value: 'gibraltar', labelKey: 'locations.provinces.gibraltar' },
-  { value: 'other', labelKey: 'common.other' },
+  { value: 'malaga', labelKey: 'locations.provinces.malaga', defaultLabel: 'Málaga province' },
+  { value: 'cadiz', labelKey: 'locations.provinces.cadiz', defaultLabel: 'Cádiz province' },
+  { value: 'gibraltar', labelKey: 'locations.provinces.gibraltar', defaultLabel: 'Gibraltar' },
+  { value: 'other', labelKey: 'common.other', defaultLabel: 'Other' },
 ]
 
 export const countryOptions = [
-  { value: 'ES', labelKey: 'locations.countries.ES' },
-  { value: 'GI', labelKey: 'locations.countries.GI' },
+  { value: 'ES', labelKey: 'locations.countries.ES', defaultLabel: 'Spain' },
+  { value: 'GI', labelKey: 'locations.countries.GI', defaultLabel: 'Gibraltar' },
 ]
 
 export const serviceAreaLabels = {
@@ -54,13 +54,21 @@ const areaGroups = {
   gibraltar: ['gibraltar'],
 }
 
+export const serviceAreaGroupLabels = {
+  malaga: 'Málaga province / Costa del Sol',
+  cadiz: 'Cádiz province / Campo de Gibraltar',
+  gibraltar: 'Gibraltar',
+  other: 'Other',
+}
+
 export const serviceAreaOptions = [
   ...Object.entries(areaGroups).flatMap(([group, ids]) => ids.map((value) => ({
     value,
     group,
     labelKey: `locations.areas.${value}`,
+    defaultLabel: serviceAreaLabels[value],
   }))),
-  { value: 'other', group: 'other', labelKey: 'common.other' },
+  { value: 'other', group: 'other', labelKey: 'common.other', defaultLabel: 'Other' },
 ]
 
 const provinceAliases = new Map([
@@ -94,13 +102,11 @@ export function normalizeServiceAreaId(value) {
 export function getServiceAreaLabel(value, translate) {
   const normalized = normalizeServiceAreaId(value)
   if (normalized === 'other') {
-    const translatedOther = translate('common.other')
-    return typeof translatedOther === 'string' ? translatedOther : 'Other'
+    return translate('common.other', { defaultValue: 'Other' })
   }
   const canonicalLabel = serviceAreaLabels[normalized]
   if (!canonicalLabel) return typeof value === 'string' ? value : ''
-  const translatedLabel = translate(`locations.areas.${normalized}`)
-  return typeof translatedLabel === 'string' ? translatedLabel : canonicalLabel
+  return translate(`locations.areas.${normalized}`, { defaultValue: canonicalLabel })
 }
 
 export function serviceAreaMatchesSearch(option, query) {
@@ -113,7 +119,13 @@ export function serviceAreaMatchesSearch(option, query) {
 
 export function getProvinceLabel(value, translate) {
   const normalized = normalizeProvinceId(value)
-  return provinceOptions.some((option) => option.value === normalized)
-    ? translate(`locations.provinces.${normalized}`)
+  const option = provinceOptions.find((option) => option.value === normalized)
+  return option
+    ? translate(option.labelKey, { defaultValue: option.defaultLabel })
     : value
+}
+
+export function getServiceAreaGroupLabel(value, translate) {
+  const defaultLabel = serviceAreaGroupLabels[value] ?? value
+  return translate(`locations.groups.${value}`, { defaultValue: defaultLabel })
 }
