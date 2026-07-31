@@ -26,8 +26,9 @@ function LanguageSwitcher() {
     const preferredLocale = userProfile?.preferredLocale?.split('-')[0]
     if (!supportedUILanguages.some(({ code }) => code === preferredLocale) || preferredLocale === activeLanguage) return
 
-    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, preferredLocale)
-    void changeAppLanguage(preferredLocale)
+    void changeAppLanguage(preferredLocale).then((loadedLocale) => {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, loadedLocale)
+    })
   }, [activeLanguage, i18n, user, userProfile?.preferredLocale])
 
   async function handleLanguageChange(languageCode) {
@@ -39,8 +40,8 @@ function LanguageSwitcher() {
         await updateUserProfile({ preferredLocale: languageCode })
       }
 
-      await changeAppLanguage(languageCode)
-      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode)
+      const loadedLocale = await changeAppLanguage(languageCode)
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, loadedLocale)
     } catch {
       setError(t('language.saveError'))
     } finally {

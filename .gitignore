@@ -2,6 +2,8 @@
 node_modules/
 dist/
 coverage/
+playwright-report/
+test-results/
 
 # Environment files: examples remain safe to commit
 .env

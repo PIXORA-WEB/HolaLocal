@@ -1,6 +1,8 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import LoadingScreen from '../components/common/LoadingScreen.jsx'
-import BlockedAccountScreen from '../components/common/BlockedAccountScreen.jsx'
+import BlockedAccountScreen, {
+  ProfileUnavailableScreen,
+} from '../components/common/BlockedAccountScreen.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
 import { hasBlockedAccountStatus } from '../utils/accountStatus.js'
 
@@ -9,21 +11,34 @@ function ProtectedRoute({
   allowIncompleteProfile = false,
   allowUnverified = false,
 }) {
-  const { emailVerified, loading, profileLoading, user, userProfile } = useAuthentication()
+  const {
+    emailVerified,
+    loading,
+    profileLoading,
+    profileStatus,
+    user,
+    userProfile,
+  } = useAuthentication()
   const location = useLocation()
 
-  if (loading || profileLoading) return <LoadingScreen />
+  if (loading) return <LoadingScreen />
 
   if (!user) {
     return <Navigate replace state={{ from: location }} to="/login" />
   }
 
-  if (hasBlockedAccountStatus(userProfile)) {
-    return <BlockedAccountScreen accountStatus={userProfile.accountStatus} />
-  }
-
   if (!allowUnverified && !emailVerified) {
     return <Navigate replace state={{ from: location }} to="/verify-email" />
+  }
+
+  if (profileStatus === 'unavailable') {
+    return <ProfileUnavailableScreen />
+  }
+
+  if (profileLoading || profileStatus === 'loading') return <LoadingScreen />
+
+  if (hasBlockedAccountStatus(userProfile)) {
+    return <BlockedAccountScreen accountStatus={userProfile.accountStatus} />
   }
 
   if (!allowIncompleteProfile && userProfile?.profileCompleted !== true) {

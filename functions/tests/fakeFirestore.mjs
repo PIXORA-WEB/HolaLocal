@@ -111,8 +111,9 @@ class FakeTransaction {
     return this.database.snapshot(reference.path)
   }
 
-  set(reference, data) {
-    this.database.store.set(reference.path, data)
+  set(reference, data, options = {}) {
+    const current = this.database.store.get(reference.path)
+    this.database.store.set(reference.path, options.merge && current ? { ...current, ...data } : data)
   }
 
   update(reference, update) {

@@ -15,7 +15,10 @@ import {
 } from 'firebase/firestore'
 import {
   buildConversationId,
+  conversationInboxQueryFilters,
+  CONVERSATION_SCHEMA_VERSION,
   CONVERSATION_STATUS_ACTIVE,
+  existingConversationQueryFilters,
   getConversationActivityTime,
   hasOwnerOnlyConversationParticipants,
   isConversationHiddenForUser,
@@ -23,6 +26,7 @@ import {
 } from '@holalocal/firebase-contract'
 import { sendMessageCallable } from '../firebase/functionsClient.js'
 import { db } from '../firebase/firestoreClient.js'
+import { createApplicationError } from '../utils/frontendErrors.js'
 import { getPublicBusinessById } from './businessService.js'
 
 const MAX_MESSAGES = 100
@@ -68,6 +72,7 @@ function buildInitialConversation(customerId, business) {
     customerId,
     participantIds,
     participantState: participantStates,
+    schemaVersion: CONVERSATION_SCHEMA_VERSION,
     lastMessage: null,
     lastMessageAt: null,
     status: CONVERSATION_STATUS_ACTIVE,
@@ -79,7 +84,7 @@ function buildInitialConversation(customerId, business) {
 async function findExistingConversation(customerId, businessId) {
   const snapshot = await getDocs(query(
     collection(db, 'conversations'),
-    where('customerId', '==', customerId),
+    ...existingConversationQueryFilters(customerId, businessId).map((constraint) => where(...constraint)),
   ))
 
   return snapshot.docs.filter((conversation) => (
@@ -155,7 +160,7 @@ function isOwnerOnlyConversationForBusiness(conversation, business) {
 function conversationsForUserQuery(userId) {
   return query(
     collection(db, 'conversations'),
-    where('participantIds', 'array-contains', userId),
+    ...conversationInboxQueryFilters(userId).map((constraint) => where(...constraint)),
   )
 }
 
@@ -183,15 +188,15 @@ export function subscribeToConversationsForUser(userId, onConversations, onError
 export async function getConversationForUser(conversationId, userId) {
   const snapshot = await getDoc(conversationDocument(conversationId))
 
-  if (!snapshot.exists()) throw new Error('Conversation not found.')
+  if (!snapshot.exists()) throw createApplicationError('conversation-not-found')
 
   const conversation = snapshot.data()
   if (!conversation.participantIds?.includes(userId)) {
-    throw new Error('You do not have access to this conversation.')
+    throw createApplicationError('conversation-access-denied')
   }
   const business = await getPublicBusinessById(conversation.businessId)
   if (!isOwnerOnlyConversationForBusiness(conversation, business)) {
-    throw new Error('You do not have access to this conversation.')
+    throw createApplicationError('conversation-access-denied')
   }
 
   return { conversationId: snapshot.id, ...conversation }
@@ -200,9 +205,9 @@ export async function getConversationForUser(conversationId, userId) {
 export async function hideConversationForUser(conversationId, userId) {
   const conversationRef = conversationDocument(conversationId)
   const snapshot = await getDoc(conversationRef)
-  if (!snapshot.exists()) throw new Error('Conversation not found.')
+  if (!snapshot.exists()) throw createApplicationError('conversation-not-found')
   if (!snapshot.data().participantIds?.includes(userId)) {
-    throw new Error('You do not have access to this conversation.')
+    throw createApplicationError('conversation-access-denied')
   }
 
   await updateDoc(
@@ -259,11 +264,11 @@ export function createMessageRequestId() {
 }
 
 export async function sendTextMessage(conversationId, senderId, text, requestId = createMessageRequestId()) {
-  if (!senderId) throw new Error('You must be logged in to send a message.')
+  if (!senderId) throw createApplicationError('auth-required')
   const normalizedText = String(text ?? '').trim()
-  if (!normalizedText) throw new Error('Enter a message before sending.')
+  if (!normalizedText) throw createApplicationError('message-text-required')
   if (normalizedText.length > MAX_MESSAGE_LENGTH) {
-    throw new Error(`Messages must be ${MAX_MESSAGE_LENGTH.toLocaleString()} characters or fewer.`)
+    throw createApplicationError('message-text-too-long')
   }
 
   const result = await sendMessageCallable({

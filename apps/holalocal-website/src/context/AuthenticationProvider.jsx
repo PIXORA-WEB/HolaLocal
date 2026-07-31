@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   loginUser,
   logoutUser,
@@ -22,27 +22,63 @@ function AuthenticationProvider({ children }) {
   const [userProfile, setUserProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [profileStatus, setProfileStatus] = useState('loading')
   const [sessionError, setSessionError] = useState('')
   const [emailVerified, setEmailVerified] = useState(false)
+  const profileRequestIdRef = useRef(0)
+  const profileRetryPromiseRef = useRef(null)
 
   const refreshUserProfile = useCallback(async (firebaseUser = user, options = {}) => {
     const background = options.background === true
+    const retainUnavailable = options.retainUnavailable === true
     if (!firebaseUser) {
+      profileRequestIdRef.current += 1
       setUserProfile(null)
+      setProfileStatus('absent')
       return null
     }
 
-    if (!background) setProfileLoading(true)
+    const requestId = ++profileRequestIdRef.current
+    if (!background) {
+      setProfileLoading(true)
+      if (!retainUnavailable) setProfileStatus('loading')
+    }
 
     try {
       const { getUserProfile } = await loadUserService()
       const profile = await getUserProfile(firebaseUser.uid)
-      setUserProfile(profile)
+      if (requestId === profileRequestIdRef.current) {
+        setUserProfile(profile)
+        setProfileStatus(profile ? 'loaded' : 'absent')
+        setSessionError('')
+      }
       return profile
+    } catch (error) {
+      if (!background && requestId === profileRequestIdRef.current) {
+        setUserProfile(null)
+        setProfileStatus('unavailable')
+        setSessionError('auth.errors.profileLoad')
+      }
+      throw error
     } finally {
-      if (!background) setProfileLoading(false)
+      if (!background && requestId === profileRequestIdRef.current) setProfileLoading(false)
     }
   }, [user])
+
+  const retryUserProfile = useCallback(() => {
+    if (!user) return Promise.resolve(null)
+    if (profileRetryPromiseRef.current) return profileRetryPromiseRef.current
+
+    const retryPromise = refreshUserProfile(user, { retainUnavailable: true })
+      .catch(() => null)
+      .finally(() => {
+        if (profileRetryPromiseRef.current === retryPromise) {
+          profileRetryPromiseRef.current = null
+        }
+      })
+    profileRetryPromiseRef.current = retryPromise
+    return retryPromise
+  }, [refreshUserProfile, user])
 
   useEffect(() => {
     let active = true
@@ -50,9 +86,11 @@ function AuthenticationProvider({ children }) {
     const unsubscribe = observeAuthentication(
       async (user) => {
         if (!active) return
+        const requestId = ++profileRequestIdRef.current
 
         setLoading(true)
         setProfileLoading(true)
+        setProfileStatus('loading')
         setUser(user)
         setEmailVerified(user?.emailVerified === true)
         setSessionError('')
@@ -64,28 +102,42 @@ function AuthenticationProvider({ children }) {
             const profile = user.emailVerified && existingProfile?.accountStatus === 'active'
               ? await ensureUserProfile(user)
               : existingProfile
-            if (profile?.accountStatus === 'active' && profile.deletionRequestedAt == null) {
-              await updateLastActive(user.uid)
+            if (active && requestId === profileRequestIdRef.current) {
+              setUserProfile(profile)
+              setProfileStatus(profile ? 'loaded' : 'absent')
             }
-            if (active) setUserProfile(profile)
+            if (
+              active &&
+              requestId === profileRequestIdRef.current &&
+              profile?.accountStatus === 'active' &&
+              profile.deletionRequestedAt == null
+            ) {
+              void updateLastActive(user.uid).catch(() => undefined)
+            }
           } else {
-            setUserProfile(null)
+            if (requestId === profileRequestIdRef.current) {
+              setUserProfile(null)
+              setProfileStatus('absent')
+            }
           }
         } catch {
-          if (active) {
+          if (active && requestId === profileRequestIdRef.current) {
             setUserProfile(null)
+            setProfileStatus('unavailable')
             setSessionError('auth.errors.profileLoad')
           }
         } finally {
-          if (active) {
+          if (active && requestId === profileRequestIdRef.current) {
             setLoading(false)
             setProfileLoading(false)
           }
         }
       },
       () => {
+        profileRequestIdRef.current += 1
         if (active) {
           setSessionError('auth.errors.sessionRestore')
+          setProfileStatus('unavailable')
           setLoading(false)
           setProfileLoading(false)
         }
@@ -112,12 +164,10 @@ function AuthenticationProvider({ children }) {
     const verified = await reloadAuthenticationUser(user)
     setEmailVerified(verified)
     if (verified && user) {
-      const { getUserProfile } = await loadUserService()
-      const profile = await getUserProfile(user.uid)
-      setUserProfile(profile)
+      await refreshUserProfile(user)
     }
     return verified
-  }, [user])
+  }, [refreshUserProfile, user])
 
   const updateUserProfile = useCallback(
     async (updates) => {
@@ -126,9 +176,28 @@ function AuthenticationProvider({ children }) {
       const { updateUserProfile: updateUserProfileDocument } = await loadUserService()
       const profile = await updateUserProfileDocument(user.uid, updates)
       setUserProfile(profile)
+      setProfileStatus('loaded')
       return profile
     },
     [user],
+  )
+
+  const completeUserProfile = useCallback(
+    async (updates) => {
+      if (!user) throw new Error('You must be logged in to complete your profile.')
+
+      const {
+        completeAbsentUserProfile,
+        updateUserProfile: updateUserProfileDocument,
+      } = await loadUserService()
+      const profile = profileStatus === 'absent'
+        ? await completeAbsentUserProfile(user, updates)
+        : await updateUserProfileDocument(user.uid, updates)
+      setUserProfile(profile)
+      setProfileStatus('loaded')
+      return profile
+    },
+    [profileStatus, user],
   )
 
   const enableBusinessAccess = useCallback(async () => {
@@ -137,6 +206,7 @@ function AuthenticationProvider({ children }) {
     const { enableBusinessRole } = await loadUserService()
     const profile = await enableBusinessRole(user.uid)
     setUserProfile(profile)
+    setProfileStatus('loaded')
     return profile
   }, [user])
 
@@ -146,17 +216,21 @@ function AuthenticationProvider({ children }) {
     const { configureAccountType } = await loadUserService()
     const profile = await configureAccountType(user.uid, accountType)
     setUserProfile(profile)
+    setProfileStatus('loaded')
     return profile
   }, [user])
 
   const value = useMemo(
     () => ({
+      completeUserProfile,
       enableBusinessAccess,
       completeOnboarding,
       emailVerified,
       loading,
       profileLoading,
+      profileStatus,
       refreshUserProfile,
+      retryUserProfile,
       refreshEmailVerification,
       resendVerificationEmail,
       resetPassword,
@@ -169,13 +243,16 @@ function AuthenticationProvider({ children }) {
       userProfile,
     }),
     [
+      completeUserProfile,
       completeOnboarding,
       emailVerified,
       loading,
       enableBusinessAccess,
       profileLoading,
+      profileStatus,
       refreshEmailVerification,
       refreshUserProfile,
+      retryUserProfile,
       resendVerificationEmail,
       resetPassword,
       sessionError,

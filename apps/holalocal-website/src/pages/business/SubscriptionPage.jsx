@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import LoadingScreen from '../../components/common/LoadingScreen.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
-import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { ensureBusinessProfile } from '../../services/businessService.js'
+import {
+  classifyFrontendError,
+  getRecoveryActionTranslationKey,
+} from '../../utils/frontendErrors.js'
 
 function SubscriptionPage() {
   const { t } = useTranslation()
-  const { refreshUserProfile, user, userProfile } = useAuthentication()
+  const navigate = useNavigate()
+  const { refreshUserProfile, signOutUser, user, userProfile } = useAuthentication()
   const [businessProfile, setBusinessProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null)
+  const [recoveryPending, setRecoveryPending] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const attemptedProfileRefreshBusinessIdRef = useRef(null)
   const userId = user.uid
@@ -38,7 +43,12 @@ function SubscriptionPage() {
         }
       })
       .catch((loadError) => {
-        if (active) setError(getAuthenticationErrorMessage(loadError, t))
+        if (active) {
+          setError(classifyFrontendError(loadError, {
+            domain: 'workflow',
+            fallbackType: 'BUSINESS_CREATE_FAILED',
+          }))
+        }
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -50,6 +60,55 @@ function SubscriptionPage() {
   }, [hasBusinessRole, loadAttempt, refreshUserProfile, t, userBusinessId, userId])
 
   if (loading) return <LoadingScreen message={t('subscription.loading')} />
+
+  async function refreshAccount() {
+    setRecoveryPending(true)
+    try {
+      await refreshUserProfile({ uid: userId }, { background: true })
+      setError(null)
+      setLoading(true)
+      setLoadAttempt((attempt) => attempt + 1)
+    } catch (refreshError) {
+      setError(classifyFrontendError(refreshError, {
+        domain: 'workflow',
+        fallbackType: 'BUSINESS_CREATE_FAILED',
+      }))
+    } finally {
+      setRecoveryPending(false)
+    }
+  }
+
+  async function handleSignOut() {
+    setRecoveryPending(true)
+    try {
+      await signOutUser()
+    } catch (signOutError) {
+      setError(classifyFrontendError(signOutError, {
+        domain: 'workflow',
+        fallbackType: 'ACCOUNT_TRANSITION_FAILED',
+      }))
+    } finally {
+      setRecoveryPending(false)
+    }
+  }
+
+  const errorAction = error?.recovery === 'sign-in'
+    ? () => navigate('/login')
+    : error?.recovery === 'verify-email'
+      ? () => navigate('/verify-email')
+      : error?.recovery === 'complete-profile'
+        ? () => navigate('/complete-profile')
+        : error?.recovery === 'sign-out'
+          ? () => void handleSignOut()
+          : error?.recovery === 'refresh-account'
+            ? () => void refreshAccount()
+            : error?.recovery === 'contact-support'
+              ? () => navigate('/contact')
+              : () => {
+                  setLoading(true)
+                  setError(null)
+                  setLoadAttempt((attempt) => attempt + 1)
+                }
 
   const plan = businessProfile?.subscription?.tier || 'free'
   const status = businessProfile?.status || 'draft'
@@ -64,12 +123,10 @@ function SubscriptionPage() {
 
       {error ? (
         <RecoveryMessage
-          message={error}
-          onRetry={() => {
-            setLoading(true)
-            setError('')
-            setLoadAttempt((attempt) => attempt + 1)
-          }}
+          actionLabel={t(getRecoveryActionTranslationKey(error.recovery) ?? 'common.retry')}
+          actionPending={recoveryPending}
+          message={t(error.translationKey)}
+          onAction={errorAction}
         />
       ) : !businessProfile ? (
         <div className="services-state">

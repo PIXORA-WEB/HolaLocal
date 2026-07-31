@@ -43,6 +43,27 @@ export function getLanguageNameFromCode(languageCode) {
   return languageCatalog.find(({ code }) => code === normalizedCode)?.name ?? languageCode ?? ''
 }
 
+function capitalizeDisplayName(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return ''
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1)
+}
+
+export function getLanguageDisplayName(languageCode, locale = 'en') {
+  const normalizedCode = normalizeLanguageCode(languageCode)?.split('-')[0].toLowerCase()
+  if (!normalizedCode) return languageCode ?? ''
+
+  try {
+    const displayNames = new Intl.DisplayNames([locale || 'en'], { type: 'language' })
+    const localizedName = displayNames.of(normalizedCode)
+    if (localizedName) return capitalizeDisplayName(localizedName)
+  } catch {
+    // Fall back to the catalog name when the runtime cannot localize a language.
+  }
+
+  return getLanguageNameFromCode(normalizedCode)
+}
+
 export function normalizeLanguageCode(language) {
   const normalized = String(language ?? '').trim().toLowerCase()
   return languageCatalog.find(({ code, name }) => code === normalized || name.toLowerCase() === normalized)?.code
@@ -50,6 +71,6 @@ export function normalizeLanguageCode(language) {
     ?? language
 }
 
-export function formatLanguageList(languageCodes) {
-  return (languageCodes ?? []).map(getLanguageNameFromCode).join(' • ')
+export function formatLanguageList(languageCodes, locale = 'en') {
+  return (languageCodes ?? []).map((languageCode) => getLanguageDisplayName(languageCode, locale)).join(' • ')
 }

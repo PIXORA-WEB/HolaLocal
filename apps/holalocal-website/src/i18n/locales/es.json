@@ -146,6 +146,7 @@
       "visibility": {
         "draft": "Tu empresa está guardada como borrador privado y todavía no aparece públicamente.",
         "pending_review": "Tu perfil está pendiente de revisión y todavía no aparece públicamente.",
+        "rejected": "Tu perfil necesita cambios antes de poder enviarse de nuevo y todavía no aparece públicamente.",
         "active": "Tu perfil está activo y puede aparecer en los resultados públicos.",
         "suspended": "Tu perfil está suspendido y no aparece públicamente.",
         "archived": "Tu perfil está archivado y no aparece públicamente.",
@@ -232,7 +233,9 @@
     "noMatchesTitle": "No hay servicios coincidentes",
     "noMatchesDescription": "Prueba otro servicio, zona, categoría o idioma.",
     "loadError": "No hemos podido cargar los negocios locales. Inténtalo de nuevo.",
-    "emptyAction": "Registrar un negocio"
+    "emptyAction": "Registrar un negocio",
+    "noReviews": "Aún no hay reseñas",
+    "verified": "Verificado"
   },
   "appHome": {
     "eyebrow": "Costa del Sol y Gibraltar",
@@ -263,7 +266,7 @@
       "secondaryAction": "Explorar servicios locales",
       "businessesLabel": "Perfiles de negocios locales destacados",
       "verifiedProfile": "Perfil verificado",
-      "activeProfile": "Perfil activo",
+      "activeProfile": "Perfil público",
       "locationLabel": "Zona de servicio",
       "languagesLabel": "Idiomas",
       "ratingCount_one": "{{count}} reseña",
@@ -314,7 +317,10 @@
             "Inglés"
           ]
         }
-      ]
+      ],
+      "previousBusiness": "Negocio anterior",
+      "nextBusiness": "Negocio siguiente",
+      "businessPosition": "Negocio {{current}} de {{total}}"
     },
     "trustStrip": {
       "label": "Puntos de confianza de HolaLocal",
@@ -364,8 +370,9 @@
       "title": "Por qué la gente confía en HolaLocal.",
       "description": "Una base cuidada de identidad, comunicación y privacidad hace más clara cada conexión local.",
       "verified": {
-        "title": "Perfiles verificados",
-        "description": "Los estados claros ayudan a entender qué perfil estás consultando."
+        "title": "Verificación de negocios",
+        "comingSoon": "Próximamente",
+        "description": "Estamos desarrollando un proceso de verificación para ayudar a los clientes a reconocer negocios cuya identidad y datos de registro hayan sido comprobados."
       },
       "identities": {
         "title": "Identidades reales",

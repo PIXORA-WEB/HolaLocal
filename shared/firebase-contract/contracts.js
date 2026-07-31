@@ -117,6 +117,7 @@ export const BUSINESS_PRIVATE_CONTRACT = Object.freeze({
     preferredContactMethod: field('contact_method', 'owner_writable', 'private_internal', 'required'),
     callbackPreferences: field('map', 'owner_writable', 'private_internal'),
     privateAddress: field('map|null', 'owner_writable', 'private_internal'),
+    currentRejection: field('moderation_feedback|null', 'trusted_only', 'private_internal'),
     createdAt: field('Timestamp', 'trusted_only', 'private_internal', 'required'),
     updatedAt: field('Timestamp', 'derived', 'private_internal', 'required'),
   }),

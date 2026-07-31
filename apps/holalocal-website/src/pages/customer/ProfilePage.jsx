@@ -9,6 +9,10 @@ import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { uploadUserProfilePhoto } from '../../services/userService.js'
+import {
+  classifyFrontendError,
+  getRecoveryActionTranslationKey,
+} from '../../utils/frontendErrors.js'
 import { supportedUILanguages } from '../../utils/languages.js'
 import { getDisplayName } from '../../utils/profile.js'
 
@@ -37,10 +41,12 @@ function ProfilePage() {
   const [city, setCity] = useState(userProfile?.city ?? '')
   const [country, setCountry] = useState(userProfile?.country ?? 'Spain')
   const [error, setError] = useState('')
+  const [errorOperation, setErrorOperation] = useState(null)
   const [success, setSuccess] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
-  const [photoError, setPhotoError] = useState('')
+  const [photoError, setPhotoError] = useState(null)
+  const [businessUpgradeError, setBusinessUpgradeError] = useState(null)
   const [businessUpgradeSubmitting, setBusinessUpgradeSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
   const photoRetryRef = useRef(null)
@@ -73,17 +79,23 @@ function ProfilePage() {
   }
 
   async function uploadProfilePhoto(file) {
-    setPhotoError('')
+    setPhotoError(null)
     setPhotoUploading(true)
 
     try {
       await uploadUserProfilePhoto(user.uid, file)
-      await refreshUserProfile(user)
       photoRetryRef.current = null
       setSuccess(t('profile.imageUpdated'))
+      await refreshUserProfile(user).catch(() => undefined)
     } catch (uploadError) {
-      photoRetryRef.current = () => void uploadProfilePhoto(file)
-      setPhotoError(uploadError.message || t('profile.imageUploadError'))
+      const classifiedError = classifyFrontendError(uploadError, {
+        domain: 'media',
+        fallbackType: 'MEDIA_UPLOAD_FAILED',
+      })
+      photoRetryRef.current = classifiedError.recovery === 'retry'
+        ? () => void uploadProfilePhoto(file)
+        : null
+      setPhotoError(classifiedError)
     } finally {
       setPhotoUploading(false)
     }
@@ -95,14 +107,22 @@ function ProfilePage() {
     if (file) void uploadProfilePhoto(file)
   }
 
+  const photoErrorAction = photoError?.recovery === 'sign-in'
+    ? () => navigate('/login')
+    : photoError?.recovery === 'retry'
+      ? () => photoRetryRef.current?.()
+      : undefined
+
   async function handleLogout() {
     setError('')
+    setErrorOperation(null)
     setSubmitting(true)
 
     try {
       await signOutUser()
     } catch (logoutError) {
       setError(getAuthenticationErrorMessage(logoutError, t))
+      setErrorOperation('logout')
       setSubmitting(false)
     }
   }
@@ -110,6 +130,7 @@ function ProfilePage() {
   async function handleProfileUpdate(event) {
     event.preventDefault()
     setError('')
+    setErrorOperation(null)
     setSuccess('')
 
     const normalizedFirstName = firstName.trim()
@@ -143,7 +164,12 @@ function ProfilePage() {
       setEditing(false)
       setSuccess(t('profile.updateSuccess'))
     } catch (updateError) {
-      setError(getAuthenticationErrorMessage(updateError, t))
+      const classifiedError = classifyFrontendError(updateError, {
+        domain: 'profile-save',
+        fallbackType: 'PROFILE_SAVE_FAILED',
+      })
+      setError(t(classifiedError.translationKey))
+      setErrorOperation('save')
     } finally {
       setSubmitting(false)
     }
@@ -152,16 +178,38 @@ function ProfilePage() {
   async function handleBusinessUpgrade() {
     setError('')
     setSuccess('')
+    setBusinessUpgradeError(null)
     setBusinessUpgradeSubmitting(true)
 
     try {
       await enableBusinessAccess()
       navigate('/business/edit')
     } catch (upgradeError) {
-      setError(getAuthenticationErrorMessage(upgradeError, t))
+      setBusinessUpgradeError(classifyFrontendError(upgradeError, {
+        domain: 'workflow',
+        fallbackType: 'ACCOUNT_TRANSITION_FAILED',
+      }))
       setBusinessUpgradeSubmitting(false)
     }
   }
+
+  const businessUpgradeErrorAction = businessUpgradeError?.recovery === 'verify-email'
+    ? () => navigate('/verify-email')
+    : businessUpgradeError?.recovery === 'sign-in'
+      ? () => navigate('/login')
+      : businessUpgradeError?.recovery === 'complete-profile'
+        ? () => navigate('/complete-profile')
+        : businessUpgradeError?.recovery === 'sign-out'
+          ? () => void handleLogout()
+          : businessUpgradeError?.recovery === 'refresh-account'
+            ? () => void refreshUserProfile(user).then(() => setBusinessUpgradeError(null))
+                .catch((refreshError) => setBusinessUpgradeError(classifyFrontendError(refreshError, {
+                  domain: 'workflow',
+                  fallbackType: 'ACCOUNT_TRANSITION_FAILED',
+                })))
+            : businessUpgradeError?.recovery === 'retry'
+              ? () => void handleBusinessUpgrade()
+              : undefined
 
   return (
     <section className="profile-card">
@@ -177,7 +225,11 @@ function ProfilePage() {
             uploading={photoUploading}
           />
           {photoError && (
-            <RecoveryMessage message={photoError} onRetry={() => photoRetryRef.current?.()} />
+            <RecoveryMessage
+              actionLabel={photoError.recovery === 'sign-in' ? t('account.signIn') : undefined}
+              message={t(photoError.translationKey)}
+              onRetry={photoErrorAction}
+            />
           )}
         </div>
         <div className="profile-summary__identity">
@@ -212,8 +264,9 @@ function ProfilePage() {
 
       {error && (
         <RecoveryMessage
+          actionLabel={errorOperation === 'logout' ? t('auth.logout') : undefined}
           message={error}
-          onRetry={() => void refreshUserProfile(user).then(() => setError('')).catch((retryError) => setError(getAuthenticationErrorMessage(retryError, t)))}
+          onAction={errorOperation === 'logout' ? () => void handleLogout() : undefined}
         />
       )}
       {success && <p className="form-message form-message--success" role="status">{success}</p>}
@@ -312,8 +365,15 @@ function ProfilePage() {
                 {t('profile.businessAssurance')}
               </p>
             </div>
-            <div className="business-tools-card__actions">
-              <button
+          <div className="business-tools-card__actions">
+            {businessUpgradeError && (
+              <RecoveryMessage
+                actionLabel={t(getRecoveryActionTranslationKey(businessUpgradeError.recovery))}
+                message={t(businessUpgradeError.translationKey)}
+                onAction={businessUpgradeErrorAction}
+              />
+            )}
+            <button
                 className="button button--primary"
                 disabled={businessUpgradeSubmitting}
                 onClick={() => void handleBusinessUpgrade()}

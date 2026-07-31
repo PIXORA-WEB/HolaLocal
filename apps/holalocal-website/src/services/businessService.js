@@ -11,15 +11,18 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
 import { ensureOwnerBusinessCallable, listPublicBusinessesCallable } from '../firebase/functionsClient.js'
+import { createApplicationError } from '../utils/frontendErrors.js'
 import {
   hasCompletePublicBusinessProfile,
   projectPublicContact,
+  validateBusinessLocation,
 } from '@holalocal/firebase-contract'
 import {
   resolveWebsiteBusinessLookup,
   toManagedBusinessView,
   toPublicBusinessView,
 } from './firebaseCompatibility.js'
+import { isOwnerEditableBusinessStatus } from '../utils/business.js'
 
 async function uploadImageFile(...args) {
   const storage = await import('../firebase/storageClient.js')
@@ -247,7 +250,7 @@ export async function getBusinessByOwnerId(ownerId, userBusinessId = null) {
 export async function createBusinessProfile() {
   const result = await ensureOwnerBusinessCallable()
   const businessId = result.data?.businessId
-  if (!businessId) throw new Error('Business profile could not be created.')
+  if (!businessId) throw createApplicationError('business-create-failed')
   return getManagedBusinessById(businessId)
 }
 
@@ -289,20 +292,33 @@ export async function updateBusinessProfile(businessId, updates) {
 export async function submitBusinessForReview(businessId) {
   await runTransaction(db, async (transaction) => {
     const businessRef = businessDocument(businessId)
-    const snapshot = await transaction.get(businessRef)
-    if (!snapshot.exists()) throw new Error('Business profile not found.')
+    const privateRef = privateBusinessDocument(businessId)
+    const [snapshot, privateSnapshot] = await Promise.all([
+      transaction.get(businessRef),
+      transaction.get(privateRef),
+    ])
+    if (!snapshot.exists()) throw createApplicationError('business-submit-not-found')
     const business = snapshot.data()
-    if (!['draft', 'rejected'].includes(business.status)) {
-      throw new Error('Only draft or rejected business profiles can be submitted for review.')
+    if (!isOwnerEditableBusinessStatus(business.status)) {
+      throw createApplicationError('business-submit-invalid-state')
     }
-    if (!hasCompletePublicBusinessProfile(business)) {
-      throw new Error('Complete the required business profile fields before submitting for review.')
+    if (
+      !hasCompletePublicBusinessProfile(business)
+      || !validateBusinessLocation(business).valid
+    ) {
+      throw createApplicationError('business-submit-incomplete')
     }
     transaction.update(businessRef, {
       status: 'pending_review',
       submittedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
+    if (business.status === 'rejected' && privateSnapshot.exists()) {
+      transaction.update(privateRef, {
+        currentRejection: null,
+        updatedAt: serverTimestamp(),
+      })
+    }
   })
   return getManagedBusinessById(businessId)
 }
@@ -319,9 +335,9 @@ export async function uploadBusinessLogo(businessId, file) {
       await deleteImageFile(existingBusiness.profilePhoto.storagePath).catch(() => undefined)
     }
     return updatedBusiness
-  } catch (error) {
+  } catch {
     await deleteImageFile(uploadedLogo.storagePath).catch(() => undefined)
-    throw error
+    throw createApplicationError('media-save-failed')
   }
 }
 
@@ -334,14 +350,20 @@ export async function uploadBusinessGalleryImages(businessId, files) {
       const image = await uploadImageFile(`businesses/${businessId}/photos`, file)
       uploadedImages.push({ ...image, updatedAt: new Date().toISOString() })
     }
-    const galleryImages = [...(existingBusiness?.galleryImages ?? []), ...uploadedImages].slice(0, 8)
-    return updateBusinessProfile(businessId, {
-      galleryImages,
-      galleryImageURLs: galleryImages.map(({ downloadUrl }) => downloadUrl),
-    })
   } catch (error) {
     await Promise.all(uploadedImages.map(({ storagePath }) => deleteImageFile(storagePath).catch(() => undefined)))
     throw error
+  }
+
+  const galleryImages = [...(existingBusiness?.galleryImages ?? []), ...uploadedImages].slice(0, 8)
+  try {
+    return await updateBusinessProfile(businessId, {
+      galleryImages,
+      galleryImageURLs: galleryImages.map(({ downloadUrl }) => downloadUrl),
+    })
+  } catch {
+    await Promise.all(uploadedImages.map(({ storagePath }) => deleteImageFile(storagePath).catch(() => undefined)))
+    throw createApplicationError('media-save-failed')
   }
 }
 

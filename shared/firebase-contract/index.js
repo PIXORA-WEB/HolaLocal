@@ -16,13 +16,22 @@ export {
 } from './lookup.js'
 export {
   getConversationActivityTime,
-  buildConversationId, CONVERSATION_ID_SEPARATOR, CONVERSATION_STATUS_ACTIVE,
+  buildConversationId, conversationInboxQueryFilters, existingConversationQueryFilters,
+  CONVERSATION_ID_SEPARATOR, CONVERSATION_SCHEMA_VERSION, CONVERSATION_STATUS_ACTIVE,
   hasOwnerOnlyConversationParticipants, isConversationHiddenForUser, isConversationIdFor,
   isConversationUnreadForUser, isSupportedTranslationLanguage, isTerminalTranslationStatus,
   MAX_MESSAGE_LENGTH, MESSAGE_TRANSLATION_REASONS, MESSAGE_TRANSLATION_STATUSES,
   MESSAGE_TRANSLATION_TERMINAL_STATUSES, normalizeMessageTranslation,
   selectMessageDisplayText, shouldAdvanceConversationPreview, shouldShowTranslatedMessage,
 } from './messaging.js'
+export {
+  LAUNCH_LOCATION_CATALOGUE,
+  locationDisplayLabel,
+  normalizeLocationText,
+  resolveLaunchLocation,
+  searchLaunchLocations,
+  validateBusinessLocation,
+} from './locations.js'
 export {
   isCustomIdentifier, isStandardLanguageCode, normalizeLanguage, normalizeLanguages,
   normalizePrimaryLanguage, normalizeServiceArea, normalizeServiceAreas, SERVICE_AREA_LABELS,

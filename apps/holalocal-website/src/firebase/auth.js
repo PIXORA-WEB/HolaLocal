@@ -2,6 +2,7 @@
 // UI components should consume these functions through AuthenticationContext.
 import {
   browserLocalPersistence,
+  connectAuthEmulator,
   createUserWithEmailAndPassword,
   deleteUser,
   getAuth,
@@ -14,6 +15,11 @@ import {
   signOut,
 } from 'firebase/auth'
 import { getFirebaseApp } from './config.js'
+import {
+  connectFirebaseEmulatorOnce,
+  FIREBASE_EMULATOR_ENDPOINTS,
+  shouldUseFirebaseEmulators,
+} from './emulatorMode.js'
 
 const loadUserService = () => import('../services/userService.js')
 
@@ -22,6 +28,12 @@ let firebaseAuth
 
 export function getFirebaseAuth() {
   firebaseAuth ??= getAuth(getFirebaseApp())
+  if (shouldUseFirebaseEmulators()) {
+    const { host, port } = FIREBASE_EMULATOR_ENDPOINTS.auth
+    connectFirebaseEmulatorOnce(firebaseAuth, () => {
+      connectAuthEmulator(firebaseAuth, `http://${host}:${port}`, { disableWarnings: true })
+    })
+  }
   return firebaseAuth
 }
 

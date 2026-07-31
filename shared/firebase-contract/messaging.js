@@ -1,4 +1,5 @@
 export const CONVERSATION_ID_SEPARATOR = '__'
+export const CONVERSATION_SCHEMA_VERSION = 1
 export const CONVERSATION_STATUS_ACTIVE = 'active'
 export const MAX_MESSAGE_LENGTH = 4000
 export const MESSAGE_TRANSLATION_STATUSES = Object.freeze([
@@ -24,6 +25,29 @@ export function buildConversationId(customerId, businessId) {
     throw new Error('A valid customer ID and business ID are required.')
   }
   return `${customerId}${CONVERSATION_ID_SEPARATOR}${businessId}`
+}
+
+export function conversationInboxQueryFilters(userId) {
+  if (!isValidConversationIdPart(userId)) {
+    throw new Error('A valid user ID is required.')
+  }
+  return [
+    ['participantIds', 'array-contains', userId],
+    ['status', '==', CONVERSATION_STATUS_ACTIVE],
+    ['schemaVersion', '==', CONVERSATION_SCHEMA_VERSION],
+  ]
+}
+
+export function existingConversationQueryFilters(customerId, businessId) {
+  if (!isValidConversationIdPart(customerId) || !isValidConversationIdPart(businessId)) {
+    throw new Error('A valid customer ID and business ID are required.')
+  }
+  return [
+    ['customerId', '==', customerId],
+    ['businessId', '==', businessId],
+    ['status', '==', CONVERSATION_STATUS_ACTIVE],
+    ['schemaVersion', '==', CONVERSATION_SCHEMA_VERSION],
+  ]
 }
 
 export function isConversationIdFor(conversationId, customerId, businessId) {

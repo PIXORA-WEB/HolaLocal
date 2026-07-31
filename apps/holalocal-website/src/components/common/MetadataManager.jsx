@@ -22,7 +22,13 @@ function MetadataManager() {
 
   useEffect(() => {
     const language = i18n.resolvedLanguage?.split('-')[0] ?? 'en'
-    const routeTitleKey = routeTitleKeys[location.pathname]
+    const routeTitleKey = location.pathname === '/admin'
+      ? 'admin.overview.title'
+      : location.pathname.startsWith('/admin/businesses/')
+        ? 'admin.review.title'
+        : location.pathname === '/admin/businesses'
+          ? 'admin.businesses.title'
+          : routeTitleKeys[location.pathname]
     const title = routeTitleKey
       ? t('metadata.pageTitle', { page: t(routeTitleKey) })
       : t('metadata.title')

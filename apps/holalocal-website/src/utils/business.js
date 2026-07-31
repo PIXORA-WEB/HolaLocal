@@ -1,6 +1,12 @@
 import { spokenLanguageOptions } from './languages.js'
 export { countryOptions, provinceOptions, serviceAreaOptions } from './locations.js'
 
+export const OWNER_EDITABLE_BUSINESS_STATUSES = Object.freeze(['draft', 'rejected'])
+
+export function isOwnerEditableBusinessStatus(status) {
+  return OWNER_EDITABLE_BUSINESS_STATUSES.includes(status)
+}
+
 export const businessCategoryOptions = [
   { value: 'Cleaning', labelKey: 'business.categories.cleaning' },
   { value: 'Plumbing', labelKey: 'business.categories.plumbing' },

@@ -10,7 +10,7 @@ import FormFieldError from '../../components/common/FormFieldError.jsx'
 
 function CompleteProfilePage() {
   const { t } = useTranslation()
-  const { sessionError, updateUserProfile, userProfile } = useAuthentication()
+  const { completeUserProfile, sessionError, userProfile } = useAuthentication()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [firstName, setFirstName] = useState(userProfile?.firstName ?? '')
@@ -48,7 +48,7 @@ function CompleteProfilePage() {
     setSubmitting(true)
 
     try {
-      await updateUserProfile({
+      await completeUserProfile({
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
         displayName: getDisplayName(normalizedFirstName, normalizedLastName),

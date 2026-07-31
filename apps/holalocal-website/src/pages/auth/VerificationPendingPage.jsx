@@ -18,6 +18,7 @@ function VerificationPendingPage() {
   const [searchParams] = useSearchParams()
   const [checking, setChecking] = useState(false)
   const [resending, setResending] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState(
     location.state?.verificationEmailSent === false
@@ -58,6 +59,18 @@ function VerificationPendingPage() {
     }
   }
 
+  async function handleSignOut() {
+    setError('')
+    setSigningOut(true)
+    try {
+      await signOutUser()
+    } catch (signOutError) {
+      setError(getAuthenticationErrorMessage(signOutError, t))
+    } finally {
+      setSigningOut(false)
+    }
+  }
+
   return (
     <section className="auth-card verification-card" aria-labelledby="verification-title">
       <div className="auth-card__heading">
@@ -72,7 +85,7 @@ function VerificationPendingPage() {
       <div className="verification-card__actions">
         <button
           className="button button--primary"
-          disabled={checking || resending}
+          disabled={checking || resending || signingOut}
           onClick={() => void checkVerification()}
           type="button"
         >
@@ -80,14 +93,20 @@ function VerificationPendingPage() {
         </button>
         <button
           className="button button--secondary"
-          disabled={checking || resending}
+          disabled={checking || resending || signingOut}
           onClick={() => void resendVerification()}
           type="button"
         >
           {resending ? t('auth.verification.resending') : t('auth.verification.resend')}
         </button>
-        <button className="button button--text" onClick={() => void signOutUser()} type="button">
-          {t('auth.logout')}
+        <button
+          aria-busy={signingOut || undefined}
+          className="button button--text"
+          disabled={signingOut}
+          onClick={() => void handleSignOut()}
+          type="button"
+        >
+          {signingOut ? t('common.loading') : t('auth.logout')}
         </button>
       </div>
     </section>

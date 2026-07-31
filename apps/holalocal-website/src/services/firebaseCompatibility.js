@@ -8,8 +8,10 @@ import {
   invalidMapping,
   isCustomIdentifier,
   isPublicBusinessEligible as sharedPublicBusinessEligible,
+  locationDisplayLabel,
   ownerMismatch,
   projectPublicContact,
+  resolveLaunchLocation,
 } from '@holalocal/firebase-contract'
 
 export { isPublicBusinessEligible } from '@holalocal/firebase-contract'
@@ -26,8 +28,19 @@ function accountTypeForRoles(roles) {
   return roles.includes('business') ? 'business' : 'customer'
 }
 
-function displayCompatibilityValues(values, namespace) {
-  return values.map((value) => isCustomIdentifier(value.id, namespace) ? value.label : value.id)
+function displayCompatibilityValues(
+  values,
+  namespace,
+  { useLocationDisplayLabels = false } = {},
+) {
+  return values.map((value) => {
+    if (isCustomIdentifier(value.id, namespace)) return value.label
+    if (namespace === 'area' && useLocationDisplayLabels) {
+      const location = resolveLaunchLocation(value.id)
+      if (location) return locationDisplayLabel(location)
+    }
+    return value.id
+  })
 }
 
 function compatibilityMetadata(adapted) {
@@ -116,6 +129,7 @@ export function toManagedBusinessView(documentId, rawDocument, privateDocument =
       ? business.languageValues.find(({ id }) => id === business.primaryLanguage)?.label
       : business.primaryLanguage,
     contact: privateContactForManagedView(adapted, privateDocument),
+    currentRejection: privateDocument?.currentRejection ?? null,
     legacyPrivateContact: adapted.legacy.contactCandidate,
     logoUrl: business.profilePhoto?.downloadUrl ?? legacy.logoURL ?? null,
     coverImageUrl: business.coverPhoto?.downloadUrl ?? legacy.coverImageURL ?? null,
@@ -138,7 +152,11 @@ export function toPublicBusinessView(documentId, rawDocument) {
   if (!sharedPublicBusinessEligible(rawDocument)) return null
 
   const languages = displayCompatibilityValues(business.languageValues, 'language')
-  const serviceAreas = displayCompatibilityValues(business.serviceAreaValues, 'area')
+  const serviceAreas = displayCompatibilityValues(
+    business.serviceAreaValues,
+    'area',
+    { useLocationDisplayLabels: true },
+  )
   return {
     businessId: documentId,
     ownerId: business.ownerId,

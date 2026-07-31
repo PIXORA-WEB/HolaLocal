@@ -4,6 +4,8 @@ import {
   ACCOUNT_STATUSES, BUSINESS_STATUSES, CONTACT_METHODS, ISSUE_CODES, SUBSCRIPTION_STATUSES,
   SUPPORTED_LANGUAGE_CODES, USER_ROLES, VERIFICATION_STATUSES, adaptBusinessDocument,
   adaptUserDocument, ambiguousBusinesses, buildConversationId, businessNotFound, detectUnsafePublicContact,
+  conversationInboxQueryFilters, CONVERSATION_SCHEMA_VERSION, existingConversationQueryFilters,
+  locationDisplayLabel, resolveLaunchLocation, searchLaunchLocations, validateBusinessLocation,
   foundBusiness, getConversationActivityTime, hasOwnerOnlyConversationParticipants, invalidMapping,
   hasCompleteUserProfile, isConversationHiddenForUser, isConversationUnreadForUser, isCustomIdentifier,
   isPublicBusinessEligible, normalizeLanguage, normalizeLanguages,
@@ -82,6 +84,35 @@ test('messaging helpers build deterministic customer and business conversation I
 
   assert.throws(() => buildConversationId('', 'business-1'))
   assert.throws(() => buildConversationId('customer-1', 'business/1'))
+})
+
+test('messaging query filters require the trusted active conversation schema', () => {
+  assert.deepEqual(conversationInboxQueryFilters('customer-1'), [
+    ['participantIds', 'array-contains', 'customer-1'],
+    ['status', '==', 'active'],
+    ['schemaVersion', '==', CONVERSATION_SCHEMA_VERSION],
+  ])
+  assert.deepEqual(existingConversationQueryFilters('customer-1', 'business-1'), [
+    ['customerId', '==', 'customer-1'],
+    ['businessId', '==', 'business-1'],
+    ['status', '==', 'active'],
+    ['schemaVersion', '==', CONVERSATION_SCHEMA_VERSION],
+  ])
+})
+
+test('launch locations resolve canonical, alias, search, and validation consistently', () => {
+  const santaMargarita = resolveLaunchLocation('Santa Margarita, La Linea de la Concepcion')
+  assert.equal(santaMargarita.id, 'santa-margarita-la-linea')
+  assert.equal(locationDisplayLabel(santaMargarita), 'Santa Margarita — La Línea de la Concepción')
+  assert.ok(searchLaunchLocations('Marbella').some(({ id }) => id === 'nueva-andalucia'))
+  assert.equal(validateBusinessLocation({
+    location: { locality: 'Santa Margarita', region: 'cadiz', countryCode: 'ES' },
+    serviceAreas: ['sotogrande'],
+  }).valid, true)
+  assert.equal(validateBusinessLocation({
+    location: { locality: 'Santa Margarita, La Linea', region: 'cadiz', countryCode: 'ES' },
+    serviceAreas: ['sotogrande'],
+  }).valid, false)
 })
 
 test('conversation preview ordering is monotonic for concurrent sends', () => {

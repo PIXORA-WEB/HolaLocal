@@ -114,6 +114,7 @@
     "loadingConversations": "Loading conversations…",
     "openingConversation": "Opening conversation…",
     "businessFallback": "Business",
+    "customerFallback": "Customer",
     "localBusiness": "Local business",
     "noMessages": "No messages yet",
     "unreadConversation": "Unread conversation with {{name}}",
@@ -141,6 +142,9 @@
     },
     "startConversation": "Start the conversation with a clear description of what you need.",
     "messageLabel": "Message",
+    "messageHistory": "Message history",
+    "you": "You",
+    "sentBy": "Sent by {{name}}",
     "placeholder": "Write a message…",
     "sending": "Sending…",
     "send": "Send",
@@ -151,7 +155,43 @@
       "loadMessages": "Unable to load messages.",
       "openConversation": "Unable to open this conversation.",
       "send": "Unable to send your message.",
-      "remove": "Unable to remove this conversation."
+      "remove": "Unable to remove this conversation.",
+      "sessionExpired": "Your session has expired. Sign in again to continue.",
+      "permissionDenied": "You cannot access or change this conversation.",
+      "networkUnavailable": "Messages are temporarily unavailable. Check your connection and try again.",
+      "notFound": "This conversation is no longer available.",
+      "invalid": "This message cannot be sent as written. Check it and try again.",
+      "conflict": "The message could not be completed safely. Refresh the conversation before trying again."
+    }
+  },
+  "media": {
+    "errors": {
+      "invalidType": "Choose a JPG, PNG or WebP image.",
+      "tooLarge": "Choose an image smaller than 5 MB.",
+      "sessionExpired": "Your session has expired. Sign in again before changing images.",
+      "permissionDenied": "You do not have permission to change this image.",
+      "networkUnavailable": "The image operation is temporarily unavailable. Check your connection and try again.",
+      "objectNotFound": "This image is no longer available. Refresh the media and try again.",
+      "uploadFailed": "The image was not uploaded. Select it and try again.",
+      "deleteFailed": "The image could not be removed. Try again.",
+      "saveFailed": "The image could not be attached to the profile. Try again."
+    }
+  },
+  "workflow": {
+    "errors": {
+      "emailNotVerified": "Verify your email before continuing.",
+      "accountNotActive": "Your account cannot complete this action right now.",
+      "profileIncomplete": "Complete your account profile before continuing.",
+      "profileNotFound": "We could not find your account profile. Refresh your account before continuing.",
+      "accountTransitionFailed": "Your account could not be updated. Try again.",
+      "roleConflict": "This account change cannot be completed in its current state. Refresh your account.",
+      "ownershipConflict": "We could not safely identify the business owned by this account. Contact HolaLocal Support.",
+      "businessCreateFailed": "The business profile could not be prepared. Try again.",
+      "submitIncomplete": "Complete the required business profile information before submitting it for review.",
+      "submitInvalidState": "This profile cannot currently be submitted for review. Refresh the dashboard.",
+      "submitPermissionDenied": "You are not allowed to submit this business profile. Refresh your account access.",
+      "submitFailed": "The profile was not submitted for review. Your saved profile is unchanged. Try again.",
+      "networkUnavailable": "The operation is temporarily unavailable. Check your connection and try again."
     }
   },
   "profile": {
@@ -391,6 +431,15 @@
         "description": "Define your base and the communities your business serves.",
         "baseTitle": "Business base",
         "baseDescription": "Your main business location.",
+        "primaryLocation": "Primary location",
+        "primaryInstruction": "Search and choose one location from the suggestions.",
+        "clearPrimary": "Clear primary location",
+        "chooseOnePrimary": "Choose one primary location. Add other places under Service areas.",
+        "selectPrimary": "Select a primary location from the suggestions.",
+        "selectServiceArea": "Select at least one service area.",
+        "resolveServiceAreas": "Remove or replace unresolved service areas.",
+        "unresolved": "(unresolved)",
+        "unresolvedPrimary": "This saved value is unresolved. Choose a suggestion before saving or submitting.",
         "coverageTitle": "Service coverage",
         "coverageDescription": "Choose the areas where you provide services.",
         "totalSelected": "{{count}} selected",
@@ -478,6 +527,7 @@
     "website": "Enter a complete website address, including https://."
   },
   "onboarding": {
+    "logoAlt": "HolaLocal logo",
     "eyebrow": "Set up your experience",
     "title": "What are you using HolaLocal for?",
     "description": "You can use one account to find services, offer services, or do both.",
@@ -586,6 +636,53 @@
     },
     "emptyAction": "Register a business"
   },
+  "publicBusinessDetail": {
+    "backToResults": "Back to results",
+    "categoryNotSpecified": "Category not specified",
+    "serviceAreaNotSpecified": "Service area not specified",
+    "activeProfile": "Public profile",
+    "verificationComingSoon": "Verification coming soon",
+    "subscriptionPlan": "{{plan}} plan",
+    "reviewCount_one": "{{count}} review",
+    "reviewCount_other": "{{count}} reviews",
+    "noReviews": "No reviews yet",
+    "sectionsLabel": "Business detail sections",
+    "overview": "Overview",
+    "services": "Services",
+    "photos": "Photos",
+    "reviews": "Reviews",
+    "about": "About",
+    "openingConversation": "Opening conversation…",
+    "messageBusiness": "Message business",
+    "favouritesComingSoon": "Favourites are coming soon",
+    "save": "Save",
+    "reportBusiness": "Report business",
+    "aboutBusiness": "About this business",
+    "noDescription": "This business has not added a public description yet.",
+    "serviceArea": "Service area",
+    "languages": "Languages",
+    "notSpecified": "Not specified",
+    "servicesOffered": "Services offered",
+    "noServices": "No detailed services have been added yet.",
+    "workGallery": "Work gallery",
+    "workImageAlt": "{{name}} work example {{index}}",
+    "noPhotos": "No work photos have been added yet.",
+    "customerFeedback": "Customer feedback",
+    "reviewsUnavailable": "Individual reviews are not available in this first release.",
+    "noReceivedReviews": "This business has not received any reviews yet.",
+    "contactInformation": "Contact information",
+    "phone": "Phone",
+    "email": "Email",
+    "website": "Website",
+    "openWhatsApp": "Open WhatsApp",
+    "callback": "Callback",
+    "callbackAvailable": "Callback requests are available through HolaLocal messaging.",
+    "noContact": "No public contact details have been added.",
+    "messageError": "Unable to open this conversation. Please try again.",
+    "reportError": "Unable to submit this report. Please try again.",
+    "unavailableTitle": "Business unavailable",
+    "unavailableDescription": "This business profile could not be found or is no longer active."
+  },
   "appHome": {
     "eyebrow": "Costa del Sol & Gibraltar",
     "title": "Trusted local help, right when you need it.",
@@ -615,7 +712,12 @@
       "secondaryAction": "Browse local services",
       "businessesLabel": "Featured local business profiles",
       "verifiedProfile": "Verified profile",
-      "activeProfile": "Active profile",
+      "activeProfile": "Public profile",
+      "exampleProfile": "Example profile",
+      "loadFailure": "Featured businesses could not be loaded right now. Please try again later.",
+      "exampleCleaningName": "Example Cleaning Service",
+      "exampleGardenName": "Example Garden Service",
+      "exampleRepairsName": "Example Home Repairs",
       "locationLabel": "Service area",
       "languagesLabel": "Languages",
       "ratingCount_one": "{{count}} review",
@@ -666,7 +768,10 @@
             "English"
           ]
         }
-      ]
+      ],
+      "previousBusiness": "Previous business",
+      "nextBusiness": "Next business",
+      "businessPosition": "Business {{current}} of {{total}}"
     },
     "trustStrip": {
       "label": "HolaLocal credibility points",
@@ -716,8 +821,9 @@
       "title": "Why people trust HolaLocal.",
       "description": "Thoughtful identity, communication and privacy foundations make every local connection clearer.",
       "verified": {
-        "title": "Verified profiles",
-        "description": "Clear status indicators help customers understand who they are viewing."
+        "title": "Business verification",
+        "comingSoon": "Coming soon",
+        "description": "We are developing a verification process to help customers recognise businesses whose identity and registration details have been checked."
       },
       "identities": {
         "title": "Real identities",

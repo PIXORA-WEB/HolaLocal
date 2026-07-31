@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { transitionAccountRole } from './accountRoleTransition.js'
+import { getAdminBusinessReview as runGetAdminBusinessReview } from './adminBusinessReview.js'
 import { moderateBusiness as runBusinessModeration } from './businessModeration.js'
 import { createFirestoreTranslationSource } from './firestoreTranslationSource.js'
 import { processMessageTranslation } from './messageTranslation.js'
@@ -68,6 +69,19 @@ export async function handleModerateBusiness(request, db) {
     claims: request.auth?.token,
     businessId: request.data?.businessId,
     operation: request.data?.operation,
+    reasonCode: request.data?.reasonCode,
+    guidance: request.data?.guidance,
+    requestId: request.data?.requestId,
+    db: db ?? getFirestore(),
+  })
+}
+
+export async function handleGetAdminBusinessReview(request, db) {
+  const uid = requireCallableUid(request)
+  return runGetAdminBusinessReview({
+    uid,
+    claims: request.auth?.token,
+    businessId: request.data?.businessId,
     db: db ?? getFirestore(),
   })
 }
@@ -116,6 +130,11 @@ export const sendMessage = onCall(
 export const moderateBusiness = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleModerateBusiness(request),
+)
+
+export const getAdminBusinessReview = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleGetAdminBusinessReview(request),
 )
 
 export const listPublicBusinesses = onCall(

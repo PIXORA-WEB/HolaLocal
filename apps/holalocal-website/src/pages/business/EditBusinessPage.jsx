@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import SelectField from '../../components/common/SelectField.jsx'
+import LocationCombobox from '../../components/business/LocationCombobox.jsx'
 import ServiceAreaSelector from '../../components/business/ServiceAreaSelector.jsx'
 import AccessibleDialog from '../../components/common/AccessibleDialog.jsx'
 import LoadingScreen from '../../components/common/LoadingScreen.jsx'
@@ -20,20 +21,28 @@ import {
 import {
   businessCategoryOptions,
   businessLanguageOptions,
-  countryOptions,
   getBusinessCategoryLabel,
+  isOwnerEditableBusinessStatus,
   normalizeCustomValues,
-  provinceOptions,
   serviceAreaOptions,
 } from '../../utils/business.js'
 import { getLanguageNameFromCode, normalizeLanguageCode } from '../../utils/languages.js'
 import { getBusinessProfileCompletion } from '../../utils/businessCompletion.js'
 import {
+  classifyFrontendError,
+  getRecoveryActionTranslationKey,
+} from '../../utils/frontendErrors.js'
+import {
   getServiceAreaGroupLabel,
-  getServiceAreaLabel,
+  locationDisplayLabel,
   normalizeCountryCode,
   normalizeProvinceId,
   normalizeServiceAreaId,
+  primaryLocationInputState,
+  primaryLocationSelectionState,
+  resolveLaunchLocation,
+  toggleServiceAreaSelection,
+  validateBusinessLocation,
 } from '../../utils/locations.js'
 
 const emptyForm = {
@@ -53,6 +62,7 @@ const emptyForm = {
   preferredContactMethod: 'holalocal',
   allowCallbackRequests: false,
   city: '',
+  primaryLocationId: '',
   province: '',
   country: 'ES',
   serviceAreas: [],
@@ -71,8 +81,8 @@ function prepareCustomSelection(values = [], options) {
   return { customValue, selectedValues }
 }
 
-function draftSignature(form, customSubcategory, customServiceArea, customLanguage) {
-  return JSON.stringify({ form, customSubcategory, customServiceArea, customLanguage })
+function draftSignature(form, customSubcategory, customLanguage) {
+  return JSON.stringify({ form, customSubcategory, customLanguage })
 }
 
 function CheckboxGroup({ error, id, legend, name, options, selectedValues, onToggle }) {
@@ -129,21 +139,29 @@ function EditBusinessPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [workflowError, setWorkflowError] = useState(null)
   const [customSubcategory, setCustomSubcategory] = useState('')
-  const [customServiceArea, setCustomServiceArea] = useState('')
   const [customLanguage, setCustomLanguage] = useState('')
-  const [mediaError, setMediaError] = useState('')
+  const [mediaError, setMediaError] = useState(null)
   const [logoUploading, setLogoUploading] = useState(false)
   const [galleryUploading, setGalleryUploading] = useState(false)
   const [deletingImage, setDeletingImage] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [historyRestoring, setHistoryRestoring] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState(null)
   const [mediaRetryAvailable, setMediaRetryAvailable] = useState(false)
   const mediaRetryRef = useRef(null)
   const [initialDraftSignature, setInitialDraftSignature] = useState(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const attemptedProfileRefreshBusinessIdRef = useRef(null)
+  const historyIndexRef = useRef(null)
+  const historyNavigationRef = useRef({
+    allowNext: false,
+    pending: null,
+    restoring: false,
+  })
+  const pendingNavigationRef = useRef(null)
   const userId = user.uid
   const userBusinessId = userProfile?.businessId ?? null
   const hasBusinessRole = userProfile?.roles?.includes('business') === true
@@ -157,10 +175,6 @@ function EditBusinessPage() {
       value: category.value,
     })),
   ]
-  const provinceListboxOptions = [
-    { label: t('business.form.selectProvince'), value: '' },
-    ...provinceOptions.map((province) => ({ label: t(province.labelKey), value: province.value })),
-  ]
   const localizedCategoryOptions = businessCategoryOptions.map((category) => ({
     ...category,
     label: getBusinessCategoryLabel(category.value, t),
@@ -169,7 +183,7 @@ function EditBusinessPage() {
     return {
       ...area,
       groupLabel: getServiceAreaGroupLabel(area.group, t),
-      label: getServiceAreaLabel(area.value, t),
+      label: locationDisplayLabel(area.location),
     }
   })
   const localizedLanguageOptions = businessLanguageOptions.map((language) => ({
@@ -180,30 +194,33 @@ function EditBusinessPage() {
     ? businessProfile.galleryImages
     : (businessProfile?.galleryImageURLs ?? []).map((downloadUrl) => ({ downloadUrl }))
   const currentDraftSignature = useMemo(
-    () => draftSignature(form, customSubcategory, customServiceArea, customLanguage),
-    [customLanguage, customServiceArea, customSubcategory, form],
+    () => draftSignature(form, customSubcategory, customLanguage),
+    [customLanguage, customSubcategory, form],
   )
   const isDirty = initialDraftSignature !== null && initialDraftSignature !== currentDraftSignature
-  const countryListboxOptions = countryOptions.map((country) => ({
-    label: t(country.labelKey, { defaultValue: country.defaultLabel }),
-    value: country.value,
-  }))
   const contactMethodOptions = [
     { label: t('business.form.contact.holalocal'), value: 'holalocal' },
     { label: t('business.form.contact.phone'), value: 'phone' },
     { label: t('business.form.contact.emailLabel'), value: 'email' },
     { label: 'WhatsApp', value: 'whatsapp' },
   ]
-  const completion = getBusinessProfileCompletion({
+  const completionBusiness = {
     ...businessProfile,
     ...form,
     contact: { ...(businessProfile?.contact ?? {}), preferredContactMethod: form.preferredContactMethod },
     galleryImages: businessProfile?.galleryImages,
     galleryImageURLs: businessProfile?.galleryImageURLs,
     languages: normalizeCustomValues(form.languages, customLanguage),
-    location: { ...(businessProfile?.location ?? {}), locality: form.city },
+    location: {
+      locality: form.city,
+      region: form.province,
+      countryCode: form.country,
+    },
     profilePhoto: businessProfile?.profilePhoto,
-    serviceAreas: normalizeCustomValues(form.serviceAreas, customServiceArea),
+    serviceAreas: form.serviceAreas,
+  }
+  const completion = getBusinessProfileCompletion(completionBusiness, {
+    selectedPrimaryLocationId: form.primaryLocationId,
   })
 
   useEffect(() => {
@@ -211,6 +228,7 @@ function EditBusinessPage() {
 
     async function loadBusinessProfile() {
       setError('')
+      setWorkflowError(null)
       setLoading(true)
       try {
         const profile = await ensureBusinessProfile(userId, {
@@ -225,15 +243,17 @@ function EditBusinessPage() {
           profile?.categoryIds ?? [],
           businessCategoryOptions,
         )
-        const preparedServiceAreas = prepareCustomSelection(
+        const preparedServiceAreas = [...new Set(
           (profile?.serviceAreas ?? []).map(normalizeServiceAreaId),
-          serviceAreaOptions,
-        )
+        )]
         const preparedLanguages = prepareCustomSelection(
           loadedLanguages,
           businessLanguageOptions,
         )
 
+        const savedPrimaryLocation = resolveLaunchLocation(
+          profile?.location?.locality ?? userCity,
+        )
         const nextForm = {
           ...emptyForm,
           email: profile?.contact?.email ?? userEmail,
@@ -246,25 +266,26 @@ function EditBusinessPage() {
           websiteVisible: profile?.contact?.websiteVisible === true,
           preferredContactMethod: profile?.contact?.preferredContactMethod ?? 'holalocal',
           allowCallbackRequests: profile?.contact?.allowCallbackRequests === true,
-          city: profile?.location?.locality ?? userCity,
-          province: normalizeProvinceId(profile?.location?.region ?? ''),
-          country: normalizeCountryCode(profile?.location?.countryCode ?? 'ES'),
+          city: savedPrimaryLocation?.locality ?? profile?.location?.locality ?? userCity,
+          primaryLocationId: savedPrimaryLocation?.id ?? '',
+          province: savedPrimaryLocation?.regionCode
+            ?? normalizeProvinceId(profile?.location?.region ?? ''),
+          country: savedPrimaryLocation?.countryCode
+            ?? normalizeCountryCode(profile?.location?.countryCode ?? 'ES'),
           primaryLanguage: profile?.primaryLanguage ?? loadedLanguages[0] ?? 'en',
           ...(profile ?? {}),
           categoryIds: preparedSubcategories.selectedValues,
-          serviceAreas: preparedServiceAreas.selectedValues,
+          serviceAreas: preparedServiceAreas,
           languages: preparedLanguages.selectedValues,
         }
 
         setBusinessProfile(profile)
         setCustomSubcategory(preparedSubcategories.customValue)
-        setCustomServiceArea(preparedServiceAreas.customValue)
         setCustomLanguage(preparedLanguages.customValue)
         setForm(nextForm)
         setInitialDraftSignature(draftSignature(
           nextForm,
           preparedSubcategories.customValue,
-          preparedServiceAreas.customValue,
           preparedLanguages.customValue,
         ))
         if (
@@ -276,7 +297,12 @@ function EditBusinessPage() {
           await refreshUserProfile({ uid: userId }, { background: true }).catch(() => undefined)
         }
       } catch (loadError) {
-        if (active) setError(getAuthenticationErrorMessage(loadError, t))
+        if (active) {
+          setWorkflowError(classifyFrontendError(loadError, {
+            domain: 'workflow',
+            fallbackType: 'BUSINESS_CREATE_FAILED',
+          }))
+        }
       } finally {
         if (active) setLoading(false)
       }
@@ -302,6 +328,11 @@ function EditBusinessPage() {
   useEffect(() => {
     if (!isDirty) return undefined
 
+    const historyNavigation = historyNavigationRef.current
+    historyIndexRef.current = Number.isInteger(window.history.state?.idx)
+      ? window.history.state.idx
+      : null
+
     function warnBeforeUnload(event) {
       event.preventDefault()
       event.returnValue = ''
@@ -320,17 +351,55 @@ function EditBusinessPage() {
       }
       event.preventDefault()
       event.stopPropagation()
-      setPendingNavigation(signOutButton ? { type: 'signOut' } : {
+      const action = signOutButton ? { type: 'signOut' } : {
         type: 'navigate',
         to: `${link.pathname}${link.search}${link.hash}`,
-      })
+      }
+      pendingNavigationRef.current = action
+      setPendingNavigation(action)
+    }
+
+    function warnBeforeHistoryNavigation(event) {
+      const targetIndex = Number.isInteger(event.state?.idx) ? event.state.idx : null
+      const currentIndex = historyIndexRef.current
+
+      if (historyNavigation.allowNext) {
+        historyNavigation.allowNext = false
+        historyIndexRef.current = targetIndex
+        return
+      }
+      if (historyNavigation.restoring && targetIndex === currentIndex) {
+        historyNavigation.restoring = false
+        setHistoryRestoring(false)
+        return
+      }
+      if (targetIndex === null || currentIndex === null || targetIndex === currentIndex) return
+
+      event.stopImmediatePropagation()
+      const action = {
+        delta: targetIndex - currentIndex,
+        type: 'history',
+      }
+      if (!pendingNavigationRef.current) {
+        historyNavigation.pending = action
+        pendingNavigationRef.current = action
+        setPendingNavigation(action)
+      }
+      historyNavigation.restoring = true
+      setHistoryRestoring(true)
+      window.history.go(currentIndex - targetIndex)
     }
 
     window.addEventListener('beforeunload', warnBeforeUnload)
+    window.addEventListener('popstate', warnBeforeHistoryNavigation, true)
     document.addEventListener('click', warnBeforeInternalNavigation, true)
     return () => {
       window.removeEventListener('beforeunload', warnBeforeUnload)
+      window.removeEventListener('popstate', warnBeforeHistoryNavigation, true)
       document.removeEventListener('click', warnBeforeInternalNavigation, true)
+      historyNavigation.pending = null
+      historyNavigation.restoring = false
+      pendingNavigationRef.current = null
     }
   }, [isDirty])
 
@@ -340,17 +409,27 @@ function EditBusinessPage() {
     return () => window.clearTimeout(timeout)
   }, [saveSuccess])
 
-  async function leaveWithoutSaving() {
-    const action = pendingNavigation
+  function cancelPendingNavigation() {
+    historyNavigationRef.current.pending = null
+    pendingNavigationRef.current = null
     setPendingNavigation(null)
-    setInitialDraftSignature(currentDraftSignature)
+  }
+
+  async function leaveWithoutSaving() {
+    const action = pendingNavigationRef.current ?? pendingNavigation
+    cancelPendingNavigation()
     if (action?.type === 'signOut') {
       try {
         await signOutUser()
       } catch (signOutError) {
         setError(getAuthenticationErrorMessage(signOutError, t))
       }
+    } else if (action?.type === 'history') {
+      setInitialDraftSignature(currentDraftSignature)
+      historyNavigationRef.current.allowNext = true
+      window.history.go(action.delta)
     } else if (action?.to) {
+      setInitialDraftSignature(currentDraftSignature)
       navigate(action.to)
     }
   }
@@ -412,7 +491,7 @@ function EditBusinessPage() {
 
   async function uploadLogoFile(file) {
     if (!businessProfile?.businessId) return
-    setMediaError('')
+    setMediaError(null)
     setLogoUploading(true)
 
     try {
@@ -420,9 +499,15 @@ function EditBusinessPage() {
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
     } catch (uploadError) {
-      mediaRetryRef.current = () => void uploadLogoFile(file)
-      setMediaRetryAvailable(true)
-      setMediaError(uploadError.message || t('business.form.errors.logoUpload'))
+      const classifiedError = classifyFrontendError(uploadError, {
+        domain: 'media',
+        fallbackType: 'MEDIA_UPLOAD_FAILED',
+      })
+      mediaRetryRef.current = classifiedError.recovery === 'retry'
+        ? () => void uploadLogoFile(file)
+        : null
+      setMediaRetryAvailable(classifiedError.recovery === 'retry')
+      setMediaError(classifiedError)
     } finally {
       setLogoUploading(false)
     }
@@ -440,13 +525,22 @@ function EditBusinessPage() {
     if (remainingSlots === 0) {
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
-      setMediaError(t('business.form.errors.galleryLimit'))
+      setMediaError({
+        translationKey: 'business.form.errors.galleryLimit',
+        recovery: 'choose-file',
+      })
       return
     }
 
     mediaRetryRef.current = null
     setMediaRetryAvailable(false)
-    setMediaError(selectedFiles.length > remainingSlots ? t('business.form.errors.galleryRemaining', { count: remainingSlots }) : '')
+    setMediaError(selectedFiles.length > remainingSlots
+      ? {
+          translationKey: 'business.form.errors.galleryRemaining',
+          interpolation: { count: remainingSlots },
+          recovery: 'choose-file',
+        }
+      : null)
     setGalleryUploading(true)
 
     try {
@@ -459,9 +553,15 @@ function EditBusinessPage() {
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
     } catch (uploadError) {
-      mediaRetryRef.current = () => void uploadGalleryFiles(selectedFiles)
-      setMediaRetryAvailable(true)
-      setMediaError(uploadError.message || t('business.form.errors.galleryUpload'))
+      const classifiedError = classifyFrontendError(uploadError, {
+        domain: 'media',
+        fallbackType: 'MEDIA_UPLOAD_FAILED',
+      })
+      mediaRetryRef.current = classifiedError.recovery === 'retry'
+        ? () => void uploadGalleryFiles(selectedFiles)
+        : null
+      setMediaRetryAvailable(classifiedError.recovery === 'retry')
+      setMediaError(classifiedError)
     } finally {
       setGalleryUploading(false)
     }
@@ -475,7 +575,7 @@ function EditBusinessPage() {
 
   async function handleGalleryDelete(image) {
     if (!businessProfile?.businessId) return
-    setMediaError('')
+    setMediaError(null)
     setDeletingImage(image.storagePath || image.downloadUrl)
 
     try {
@@ -483,9 +583,15 @@ function EditBusinessPage() {
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
     } catch (deleteError) {
-      mediaRetryRef.current = () => void handleGalleryDelete(image)
-      setMediaRetryAvailable(true)
-      setMediaError(deleteError.message || t('business.form.errors.galleryDelete'))
+      const classifiedError = classifyFrontendError(deleteError, {
+        domain: 'media',
+        fallbackType: 'MEDIA_DELETE_FAILED',
+      })
+      mediaRetryRef.current = classifiedError.recovery === 'retry'
+        ? () => void handleGalleryDelete(image)
+        : null
+      setMediaRetryAvailable(classifiedError.recovery === 'retry')
+      setMediaError(classifiedError)
     } finally {
       setDeletingImage('')
     }
@@ -502,20 +608,37 @@ function EditBusinessPage() {
     const primaryCategoryId = form.primaryCategoryId.trim()
     const city = form.city.trim()
     const usesCustomSubcategory = form.categoryIds.includes('Other')
-    const usesCustomServiceArea = form.serviceAreas.includes('other')
     const usesCustomLanguage = form.languages.includes('other')
 
     const categoryIds = normalizeCustomValues(form.categoryIds, customSubcategory)
-    const serviceAreas = normalizeCustomValues(form.serviceAreas, customServiceArea)
+    const serviceAreas = form.serviceAreas
     const languages = normalizeCustomValues(form.languages, customLanguage)
 
     const nextErrors = {}
     if (!name) nextErrors.name = t('validation.businessName')
     if (!description) nextErrors.description = t('validation.businessDescription')
     if (!primaryCategoryId) nextErrors.primaryCategoryId = t('validation.category')
-    if (!city) nextErrors.city = t('validation.city')
+    const locationValidation = validateBusinessLocation({
+      location: {
+        locality: city,
+        region: form.province,
+        countryCode: form.country,
+      },
+      serviceAreas,
+    }, {
+      selectedPrimaryLocationId: form.primaryLocationId,
+    })
+    if (!locationValidation.primarySelected) {
+      nextErrors.city = city.includes(',')
+        ? t('business.form.location.chooseOnePrimary')
+        : t('business.form.location.selectPrimary')
+    }
     if (usesCustomSubcategory && !customSubcategory.trim()) nextErrors.customSubcategory = t('validation.customSubcategory')
-    if (usesCustomServiceArea && !customServiceArea.trim()) nextErrors.customServiceArea = t('validation.customServiceArea')
+    if (!locationValidation.serviceAreasValid) {
+      nextErrors.serviceAreas = locationValidation.unresolvedServiceAreas.length > 0
+        ? t('business.form.location.resolveServiceAreas')
+        : t('business.form.location.selectServiceArea')
+    }
     if (usesCustomLanguage && !customLanguage.trim()) nextErrors.customLanguage = t('validation.customLanguage')
     if (languages.length === 0) nextErrors.languages = t('validation.languages')
     if (form.email && !/^\S+@\S+\.\S+$/.test(form.email.trim())) nextErrors.email = t('validation.email')
@@ -523,7 +646,8 @@ function EditBusinessPage() {
     setFieldErrors(nextErrors)
     const fieldIds = {
       name: 'business-name', description: 'business-description', primaryCategoryId: 'business-main-category',
-      city: 'business-city', customSubcategory: 'custom-subcategory', customServiceArea: 'custom-service-area',
+      city: 'business-primary-location', customSubcategory: 'custom-subcategory',
+      serviceAreas: 'business-service-areas',
       customLanguage: 'custom-language', languages: 'business-languages-group', email: 'business-email',
       website: 'business-website',
     }
@@ -559,7 +683,7 @@ function EditBusinessPage() {
         allowCallbackRequests: form.allowCallbackRequests,
       },
       location: {
-        locality: city,
+        locality: locationValidation.primary.locality,
         region: form.province,
         countryCode: form.country.trim() || 'ES',
       },
@@ -580,24 +704,86 @@ function EditBusinessPage() {
       setInitialDraftSignature(currentDraftSignature)
       setSaveSuccess(true)
     } catch (saveError) {
-      setError(getAuthenticationErrorMessage(saveError, t))
+      const classifiedError = classifyFrontendError(saveError, {
+        domain: 'business-save',
+        fallbackType: 'BUSINESS_SAVE_FAILED',
+      })
+      setError(t(classifiedError.translationKey))
     } finally {
       setSubmitting(false)
     }
   }
 
+  const mediaErrorAction = mediaError?.recovery === 'sign-in'
+    ? () => navigate('/login')
+    : mediaError?.recovery === 'refresh'
+      ? () => {
+          setMediaError(null)
+          setLoadAttempt((attempt) => attempt + 1)
+        }
+      : mediaRetryAvailable
+        ? () => mediaRetryRef.current?.()
+        : undefined
+  const mediaErrorMessage = mediaError?.translationKey === 'business.form.errors.galleryRemaining'
+    ? t('business.form.errors.galleryRemaining', { count: mediaError.interpolation.count })
+    : mediaError
+      ? t(mediaError.translationKey, mediaError.interpolation)
+      : ''
+  const workflowErrorAction = workflowError?.recovery === 'sign-in'
+    ? () => navigate('/login')
+    : workflowError?.recovery === 'verify-email'
+      ? () => navigate('/verify-email')
+      : workflowError?.recovery === 'complete-profile'
+        ? () => navigate('/complete-profile')
+        : workflowError?.recovery === 'contact-support'
+          ? () => navigate('/contact')
+          : workflowError?.recovery === 'sign-out'
+            ? () => void signOutUser().catch((signOutError) => {
+                setWorkflowError(classifyFrontendError(signOutError, {
+                  domain: 'workflow',
+                  fallbackType: 'ACCOUNT_TRANSITION_FAILED',
+                }))
+              })
+            : workflowError?.recovery === 'refresh-account'
+              ? () => void refreshUserProfile({ uid: userId }, { background: true })
+                  .then(() => {
+                    setWorkflowError(null)
+                    setLoadAttempt((attempt) => attempt + 1)
+                  })
+                  .catch((refreshError) => setWorkflowError(classifyFrontendError(refreshError, {
+                    domain: 'workflow',
+                    fallbackType: 'BUSINESS_CREATE_FAILED',
+                  })))
+          : () => {
+              setLoading(true)
+              setWorkflowError(null)
+              setLoadAttempt((attempt) => attempt + 1)
+            }
+
   if (loading) return <LoadingScreen message={t('business.control.loading')} />
 
-  if (error && !businessProfile) {
+  if (workflowError && !businessProfile) {
     return (
       <RecoveryMessage
-        message={error}
-        onRetry={() => {
-          setLoading(true)
-          setError('')
-          setLoadAttempt((attempt) => attempt + 1)
-        }}
+        actionLabel={t(getRecoveryActionTranslationKey(workflowError.recovery) ?? 'common.retry')}
+        message={t(workflowError.translationKey)}
+        onAction={workflowErrorAction}
       />
+    )
+  }
+
+  if (businessProfile && !isOwnerEditableBusinessStatus(businessProfile.status)) {
+    return (
+      <section className="services-state" aria-labelledby="business-edit-unavailable-title">
+        <span aria-hidden="true">✦</span>
+        <h1 id="business-edit-unavailable-title">
+          {t(`business.control.status.${businessProfile.status}`)}
+        </h1>
+        <p>{t(`business.control.visibility.${businessProfile.status}`)}</p>
+        <Link className="button button--primary" to="/business/dashboard">
+          {t('profile.businessDashboard')}
+        </Link>
+      </section>
     )
   }
 
@@ -618,7 +804,6 @@ function EditBusinessPage() {
       {error && (
         <RecoveryMessage
           message={error}
-          onRetry={() => document.getElementById('business-profile-form')?.requestSubmit()}
         />
       )}
 
@@ -639,8 +824,9 @@ function EditBusinessPage() {
 
         {mediaError && (
           <RecoveryMessage
-            message={mediaError}
-            onRetry={mediaRetryAvailable ? () => mediaRetryRef.current?.() : undefined}
+            actionLabel={mediaError.recovery === 'sign-in' ? t('account.signIn') : undefined}
+            message={mediaErrorMessage}
+            onRetry={mediaErrorAction}
           />
         )}
 
@@ -934,57 +1120,49 @@ function EditBusinessPage() {
                 <p>{t('business.form.location.baseDescription')}</p>
               </div>
             </header>
-            <div className="business-form__location-grid">
-              <div>
-                <label htmlFor="business-city">{t('profile.city')} *</label>
-                <input
-                  autoComplete="address-level2"
-                  aria-describedby={fieldErrors.city ? 'business-city-error' : undefined}
-                  aria-invalid={Boolean(fieldErrors.city)}
-                  id="business-city"
-                  maxLength={100}
-                  onChange={(event) => setField('city', event.target.value)}
-                  required
-                  type="text"
-                  value={form.city}
-                />
-                <FormFieldError id="business-city-error" message={fieldErrors.city} />
-              </div>
-              <div>
-                <label htmlFor="business-province">{t('business.form.location.province')}</label>
-                <SelectField
-                  ariaLabel={t('business.form.location.province')}
-                  className="select-field--form"
-                  id="business-province"
-                  onChange={(value) => setField('province', value)}
-                  options={provinceListboxOptions}
-                  showLeadingIcon={false}
-                  value={form.province}
-                />
-              </div>
-              <div>
-                <label htmlFor="business-country">{t('business.form.location.country')}</label>
-                <SelectField
-                  ariaLabel={t('business.form.location.country')}
-                  className="select-field--form"
-                  id="business-country"
-                  onChange={(value) => setField('country', value)}
-                  options={countryListboxOptions}
-                  value={form.country}
-                />
-              </div>
+            <div className="business-form__location-grid" id="business-primary-location" tabIndex={-1}>
+              <LocationCombobox
+                error={fieldErrors.city}
+                inputValue={form.city}
+                label={`${t('business.form.location.primaryLocation')} *`}
+                onInputChange={(value) => {
+                  setForm((current) => ({
+                    ...current,
+                    ...primaryLocationInputState(value),
+                  }))
+                  setFieldErrors((current) => ({ ...current, city: '' }))
+                }}
+                onSelect={(location) => {
+                  setForm((current) => ({
+                    ...current,
+                    ...primaryLocationSelectionState(location),
+                  }))
+                  setFieldErrors((current) => ({ ...current, city: '' }))
+                }}
+                selectedLocationId={form.primaryLocationId}
+              />
+              {form.primaryLocationId ? (
+                <p className="business-form__location-context">
+                  {locationDisplayLabel(resolveLaunchLocation(form.primaryLocationId))}
+                </p>
+              ) : form.city ? (
+                <p className="business-form__location-unresolved" role="status">
+                  {t('business.form.location.unresolvedPrimary')}
+                </p>
+              ) : null}
             </div>
           </section>
 
           <ServiceAreaSelector
-            customArea={customServiceArea}
-            customAreaError={fieldErrors.customServiceArea}
-            onCustomAreaChange={(value) => {
-              setCustomServiceArea(value)
-              setFieldErrors((current) => ({ ...current, customServiceArea: '' }))
-            }}
+            error={fieldErrors.serviceAreas}
             onRadiusChange={(value) => setField('serviceRadiusKm', value)}
-            onToggle={(value) => toggleArrayValue('serviceAreas', value)}
+            onToggle={(value) => {
+              setForm((current) => ({
+                ...current,
+                serviceAreas: toggleServiceAreaSelection(current.serviceAreas, value),
+              }))
+              setFieldErrors((current) => ({ ...current, serviceAreas: '' }))
+            }}
             options={localizedServiceAreaOptions}
             province={form.province}
             radius={form.serviceRadiusKm}
@@ -1054,18 +1232,26 @@ function EditBusinessPage() {
         ariaDescribedBy="unsaved-business-description"
         ariaLabelledBy="unsaved-business-title"
         className="profile-edit-dialog confirmation-dialog"
-        onClose={() => setPendingNavigation(null)}
+        onClose={cancelPendingNavigation}
         open={Boolean(pendingNavigation)}
       >
         <section className="profile-edit-dialog__panel">
           <header className="profile-edit-dialog__header">
             <h2 id="unsaved-business-title">{t('business.form.unsavedDialogTitle')}</h2>
-            <button aria-label={t('common.close')} onClick={() => setPendingNavigation(null)} type="button">×</button>
+            <button aria-label={t('common.close')} onClick={cancelPendingNavigation} type="button">×</button>
           </header>
           <p id="unsaved-business-description">{t('business.form.unsavedWarning')}</p>
           <div className="profile-edit-form__actions">
-            <button className="button button--secondary" onClick={() => setPendingNavigation(null)} type="button">{t('business.form.keepEditing')}</button>
-            <button className="button button--primary" onClick={() => void leaveWithoutSaving()} type="button">{t('business.form.leave')}</button>
+            <button className="button button--secondary" onClick={cancelPendingNavigation} type="button">{t('business.form.keepEditing')}</button>
+            <button
+              aria-busy={historyRestoring || undefined}
+              className="button button--primary"
+              disabled={historyRestoring}
+              onClick={() => void leaveWithoutSaving()}
+              type="button"
+            >
+              {t('business.form.leave')}
+            </button>
           </div>
         </section>
       </AccessibleDialog>

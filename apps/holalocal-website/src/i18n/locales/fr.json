@@ -105,6 +105,8 @@
       "loading": "Chargement de votre profil professionnel…",
       "yourBusiness": "Votre entreprise",
       "heroContext": "{{category}} · Services à {{location}}",
+      "heroContextAreas_one": "{{category}} · Services à {{location}} + {{count}} zone supplémentaire",
+      "heroContextAreas_other": "{{category}} · Services à {{location}} + {{count}} zones supplémentaires",
       "heroPrompt": "Complétez la catégorie et le lieu afin que les clients comprennent votre activité.",
       "status": {
         "draft": "Brouillon",
@@ -144,10 +146,18 @@
       "visibility": {
         "draft": "Votre entreprise est enregistrée comme brouillon privé et n’est pas encore publiée.",
         "pending_review": "Votre profil attend une vérification et n’est pas encore publié.",
+        "rejected": "Votre profil doit être modifié avant de pouvoir être envoyé de nouveau et n’est pas publié.",
         "active": "Votre profil est actif et peut apparaître dans les résultats publics.",
         "suspended": "Votre profil est suspendu et n’est pas publié.",
         "archived": "Votre profil est archivé et n’est pas publié.",
         "deleted": "Ce profil est marqué comme supprimé et n’est pas publié."
+      },
+      "visibilitySteps": {
+        "saved": "Enregistré",
+        "private": "Privé",
+        "visibleToYou": "Visible par vous",
+        "notPublic": "Pas encore publié",
+        "comingLater": "La publication sera disponible ultérieurement"
       },
       "coverageEyebrow": "Zones et langues",
       "coverageTitle": "Où et comment vous travaillez",
@@ -176,7 +186,8 @@
         "views": "Vues du profil",
         "messages": "Messages clients",
         "saved": "Ajouté aux favoris",
-        "reviews": "Avis"
+        "reviews": "Avis",
+        "contactClicks": "Clics sur les coordonnées"
       }
     }
   },
@@ -222,7 +233,9 @@
     "noMatchesTitle": "Aucun service correspondant",
     "noMatchesDescription": "Essayez un autre service, lieu, catégorie ou langue.",
     "loadError": "Impossible de charger les entreprises locales. Veuillez réessayer.",
-    "emptyAction": "Inscrire une entreprise"
+    "noReviews": "Pas encore d’avis",
+    "emptyAction": "Inscrire une entreprise",
+    "verified": "Vérifié"
   },
   "appHome": {
     "eyebrow": "Costa del Sol et Gibraltar",
@@ -253,7 +266,7 @@
       "secondaryAction": "Découvrir les services locaux",
       "businessesLabel": "Profils d’entreprises locales",
       "verifiedProfile": "Profil vérifié",
-      "activeProfile": "Profil actif",
+      "activeProfile": "Profil public",
       "locationLabel": "Zone de service",
       "languagesLabel": "Langues",
       "ratingCount_one": "{{count}} avis",
@@ -304,7 +317,10 @@
             "Anglais"
           ]
         }
-      ]
+      ],
+      "previousBusiness": "Entreprise précédente",
+      "nextBusiness": "Entreprise suivante",
+      "businessPosition": "Entreprise {{current}} sur {{total}}"
     },
     "trustStrip": {
       "label": "Atouts de confiance HolaLocal",
@@ -354,8 +370,9 @@
       "title": "Pourquoi faire confiance à HolaLocal.",
       "description": "Des bases solides d’identité, de communication et de confidentialité rendent chaque échange plus clair.",
       "verified": {
-        "title": "Profils vérifiés",
-        "description": "Des statuts clairs aident à comprendre les profils consultés."
+        "title": "Vérification des entreprises",
+        "comingSoon": "Bientôt disponible",
+        "description": "Nous développons un processus de vérification pour aider les clients à reconnaître les entreprises dont l’identité et les informations d’enregistrement ont été contrôlées."
       },
       "identities": {
         "title": "Identités réelles",

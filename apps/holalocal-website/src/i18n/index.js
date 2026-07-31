@@ -2,6 +2,11 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { supportedUILanguages } from '../utils/languages.js'
 import { serviceAreaLabels } from '../utils/locations.js'
+import {
+  adminEnglishTranslations,
+  ownerEnglishRejectionTranslations,
+} from './defaultTranslations.js'
+import { englishLegalPages } from './englishLegalPages.js'
 import en from './locales/en.json'
 import { mergeLocale } from './locales/mergeLocale.js'
 
@@ -31,8 +36,16 @@ const storedLanguage = typeof window === 'undefined'
   ? null
   : window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
 const initialLanguage = supportedLanguageCodes.includes(storedLanguage) ? storedLanguage : 'en'
-const englishResource = mergeLocale(en, { locations: { areas: serviceAreaLabels } })
+const englishResource = mergeLocale(
+  en,
+  adminEnglishTranslations,
+  ownerEnglishRejectionTranslations,
+  { legalPages: englishLegalPages },
+  { locations: { areas: serviceAreaLabels } },
+)
 const loadedLocales = new Set(['en'])
+const localeLoadPromises = new Map()
+let languageChangeSequence = 0
 
 void i18n.use(initReactI18next).init({
   resources: { en: { translation: englishResource } },
@@ -47,30 +60,63 @@ void i18n.use(initReactI18next).init({
 export async function loadLocale(languageCode) {
   const code = supportedLanguageCodes.includes(languageCode) ? languageCode : 'en'
   if (loadedLocales.has(code)) return code
+  if (localeLoadPromises.has(code)) return localeLoadPromises.get(code)
 
-  const [{ default: baseLocale }, { authenticatedTranslations }] = await Promise.all([
+  const loadPromise = Promise.all([
     localeLoaders[code](),
     import('./locales/authenticatedTranslations.js'),
-  ])
-  const resource = mergeLocale(
-    en,
-    baseLocale,
-    authenticatedTranslations[code],
-    { locations: { areas: serviceAreaLabels } },
-  )
-  i18n.addResourceBundle(code, 'translation', resource, true, true)
-  loadedLocales.add(code)
-  return code
+    import('./locales/fallbackLocaleCompletionTranslations.js'),
+    import('./locales/legalContent.js'),
+    import('./locales/universalOperationalTranslations.js'),
+    import('./adminTranslations.js'),
+  ]).then(([
+    { default: baseLocale },
+    { authenticatedTranslations },
+    { fallbackLocaleCompletionTranslations },
+    { legalPageContent },
+    { universalOperationalTranslations },
+    { ownerRejectionTranslations },
+  ]) => {
+    const resource = mergeLocale(
+      en,
+      baseLocale,
+      authenticatedTranslations[code],
+      fallbackLocaleCompletionTranslations[code],
+      universalOperationalTranslations[code],
+      adminEnglishTranslations,
+      ownerRejectionTranslations[code],
+      { legalPages: legalPageContent[code] },
+      { locations: { areas: serviceAreaLabels } },
+    )
+    i18n.addResourceBundle(code, 'translation', resource, true, true)
+    loadedLocales.add(code)
+    return code
+  }).catch((error) => {
+    localeLoadPromises.delete(code)
+    throw error
+  })
+
+  localeLoadPromises.set(code, loadPromise)
+  return loadPromise
 }
 
 export async function changeAppLanguage(languageCode) {
-  const code = await loadLocale(languageCode)
+  const requestSequence = ++languageChangeSequence
+  let code
+  try {
+    code = await loadLocale(languageCode)
+  } catch {
+    code = 'en'
+  }
+  if (requestSequence !== languageChangeSequence) {
+    return i18n.resolvedLanguage?.split('-')[0] ?? 'en'
+  }
   await i18n.changeLanguage(code)
   return code
 }
 
 export const i18nReady = initialLanguage === 'en'
   ? Promise.resolve()
-  : changeAppLanguage(initialLanguage).catch(() => i18n.changeLanguage('en'))
+  : changeAppLanguage(initialLanguage)
 
 export default i18n

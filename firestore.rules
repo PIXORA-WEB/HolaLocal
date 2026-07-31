@@ -364,47 +364,9 @@ service cloud.firestore {
         );
     }
 
-    function validBusinessTransition() {
-      return (resource.data.status == 'pending_review' && request.resource.data.status in ['active', 'rejected'])
-        || (resource.data.status == 'active' && request.resource.data.status in ['suspended', 'archived'])
-        || (resource.data.status == 'suspended' && request.resource.data.status == 'active')
-        || (resource.data.status == request.resource.data.status);
-    }
-
-    function validTransitionTimestamps() {
-      return (request.resource.data.status != 'active'
-          || resource.data.status == 'active'
-          || request.resource.data.publishedAt == request.time)
-        && (request.resource.data.verificationStatus != 'verified'
-          || resource.data.verificationStatus == 'verified'
-          || request.resource.data.verifiedAt == request.time)
-        && (request.resource.data.status != 'rejected'
-          || resource.data.status == 'rejected'
-          || request.resource.data.submittedAt == resource.data.submittedAt);
-    }
-
-    function validModeratorPublicationUpdate() {
-      return isModerator()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'verificationStatus', 'verifiedAt', 'publishedAt',
-          'submittedAt', 'updatedAt'
-        ])
-        && validBusinessKeys(request.resource.data)
-        && immutableBusinessIdentity()
-        && request.resource.data.updatedAt == request.time
-        && resource.data.status != 'deleted'
-        && request.resource.data.status in ['draft', 'pending_review', 'rejected', 'active', 'suspended', 'archived', 'deleted']
-        && request.resource.data.verificationStatus in ['unverified', 'pending', 'verified', 'rejected']
-        && validBusinessTransition()
-        && (request.resource.data.status != 'active' || hasSafePublicBusinessData(request.resource.data))
-        && request.resource.data.deletionRequestedAt == resource.data.deletionRequestedAt
-        && request.resource.data.deletedAt == resource.data.deletedAt
-        && validTransitionTimestamps();
-    }
-
     function validBusinessPrivateCreate(businessId) {
       return request.resource.data.keys().hasOnly([
-          'ownerId', 'managerIds', 'contact', 'createdAt', 'updatedAt'
+          'ownerId', 'managerIds', 'contact', 'currentRejection', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.keys().hasAll([
           'ownerId', 'managerIds', 'contact', 'createdAt', 'updatedAt'
@@ -419,13 +381,30 @@ service cloud.firestore {
     function validBusinessPrivateUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contact', 'updatedAt'])
         && request.resource.data.keys().hasOnly([
-          'ownerId', 'managerIds', 'contact', 'createdAt', 'updatedAt'
+          'ownerId', 'managerIds', 'contact', 'currentRejection', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.managerIds == resource.data.managerIds
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedAt == request.time
         && validPrivateContact(request.resource.data.contact);
+    }
+
+    function validRejectionResolution(businessId) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'currentRejection', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'ownerId', 'managerIds', 'contact', 'currentRejection', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.managerIds == resource.data.managerIds
+        && request.resource.data.contact == resource.data.contact
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.currentRejection == null
+        && request.resource.data.updatedAt == request.time
+        && businessData(businessId).status == 'rejected'
+        && getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.status == 'pending_review';
     }
 
     match /users/{userId} {
@@ -439,7 +418,7 @@ service cloud.firestore {
         && request.resource.data.privacyAccepted == true
         && request.resource.data.privacyAcceptedAt == request.time
         && request.resource.data.privacyVersion == '1.0';
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId);
       allow update: if isOwner(userId)
         && hasActiveAccount()
         && validUserOwnerUpdate();
@@ -451,7 +430,6 @@ service cloud.firestore {
       allow create: if false;
       allow update: if managesBusiness(businessId)
         && validBusinessOwnerUpdate();
-      allow update: if validModeratorPublicationUpdate();
       allow delete: if false;
     }
 
@@ -462,8 +440,13 @@ service cloud.firestore {
           || request.auth.uid in getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.managerIds)
         && validBusinessPrivateCreate(businessId);
       allow update: if managesBusiness(businessId)
-        && validBusinessPrivateUpdate();
+        && (validBusinessPrivateUpdate() || validRejectionResolution(businessId));
       allow delete: if false;
+    }
+
+    match /businesses/{businessId}/moderationEvents/{eventId} {
+      allow read: if isModerator();
+      allow create, update, delete: if false;
     }
 
     match /conversations/{conversationId} {
@@ -496,6 +479,8 @@ service cloud.firestore {
           && resource.data.participantIds is list
           && resource.data.participantIds.size() == 2
           && resource.data.status == 'active'
+          && (!resource.data.keys().hasAny(['schemaVersion'])
+            || resource.data.schemaVersion == 1)
           && storedBusiness().ownerId is string
           && resource.data.customerId != storedBusiness().ownerId
           && resource.data.participantIds.hasAll([
@@ -510,6 +495,12 @@ service cloud.firestore {
 
       function validConversationId() {
         return conversationId == request.resource.data.customerId + '__' + request.resource.data.businessId;
+      }
+
+      function validQueryableConversation() {
+        return resource.data.keys().hasAll(['schemaVersion', 'status'])
+          && resource.data.schemaVersion == 1
+          && resource.data.status == 'active';
       }
 
       function validParticipantState() {
@@ -606,13 +597,17 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time;
       }
 
-      allow read: if hasActiveAccount()
+      allow get: if hasActiveAccount()
         && validStoredConversation()
         && request.auth.uid in resource.data.participantIds;
+      allow list: if hasActiveAccount()
+        && validQueryableConversation()
+        && (resource.data.customerId == request.auth.uid
+          || request.auth.uid in resource.data.participantIds);
       allow create: if hasActiveAccount()
         && request.resource.data.keys().hasOnly([
           'businessId', 'customerId', 'participantIds', 'participantState',
-          'lastMessage', 'lastMessageAt', 'status', 'createdAt', 'updatedAt'
+          'schemaVersion', 'lastMessage', 'lastMessageAt', 'status', 'createdAt', 'updatedAt'
         ])
         && request.auth.uid == request.resource.data.customerId
         && validConversationId()
@@ -627,6 +622,7 @@ service cloud.firestore {
           : request.resource.data.participantIds[0])
         && request.resource.data.lastMessage == null
         && request.resource.data.lastMessageAt == null
+        && request.resource.data.schemaVersion == 1
         && request.resource.data.status == 'active'
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;

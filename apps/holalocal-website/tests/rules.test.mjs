@@ -2,9 +2,18 @@ import { after, before, beforeEach, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
-import { doc, FieldPath, getDoc, serverTimestamp, setDoc, Timestamp, updateDoc, writeBatch } from 'firebase/firestore'
-import { deleteObject, ref, uploadBytes } from 'firebase/storage'
-import { buildConversationId } from '@holalocal/firebase-contract'
+import {
+  collection, doc, documentId, FieldPath, getCountFromServer, getDoc, getDocs,
+  limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where,
+  writeBatch,
+} from 'firebase/firestore'
+import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage'
+import {
+  buildConversationId,
+  conversationInboxQueryFilters,
+  CONVERSATION_SCHEMA_VERSION,
+  existingConversationQueryFilters,
+} from '@holalocal/firebase-contract'
 import { buildRegistrationProfile } from '../../holalocal-app/src/services/userPayloads.js'
 import { buildCanonicalBusinessUpdate } from '../../holalocal-app/src/services/businessPayloads.js'
 
@@ -16,9 +25,15 @@ const activeContact = {
 }
 const users = {
   customer: user('customer', { roles: ['customer'] }),
+  both: user('both', {
+    roles: ['customer', 'business'],
+    accountType: 'both',
+    onboardingCompleted: true,
+    profileCompleted: true,
+  }),
   owner: user('owner', { roles: ['business'], accountType: 'business', onboardingCompleted: true, profileCompleted: true }),
   manager: user('manager', { roles: ['business'], accountType: 'business', onboardingCompleted: true, profileCompleted: true }),
-  otherOwner: user('other-owner', { roles: ['business'], accountType: 'business', onboardingCompleted: true, profileCompleted: true }),
+  'other-owner': user('other-owner', { roles: ['business'], accountType: 'business', onboardingCompleted: true, profileCompleted: true }),
   unrelated: user('unrelated', { roles: ['customer'] }),
   suspended: user('suspended', { roles: ['customer'], accountStatus: 'suspended' }),
   deleted: user('deleted', { roles: ['customer'], accountStatus: 'deleted' }),
@@ -186,6 +201,7 @@ function conversation(overrides = {}) {
       [ownerId]: { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
     },
     lastMessage: null, lastMessageAt: null, status: 'active',
+    schemaVersion: CONVERSATION_SCHEMA_VERSION,
     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     ...overrides,
   }
@@ -222,6 +238,28 @@ async function seedConversationWithoutRules(id, payload = conversation()) {
   await environment.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(context.firestore(), 'conversations', id), payload)
   })
+}
+
+function inboxQuery(database, userId) {
+  return query(
+    collection(database, 'conversations'),
+    ...conversationInboxQueryFilters(userId).map((constraint) => where(...constraint)),
+  )
+}
+
+function existingConversationQuery(database, customerId, businessId) {
+  return query(
+    collection(database, 'conversations'),
+    ...existingConversationQueryFilters(customerId, businessId).map((constraint) => where(...constraint)),
+  )
+}
+
+async function assertQuerySucceeds(label, queryPromise) {
+  try {
+    return await assertSucceeds(queryPromise)
+  } catch (error) {
+    throw new Error(`${label}: ${error.message}`, { cause: error })
+  }
 }
 
 async function atomicMessagePreviewWrite({
@@ -320,6 +358,7 @@ describe('users and account lifecycle', () => {
   test('owner reads own profile and unrelated users cannot', async () => {
     await assertSucceeds(getDoc(doc(environment.authenticatedContext('customer').firestore(), 'users', 'customer')))
     await assertFails(getDoc(doc(environment.authenticatedContext('unrelated').firestore(), 'users', 'customer')))
+    await assertFails(getDoc(doc(environment.authenticatedContext('admin', { admin: true }).firestore(), 'users', 'customer')))
   })
   test('users cannot grant themselves privileged roles', async () => {
     await assertFails(updateDoc(doc(environment.authenticatedContext('customer').firestore(), 'users', 'customer'), { roles: ['customer', 'admin'] }))
@@ -582,17 +621,17 @@ describe('business documents', () => {
       updatedAt: serverTimestamp(),
     }))
   })
-  test('moderators can publish eligible submitted businesses', async () => {
+  test('moderators cannot bypass the callable to publish eligible submitted businesses', async () => {
     const moderator = environment.authenticatedContext('moderator', { moderator: true }).firestore()
     await environment.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), 'users', 'moderator'), user('moderator', { roles: ['customer'] }))
     })
-    await assertSucceeds(updateDoc(doc(moderator, 'businesses', 'pending_review-business'), {
+    await assertFails(updateDoc(doc(moderator, 'businesses', 'pending_review-business'), {
       status: 'active',
       publishedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }))
-    await assertSucceeds(getDoc(doc(environment.unauthenticatedContext().firestore(), 'businesses', 'pending_review-business')))
+    await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), 'businesses', 'pending_review-business')))
   })
   test('moderators and admins cannot bypass lifecycle, allowlists or ownership invariants', async () => {
     const moderator = environment.authenticatedContext('moderator', { moderator: true }).firestore()
@@ -625,7 +664,7 @@ describe('business documents', () => {
       updatedAt: serverTimestamp(),
     }))
   })
-  test('moderator lifecycle transitions are explicit and publication requires eligibility', async () => {
+  test('all moderator lifecycle writes are restricted to trusted backend code', async () => {
     const moderator = environment.authenticatedContext('moderator', { moderator: true }).firestore()
     await assertFails(updateDoc(doc(moderator, 'businesses', 'incomplete-active-business'), {
       status: 'active',
@@ -636,15 +675,34 @@ describe('business documents', () => {
       status: 'active',
       updatedAt: serverTimestamp(),
     }))
-    await assertSucceeds(updateDoc(doc(moderator, 'businesses', 'active-business'), {
+    await assertFails(updateDoc(doc(moderator, 'businesses', 'active-business'), {
       status: 'suspended',
       updatedAt: serverTimestamp(),
     }))
-    await assertSucceeds(updateDoc(doc(moderator, 'businesses', 'suspended-business'), {
+    await assertFails(updateDoc(doc(moderator, 'businesses', 'suspended-business'), {
       status: 'active',
       publishedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }))
+  })
+  test('moderator queue and bounded count queries require trusted claims', async () => {
+    const moderator = environment.authenticatedContext('moderator', { moderator: true }).firestore()
+    const pendingQueue = (database) => query(
+      collection(database, 'businesses'),
+      where('status', '==', 'pending_review'),
+      orderBy('submittedAt', 'desc'),
+      orderBy(documentId(), 'desc'),
+      limit(24),
+    )
+    const pendingCount = (database) => query(
+      collection(database, 'businesses'),
+      where('status', '==', 'pending_review'),
+    )
+    await assertSucceeds(getDocs(pendingQueue(moderator)))
+    await assertSucceeds(getCountFromServer(pendingCount(moderator)))
+    const owner = environment.authenticatedContext('owner').firestore()
+    await assertFails(getDocs(pendingQueue(owner)))
+    await assertFails(getCountFromServer(pendingCount(owner)))
   })
   test('unpublished and malformed businesses are excluded from public reads', async () => {
     const publicDatabase = environment.unauthenticatedContext().firestore()
@@ -662,6 +720,68 @@ describe('business documents', () => {
     await assertSucceeds(getDoc(doc(environment.authenticatedContext('owner').firestore(), 'businessPrivate', 'active-business')))
     await assertFails(getDoc(doc(environment.authenticatedContext('unrelated').firestore(), 'businessPrivate', 'active-business')))
   })
+  test('moderation events are moderator-only and do not inherit public parent access', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'businesses', 'active-business', 'moderationEvents', 'event-1'), {
+        businessId: 'active-business',
+        action: 'publish',
+        previousStatus: 'pending_review',
+        newStatus: 'active',
+        moderatorUid: 'moderator',
+        reasonCode: null,
+        guidance: null,
+        requestId: 'event-1',
+        schemaVersion: 1,
+        createdAt: serverTimestamp(),
+      })
+    })
+    const eventPath = ['businesses', 'active-business', 'moderationEvents', 'event-1']
+    await assertSucceeds(getDoc(doc(environment.authenticatedContext('moderator', { moderator: true }).firestore(), ...eventPath)))
+    await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), ...eventPath)))
+    await assertFails(getDoc(doc(environment.authenticatedContext('owner').firestore(), ...eventPath)))
+    await assertFails(setDoc(doc(environment.authenticatedContext('moderator', { moderator: true }).firestore(), 'businesses', 'active-business', 'moderationEvents', 'event-2'), {
+      action: 'publish',
+    }))
+  })
+  test('owner resubmission clears only current rejection feedback in the same batch', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'businessPrivate', 'rejected-business'), {
+        ownerId: 'owner',
+        managerIds: ['owner', 'manager'],
+        contact: activeContact,
+        currentRejection: {
+          reasonCode: 'other',
+          guidance: 'Please revise the profile before resubmitting it.',
+          moderationEventId: 'rejection-event',
+          createdAt: serverTimestamp(),
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      await setDoc(doc(context.firestore(), 'businesses', 'rejected-business', 'moderationEvents', 'rejection-event'), {
+        action: 'reject',
+        createdAt: serverTimestamp(),
+      })
+    })
+    const owner = environment.authenticatedContext('owner').firestore()
+    const batch = writeBatch(owner)
+    batch.update(doc(owner, 'businesses', 'rejected-business'), {
+      status: 'pending_review',
+      submittedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    batch.update(doc(owner, 'businessPrivate', 'rejected-business'), {
+      currentRejection: null,
+      updatedAt: serverTimestamp(),
+    })
+    await assertSucceeds(batch.commit())
+    assert.equal((await getDoc(doc(owner, 'businessPrivate', 'rejected-business'))).data().currentRejection, null)
+    await assertFails(getDoc(doc(owner, 'businesses', 'rejected-business', 'moderationEvents', 'rejection-event')))
+    await assertFails(updateDoc(doc(owner, 'businessPrivate', 'rejected-business'), {
+      currentRejection: { reasonCode: 'other', guidance: 'Owner injected guidance.' },
+      updatedAt: serverTimestamp(),
+    }))
+  })
 })
 
 describe('conversations and messages', () => {
@@ -677,6 +797,112 @@ describe('conversations and messages', () => {
       doc(environment.authenticatedContext('owner').firestore(), `conversations/${conversationId}/messages`, 'owner-reply'),
       message({ senderId: 'owner', text: 'Owner reply' }),
     ))
+  })
+  test('production inbox queries list valid conversations only for active participants', async () => {
+    await createConversation()
+
+    const customerSnapshot = await assertQuerySucceeds('customer legacy-safe inbox query', getDocs(inboxQuery(
+      environment.authenticatedContext('customer').firestore(),
+      'customer',
+    )))
+    const ownerSnapshot = await assertSucceeds(getDocs(inboxQuery(
+      environment.authenticatedContext('owner').firestore(),
+      'owner',
+    )))
+    const unrelatedSnapshot = await assertSucceeds(getDocs(inboxQuery(
+      environment.authenticatedContext('unrelated').firestore(),
+      'unrelated',
+    )))
+
+    assert.deepEqual(customerSnapshot.docs.map(({ id }) => id), [canonicalConversationId()])
+    assert.deepEqual(ownerSnapshot.docs.map(({ id }) => id), [canonicalConversationId()])
+    assert.equal(unrelatedSnapshot.empty, true)
+    await assertFails(getDocs(inboxQuery(
+      environment.authenticatedContext('unrelated').firestore(),
+      'customer',
+    )))
+    await assertFails(getDocs(inboxQuery(
+      environment.authenticatedContext('suspended').firestore(),
+      'suspended',
+    )))
+  })
+  test('both-role customers can list conversations without gaining manager access', async () => {
+    const conversationId = canonicalConversationId('both')
+    const database = environment.authenticatedContext('both').firestore()
+    await assertSucceeds(setDoc(
+      doc(database, 'conversations', conversationId),
+      conversation({ customerId: 'both' }),
+    ))
+
+    const bothSnapshot = await assertSucceeds(getDocs(inboxQuery(database, 'both')))
+    assert.deepEqual(bothSnapshot.docs.map(({ id }) => id), [conversationId])
+    const managerSnapshot = await assertQuerySucceeds('manager legacy-safe inbox query', getDocs(inboxQuery(
+      environment.authenticatedContext('manager').firestore(),
+      'manager',
+    )))
+    assert.equal(managerSnapshot.empty, true)
+  })
+  test('production existing-conversation query is scoped to the authenticated customer and business', async () => {
+    await createConversation()
+
+    const customerDatabase = environment.authenticatedContext('customer').firestore()
+    const snapshot = await assertSucceeds(getDocs(existingConversationQuery(
+      customerDatabase,
+      'customer',
+      'active-business',
+    )))
+    assert.deepEqual(snapshot.docs.map(({ id }) => id), [canonicalConversationId()])
+
+    await assertFails(getDocs(existingConversationQuery(
+      environment.authenticatedContext('unrelated').firestore(),
+      'customer',
+      'active-business',
+    )))
+    const unrelatedSnapshot = await assertSucceeds(getDocs(existingConversationQuery(
+      environment.authenticatedContext('unrelated').firestore(),
+      'unrelated',
+      'active-business',
+    )))
+    assert.equal(unrelatedSnapshot.empty, true)
+  })
+  test('untrusted legacy and malformed conversations are excluded from production list queries', async () => {
+    await createConversation()
+    const managerConversation = {
+      ...conversation({ ownerId: 'manager' }),
+      participantIds: ['customer', 'manager'],
+      participantState: {
+        customer: { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
+        manager: { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
+      },
+    }
+    const ownerMismatchConversation = {
+      ...conversation({ ownerId: 'other-owner' }),
+      participantIds: ['customer', 'other-owner'],
+      participantState: {
+        customer: { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
+        'other-owner': { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
+      },
+    }
+    delete managerConversation.schemaVersion
+    delete ownerMismatchConversation.schemaVersion
+    await seedConversationWithoutRules('legacy-manager-participant', managerConversation)
+    await seedConversationWithoutRules('legacy-owner-mismatch', ownerMismatchConversation)
+
+    const customerSnapshot = await assertSucceeds(getDocs(inboxQuery(
+      environment.authenticatedContext('customer').firestore(),
+      'customer',
+    )))
+    assert.deepEqual(customerSnapshot.docs.map(({ id }) => id), [canonicalConversationId()])
+    const managerSnapshot = await assertSucceeds(getDocs(inboxQuery(
+      environment.authenticatedContext('manager').firestore(),
+      'manager',
+    )))
+    assert.equal(managerSnapshot.empty, true)
+    const otherOwnerSnapshot = await assertQuerySucceeds('other-owner legacy-safe inbox query', getDocs(inboxQuery(
+      environment.authenticatedContext('other-owner').firestore(),
+      'other-owner',
+    )))
+    assert.equal(otherOwnerSnapshot.empty, true)
   })
   test('new conversations must use the deterministic customer and business identity', async () => {
     const database = environment.authenticatedContext('customer').firestore()
@@ -1034,6 +1260,19 @@ describe('storage', () => {
     const path = 'businesses/active-business/photos/delete.png'
     await assertSucceeds(uploadBytes(ref(environment.authenticatedContext('owner').storage(), path), image, { contentType: 'image/png' }))
     await assertFails(deleteObject(ref(environment.authenticatedContext('unrelated').storage(), path)))
+  })
+  test('moderators can read pending review media only from established media folders', async () => {
+    const ownerStorage = environment.authenticatedContext('owner').storage()
+    const logoPath = 'businesses/pending_review-business/logos/review.png'
+    const privateFolderPath = 'businesses/pending_review-business/internal/review.png'
+    await assertSucceeds(uploadBytes(ref(ownerStorage, logoPath), image, { contentType: 'image/png' }))
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await uploadBytes(ref(context.storage(), privateFolderPath), image, { contentType: 'image/png' })
+    })
+    const moderatorStorage = environment.authenticatedContext('moderator', { moderator: true }).storage()
+    await assertSucceeds(getBytes(ref(moderatorStorage, logoPath)))
+    await assertFails(getBytes(ref(moderatorStorage, privateFolderPath)))
+    await assertFails(getBytes(ref(environment.authenticatedContext('unrelated').storage(), logoPath)))
   })
 })
 

@@ -3,6 +3,8 @@
 import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
 import { updateAccountRoleCallable } from '../firebase/functionsClient.js'
+import { createApplicationError } from '../utils/frontendErrors.js'
+import { POLICY_VERSION } from '../utils/policies.js'
 import { toWebsiteUserProfile } from './firebaseCompatibility.js'
 
 async function uploadImageFile(...args) {
@@ -152,6 +154,28 @@ export async function updateUserProfile(uid, updates) {
   return getUserProfile(uid)
 }
 
+export async function completeAbsentUserProfile(firebaseUser, updates) {
+  if (!firebaseUser?.uid) throw createApplicationError('auth-required')
+
+  const reference = userDocument(firebaseUser.uid)
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(reference)
+    if (snapshot.exists()) return
+
+    transaction.set(reference, buildNewProfile(firebaseUser.uid, {
+      email: firebaseUser.email ?? '',
+      displayName: firebaseUser.displayName ?? '',
+      photoURL: null,
+      termsAccepted: true,
+      termsVersion: POLICY_VERSION,
+      privacyAccepted: true,
+      privacyVersion: POLICY_VERSION,
+    }))
+  })
+
+  return updateUserProfile(firebaseUser.uid, updates)
+}
+
 export async function configureAccountType(uid, accountType) {
   await updateAccountRoleCallable({ accountType })
   return getUserProfile(uid)
@@ -183,9 +207,9 @@ export async function uploadUserProfilePhoto(uid, file) {
     }
 
     return updatedProfile
-  } catch (error) {
+  } catch {
     await deleteImageFile(uploadedPhoto.storagePath).catch(() => undefined)
-    throw error
+    throw createApplicationError('media-save-failed')
   }
 }
 

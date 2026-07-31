@@ -105,6 +105,8 @@
       "loading": "Je bedrijfsprofiel laden…",
       "yourBusiness": "Jouw bedrijf",
       "heroContext": "{{category}} · Actief in {{location}}",
+      "heroContextAreas_one": "{{category}} · Actief in {{location}} + {{count}} extra werkgebied",
+      "heroContextAreas_other": "{{category}} · Actief in {{location}} + {{count}} extra werkgebieden",
       "heroPrompt": "Vul je categorie en locatie in zodat klanten weten wat je aanbiedt.",
       "status": {
         "draft": "Concept",
@@ -144,10 +146,18 @@
       "visibility": {
         "draft": "Je bedrijf is opgeslagen als privéconcept en wordt nog niet openbaar vermeld.",
         "pending_review": "Je profiel wacht op beoordeling en is nog niet openbaar.",
+        "rejected": "Je profiel moet worden aangepast voordat je het opnieuw kunt indienen en is niet openbaar.",
         "active": "Je profiel is actief en kan in openbare resultaten verschijnen.",
         "suspended": "Je profiel is opgeschort en niet openbaar.",
         "archived": "Je profiel is gearchiveerd en niet openbaar.",
         "deleted": "Dit profiel is als verwijderd gemarkeerd en niet openbaar."
+      },
+      "visibilitySteps": {
+        "saved": "Opgeslagen",
+        "private": "Privé",
+        "visibleToYou": "Zichtbaar voor jou",
+        "notPublic": "Nog niet openbaar vermeld",
+        "comingLater": "Openbare vermelding wordt later beschikbaar"
       },
       "coverageEyebrow": "Gebieden en talen",
       "coverageTitle": "Waar en hoe je werkt",
@@ -176,7 +186,8 @@
         "views": "Profielweergaven",
         "messages": "Klantberichten",
         "saved": "Opgeslagen door klanten",
-        "reviews": "Beoordelingen"
+        "reviews": "Beoordelingen",
+        "contactClicks": "Klikken op contactgegevens"
       }
     }
   },
@@ -222,7 +233,9 @@
     "noMatchesTitle": "Geen passende diensten",
     "noMatchesDescription": "Probeer een andere dienst, regio, categorie of taal.",
     "loadError": "Lokale bedrijven konden niet worden geladen. Probeer het opnieuw.",
-    "emptyAction": "Bedrijf registreren"
+    "noReviews": "Nog geen beoordelingen",
+    "emptyAction": "Bedrijf registreren",
+    "verified": "Geverifieerd"
   },
   "appHome": {
     "eyebrow": "Costa del Sol & Gibraltar",
@@ -253,7 +266,7 @@
       "secondaryAction": "Lokale diensten bekijken",
       "businessesLabel": "Uitgelichte lokale bedrijfsprofielen",
       "verifiedProfile": "Geverifieerd profiel",
-      "activeProfile": "Actief profiel",
+      "activeProfile": "Openbaar profiel",
       "locationLabel": "Werkgebied",
       "languagesLabel": "Talen",
       "ratingCount_one": "{{count}} beoordeling",
@@ -304,7 +317,10 @@
             "Engels"
           ]
         }
-      ]
+      ],
+      "previousBusiness": "Vorig bedrijf",
+      "nextBusiness": "Volgend bedrijf",
+      "businessPosition": "Bedrijf {{current}} van {{total}}"
     },
     "trustStrip": {
       "label": "Vertrouwenspunten van HolaLocal",
@@ -354,8 +370,9 @@
       "title": "Waarom mensen HolaLocal vertrouwen.",
       "description": "Heldere keuzes rond identiteit, communicatie en privacy maken elk lokaal contact duidelijker.",
       "verified": {
-        "title": "Geverifieerde profielen",
-        "description": "Duidelijke statussen laten zien welk profiel je bekijkt."
+        "title": "Bedrijfsverificatie",
+        "comingSoon": "Binnenkort",
+        "description": "We ontwikkelen een verificatieproces zodat klanten bedrijven kunnen herkennen waarvan de identiteit en registratiegegevens zijn gecontroleerd."
       },
       "identities": {
         "title": "Echte identiteiten",
