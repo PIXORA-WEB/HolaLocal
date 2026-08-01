@@ -449,6 +449,14 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /businessInsights/{businessId} {
+      allow read, write: if false;
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
     match /conversations/{conversationId} {
       function requestedBusiness() {
         return get(/databases/$(database)/documents/businesses/$(request.resource.data.businessId)).data;
