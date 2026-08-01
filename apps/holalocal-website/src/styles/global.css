@@ -2566,6 +2566,8 @@
 
 .business-insights {
   grid-column: 1 / -1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .business-insights .account-card__header > p:last-child {
@@ -2618,9 +2620,84 @@
   color: #475569;
 }
 
+.business-insights__range-controls {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 40rem;
+  margin-top: 1rem;
+}
+
+.business-insights__range-controls > label,
+.business-insights__custom-range label {
+  color: var(--brand-navy);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.business-insights__range-controls select,
+.business-insights__custom-range input {
+  width: 100%;
+  min-height: 2.75rem;
+}
+
+.business-insights__custom-range {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.business-insights__custom-range label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.business-insights__range-error {
+  margin: 0;
+  color: #9f1239;
+}
+
+.business-insights__range-label {
+  margin: 1rem 0 0;
+  color: #475569;
+  font-weight: 700;
+}
+
+.business-insights__all-time {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d8e2ee;
+}
+
+.business-insights__all-time h3 {
+  margin: 0 0 0.5rem;
+  color: var(--brand-navy);
+}
+
+.business-insights__all-time dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.business-insights__all-time dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.business-insights__all-time dd {
+  margin: 0;
+  font-weight: 800;
+}
+
 .business-insights__breakdown,
 .business-insights__activity {
   margin-top: 1.5rem;
+}
+
+.business-insights__activity {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .business-insights__breakdown h3,
@@ -2652,13 +2729,28 @@
 
 .business-insights__activity ol {
   display: grid;
-  grid-template-columns: repeat(30, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--activity-day-count), minmax(0, 1fr));
   align-items: end;
-  gap: 0.15rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   height: 9rem;
   margin: 1rem 0 0;
   padding: 0;
   list-style: none;
+}
+
+.business-insights__activity-days--spacious {
+  gap: 0.15rem;
+}
+
+.business-insights__activity-days--compact {
+  gap: 0.04rem;
+}
+
+.business-insights__activity-days--dense {
+  gap: 0;
 }
 
 .business-insights__activity li {
@@ -2683,6 +2775,17 @@
   color: #64748b;
   font-size: 0.55rem;
   text-align: center;
+}
+
+@media (min-width: 36rem) {
+  .business-insights__custom-range {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    align-items: end;
+  }
+
+  .business-insights__all-time dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .business-page-heading,

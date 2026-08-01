@@ -7,6 +7,12 @@ import {
   profileViewToken,
   secureRandomToken,
 } from '../src/services/businessInsightsTracking.js'
+import {
+  activityChartConfiguration,
+  presetDateRequest,
+  showActivityDayLabel,
+  validateCustomInsightRange,
+} from '../src/services/businessInsightsRanges.js'
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8')
 
@@ -16,12 +22,73 @@ test('dashboard uses real insights states and excludes misleading placeholder me
     read('../src/components/business/BusinessInsightsPanel.jsx'),
   ])
   assert.match(dashboard, /<BusinessInsightsPanel/)
-  for (const state of ['loading', 'error', 'unpublished', 'inactive', 'notStarted', 'collectingSince', 'empty']) {
+  for (const state of ['loading', 'loadingRange', 'error', 'unpublished', 'inactive', 'notStarted', 'collectingSince', 'empty']) {
     assert.match(panel, new RegExp(`businessInsights\\.state\\.${state}`))
   }
   assert.doesNotMatch(panel, /saved|reviews|rating|revenue/i)
   assert.match(panel, /setAttempt/)
-  assert.match(panel, /state\.data\.days\.map/)
+  assert.match(panel, /displayed\.days\.map/)
+  assert.match(panel, /useState\(\{ preset: 'last_30_days'/)
+  assert.match(panel, /selection\.preset === 'custom'/)
+  assert.match(panel, /validateCustomInsightRange/)
+  assert.match(panel, /displayed\.selectedRange/)
+  assert.match(panel, /displayed\.allTime/)
+  assert.match(panel, /max=\{today\}/)
+})
+
+test('preset date requests use inclusive UTC 7, 30 and 90-day boundaries', () => {
+  assert.deepEqual(presetDateRequest('last_7_days', '2026-08-01'), { startDate: '2026-07-26', endDate: '2026-08-01' })
+  assert.deepEqual(presetDateRequest('last_30_days', '2026-08-01'), { startDate: '2026-07-03', endDate: '2026-08-01' })
+  assert.deepEqual(presetDateRequest('last_90_days', '2026-08-01'), { startDate: '2026-05-04', endDate: '2026-08-01' })
+})
+
+test('custom ranges validate before a backend request is constructed', () => {
+  assert.deepEqual(validateCustomInsightRange('2026-07-01', '2026-07-12', '2026-08-01'), {
+    valid: true, startDate: '2026-07-01', endDate: '2026-07-12', numberOfDays: 12,
+  })
+  assert.equal(validateCustomInsightRange('', '2026-07-12', '2026-08-01').valid, false)
+  assert.equal(validateCustomInsightRange('2026-07-13', '2026-07-12', '2026-08-01').reason, 'order')
+  assert.equal(validateCustomInsightRange('2026-07-01', '2026-08-02', '2026-08-01').reason, 'future')
+  assert.equal(validateCustomInsightRange('2025-07-31', '2026-08-01', '2026-08-01').reason, 'tooLong')
+})
+
+test('range UI keeps selected and all-time values separate with accessible zero-day output', async () => {
+  const panel = await read('../src/components/business/BusinessInsightsPanel.jsx')
+  assert.match(panel, /businessInsights\.selectedPeriod/)
+  assert.match(panel, /businessInsights\.allTimeTitle/)
+  assert.match(panel, /aria-label=\{t\('businessInsights\.dayLabel'/)
+  assert.match(panel, /Math\.max\(total \? 8 : 2/)
+  assert.match(panel, /businessInsights\.state\.collectingSince/)
+  assert.doesNotMatch(panel, /saved|reviews/i)
+})
+
+test('activity chart config adapts for 7, 30, 90 and 366 days', () => {
+  assert.deepEqual(activityChartConfiguration(7), { density: 'spacious', labelEvery: 1 })
+  assert.deepEqual(activityChartConfiguration(30), { density: 'spacious', labelEvery: 1 })
+  assert.deepEqual(activityChartConfiguration(90), { density: 'compact', labelEvery: 10 })
+  assert.deepEqual(activityChartConfiguration(366), { density: 'dense', labelEvery: 0 })
+  assert.equal(showActivityDayLabel(6, 7), true)
+  assert.equal(showActivityDayLabel(8, 90), false)
+  assert.equal(showActivityDayLabel(9, 90), true)
+  assert.equal(showActivityDayLabel(365, 366), false)
+})
+
+test('dense charts remove fixed gaps while retaining every accessible daily list item', async () => {
+  const [panel, styles] = await Promise.all([
+    read('../src/components/business/BusinessInsightsPanel.jsx'),
+    read('../src/styles/global.css'),
+  ])
+  assert.match(panel, /data-day-count=\{displayed\.days\.length\}/)
+  assert.match(panel, /--activity-day-count/)
+  assert.match(panel, /displayed\.days\.map\(\(day, index\)/)
+  assert.match(panel, /aria-label=\{t\('businessInsights\.dayLabel'/)
+  assert.match(panel, /className="visually-hidden"/)
+  assert.match(panel, /showActivityDayLabel/)
+  assert.match(styles, /grid-template-columns: repeat\(var\(--activity-day-count\), minmax\(0, 1fr\)\)/)
+  assert.match(styles, /business-insights__activity-days--dense[\s\S]*?gap: 0;/)
+  assert.match(styles, /business-insights__activity[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;[\s\S]*?overflow: hidden;/)
+  assert.doesNotMatch(styles, /business-insights__activity ol[\s\S]{0,200}display: flex/)
+  assert.doesNotMatch(panel, /saved|reviews/i)
 })
 
 test('public profile and deliberate contact controls are instrumented non-blockingly', async () => {

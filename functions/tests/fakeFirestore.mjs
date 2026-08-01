@@ -76,9 +76,11 @@ class FakeCollectionRef {
       .map(([path, data]) => new FakeSnapshot(path.split('/').pop(), data))
     for (const filter of this.filters) {
       documents = documents.filter((snapshot) => {
-        const value = snapshot.data()?.[filter.field]
+        const value = String(filter.field) === '__name__' ? snapshot.id : snapshot.data()?.[filter.field]
         if (filter.operator === '==') return value === filter.value
         if (filter.operator === '!=') return value !== filter.value
+        if (filter.operator === '>=') return value >= filter.value
+        if (filter.operator === '<=') return value <= filter.value
         if (filter.operator === 'array-contains') return Array.isArray(value) && value.includes(filter.value)
         throw new Error(`Unsupported fake query operator: ${filter.operator}`)
       })

@@ -476,17 +476,17 @@
     }
   },
   "businessInsights": {
-    "eyebrow": "Last 30 days",
+    "eyebrow": "Performance",
     "title": "Business insights",
     "description": "Private, server-counted activity from your public HolaLocal profile. Earlier activity is not estimated.",
     "profileViews": "Profile views",
     "enquiries": "New enquiries",
     "contactActions": "Contact actions",
-    "last30Days": "Last 30 days",
-    "allTime": "{{count}} all time",
-    "contactBreakdown": "Contact action breakdown (all time)",
-    "activityTitle": "30-day activity",
-    "activityDescription": "Each column shows all tracked profile views, enquiries and contact actions for one UTC day.",
+    "selectedPeriod": "Selected period",
+    "allTimeTitle": "All-time totals",
+    "contactBreakdownSelected": "Contact actions in the selected period",
+    "activityTitle": "Daily activity",
+    "activityDescription": "Each column shows all tracked profile views, enquiries and contact actions for one UTC day in the selected period.",
     "dayLabel": "{{date}}: {{count}} total activities",
     "dayDetails": "{{views}} profile views, {{enquiries}} enquiries and {{contacts}} contact actions",
     "actions": {
@@ -496,8 +496,29 @@
       "whatsapp": "WhatsApp",
       "website": "Website"
     },
+    "range": {
+      "label": "Date range",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "displayed": "Showing {{start}} to {{end}}.",
+      "presets": {
+        "last_7_days": "Last 7 days",
+        "last_30_days": "Last 30 days",
+        "last_90_days": "Last 90 days",
+        "custom": "Custom dates"
+      },
+      "errors": {
+        "required": "Choose both a From and To date.",
+        "invalid": "Choose valid calendar dates.",
+        "order": "The From date must be on or before the To date.",
+        "future": "The To date cannot be in the future.",
+        "tooLong": "Choose a range of no more than 366 days."
+      }
+    },
     "state": {
       "loading": "Loading business insights…",
+      "loadingRange": "Loading the selected date range… Previously loaded figures remain visible.",
       "error": "Business insights could not be loaded. Your business profile is still available.",
       "notStarted": "Insights will begin collecting after the first eligible public activity.",
       "collectingSince": "Insights have been collecting since {{date}}.",
