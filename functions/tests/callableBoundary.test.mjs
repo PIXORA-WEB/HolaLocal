@@ -16,7 +16,8 @@ test('callable exports remain registered in europe-west1', async () => {
   const source = await readFile(new URL('../src/index.js', import.meta.url), 'utf8')
   for (const callableName of [
     'updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'moderateBusiness',
-    'getAdminBusinessReview', 'listPublicBusinesses',
+    'getAdminBusinessReview', 'listPublicBusinesses', 'recordBusinessInsight',
+    'getOwnerBusinessInsights',
   ]) {
     assert.match(source, new RegExp(`export const ${callableName} = onCall`))
   }

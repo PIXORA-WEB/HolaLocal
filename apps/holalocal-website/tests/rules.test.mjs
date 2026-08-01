@@ -1242,6 +1242,27 @@ describe('conversations and messages', () => {
   })
 })
 
+describe('business insights aggregates', () => {
+  test('aggregate documents are inaccessible and immutable to every client role', async () => {
+    const path = ['businessInsights', 'active-business']
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), ...path), { profileViews: 4, schemaVersion: 1 })
+      await setDoc(doc(context.firestore(), ...path, 'days', '2026-08-01'), { profileViews: 2 })
+    })
+    for (const context of [
+      environment.unauthenticatedContext(),
+      environment.authenticatedContext('owner'),
+      environment.authenticatedContext('manager'),
+      environment.authenticatedContext('other-owner'),
+      environment.authenticatedContext('moderator', { moderator: true }),
+    ]) {
+      await assertFails(getDoc(doc(context.firestore(), ...path)))
+      await assertFails(getDoc(doc(context.firestore(), ...path, 'days', '2026-08-01')))
+      await assertFails(setDoc(doc(context.firestore(), ...path), { profileViews: 100 }, { merge: true }))
+    }
+  })
+})
+
 describe('storage', () => {
   const image = new Uint8Array([137, 80, 78, 71])
   test('manager image upload succeeds and unrelated upload fails', async () => {

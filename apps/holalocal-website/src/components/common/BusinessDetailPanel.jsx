@@ -8,7 +8,7 @@ function externalUrl(value) {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`
 }
 
-function BusinessDetailPanel({ business, messaging, onBack, onMessage, onReport }) {
+function BusinessDetailPanel({ business, messaging, onBack, onContactAction, onMessage, onReport }) {
   const { i18n, t } = useTranslation()
   const hasRating = business.ratingAverage > 0 && business.ratingCount > 0
   const categoryLabel = business.category
@@ -181,10 +181,10 @@ function BusinessDetailPanel({ business, messaging, onBack, onMessage, onReport 
         <h2>{t('publicBusinessDetail.contactInformation')}</h2>
         {hasContact ? (
           <dl className="business-detail__contact">
-            {business.contact.phone && <div><dt>{t('publicBusinessDetail.phone')}</dt><dd><a href={`tel:${business.contact.phone}`}>{business.contact.phone}</a></dd></div>}
-            {business.contact.email && <div><dt>{t('publicBusinessDetail.email')}</dt><dd><a href={`mailto:${business.contact.email}`}>{business.contact.email}</a></dd></div>}
-            {business.contact.website && <div><dt>{t('publicBusinessDetail.website')}</dt><dd><a href={externalUrl(business.contact.website)} rel="noreferrer" target="_blank">{business.contact.website}</a></dd></div>}
-            {business.contact.whatsappNumber && <div><dt>WhatsApp</dt><dd><a href={`https://wa.me/${business.contact.whatsappNumber.replace(/\D/g, '')}`} rel="noreferrer" target="_blank">{t('publicBusinessDetail.openWhatsApp')}</a></dd></div>}
+            {business.contact.phone && <div><dt>{t('publicBusinessDetail.phone')}</dt><dd><a href={`tel:${business.contact.phone}`} onClick={() => onContactAction?.('phone')}>{business.contact.phone}</a></dd></div>}
+            {business.contact.email && <div><dt>{t('publicBusinessDetail.email')}</dt><dd><a href={`mailto:${business.contact.email}`} onClick={() => onContactAction?.('email')}>{business.contact.email}</a></dd></div>}
+            {business.contact.website && <div><dt>{t('publicBusinessDetail.website')}</dt><dd><a href={externalUrl(business.contact.website)} onClick={() => onContactAction?.('website')} rel="noreferrer" target="_blank">{business.contact.website}</a></dd></div>}
+            {business.contact.whatsappNumber && <div><dt>WhatsApp</dt><dd><a href={`https://wa.me/${business.contact.whatsappNumber.replace(/\D/g, '')}`} onClick={() => onContactAction?.('whatsapp')} rel="noreferrer" target="_blank">{t('publicBusinessDetail.openWhatsApp')}</a></dd></div>}
             {business.contact.allowCallbackRequests && <div><dt>{t('publicBusinessDetail.callback')}</dt><dd>{t('publicBusinessDetail.callbackAvailable')}</dd></div>}
           </dl>
         ) : (

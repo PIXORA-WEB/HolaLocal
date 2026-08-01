@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LoadingScreen from '../../components/common/LoadingScreen.jsx'
+import BusinessInsightsPanel from '../../components/business/BusinessInsightsPanel.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { ImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
@@ -17,8 +18,6 @@ import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
-
-const insightKeys = ['views', 'messages', 'saved', 'reviews', 'contactClicks']
 
 function BusinessDashboardPage() {
   const { t } = useTranslation()
@@ -349,16 +348,7 @@ function BusinessDashboardPage() {
           </div>
         </article>
 
-        <section className="account-card business-insights" aria-labelledby="business-insights-title">
-          <header className="account-card__header">
-            <p className="account-card__eyebrow">{t('business.control.insightsEyebrow')}</p>
-            <h2 id="business-insights-title">{t('business.control.insightsTitle')}</h2>
-            <p>{t('business.control.insightsDescription')}</p>
-          </header>
-          <div className="business-insights__grid">
-            {insightKeys.map((key) => <article key={key}><strong>—</strong><span>{t(`business.control.insights.${key}`)}</span><small>{t('business.control.comingSoon')}</small></article>)}
-          </div>
-        </section>
+        <BusinessInsightsPanel businessId={businessProfile.businessId} status={status} />
       </div>
     </section>
   )

@@ -475,6 +475,37 @@
       }
     }
   },
+  "businessInsights": {
+    "eyebrow": "Last 30 days",
+    "title": "Business insights",
+    "description": "Private, server-counted activity from your public HolaLocal profile. Earlier activity is not estimated.",
+    "profileViews": "Profile views",
+    "enquiries": "New enquiries",
+    "contactActions": "Contact actions",
+    "last30Days": "Last 30 days",
+    "allTime": "{{count}} all time",
+    "contactBreakdown": "Contact action breakdown (all time)",
+    "activityTitle": "30-day activity",
+    "activityDescription": "Each column shows all tracked profile views, enquiries and contact actions for one UTC day.",
+    "dayLabel": "{{date}}: {{count}} total activities",
+    "dayDetails": "{{views}} profile views, {{enquiries}} enquiries and {{contacts}} contact actions",
+    "actions": {
+      "holalocal": "HolaLocal messages",
+      "phone": "Phone",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "website": "Website"
+    },
+    "state": {
+      "loading": "Loading business insights…",
+      "error": "Business insights could not be loaded. Your business profile is still available.",
+      "notStarted": "Insights will begin collecting after the first eligible public activity.",
+      "collectingSince": "Insights have been collecting since {{date}}.",
+      "unpublished": "Insights begin after your business profile is published and active.",
+      "inactive": "New public activity is not currently recorded. Previously collected totals are retained.",
+      "empty": "No eligible activity has been recorded yet."
+    }
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",

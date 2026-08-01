@@ -11,6 +11,7 @@ import { getOrCreateConversationForBusiness } from '../services/conversationServ
 import { createBusinessReport } from '../services/reportService.js'
 import { getLanguageNameFromCode } from '../utils/languages.js'
 import SelectField from '../components/common/SelectField.jsx'
+import { recordPublicContactAction, recordPublicProfileView } from '../services/businessInsightsService.js'
 
 const popularCategories = [
   { key: 'cleaning', value: 'Cleaning' },
@@ -107,6 +108,10 @@ function ServicesPage() {
   ) ?? null
 
   useEffect(() => {
+    if (selectedBusiness?.businessId) recordPublicProfileView(selectedBusiness.businessId)
+  }, [selectedBusiness?.businessId])
+
+  useEffect(() => {
     if (businessId || loading || resultsScrollPosition === null) return undefined
 
     const scrollPosition = resultsScrollPosition
@@ -152,6 +157,7 @@ function ServicesPage() {
 
   async function handleMessageBusiness() {
     if (!selectedBusiness) return
+    recordPublicContactAction(selectedBusiness.businessId, 'holalocal')
     if (!user) {
       setAuthPromptReason('message')
       return
@@ -283,6 +289,7 @@ function ServicesPage() {
               messaging={messaging}
               onBack={closeBusiness}
               onMessage={() => void handleMessageBusiness()}
+              onContactAction={(action) => recordPublicContactAction(selectedBusiness.businessId, action)}
               onReport={handleReportBusiness}
             />
             <BusinessReportDialog

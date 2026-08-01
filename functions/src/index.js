@@ -11,6 +11,11 @@ import { sendConversationMessage } from './messageSending.js'
 import { ensureOwnerBusiness as runEnsureOwnerBusiness } from './ownerBusinessCreation.js'
 import { listPublicBusinesses as runListPublicBusinesses } from './publicBusinessDirectory.js'
 import {
+  countCreatedConversation,
+  getOwnerBusinessInsights as runGetOwnerBusinessInsights,
+  recordBusinessInsight as runRecordBusinessInsight,
+} from './businessInsights.js'
+import {
   TRANSLATION_PROVIDER_CONFIG,
   createTranslationProvider,
   resolveRuntimeProjectId,
@@ -93,6 +98,27 @@ export async function handleListPublicBusinesses(request, db) {
   })
 }
 
+export async function handleRecordBusinessInsight(request, db) {
+  return runRecordBusinessInsight({ data: request.data, db: db ?? getFirestore() })
+}
+
+export async function handleGetOwnerBusinessInsights(request, db) {
+  const uid = requireCallableUid(request)
+  return runGetOwnerBusinessInsights({ uid, data: request.data, db: db ?? getFirestore() })
+}
+
+export const countBusinessEnquiry = onDocumentCreated(
+  {
+    document: 'conversations/{conversationId}',
+    region: MESSAGE_TRANSLATION_REGION,
+  },
+  async (event) => countCreatedConversation({
+    conversationId: event.params.conversationId,
+    conversation: event.data?.data(),
+    db: getFirestore(),
+  }),
+)
+
 export const translateCreatedMessage = onDocumentCreated(
   {
     document: 'conversations/{conversationId}/messages/{messageId}',
@@ -140,4 +166,14 @@ export const getAdminBusinessReview = onCall(
 export const listPublicBusinesses = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleListPublicBusinesses(request),
+)
+
+export const recordBusinessInsight = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleRecordBusinessInsight(request),
+)
+
+export const getOwnerBusinessInsights = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleGetOwnerBusinessInsights(request),
 )
