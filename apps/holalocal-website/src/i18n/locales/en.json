@@ -502,6 +502,7 @@
       "to": "To",
       "apply": "Apply",
       "displayed": "Showing {{start}} to {{end}}.",
+      "dates": "{{start}} – {{end}}",
       "presets": {
         "last_7_days": "Last 7 days",
         "last_30_days": "Last 30 days",

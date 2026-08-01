@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BUSINESS_CONTACT_ACTIONS } from '@holalocal/firebase-contract'
+import SelectField from '../common/SelectField.jsx'
 import { getOwnerBusinessInsights } from '../../services/businessInsightsService.js'
 import {
   activityChartConfiguration,
@@ -49,8 +50,7 @@ export default function BusinessInsightsPanel({ businessId, status }) {
     setSelection({ preset, request })
   }
 
-  function choosePreset(event) {
-    const preset = event.target.value
+  function choosePreset(preset) {
     if (preset === 'custom') {
       setValidationError('')
       setSelection((previous) => ({ ...previous, preset }))
@@ -76,12 +76,17 @@ export default function BusinessInsightsPanel({ businessId, status }) {
 
   const displayed = state.data
   const rangeLabel = displayed
-    ? t('businessInsights.range.displayed', {
+    ? t('businessInsights.range.dates', {
         start: localeDate(displayed.range.startDate, locale),
         end: localeDate(displayed.range.endDate, locale),
       })
     : ''
   const chartConfiguration = activityChartConfiguration(displayed?.days.length)
+  const hasActivity = displayed?.days.some((day) => totalActivity(day) > 0) ?? false
+  const rangeOptions = presets.map((preset) => ({
+    label: t(`businessInsights.range.presets.${preset}`),
+    value: preset,
+  }))
 
   return (
     <section className="account-card business-insights" aria-labelledby="business-insights-title">
@@ -91,16 +96,24 @@ export default function BusinessInsightsPanel({ businessId, status }) {
         <p>{t('businessInsights.description')}</p>
       </header>
 
-      <div className="business-insights__range-controls">
-        <label htmlFor="business-insights-range">{t('businessInsights.range.label')}</label>
-        <select id="business-insights-range" onChange={choosePreset} value={selection.preset}>
-          {presets.map((preset) => <option key={preset} value={preset}>{t(`businessInsights.range.presets.${preset}`)}</option>)}
-        </select>
+      <div className="business-insights__range-controls" aria-busy={state.status === 'loading'}>
+        <div className="business-insights__range-select">
+          <label htmlFor="business-insights-range">{t('businessInsights.range.label')}</label>
+          <SelectField
+            ariaLabel={t('businessInsights.range.label')}
+            className="select-field--form"
+            disabled={state.status === 'loading'}
+            id="business-insights-range"
+            onChange={choosePreset}
+            options={rangeOptions}
+            value={selection.preset}
+          />
+        </div>
         {selection.preset === 'custom' && (
           <form className="business-insights__custom-range" onSubmit={applyCustomRange}>
             <label>{t('businessInsights.range.from')}<input aria-describedby={validationError ? 'business-insights-range-error' : undefined} aria-invalid={Boolean(validationError)} max={today} onChange={(event) => setCustom((value) => ({ ...value, startDate: event.target.value }))} type="date" value={custom.startDate} /></label>
             <label>{t('businessInsights.range.to')}<input aria-describedby={validationError ? 'business-insights-range-error' : undefined} aria-invalid={Boolean(validationError)} max={today} onChange={(event) => setCustom((value) => ({ ...value, endDate: event.target.value }))} type="date" value={custom.endDate} /></label>
-            <button className="button button--secondary" type="submit">{t('businessInsights.range.apply')}</button>
+            <button className="button button--secondary" disabled={state.status === 'loading'} type="submit">{t('businessInsights.range.apply')}</button>
           </form>
         )}
         {validationError && <p className="business-insights__range-error" id="business-insights-range-error" role="alert">{validationError}</p>}
@@ -123,11 +136,13 @@ export default function BusinessInsightsPanel({ businessId, status }) {
               date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(displayed.trackingStartedAt)),
             })}
           </p>
-          <p className="business-insights__range-label">{rangeLabel}</p>
-          <div className="business-insights__grid">
-            {metricKeys.map((key) => <article key={key}><strong>{displayed.selectedRange[key]}</strong><span>{t(`businessInsights.${key}`)}</span><small>{t('businessInsights.selectedPeriod')}</small></article>)}
+          <div className="business-insights__selected-period">
+            <span>{t('businessInsights.selectedPeriod')}</span>
+            <strong>{rangeLabel}</strong>
           </div>
-          {metricKeys.every((key) => displayed.selectedRange[key] === 0) && <p className="business-insights__empty">{t('businessInsights.state.empty')}</p>}
+          <div className="business-insights__grid">
+            {metricKeys.map((key) => <article key={key}><strong>{displayed.selectedRange[key]}</strong><span>{t(`businessInsights.${key}`)}</span></article>)}
+          </div>
           <section className="business-insights__all-time" aria-labelledby="insights-all-time-title">
             <h3 id="insights-all-time-title">{t('businessInsights.allTimeTitle')}</h3>
             <dl>{metricKeys.map((key) => <div key={key}><dt>{t(`businessInsights.${key}`)}</dt><dd>{displayed.allTime[key]}</dd></div>)}</dl>
@@ -138,19 +153,36 @@ export default function BusinessInsightsPanel({ businessId, status }) {
           </section>
           <section className="business-insights__activity" aria-labelledby="insights-activity-title">
             <h3 id="insights-activity-title">{t('businessInsights.activityTitle')}</h3>
-            <p>{t('businessInsights.activityDescription')}</p>
-            <ol
-              className={`business-insights__activity-days business-insights__activity-days--${chartConfiguration.density}`}
-              data-day-count={displayed.days.length}
-              style={{ '--activity-day-count': displayed.days.length }}
-            >
-              {displayed.days.map((day, index) => {
-                const total = totalActivity(day)
-                const date = localeDate(day.date, locale)
-                const showLabel = showActivityDayLabel(index, displayed.days.length)
-                return <li aria-label={t('businessInsights.dayLabel', { date, count: total })} key={day.date}><span style={{ '--activity-size': `${Math.max(total ? 8 : 2, (total / maximum) * 100)}%` }} />{showLabel && <small aria-hidden="true">{day.date.slice(8)}</small>}<span className="visually-hidden">{t('businessInsights.dayDetails', { views: day.profileViews, enquiries: day.enquiries, contacts: day.contactActions })}</span></li>
-              })}
-            </ol>
+            {hasActivity ? (
+              <>
+                <p>{t('businessInsights.activityDescription')}</p>
+                <ol
+                  className={`business-insights__activity-days business-insights__activity-days--${chartConfiguration.density}`}
+                  data-day-count={displayed.days.length}
+                  style={{ '--activity-day-count': displayed.days.length }}
+                >
+                  {displayed.days.map((day, index) => {
+                    const total = totalActivity(day)
+                    const date = localeDate(day.date, locale)
+                    const showLabel = showActivityDayLabel(index, displayed.days.length)
+                    return <li aria-label={t('businessInsights.dayLabel', { date, count: total })} key={day.date}><span style={{ '--activity-size': `${Math.max(total ? 8 : 2, (total / maximum) * 100)}%` }} />{showLabel && <small aria-hidden="true">{day.date.slice(8)}</small>}<span className="visually-hidden">{t('businessInsights.dayDetails', { views: day.profileViews, enquiries: day.enquiries, contacts: day.contactActions })}</span></li>
+                  })}
+                </ol>
+              </>
+            ) : (
+              <>
+                <div className="business-insights__activity-empty" role="status">
+                  <span aria-hidden="true">—</span>
+                  <p>{t('businessInsights.state.empty')}</p>
+                </div>
+                <ol className="visually-hidden">
+                  {displayed.days.map((day) => {
+                    const date = localeDate(day.date, locale)
+                    return <li key={day.date}>{t('businessInsights.dayLabel', { date, count: 0 })}. {t('businessInsights.dayDetails', { views: 0, enquiries: 0, contacts: 0 })}</li>
+                  })}
+                </ol>
+              </>
+            )}
           </section>
         </>
       )}
