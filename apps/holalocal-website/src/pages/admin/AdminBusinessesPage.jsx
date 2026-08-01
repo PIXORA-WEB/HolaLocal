@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   ADMIN_BUSINESS_STATUSES,
   getAdminBusinessesPage,
+  getBusinessStatusCounts,
 } from '../../services/adminService.js'
 import { getBusinessCategoryLabel } from '../../utils/business.js'
 
@@ -14,6 +15,20 @@ function dateText(value, language) {
     : '—'
 }
 
+function BusinessLogo({ business }) {
+  return (
+    <span className="admin-business-logo">
+      {business.profilePhoto?.downloadUrl
+        ? <img alt="" src={business.profilePhoto.downloadUrl} />
+        : <span aria-hidden="true">{business.name?.charAt(0) || '?'}</span>}
+    </span>
+  )
+}
+
+function StatusBadge({ status, t }) {
+  return <span className={`admin-status admin-status--${status}`}>{t(`admin.status.${status}`, { defaultValue: status })}</span>
+}
+
 function AdminBusinessesPage() {
   const { i18n, t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -22,7 +37,16 @@ function AdminBusinessesPage() {
   const [state, setState] = useState({
     status: 'loading', businesses: [], cursor: null, hasMore: false, attempt: 0,
   })
+  const [counts, setCounts] = useState(null)
   const [localSearch, setLocalSearch] = useState('')
+
+  useEffect(() => {
+    let active = true
+    getBusinessStatusCounts()
+      .then((result) => active && setCounts(result))
+      .catch(() => active && setCounts(null))
+    return () => { active = false }
+  }, [state.attempt])
 
   useEffect(() => {
     let active = true
@@ -43,6 +67,18 @@ function AdminBusinessesPage() {
       : state.businesses
   }, [localSearch, state.businesses])
 
+  function selectStatus(nextStatus) {
+    setLocalSearch('')
+    setState((current) => ({
+      ...current, status: 'loading', businesses: [], cursor: null, hasMore: false,
+    }))
+    setSearchParams({ status: nextStatus })
+  }
+
+  function retry() {
+    setState((current) => ({ ...current, status: 'loading', attempt: current.attempt + 1 }))
+  }
+
   async function loadMore() {
     if (!state.cursor || state.status === 'loading-more') return
     setState((current) => ({ ...current, status: 'loading-more' }))
@@ -60,63 +96,130 @@ function AdminBusinessesPage() {
     }
   }
 
+  const dateKey = status === 'pending_review' ? 'submittedAt' : 'updatedAt'
+
   return (
     <section className="admin-page" aria-labelledby="admin-businesses-title">
-      <header className="admin-page__heading">
-        <p>{t('admin.businesses.eyebrow')}</p>
-        <h1 id="admin-businesses-title">{t('admin.businesses.title')}</h1>
+      <header className="admin-page__heading admin-page__heading--split">
+        <div>
+          <p className="admin-eyebrow">{t('admin.businesses.eyebrow')}</p>
+          <h1 id="admin-businesses-title">{t('admin.businesses.title')}</h1>
+          <p>{t('admin.businesses.description')}</p>
+        </div>
       </header>
-      <div className="admin-filters">
-        <label>
-          {t('admin.businesses.statusFilter')}
-          <select value={status} onChange={(event) => {
-            setState((current) => ({ ...current, status: 'loading', businesses: [], cursor: null }))
-            setSearchParams({ status: event.target.value })
-          }}>
-            {ADMIN_BUSINESS_STATUSES.map((item) => <option key={item} value={item}>{t(`admin.status.${item}`)}</option>)}
-          </select>
-        </label>
-        <label>
-          {t('admin.businesses.pageSearch')}
-          <input onChange={(event) => setLocalSearch(event.target.value)} type="search" value={localSearch} />
-        </label>
+
+      <div aria-label={t('admin.businesses.statusFilter')} className="admin-status-tabs" role="group">
+        {ADMIN_BUSINESS_STATUSES.map((item) => (
+          <button
+            aria-pressed={status === item}
+            key={item}
+            onClick={() => selectStatus(item)}
+            type="button"
+          >
+            <span>{t(`admin.status.${item}`)}</span>
+            {counts && <strong aria-label={t('admin.businesses.statusCount', { count: counts[item], status: t(`admin.status.${item}`) })}>{counts[item] ?? 0}</strong>}
+          </button>
+        ))}
       </div>
-      {state.status === 'loading' && <p role="status">{t('admin.businesses.loading')}</p>}
+
+      <div className="admin-toolbar">
+        <div className="admin-search">
+          <label htmlFor="admin-business-search">{t('admin.businesses.pageSearch')}</label>
+          <span className="admin-search__control">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m16 16 4 4" /></svg>
+            <input aria-describedby="admin-business-search-help" id="admin-business-search" onChange={(event) => setLocalSearch(event.target.value)} placeholder={t('admin.businesses.searchPlaceholder')} type="search" value={localSearch} />
+            {localSearch && <button aria-label={t('admin.businesses.clearSearch')} onClick={() => setLocalSearch('')} type="button"><span aria-hidden="true">×</span></button>}
+          </span>
+          <p className="admin-search__help" id="admin-business-search-help">{t('admin.businesses.pageSearchHelp')}</p>
+        </div>
+        <p>{t('admin.businesses.pageLimit', { count: 24 })}</p>
+      </div>
+
+      {state.status === 'loading' && (
+        <div aria-live="polite" className="admin-list-loading" role="status">
+          <span className="visually-hidden">{t('admin.businesses.loading')}</span>
+          {[0, 1, 2, 3].map((item) => <span className="admin-list-loading__row" key={item} />)}
+        </div>
+      )}
+
       {state.status === 'error' && (
         <div className="admin-alert" role="alert">
-          <p>{t(state.error === 'permission' ? 'admin.errors.permission' : 'admin.errors.load')}</p>
-          <button className="button button--secondary" onClick={() => setState((current) => ({ ...current, status: 'loading', attempt: current.attempt + 1 }))} type="button">{t('common.retry')}</button>
+          <div><strong>{t('admin.errors.loadTitle')}</strong><p>{t(state.error === 'permission' ? 'admin.errors.permission' : 'admin.errors.load')}</p></div>
+          <button className="button button--secondary" onClick={retry} type="button">{t('common.retry')}</button>
         </div>
       )}
-      {state.status !== 'loading' && state.businesses.length === 0 && <p className="admin-empty">{t('admin.businesses.empty')}</p>}
-      {state.businesses.length > 0 && (
-        <div className="admin-table-scroll">
-          <table className="admin-table">
-            <caption className="visually-hidden">{t('admin.businesses.caption')}</caption>
-            <thead><tr>
-              <th scope="col">{t('admin.businesses.name')}</th>
-              <th scope="col">{t('admin.businesses.category')}</th>
-              <th scope="col">{t('admin.businesses.location')}</th>
-              <th scope="col">{t('admin.businesses.submitted')}</th>
-              <th scope="col">{t('admin.businesses.status')}</th>
-              <th scope="col"><span className="visually-hidden">{t('admin.businesses.actions')}</span></th>
-            </tr></thead>
-            <tbody>
-              {visibleBusinesses.map((business) => (
-                <tr key={business.businessId}>
-                  <td><span className="admin-business-name">{business.profilePhoto?.downloadUrl && <img alt="" src={business.profilePhoto.downloadUrl} />} {business.name || '—'}</span></td>
-                  <td>{getBusinessCategoryLabel(business.primaryCategoryId, t) || '—'}</td>
-                  <td>{business.location?.locality || '—'}</td>
-                  <td>{dateText(status === 'pending_review' ? business.submittedAt : business.updatedAt, i18n.resolvedLanguage)}</td>
-                  <td><span className={`admin-status admin-status--${business.status}`}>{t(`admin.status.${business.status}`, { defaultValue: business.status })}</span></td>
-                  <td><Link aria-label={t('admin.businesses.reviewNamed', { name: business.name })} to={`/admin/businesses/${business.businessId}`}>{t('admin.businesses.review')}</Link></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+      {state.status !== 'loading' && state.businesses.length === 0 && (
+        <div className="admin-empty">
+          <span aria-hidden="true">✓</span>
+          <strong>{t('admin.businesses.emptyTitle')}</strong>
+          <p>{t('admin.businesses.empty')}</p>
         </div>
       )}
-      {state.hasMore && <button className="button button--secondary" disabled={state.status === 'loading-more'} onClick={() => void loadMore()} type="button">{t(state.status === 'loading-more' ? 'common.loading' : 'admin.businesses.loadMore')}</button>}
+
+      {state.businesses.length > 0 && visibleBusinesses.length === 0 && (
+        <div className="admin-empty">
+          <strong>{t('admin.businesses.noSearchTitle')}</strong>
+          <p>{t('admin.businesses.noSearch')}</p>
+          <button className="button button--secondary" onClick={() => setLocalSearch('')} type="button">{t('admin.businesses.clearSearch')}</button>
+        </div>
+      )}
+
+      {visibleBusinesses.length > 0 && (
+        <>
+          <div className="admin-table-panel">
+            <table className="admin-table">
+              <caption className="visually-hidden">{t('admin.businesses.caption')}</caption>
+              <thead><tr>
+                <th scope="col">{t('admin.businesses.name')}</th>
+                <th scope="col">{t('admin.businesses.category')}</th>
+                <th scope="col">{t('admin.businesses.location')}</th>
+                <th scope="col">{t('admin.businesses.submitted')}</th>
+                <th scope="col">{t('admin.businesses.status')}</th>
+                <th scope="col"><span className="visually-hidden">{t('admin.businesses.actions')}</span></th>
+              </tr></thead>
+              <tbody>
+                {visibleBusinesses.map((business) => (
+                  <tr key={business.businessId}>
+                    <td><span className="admin-business-name"><BusinessLogo business={business} /><strong>{business.name || t('admin.common.notProvided')}</strong></span></td>
+                    <td>{getBusinessCategoryLabel(business.primaryCategoryId, t) || t('admin.common.notProvided')}</td>
+                    <td>{business.location?.locality || t('admin.common.notProvided')}</td>
+                    <td>{dateText(business[dateKey], i18n.resolvedLanguage)}</td>
+                    <td><StatusBadge status={business.status} t={t} /></td>
+                    <td><Link className="admin-row-action" aria-label={t('admin.businesses.reviewNamed', { name: business.name })} to={`/admin/businesses/${business.businessId}`}>{t(status === 'pending_review' ? 'admin.businesses.review' : 'admin.businesses.view')} <span aria-hidden="true">→</span></Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <ul className="admin-business-cards">
+            {visibleBusinesses.map((business) => (
+              <li key={business.businessId}>
+                <div className="admin-business-card__heading">
+                  <BusinessLogo business={business} />
+                  <div><strong>{business.name || t('admin.common.notProvided')}</strong><span>{getBusinessCategoryLabel(business.primaryCategoryId, t) || t('admin.common.notProvided')}</span></div>
+                  <StatusBadge status={business.status} t={t} />
+                </div>
+                <dl>
+                  <div><dt>{t('admin.businesses.location')}</dt><dd>{business.location?.locality || t('admin.common.notProvided')}</dd></div>
+                  <div><dt>{t('admin.businesses.submitted')}</dt><dd>{dateText(business[dateKey], i18n.resolvedLanguage)}</dd></div>
+                </dl>
+                <Link aria-label={t('admin.businesses.reviewNamed', { name: business.name })} to={`/admin/businesses/${business.businessId}`}>{t(status === 'pending_review' ? 'admin.businesses.review' : 'admin.businesses.view')} <span aria-hidden="true">→</span></Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {state.hasMore && (
+        <div className="admin-pagination">
+          <p>{t('admin.businesses.loadedCount', { count: state.businesses.length })}</p>
+          <button className="button button--secondary" disabled={state.status === 'loading-more'} onClick={() => void loadMore()} type="button">
+            {t(state.status === 'loading-more' ? 'common.loading' : 'admin.businesses.loadMore')}
+          </button>
+        </div>
+      )}
     </section>
   )
 }
