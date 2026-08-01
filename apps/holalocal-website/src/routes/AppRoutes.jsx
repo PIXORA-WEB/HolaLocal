@@ -10,6 +10,7 @@ import BusinessRoute from './BusinessRoute.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import PublicRoute from './PublicRoute.jsx'
 import AdminRoute from './AdminRoute.jsx'
+import ScrollToTopOnNavigation from './ScrollToTopOnNavigation.jsx'
 
 const CompleteProfilePage = lazy(() => import('../pages/auth/CompleteProfilePage.jsx'))
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage.jsx'))
@@ -59,6 +60,7 @@ function LegacyBusinessRedirect() {
 function AppRoutes() {
   return (
     <BrowserRouter>
+      <ScrollToTopOnNavigation />
       <MetadataManager />
       <Suspense fallback={<RouteLoadingFallback />}>
       <Routes>

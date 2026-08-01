@@ -6,6 +6,10 @@ import path from 'node:path'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const routesPath = path.resolve(__dirname, '../src/routes/AppRoutes.jsx')
+const scrollNavigationPath = path.resolve(
+  __dirname,
+  '../src/routes/ScrollToTopOnNavigation.jsx',
+)
 const headerPath = path.resolve(__dirname, '../src/components/layout/SiteHeader.jsx')
 const footerPath = path.resolve(__dirname, '../src/components/layout/SiteFooter.jsx')
 const homePath = path.resolve(__dirname, '../src/pages/HomePage.jsx')
@@ -55,6 +59,20 @@ test('public production routes use the full homepage and services pages', async 
   assert.match(source, /<Route path="businesses\/:businessId" element=\{<LegacyBusinessRedirect \/>\} \/>/)
   assert.doesNotMatch(source, /EarlyAccessPage/)
   assert.doesNotMatch(source, /dev-services|dev-home|dev-businesses|main-preview/)
+})
+
+test('normal push navigation scrolls to the top without overriding history or anchors', async () => {
+  const [routes, scrollNavigation] = await Promise.all([
+    readFile(routesPath, 'utf8'),
+    readFile(scrollNavigationPath, 'utf8'),
+  ])
+
+  assert.match(routes, /<BrowserRouter>[\s\S]*?<ScrollToTopOnNavigation \/>/)
+  assert.match(scrollNavigation, /useNavigationType\(\)/)
+  assert.match(scrollNavigation, /navigationType !== 'PUSH'/)
+  assert.match(scrollNavigation, /location\.hash/)
+  assert.match(scrollNavigation, /window\.scrollTo\(\{ top: 0, left: 0, behavior: 'auto' \}\)/)
+  assert.doesNotMatch(scrollNavigation, /popstate|onClick|scrollRestoration/)
 })
 
 test('logged-out header exposes the public navigation on desktop and mobile', async () => {

@@ -145,7 +145,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Multilingv prin concepție', 'Folosește limba care ți se pare firească.',
       'Alege acum limba interfeței. Preferințele lingvistice pregătesc HolaLocal pentru traducerea responsabilă a mesajelor în viitor.',
       'Rețeaua ta locală începe aici', 'Ești gata să folosești mai ușor serviciile locale?',
-      'Alătură-te ca client, firmă sau ambele. Același cont funcționează în aplicația și site-ul HolaLocal.',
+      'Alătură-te ca client, firmă sau ambele. Un singur cont îți oferă acces la tot ce găsești pe HolaLocal.',
       'Începe',
     ],
     services: [
@@ -264,7 +264,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Wielojęzyczność od podstaw', 'Korzystaj z języka, który jest dla Ciebie naturalny.',
       'Wybierz język interfejsu. Preferencje językowe przygotowują też HolaLocal do odpowiedzialnego tłumaczenia wiadomości w przyszłości.',
       'Twoja lokalna sieć zaczyna się tutaj', 'Chcesz łatwiej korzystać z lokalnych usług?',
-      'Dołącz jako klient, firma lub obie role. Jedno konto działa w aplikacji i witrynie HolaLocal.',
+      'Dołącz jako klient, firma lub obie role. Jedno konto zapewnia dostęp do wszystkiego w HolaLocal.',
       'Rozpocznij',
     ],
     services: [
@@ -377,7 +377,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Vícejazyčné od základu', 'Používejte jazyk, který je vám přirozený.',
       'Jazyk rozhraní si můžete zvolit už nyní. Jazykové preference připravují HolaLocal na odpovědný překlad zpráv v budoucnu.',
       'Vaše místní síť začíná zde', 'Chcete využívat místní služby snadněji?',
-      'Přidejte se jako zákazník, firma nebo obojí. Stejný účet funguje v aplikaci i na webu HolaLocal.',
+      'Přidejte se jako zákazník, firma nebo obojí. Jeden účet vám poskytne přístup ke všemu na HolaLocal.',
       'Začít',
     ],
     services: [
@@ -489,7 +489,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Viacjazyčné od základu', 'Používajte jazyk, ktorý je vám prirodzený.',
       'Jazyk rozhrania si môžete zvoliť už teraz. Jazykové preferencie pripravujú HolaLocal na zodpovedný preklad správ v budúcnosti.',
       'Vaša miestna sieť začína tu', 'Chcete využívať miestne služby jednoduchšie?',
-      'Pridajte sa ako zákazník, firma alebo oboje. Rovnaký účet funguje v aplikácii aj na webe HolaLocal.',
+      'Pridajte sa ako zákazník, firma alebo oboje. Jeden účet vám poskytne prístup ku všetkému na HolaLocal.',
       'Začať',
     ],
     services: [
@@ -593,7 +593,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Eleve többnyelvű', 'Használd azt a nyelvet, amely számodra természetes.',
       'A felület nyelvét már most kiválaszthatod. A nyelvi beállítások előkészítik a HolaLocalt az üzenetek jövőbeli, felelős fordítására.',
       'A helyi hálózatod itt kezdődik', 'Készen állsz arra, hogy egyszerűbben használd a helyi szolgáltatásokat?',
-      'Csatlakozz ügyfélként, vállalkozásként vagy mindkettőként. Ugyanaz a fiók működik a HolaLocal alkalmazásában és weboldalán.',
+      'Csatlakozz ügyfélként, vállalkozásként vagy mindkettőként. Egyetlen fiókkal mindenhez hozzáférhetsz a HolaLocalon.',
       'Kezdés',
     ],
     services: [
@@ -711,7 +711,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Багатомовність від початку', 'Використовуйте мову, яка для вас природна.',
       'Мову інтерфейсу можна вибрати вже зараз. Мовні налаштування готують HolaLocal до відповідального перекладу повідомлень у майбутньому.',
       'Ваша місцева мережа починається тут', 'Готові користуватися місцевими послугами простіше?',
-      'Приєднуйтеся як клієнт, бізнес або в обох ролях. Той самий обліковий запис працює в застосунку й на сайті HolaLocal.',
+      'Приєднуйтеся як клієнт, бізнес або в обох ролях. Один обліковий запис надає доступ до всього на HolaLocal.',
       'Почати',
     ],
     services: [
@@ -815,7 +815,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Multilingue fin dall’inizio', 'Usa la lingua che ti è più naturale.',
       'Puoi già scegliere la lingua dell’interfaccia. Le preferenze linguistiche preparano HolaLocal alla traduzione responsabile dei messaggi in futuro.',
       'La tua rete locale inizia qui', 'Vuoi usare i servizi locali con maggiore facilità?',
-      'Unisciti come cliente, attività o entrambi. Lo stesso account funziona nell’app e sul sito HolaLocal.',
+      'Unisciti come cliente, attività o entrambi. Un solo account ti dà accesso a tutto su HolaLocal.',
       'Inizia',
     ],
     services: [
@@ -919,7 +919,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Monikielinen alusta alkaen', 'Käytä sinulle luontevaa kieltä.',
       'Voit valita käyttöliittymän kielen jo nyt. Kieliasetukset valmistavat HolaLocalia viestien vastuulliseen kääntämiseen tulevaisuudessa.',
       'Paikallinen verkostosi alkaa tästä', 'Haluatko käyttää paikallisia palveluja helpommin?',
-      'Liity asiakkaana, yrityksenä tai molempina. Sama tili toimii HolaLocalin sovelluksessa ja verkkosivustolla.',
+      'Liity asiakkaana, yrityksenä tai molempina. Yhdellä tilillä pääset käyttämään kaikkea HolaLocalissa.',
       'Aloita',
     ],
     services: [
@@ -1023,7 +1023,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Flerspråkigt från början', 'Använd det språk som känns naturligt för dig.',
       'Du kan redan välja gränssnittets språk. Språkinställningarna förbereder HolaLocal för ansvarsfull meddelandeöversättning i framtiden.',
       'Ditt lokala nätverk börjar här', 'Vill du använda lokala tjänster enklare?',
-      'Gå med som kund, företag eller båda. Samma konto fungerar i HolaLocal-appen och på webbplatsen.',
+      'Gå med som kund, företag eller båda. Ett konto ger dig tillgång till allt på HolaLocal.',
       'Kom igång',
     ],
     services: [
@@ -1127,7 +1127,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Flersproget fra starten', 'Brug det sprog, der føles naturligt for dig.',
       'Du kan allerede vælge brugerfladens sprog. Sprogindstillingerne forbereder HolaLocal på ansvarlig oversættelse af beskeder i fremtiden.',
       'Dit lokale netværk begynder her', 'Vil du bruge lokale tjenester nemmere?',
-      'Deltag som kunde, virksomhed eller begge dele. Den samme konto fungerer i HolaLocal-appen og på webstedet.',
+      'Deltag som kunde, virksomhed eller begge dele. Én konto giver dig adgang til alt på HolaLocal.',
       'Kom i gang',
     ],
     services: [
@@ -1231,7 +1231,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Flerspråklig fra starten', 'Bruk språket som føles naturlig for deg.',
       'Du kan allerede velge språk for grensesnittet. Språkinnstillingene forbereder HolaLocal på ansvarlig oversettelse av meldinger i fremtiden.',
       'Det lokale nettverket ditt begynner her', 'Vil du bruke lokale tjenester enklere?',
-      'Bli med som kunde, bedrift eller begge deler. Den samme kontoen fungerer i HolaLocal-appen og på nettstedet.',
+      'Bli med som kunde, bedrift eller begge deler. Én konto gir deg tilgang til alt på HolaLocal.',
       'Kom i gang',
     ],
     services: [
