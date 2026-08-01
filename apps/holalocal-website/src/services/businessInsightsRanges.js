@@ -6,19 +6,44 @@ import {
   utcDateKey,
 } from '@holalocal/firebase-contract'
 
-export const INSIGHT_RANGE_PRESETS = Object.freeze(['last_7_days', 'last_30_days', 'last_90_days', 'custom'])
+export const INSIGHT_RANGE_PRESETS = Object.freeze([
+  'last_7_days',
+  'last_30_days',
+  'this_month',
+  'last_month',
+  'last_90_days',
+  'custom',
+])
 
-export function currentUtcDate() {
-  return utcDateKey(new Date())
+export function currentLocalDateKey(now = new Date()) {
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
-export function presetDateRequest(preset, today = currentUtcDate()) {
+export function presetDateRequest(preset, today = currentLocalDateKey()) {
+  const current = parseBusinessInsightDate(today)
+  if (!current) return null
+
   const count = { last_7_days: 7, last_30_days: 30, last_90_days: 90 }[preset]
-  if (!count || !parseBusinessInsightDate(today)) return null
-  return { startDate: recentUtcDateKeys(parseBusinessInsightDate(today), count)[0], endDate: today }
+  if (count) return { startDate: recentUtcDateKeys(current, count)[0], endDate: today }
+
+  if (preset === 'this_month') {
+    const start = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 1))
+    return { startDate: utcDateKey(start), endDate: today }
+  }
+
+  if (preset === 'last_month') {
+    const start = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth() - 1, 1))
+    const end = new Date(Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), 0))
+    return { startDate: utcDateKey(start), endDate: utcDateKey(end) }
+  }
+
+  return null
 }
 
-export function validateCustomInsightRange(startDate, endDate, today = currentUtcDate()) {
+export function validateCustomInsightRange(startDate, endDate, today = currentLocalDateKey()) {
   const start = parseBusinessInsightDate(startDate)
   const end = parseBusinessInsightDate(endDate)
   const maximum = parseBusinessInsightDate(today)

@@ -5,7 +5,8 @@ import SelectField from '../common/SelectField.jsx'
 import { getOwnerBusinessInsights } from '../../services/businessInsightsService.js'
 import {
   activityChartConfiguration,
-  currentUtcDate,
+  currentLocalDateKey,
+  INSIGHT_RANGE_PRESETS,
   localeDate,
   presetDateRequest,
   showActivityDayLabel,
@@ -13,7 +14,6 @@ import {
 } from '../../services/businessInsightsRanges.js'
 
 const metricKeys = ['profileViews', 'enquiries', 'contactActions']
-const presets = ['last_7_days', 'last_30_days', 'last_90_days', 'custom']
 
 function totalActivity(day) {
   return day.profileViews + day.enquiries + day.contactActions
@@ -21,7 +21,7 @@ function totalActivity(day) {
 
 export default function BusinessInsightsPanel({ businessId, status }) {
   const { i18n, t } = useTranslation()
-  const today = currentUtcDate()
+  const today = currentLocalDateKey()
   const defaultDates = presetDateRequest('last_30_days', today)
   const [state, setState] = useState({ status: 'loading', data: null })
   const [selection, setSelection] = useState({ preset: 'last_30_days', request: null })
@@ -83,7 +83,7 @@ export default function BusinessInsightsPanel({ businessId, status }) {
     : ''
   const chartConfiguration = activityChartConfiguration(displayed?.days.length)
   const hasActivity = displayed?.days.some((day) => totalActivity(day) > 0) ?? false
-  const rangeOptions = presets.map((preset) => ({
+  const rangeOptions = INSIGHT_RANGE_PRESETS.map((preset) => ({
     label: t(`businessInsights.range.presets.${preset}`),
     value: preset,
   }))

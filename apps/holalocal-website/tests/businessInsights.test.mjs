@@ -9,6 +9,8 @@ import {
 } from '../src/services/businessInsightsTracking.js'
 import {
   activityChartConfiguration,
+  currentLocalDateKey,
+  INSIGHT_RANGE_PRESETS,
   presetDateRequest,
   showActivityDayLabel,
   validateCustomInsightRange,
@@ -36,10 +38,74 @@ test('dashboard uses real insights states and excludes misleading placeholder me
   assert.match(panel, /max=\{today\}/)
 })
 
-test('preset date requests use inclusive UTC 7, 30 and 90-day boundaries', () => {
+test('presets use the required order and keep Last 30 days as the default', async () => {
+  assert.deepEqual(INSIGHT_RANGE_PRESETS, [
+    'last_7_days',
+    'last_30_days',
+    'this_month',
+    'last_month',
+    'last_90_days',
+    'custom',
+  ])
+  const [panel, englishSource] = await Promise.all([
+    read('../src/components/business/BusinessInsightsPanel.jsx'),
+    read('../src/i18n/locales/en.json'),
+  ])
+  const labels = JSON.parse(englishSource).businessInsights.range.presets
+  assert.deepEqual(INSIGHT_RANGE_PRESETS.map((preset) => labels[preset]), [
+    'Last 7 days',
+    'Last 30 days',
+    'This month',
+    'Last month',
+    'Last 90 days',
+    'Custom dates',
+  ])
+  assert.match(panel, /useState\(\{ preset: 'last_30_days', request: null \}\)/)
+  assert.match(panel, /INSIGHT_RANGE_PRESETS\.map/)
+})
+
+test('rolling preset requests use inclusive UTC 7, 30 and 90-day boundaries', () => {
   assert.deepEqual(presetDateRequest('last_7_days', '2026-08-01'), { startDate: '2026-07-26', endDate: '2026-08-01' })
   assert.deepEqual(presetDateRequest('last_30_days', '2026-08-01'), { startDate: '2026-07-03', endDate: '2026-08-01' })
   assert.deepEqual(presetDateRequest('last_90_days', '2026-08-01'), { startDate: '2026-05-04', endDate: '2026-08-01' })
+})
+
+test('local today remains 1 August while the corresponding UTC instant is 31 July', () => {
+  const madridBoundary = new Date('2026-07-31T22:30:00.000Z')
+  madridBoundary.getFullYear = () => 2026
+  madridBoundary.getMonth = () => 7
+  madridBoundary.getDate = () => 1
+
+  assert.equal(madridBoundary.toISOString().slice(0, 10), '2026-07-31')
+  const today = currentLocalDateKey(madridBoundary)
+  assert.equal(today, '2026-08-01')
+  assert.deepEqual(presetDateRequest('this_month', today), { startDate: '2026-08-01', endDate: '2026-08-01' })
+  assert.deepEqual(presetDateRequest('last_month', today), { startDate: '2026-07-01', endDate: '2026-07-31' })
+})
+
+test('This month begins on day one and ends today at month boundaries', () => {
+  assert.deepEqual(presetDateRequest('this_month', '2026-08-17'), { startDate: '2026-08-01', endDate: '2026-08-17' })
+  assert.deepEqual(presetDateRequest('this_month', '2026-08-01'), { startDate: '2026-08-01', endDate: '2026-08-01' })
+  assert.deepEqual(presetDateRequest('this_month', '2026-08-31'), { startDate: '2026-08-01', endDate: '2026-08-31' })
+})
+
+test('Last month spans the complete previous calendar month', () => {
+  assert.deepEqual(presetDateRequest('last_month', '2026-08-17'), { startDate: '2026-07-01', endDate: '2026-07-31' })
+  assert.deepEqual(presetDateRequest('last_month', '2026-01-15'), { startDate: '2025-12-01', endDate: '2025-12-31' })
+  assert.deepEqual(presetDateRequest('last_month', '2026-05-01'), { startDate: '2026-04-01', endDate: '2026-04-30' })
+})
+
+test('Last month handles leap and non-leap February', () => {
+  assert.deepEqual(presetDateRequest('last_month', '2024-03-20'), { startDate: '2024-02-01', endDate: '2024-02-29' })
+  assert.deepEqual(presetDateRequest('last_month', '2025-03-20'), { startDate: '2025-02-01', endDate: '2025-02-28' })
+})
+
+test('calendar presets keep custom controls hidden and preserve the selected preset', async () => {
+  const panel = await read('../src/components/business/BusinessInsightsPanel.jsx')
+  assert.match(panel, /selection\.preset === 'custom'/)
+  assert.match(panel, /setSelection\(\{ preset, request \}\)/)
+  assert.match(panel, /value=\{selection\.preset\}/)
+  assert.doesNotMatch(panel, /data\.range\.preset/)
 })
 
 test('custom ranges validate before a backend request is constructed', () => {

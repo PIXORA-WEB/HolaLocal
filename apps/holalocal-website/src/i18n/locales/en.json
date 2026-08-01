@@ -506,6 +506,8 @@
       "presets": {
         "last_7_days": "Last 7 days",
         "last_30_days": "Last 30 days",
+        "this_month": "This month",
+        "last_month": "Last month",
         "last_90_days": "Last 90 days",
         "custom": "Custom dates"
       },
