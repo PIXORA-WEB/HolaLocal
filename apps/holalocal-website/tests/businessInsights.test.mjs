@@ -135,14 +135,16 @@ test('range toolbar reuses the HolaLocal select and accessible form-control patt
     read('../src/styles/global.css'),
   ])
   assert.match(panel, /import SelectField from '\.\.\/common\/SelectField\.jsx'/)
-  assert.match(panel, /<SelectField[\s\S]*?className="select-field--form"/)
+  assert.match(panel, /<SelectField[\s\S]*?className="select-field--form business-insights__range-field"/)
   assert.doesNotMatch(panel, /<select/)
   assert.match(panel, /htmlFor="business-insights-range"/)
   assert.match(panel, /type="date"/)
   assert.match(panel, /aria-invalid=\{Boolean\(validationError\)\}/)
   assert.match(panel, /aria-describedby=\{validationError/)
   assert.match(panel, /max=\{today\}/)
-  assert.match(styles, /business-insights__range-select[\s\S]*?width: min\(20rem, 100%\)/)
+  assert.match(styles, /business-insights__range-select[\s\S]*?width: 13rem;[\s\S]*?max-width: 100%/)
+  assert.match(styles, /business-insights__range-field \.select-field__menu[\s\S]*?width: min\(16rem, calc\(100vw - 3rem\)\)/)
+  assert.match(styles, /business-insights__range-field \.select-field__menu button > span:first-child[\s\S]*?white-space: nowrap/)
   assert.match(styles, /business-insights__custom-range input:focus-visible/)
 })
 

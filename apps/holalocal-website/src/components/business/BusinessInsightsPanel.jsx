@@ -101,7 +101,7 @@ export default function BusinessInsightsPanel({ businessId, status }) {
           <label htmlFor="business-insights-range">{t('businessInsights.range.label')}</label>
           <SelectField
             ariaLabel={t('businessInsights.range.label')}
-            className="select-field--form"
+            className="select-field--form business-insights__range-field"
             disabled={state.status === 'loading'}
             id="business-insights-range"
             onChange={choosePreset}

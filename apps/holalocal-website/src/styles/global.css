@@ -2625,8 +2625,32 @@
 
 .business-insights__range-select {
   display: grid;
-  width: min(20rem, 100%);
+  width: 13rem;
+  max-width: 100%;
   gap: 0.4rem;
+}
+
+.business-insights__range-field .select-field__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-insights__range-field .select-field__menu {
+  width: min(16rem, calc(100vw - 3rem));
+  max-width: calc(100vw - 3rem);
+}
+
+.business-insights__range-field .select-field__menu button > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-insights__range-field .select-field__menu button > span:last-child:not(:first-child) {
+  flex: 0 0 auto;
 }
 
 .business-insights__range-select > label,
