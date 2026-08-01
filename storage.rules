@@ -13,6 +13,14 @@ service firebase.storage {
         && user.deletionRequestedAt == null;
     }
 
+    function isModerator() {
+      return signedIn()
+        && ((request.auth.token.keys().hasAll(['moderator'])
+          && request.auth.token.moderator == true)
+          || (request.auth.token.keys().hasAll(['admin'])
+            && request.auth.token.admin == true));
+    }
+
     function validImage() {
       return request.resource != null
         && request.resource.size < 5 * 1024 * 1024
@@ -33,7 +41,8 @@ service firebase.storage {
 
     match /businesses/{businessId}/{folder}/{fileName} {
       allow read: if firestore.get(/databases/(default)/documents/businesses/$(businessId)).data.status == 'active'
-        || managesBusiness(businessId);
+        || managesBusiness(businessId)
+        || (isModerator() && folder in ['logos', 'photos']);
       allow create, update: if folder in ['logos', 'photos'] && managesBusiness(businessId) && validImage();
       allow delete: if managesBusiness(businessId);
     }

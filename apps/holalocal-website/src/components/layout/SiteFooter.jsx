@@ -3,6 +3,22 @@ import { useTranslation } from 'react-i18next'
 import BrandLockup from '../common/BrandLockup.jsx'
 import LanguageSwitcher from '../common/LanguageSwitcher.jsx'
 
+const platformLinks = [
+  { labelKey: 'nav.home', to: '/' },
+  { labelKey: 'nav.findServices', to: '/services' },
+  { labelKey: 'footer.contact', to: '/contact' },
+]
+
+const accountLinks = [
+  { labelKey: 'account.signIn', to: '/login' },
+  { labelKey: 'nav.join', to: '/register' },
+]
+
+const legalLinks = [
+  { labelKey: 'footer.privacy', to: '/privacy' },
+  { labelKey: 'footer.terms', to: '/terms' },
+]
+
 function SiteFooter() {
   const { t } = useTranslation()
 
@@ -11,22 +27,36 @@ function SiteFooter() {
       <div className="site-footer__inner">
         <div className="site-footer__brand">
           <BrandLockup />
-          <p>{t('earlyAccess.footer.description')}</p>
+          <p>{t('footer.description')}</p>
         </div>
         <div className="site-footer__navigation">
-          <nav className="site-footer__links" aria-label="Footer links">
-            <Link to="/privacy">{t('footer.privacy')}</Link>
-            <Link to="/terms">{t('footer.terms')}</Link>
-            <Link to="/contact">{t('footer.contact')}</Link>
+          <nav className="site-footer__group" aria-label={t('footer.platformLabel')}>
+            <h2>{t('footer.platform')}</h2>
+            <div className="site-footer__links">
+              {platformLinks.map((link) => <Link key={link.to} to={link.to}>{t(link.labelKey)}</Link>)}
+            </div>
+          </nav>
+          <nav className="site-footer__group" aria-label={t('footer.accountLabel')}>
+            <h2>{t('footer.account')}</h2>
+            <div className="site-footer__links">
+              {accountLinks.map((link) => <Link key={link.to} to={link.to}>{t(link.labelKey)}</Link>)}
+            </div>
+          </nav>
+          <nav className="site-footer__group" aria-label={t('footer.legalLabel')}>
+            <h2>{t('footer.legal')}</h2>
+            <div className="site-footer__links">
+              {legalLinks.map((link) => <Link key={link.to} to={link.to}>{t(link.labelKey)}</Link>)}
+            </div>
           </nav>
           <div className="site-footer__language">
+            <h2>{t('footer.language')}</h2>
             <LanguageSwitcher />
-            <p className="site-footer__language-note">{t('earlyAccess.languageNotice.selectorNote')}</p>
           </div>
         </div>
       </div>
       <div className="site-footer__legal">
         <p>{t('footer.copyright', { year: 2026 })}</p>
+        <p>{t('footer.poweredBy')}</p>
       </div>
     </footer>
   )

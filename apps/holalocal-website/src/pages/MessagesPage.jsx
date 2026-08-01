@@ -1,6 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  isConversationUnreadForUser,
+  normalizeMessageTranslation,
+  selectMessageDisplayText,
+  shouldShowTranslatedMessage,
+} from '@holalocal/firebase-contract'
 import AccessibleDialog from '../components/common/AccessibleDialog.jsx'
 import { ImageAvatar } from '../components/common/PublicBusinessCard.jsx'
 import LoadingScreen from '../components/common/LoadingScreen.jsx'
@@ -9,11 +15,25 @@ import useAuthentication from '../hooks/useAuthentication.js'
 import { getPublicBusinessById } from '../services/businessService.js'
 import {
   getConversationForUser,
-  getConversationsForUser,
   hideConversationForUser,
+  markConversationReadForUser,
+  createMessageRequestId,
   sendTextMessage,
+  subscribeToConversationsForUser,
   subscribeToMessages,
 } from '../services/conversationService.js'
+import { classifyFrontendError } from '../utils/frontendErrors.js'
+import {
+  conversationViewReducer,
+  createInboxViewState,
+  createConversationViewState,
+  enrichConversationSummaries,
+  inboxViewReducer,
+  messageSenderIdentity,
+  pendingSendForDraft,
+  selectInboxView,
+  selectConversationView,
+} from '../utils/messageConversationState.js'
 
 function formatMessageTime(timestamp) {
   const date = timestamp?.toDate?.()
@@ -27,100 +47,172 @@ function formatMessageTime(timestamp) {
   }).format(date)
 }
 
-async function loadConversationSummaries(userId) {
-  const conversations = await getConversationsForUser(userId)
-  const businesses = new Map()
-
-  await Promise.all(conversations.map(async (conversation) => {
-    if (!businesses.has(conversation.businessId)) {
-      businesses.set(conversation.businessId, await getPublicBusinessById(conversation.businessId))
-    }
-  }))
-
-  return conversations.map((conversation) => ({
-    ...conversation,
-    business: businesses.get(conversation.businessId),
-  }))
-}
-
 function MessagesPage() {
   const { t } = useTranslation()
   const { conversationId } = useParams()
   const navigate = useNavigate()
   const { user, userProfile } = useAuthentication()
   const messagesEndRef = useRef(null)
-  const [conversations, setConversations] = useState([])
-  const [inboxLoading, setInboxLoading] = useState(true)
-  const [conversation, setConversation] = useState(null)
-  const [business, setBusiness] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [failedConversationId, setFailedConversationId] = useState(null)
-  const [messageText, setMessageText] = useState('')
-  const [sending, setSending] = useState(false)
-  const [hiding, setHiding] = useState(false)
-  const [error, setError] = useState('')
+  const readMarkersRef = useRef(new Set())
+  const activeSendOperationsRef = useRef(new Map())
+  const activeHideOperationsRef = useRef(new Map())
+  const operationSequenceRef = useRef(0)
+  const [inboxState, dispatchInbox] = useReducer(
+    inboxViewReducer,
+    user.uid,
+    createInboxViewState,
+  )
+  const [conversationState, dispatchConversation] = useReducer(
+    conversationViewReducer,
+    conversationId,
+    createConversationViewState,
+  )
   const [success, setSuccess] = useState('')
   const [inboxAttempt, setInboxAttempt] = useState(0)
   const [conversationAttempt, setConversationAttempt] = useState(0)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [originalMessageIds, setOriginalMessageIds] = useState(() => new Set())
+  const activeInboxState = selectInboxView(inboxState, user.uid)
+  const {
+    error: inboxError,
+    items: conversations,
+    status: inboxStatus,
+  } = activeInboxState
+  const activeConversationState = selectConversationView(conversationState, conversationId)
+  const {
+    business,
+    conversation,
+    draft: messageText,
+    error: conversationError,
+    hiding,
+    loadStatus: conversationLoadStatus,
+    messages,
+    sending,
+  } = activeConversationState
+  const error = conversationId ? conversationError : inboxError
 
   useEffect(() => {
     let active = true
+    let requestId = 0
+    dispatchInbox({ type: 'loadStarted', userId: user.uid })
 
-    loadConversationSummaries(user.uid)
-      .then((items) => {
+    const unsubscribe = subscribeToConversationsForUser(
+      user.uid,
+      (items) => {
+        const currentRequest = requestId + 1
+        requestId = currentRequest
+        enrichConversationSummaries(items, getPublicBusinessById)
+          .then((summaries) => {
+            if (active && currentRequest === requestId) {
+              dispatchInbox({
+                type: 'loadSucceeded',
+                items: summaries,
+                userId: user.uid,
+              })
+            }
+          })
+          .catch((loadError) => {
+            if (active && currentRequest === requestId) {
+              dispatchInbox({
+                type: 'loadFailed',
+                error: classifyFrontendError(loadError, {
+                  fallbackType: 'MESSAGE_LOAD_FAILED',
+                  fallbackTranslationKey: 'messages.errors.loadConversations',
+                  operation: 'load-inbox',
+                }),
+                userId: user.uid,
+              })
+            }
+          })
+      },
+      (loadError) => {
         if (active) {
-          setConversations(items)
-          setError('')
+          dispatchInbox({
+            type: 'loadFailed',
+            error: classifyFrontendError(loadError, {
+              fallbackType: 'MESSAGE_LOAD_FAILED',
+              fallbackTranslationKey: 'messages.errors.loadConversations',
+              operation: 'load-inbox',
+            }),
+            userId: user.uid,
+          })
         }
-      })
-      .catch((loadError) => {
-        if (active) setError(loadError.message || t('messages.errors.loadConversations'))
-      })
-      .finally(() => {
-        if (active) setInboxLoading(false)
-      })
+      },
+    )
 
     return () => {
       active = false
+      unsubscribe()
     }
   }, [inboxAttempt, t, user.uid])
 
   useEffect(() => {
-    if (!conversationId) return undefined
+    if (!conversationId) {
+      dispatchConversation({ type: 'loadStarted', conversationId: null })
+      return undefined
+    }
 
     let active = true
     let unsubscribe = () => undefined
+    dispatchConversation({ type: 'loadStarted', conversationId })
 
-    Promise.all([
-      getConversationForUser(conversationId, user.uid),
-    ])
-      .then(async ([loadedConversation]) => {
+    getConversationForUser(conversationId, user.uid)
+      .then(async (loadedConversation) => {
         const loadedBusiness = await getPublicBusinessById(loadedConversation.businessId)
         if (!active) return
 
-        setConversation(loadedConversation)
-        setBusiness(loadedBusiness)
-        setFailedConversationId(null)
-        setError('')
+        if (!loadedBusiness) {
+          dispatchConversation({
+            type: 'businessUnavailable',
+            conversationId,
+            conversation: loadedConversation,
+          })
+          return
+        }
+
+        dispatchConversation({
+          type: 'metadataLoaded',
+          business: loadedBusiness,
+          conversation: loadedConversation,
+          conversationId,
+        })
         unsubscribe = subscribeToMessages(
           conversationId,
           (loadedMessages) => {
-            if (active) setMessages(loadedMessages.filter(
-              (message) => message.moderationStatus === 'visible' && !message.deletedAt,
-            ))
+            if (active) {
+              dispatchConversation({
+                type: 'messagesLoaded',
+                conversationId,
+                messages: loadedMessages.filter(
+                  (message) => message.moderationStatus === 'visible' && !message.deletedAt,
+                ),
+              })
+            }
           },
           (loadError) => {
-            if (active) setError(loadError.message || t('messages.errors.loadMessages'))
+            if (active) {
+              dispatchConversation({
+                type: 'messagesFailed',
+                conversationId,
+                error: classifyFrontendError(loadError, {
+                  fallbackType: 'MESSAGE_LOAD_FAILED',
+                  fallbackTranslationKey: 'messages.errors.loadMessages',
+                }),
+              })
+            }
           },
         )
       })
       .catch((loadError) => {
         if (active) {
-          setConversation(null)
-          setBusiness(null)
-          setFailedConversationId(conversationId)
-          setError(loadError.message || t('messages.errors.openConversation'))
+          dispatchConversation({
+            type: 'loadFailed',
+            conversationId,
+            error: classifyFrontendError(loadError, {
+              fallbackType: 'MESSAGE_LOAD_FAILED',
+              fallbackTranslationKey: 'messages.errors.openConversation',
+            }),
+          })
         }
       })
 
@@ -134,46 +226,135 @@ function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  useEffect(() => {
+    if (!conversationId || !user.uid) return
+    const currentConversation = conversations.find((item) => item.conversationId === conversationId) ?? conversation
+    if (!isConversationUnreadForUser(currentConversation, user.uid)) return
+
+    const marker = `${conversationId}:${currentConversation.lastMessage?.messageId ?? ''}:${currentConversation.lastMessageAt?.toMillis?.() ?? ''}`
+    if (readMarkersRef.current.has(marker)) return
+    readMarkersRef.current.add(marker)
+
+    markConversationReadForUser(conversationId, user.uid).catch(() => {
+      readMarkersRef.current.delete(marker)
+    })
+  }, [conversation, conversationId, conversations, user.uid])
+
   async function handleSend(event) {
     event.preventDefault()
-    if (!conversationId || !messageText.trim()) return
+    const normalizedText = messageText.trim()
+    if (!conversationId || !normalizedText) return
+    if (activeSendOperationsRef.current.has(conversationId)) return
 
-    setSending(true)
-    setError('')
+    operationSequenceRef.current += 1
+    const operationId = operationSequenceRef.current
+    const pendingSend = pendingSendForDraft(
+      activeConversationState,
+      normalizedText,
+      createMessageRequestId,
+    )
+    activeSendOperationsRef.current.set(conversationId, operationId)
+
+    dispatchConversation({
+      type: 'sendStarted',
+      conversationId,
+      operationId,
+      pendingSend,
+    })
     try {
-      await sendTextMessage(conversationId, user.uid, messageText)
-      setMessageText('')
-      setConversations(await loadConversationSummaries(user.uid))
+      await sendTextMessage(conversationId, user.uid, normalizedText, pendingSend.requestId)
+      dispatchConversation({ type: 'sendSucceeded', conversationId, operationId })
     } catch (sendError) {
-      setError(sendError.message || t('messages.errors.send'))
+      dispatchConversation({
+        type: 'sendFailed',
+        conversationId,
+        operationId,
+        error: classifyFrontendError(sendError, { fallbackType: 'MESSAGE_SEND_FAILED' }),
+      })
     } finally {
-      setSending(false)
+      if (activeSendOperationsRef.current.get(conversationId) === operationId) {
+        activeSendOperationsRef.current.delete(conversationId)
+      }
+      dispatchConversation({ type: 'sendFinished', conversationId, operationId })
     }
   }
 
   async function handleHideConversation() {
     if (!conversationId) return
+    if (activeHideOperationsRef.current.has(conversationId)) return
 
-    setHiding(true)
-    setError('')
+    operationSequenceRef.current += 1
+    const operationId = operationSequenceRef.current
+    activeHideOperationsRef.current.set(conversationId, operationId)
+    dispatchConversation({ type: 'hideStarted', conversationId, operationId })
     setSuccess('')
     try {
       await hideConversationForUser(conversationId, user.uid)
-      setConversations((items) => items.filter((item) => item.conversationId !== conversationId))
+      dispatchInbox({
+        type: 'itemRemoved',
+        conversationId,
+        userId: user.uid,
+      })
       setSuccess(t('messages.removeSuccess'))
       setConfirmRemove(false)
       navigate('/messages', { replace: true })
     } catch (hideError) {
-      setError(hideError.message || t('messages.errors.remove'))
+      dispatchConversation({
+        type: 'hideFailed',
+        conversationId,
+        operationId,
+        error: classifyFrontendError(hideError, {
+          fallbackType: 'CONVERSATION_REMOVE_FAILED',
+        }),
+      })
     } finally {
-      setHiding(false)
+      if (activeHideOperationsRef.current.get(conversationId) === operationId) {
+        activeHideOperationsRef.current.delete(conversationId)
+      }
+      dispatchConversation({ type: 'hideFinished', conversationId, operationId })
     }
+  }
+
+  function toggleOriginalMessage(messageId) {
+    setOriginalMessageIds((current) => {
+      const next = new Set(current)
+      if (next.has(messageId)) next.delete(messageId)
+      else next.add(messageId)
+      return next
+    })
   }
 
   const customerLanguage = userProfile?.preferredLocale ?? t('messages.preferredLanguageFallback')
   const businessLanguage = business?.primaryLanguage ?? business?.languages?.[0] ?? t('messages.businessLanguageFallback')
   const isBusinessParticipant = conversation && business?.ownerId === user.uid
   const activeLanguage = isBusinessParticipant ? businessLanguage : customerLanguage
+  const otherParticipantName = isBusinessParticipant
+    ? t('messages.customerFallback')
+    : business?.name ?? t('messages.businessFallback')
+  const errorAction = error?.recovery === 'edit'
+    ? undefined
+    : error?.recovery === 'back'
+      ? conversationId
+        ? () => navigate('/messages')
+        : undefined
+      : error?.recovery === 'sign-in'
+        ? () => navigate('/login')
+        : () => {
+            if (conversationId) {
+              dispatchConversation({ type: 'clearError', conversationId })
+            }
+            if (conversationId) {
+              setConversationAttempt((attempt) => attempt + 1)
+            } else {
+              dispatchInbox({ type: 'loadStarted', userId: user.uid })
+              setInboxAttempt((attempt) => attempt + 1)
+            }
+          }
+  const errorActionLabel = error?.recovery === 'back'
+    ? t('messages.back')
+    : error?.recovery === 'sign-in'
+      ? t('account.signIn')
+      : undefined
 
   return (
     <div className={`messages-page${conversationId ? ' has-conversation' : ''}`}>
@@ -186,17 +367,9 @@ function MessagesPage() {
       {error && (
         <div className="messages-page__error">
           <RecoveryMessage
-            message={error}
-            onRetry={() => conversationId
-              ? (() => {
-                  setError('')
-                  setConversationAttempt((attempt) => attempt + 1)
-                })()
-              : (() => {
-                  setError('')
-                  setInboxLoading(true)
-                  setInboxAttempt((attempt) => attempt + 1)
-                })()}
+            actionLabel={errorActionLabel}
+            message={t(error.translationKey)}
+            onRetry={errorAction}
           />
         </div>
       )}
@@ -208,26 +381,41 @@ function MessagesPage() {
             <h2>{t('messages.conversations')}</h2>
             <span>{conversations.length}</span>
           </header>
-          {inboxLoading ? (
+          {inboxStatus === 'loading' ? (
             <LoadingScreen message={t('messages.loadingConversations')} />
+          ) : inboxStatus === 'failed' ? (
+            <div className="conversation-list__empty">
+              <p>{t('messages.errors.loadConversations')}</p>
+            </div>
           ) : conversations.length > 0 ? (
             <nav>
               {conversations.map((item) => (
-                <Link
-                  className={item.conversationId === conversationId ? 'is-active' : ''}
-                  key={item.conversationId}
-                  to={`/messages/${item.conversationId}`}
-                >
-                  <ImageAvatar
-                    className="image-avatar--conversation"
-                    name={item.business?.name || t('messages.businessFallback')}
-                    src={item.business?.logoUrl}
-                  />
-                  <span>
-                    <strong>{item.business?.name || t('messages.localBusiness')}</strong>
-                    <small>{item.lastMessage?.preview || t('messages.noMessages')}</small>
-                  </span>
-                </Link>
+                (() => {
+                  const isUnread = isConversationUnreadForUser(item, user.uid)
+                  const businessName = item.business?.name || t('messages.localBusiness')
+                  return (
+                    <Link
+                      aria-label={isUnread ? t('messages.unreadConversation', { name: businessName }) : undefined}
+                      className={[
+                        item.conversationId === conversationId ? 'is-active' : '',
+                        isUnread ? 'is-unread' : '',
+                      ].filter(Boolean).join(' ')}
+                      key={item.conversationId}
+                      to={`/messages/${item.conversationId}`}
+                    >
+                      <ImageAvatar
+                        className="image-avatar--conversation"
+                        name={item.business?.name || t('messages.businessFallback')}
+                        src={item.business?.logoUrl}
+                      />
+                      <span>
+                        <strong>{businessName}</strong>
+                        <small>{item.lastMessage?.preview || t('messages.noMessages')}</small>
+                      </span>
+                      <time>{formatMessageTime(item.lastMessageAt ?? item.createdAt)}</time>
+                    </Link>
+                  )
+                })()
               ))}
             </nav>
           ) : (
@@ -247,13 +435,17 @@ function MessagesPage() {
               <p>{t('messages.selectConversation')}</p>
               <Link className="button button--primary" to="/">{t('messages.returnHome')}</Link>
             </div>
-          ) : failedConversationId === conversationId ? (
+          ) : (
+            conversationLoadStatus === 'unavailable' ||
+            conversationLoadStatus === 'failed' ||
+            conversationLoadStatus === 'messages-failed'
+          ) ? (
             <div className="conversation-view__placeholder">
               <h2>{t('messages.unavailable')}</h2>
               <p>{t('messages.unavailableDescription')}</p>
               <button className="button button--secondary" onClick={() => navigate('/messages')} type="button">{t('messages.back')}</button>
             </div>
-          ) : conversation?.conversationId !== conversationId || !business ? (
+          ) : conversationLoadStatus !== 'ready' ? (
             <LoadingScreen message={t('messages.openingConversation')} />
           ) : conversation && business ? (
             <>
@@ -286,30 +478,72 @@ function MessagesPage() {
                 </p>
               </div>
 
-              <div className="message-list" aria-live="polite">
+              <ol
+                aria-atomic="false"
+                aria-label={t('messages.messageHistory')}
+                aria-live="polite"
+                aria-relevant="additions"
+                className="message-list"
+                role="log"
+              >
                 {messages.length > 0 ? messages.map((message) => {
                   const isOwn = message.senderId === user.uid
+                  const senderName = messageSenderIdentity(
+                    message.senderId,
+                    user.uid,
+                    t('messages.you'),
+                    otherParticipantName,
+                  )
+                  const translation = normalizeMessageTranslation(message.translation)
+                  const canShowTranslation = shouldShowTranslatedMessage(message, user.uid)
+                  const showOriginal = originalMessageIds.has(message.messageId)
+                  const visibleText = selectMessageDisplayText(message, user.uid, showOriginal)
                   return (
-                    <article className={isOwn ? 'message-bubble is-own' : 'message-bubble'} key={message.messageId}>
-                      <p>{message.text}</p>
+                    <li className={isOwn ? 'message-bubble is-own' : 'message-bubble'} key={message.messageId}>
+                      <span className="visually-hidden">{t('messages.sentBy', { name: senderName })}</span>
+                      <p>{visibleText}</p>
+                      {canShowTranslation && (
+                        <div className="message-translation-controls">
+                          <span>{t('messages.translation.completed')}</span>
+                          <button
+                            aria-label={showOriginal ? t('messages.translation.viewTranslation') : t('messages.translation.viewOriginal')}
+                            onClick={() => toggleOriginalMessage(message.messageId)}
+                            type="button"
+                          >
+                            {showOriginal ? t('messages.translation.viewTranslation') : t('messages.translation.viewOriginal')}
+                          </button>
+                        </div>
+                      )}
+                      {!isOwn && translation.status === 'processing' && (
+                        <small className="message-translation-status">{t('messages.translation.processing')}</small>
+                      )}
+                      {!isOwn && translation.status === 'failed' && (
+                        <small className="message-translation-status">{t('messages.translation.failed')}</small>
+                      )}
                       <time>{formatMessageTime(message.createdAt)}</time>
-                    </article>
+                    </li>
                   )
                 }) : (
-                  <div className="message-list__empty">
+                  <li className="message-list__empty">
                     <p>{t('messages.noMessages')}</p>
                     <span>{t('messages.startConversation')}</span>
-                  </div>
+                  </li>
                 )}
-                <div ref={messagesEndRef} />
-              </div>
+                <li aria-hidden="true" className="message-list__end" ref={messagesEndRef} />
+              </ol>
 
               <form className="message-composer" onSubmit={handleSend}>
                 <label className="visually-hidden" htmlFor="message-text">{t('messages.messageLabel')}</label>
                 <textarea
                   id="message-text"
                   maxLength={4000}
-                  onChange={(event) => setMessageText(event.target.value)}
+                  onChange={(event) => {
+                    dispatchConversation({
+                      type: 'draftChanged',
+                      conversationId,
+                      draft: event.target.value,
+                    })
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' && !event.shiftKey) {
                       event.preventDefault()
@@ -334,7 +568,7 @@ function MessagesPage() {
         className="profile-edit-dialog confirmation-dialog"
         closeDisabled={hiding}
         onClose={() => setConfirmRemove(false)}
-        open={confirmRemove}
+        open={confirmRemove && conversationState.conversationId === conversationId}
       >
         <section className="profile-edit-dialog__panel">
           <header className="profile-edit-dialog__header">

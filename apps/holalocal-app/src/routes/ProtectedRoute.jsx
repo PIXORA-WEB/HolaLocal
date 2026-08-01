@@ -1,26 +1,33 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import LoadingScreen from '../components/LoadingScreen.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
+import { protectedAccountDecision } from './accountRoutePolicy.js'
 
-function ProtectedRoute({ allowIncompleteOnboarding = false, allowIncompleteProfile = false }) {
-  const { loading, profileLoading, user, userProfile } = useAuthentication()
+function ProtectedRoute({ allowIncompleteOnboarding = false, allowIncompleteProfile = false, allowUnverified = false }) {
+  const { emailVerified, loading, profileLoading, user, userProfile } = useAuthentication()
   const location = useLocation()
+  const decision = protectedAccountDecision({
+    allowIncompleteOnboarding, allowIncompleteProfile, allowUnverified,
+    emailVerified, loading, profileLoading, user, userProfile,
+  })
 
-  if (loading || profileLoading) return <LoadingScreen />
+  if (decision === 'loading') return <LoadingScreen />
 
-  if (!user) {
+  if (decision === 'login') {
     return <Navigate replace state={{ from: location }} to="/login" />
   }
 
-  if (!allowIncompleteProfile && userProfile?.profileCompleted !== true) {
+  if (decision === 'blocked') return <Navigate replace to="/" />
+
+  if (decision === 'verify_email') {
+    return <Navigate replace state={{ from: location }} to="/verify-email" />
+  }
+
+  if (decision === 'complete_profile') {
     return <Navigate replace to="/complete-profile" />
   }
 
-  if (
-    userProfile?.profileCompleted === true &&
-    !allowIncompleteOnboarding &&
-    userProfile?.onboardingCompleted !== true
-  ) {
+  if (decision === 'onboarding') {
     return <Navigate replace to="/onboarding" />
   }
 

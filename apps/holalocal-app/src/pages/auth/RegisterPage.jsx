@@ -3,14 +3,17 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
+import { POLICY_VERSION } from '../../services/userPayloads.js'
 
 function RegisterPage() {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation()
   const { signUp } = useAuthentication()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -22,14 +25,24 @@ function RegisterPage() {
       setError('Passwords do not match.')
       return
     }
+    if (!termsAccepted || !privacyAccepted) {
+      setError(t('auth.registration.consentRequired'))
+      return
+    }
 
     setSubmitting(true)
 
     try {
-      await signUp(email.trim(), password)
-      navigate('/complete-profile', { replace: true })
+      const registration = await signUp(email.trim(), password, {
+        termsAccepted: true,
+        termsVersion: POLICY_VERSION,
+        privacyAccepted: true,
+        privacyVersion: POLICY_VERSION,
+        preferredLocale: i18n.resolvedLanguage,
+      })
+      navigate('/verify-email', { replace: true, state: registration })
     } catch (submissionError) {
-      setError(getAuthenticationErrorMessage(submissionError))
+      setError(getAuthenticationErrorMessage(submissionError, t))
     } finally {
       setSubmitting(false)
     }
@@ -80,7 +93,19 @@ function RegisterPage() {
           value={confirmPassword}
         />
 
-        <button className="button button--primary" disabled={submitting} type="submit">
+        <fieldset>
+          <legend>{t('auth.registration.consentLegend')}</legend>
+          <label>
+            <input checked={termsAccepted} onChange={(event) => setTermsAccepted(event.target.checked)} required type="checkbox" />
+            <span>{t('auth.registration.termsPrefix')} <a href="https://www.holalocal.es/terms" rel="noreferrer" target="_blank">{t('auth.registration.terms')}</a></span>
+          </label>
+          <label>
+            <input checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} required type="checkbox" />
+            <span>{t('auth.registration.privacyPrefix')} <a href="https://www.holalocal.es/privacy" rel="noreferrer" target="_blank">{t('auth.registration.privacy')}</a></span>
+          </label>
+        </fieldset>
+
+        <button className="button button--primary" disabled={submitting || !termsAccepted || !privacyAccepted} type="submit">
           {submitting ? t('common.loading') : t('auth.register')}
         </button>
       </form>

@@ -1,3 +1,5 @@
+import { SUPPORTED_LANGUAGE_CODES, normalizeLanguage } from '@holalocal/firebase-contract'
+
 export const supportedUILanguages = [
   { code: 'en', name: 'English' },
   { code: 'es', name: 'Spanish' },
@@ -12,12 +14,33 @@ export const spokenLanguageOptions = [
   'Other',
 ]
 
+export const supportedAccountLanguageCodes = [...SUPPORTED_LANGUAGE_CODES]
+
+const englishLanguageNames = Object.freeze({
+  en: 'English', es: 'Spanish', fr: 'French', de: 'German', nl: 'Dutch',
+  pt: 'Portuguese', pl: 'Polish', ro: 'Romanian', cs: 'Czech', sk: 'Slovak',
+  hu: 'Hungarian', uk: 'Ukrainian', it: 'Italian', sv: 'Swedish', da: 'Danish',
+  fi: 'Finnish', no: 'Norwegian',
+})
+
+export function getLanguageDisplayName(code, locale = 'en') {
+  try {
+    if (typeof Intl.DisplayNames !== 'function') return englishLanguageNames[code] ?? code
+    return new Intl.DisplayNames([locale], { type: 'language' }).of(code) ?? englishLanguageNames[code] ?? code
+  } catch {
+    return englishLanguageNames[code] ?? code
+  }
+}
+
 export function getLanguageCodeFromName(languageName) {
-  return (
-    supportedUILanguages.find(
-      ({ name }) => name.toLowerCase() === languageName?.trim().toLowerCase(),
-    )?.code ?? null
-  )
+  const result = normalizeLanguage(languageName)
+  return result.value?.isCustom ? null : result.value?.id ?? null
+}
+
+export function getAuthenticatedUiLanguage(preferredLocale) {
+  const code = getLanguageCodeFromName(preferredLocale)
+  if (!code) return null
+  return supportedUILanguages.some((language) => language.code === code) ? code : 'en'
 }
 
 export function getLanguageNameFromCode(languageCode) {

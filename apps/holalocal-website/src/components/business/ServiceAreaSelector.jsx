@@ -23,9 +23,7 @@ function AreaCards({ onToggle, options, selectedValues }) {
 }
 
 function ServiceAreaSelector({
-  customArea,
-  customAreaError,
-  onCustomAreaChange,
+  error,
   onRadiusChange,
   onToggle,
   options,
@@ -49,8 +47,11 @@ function ServiceAreaSelector({
       .map(([group]) => group),
   ))
   const selectedOptions = selectedValues
-    .map((value) => options.find((option) => option.value === value))
-    .filter(Boolean)
+    .map((value) => options.find((option) => option.value === value) ?? {
+      label: value,
+      unresolved: true,
+      value,
+    })
   const searchResults = search.trim()
     ? options.filter((option) => serviceAreaMatchesSearch(option, search))
     : []
@@ -65,7 +66,14 @@ function ServiceAreaSelector({
   }
 
   return (
-    <section className="business-location-subsection business-location-subsection--coverage" aria-labelledby={`${id}-title`}>
+    <section
+      aria-describedby={error ? `${id}-error` : undefined}
+      aria-invalid={Boolean(error)}
+      aria-labelledby={`${id}-title`}
+      className="business-location-subsection business-location-subsection--coverage"
+      id="business-service-areas"
+      tabIndex={error ? -1 : undefined}
+    >
       <header className="business-location-subsection__heading">
         <div>
           <h3 id={`${id}-title`}>{t('business.form.location.coverageTitle')}</h3>
@@ -118,7 +126,9 @@ function ServiceAreaSelector({
                 onClick={() => onToggle(option.value)}
                 type="button"
               >
-                {option.label}<span aria-hidden="true">×</span>
+                {option.label}
+                {option.unresolved && <span className="service-area-selector__unresolved"> {t('business.form.location.unresolved')}</span>}
+                <span aria-hidden="true">×</span>
               </button>
             ))}
           </div>
@@ -159,22 +169,7 @@ function ServiceAreaSelector({
         </div>
       )}
 
-      {selectedValues.includes('other') && (
-        <div className="custom-option-field">
-          <label htmlFor="custom-service-area">{t('business.form.location.customArea')}</label>
-          <input
-            aria-describedby={customAreaError ? 'custom-service-area-error' : undefined}
-            aria-invalid={Boolean(customAreaError)}
-            id="custom-service-area"
-            maxLength={100}
-            onChange={(event) => onCustomAreaChange(event.target.value)}
-            required
-            type="text"
-            value={customArea}
-          />
-          <FormFieldError id="custom-service-area-error" message={customAreaError} />
-        </div>
-      )}
+      <FormFieldError id={`${id}-error`} message={error} />
     </section>
   )
 }

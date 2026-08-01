@@ -4,15 +4,16 @@ import { useTranslation } from 'react-i18next'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { getDisplayName, languageOptions } from '../../utils/profile.js'
+import { getLanguageDisplayName } from '../../utils/languages.js'
 
 function CompleteProfilePage() {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation()
   const { sessionError, updateUserProfile, userProfile } = useAuthentication()
   const navigate = useNavigate()
   const [firstName, setFirstName] = useState(userProfile?.firstName ?? '')
   const [lastName, setLastName] = useState(userProfile?.lastName ?? '')
-  const [preferredLanguage, setPreferredLanguage] = useState(
-    userProfile?.preferredLanguage ?? 'English',
+  const [preferredLocale, setPreferredLocale] = useState(
+    userProfile?.preferredLocale ?? 'en',
   )
   const [city, setCity] = useState(userProfile?.city ?? '')
   const [country, setCountry] = useState(userProfile?.country ?? 'Spain')
@@ -26,7 +27,7 @@ function CompleteProfilePage() {
     const normalizedFirstName = firstName.trim()
     const normalizedLastName = lastName.trim()
     const normalizedCity = city.trim()
-    const normalizedLanguage = preferredLanguage.trim()
+    const normalizedLanguage = preferredLocale.trim()
 
     if (!normalizedFirstName || !normalizedLastName || !normalizedCity || !normalizedLanguage) {
       setError('First name, last name, preferred language, and city are required.')
@@ -40,7 +41,7 @@ function CompleteProfilePage() {
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
         displayName: getDisplayName(normalizedFirstName, normalizedLastName),
-        preferredLanguage: normalizedLanguage,
+        preferredLocale: normalizedLanguage,
         city: normalizedCity,
         country: country.trim() || 'Spain',
         profileCompleted: true,
@@ -93,12 +94,12 @@ function CompleteProfilePage() {
         <label htmlFor="profile-language">{t('language.label')}</label>
         <select
           id="profile-language"
-          onChange={(event) => setPreferredLanguage(event.target.value)}
+          onChange={(event) => setPreferredLocale(event.target.value)}
           required
-          value={preferredLanguage}
+          value={preferredLocale}
         >
           {languageOptions.map((language) => (
-            <option key={language} value={language}>{language}</option>
+            <option key={language} value={language}>{getLanguageDisplayName(language, i18n.resolvedLanguage)}</option>
           ))}
         </select>
 

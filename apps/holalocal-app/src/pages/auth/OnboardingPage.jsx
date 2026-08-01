@@ -5,7 +5,6 @@ import logoIcon from '../../assets/images/logo-icon.png'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { brand } from '../../utils/brand.js'
-import { getRolesForAccountType } from '../../utils/profile.js'
 
 const onboardingOptions = [
   {
@@ -27,7 +26,7 @@ const onboardingOptions = [
 
 function OnboardingPage() {
   const { t } = useTranslation()
-  const { sessionError, updateUserProfile, userProfile } = useAuthentication()
+  const { configureAccountType, sessionError } = useAuthentication()
   const navigate = useNavigate()
   const [accountType, setAccountType] = useState('')
   const [error, setError] = useState('')
@@ -37,8 +36,7 @@ function OnboardingPage() {
     event.preventDefault()
     setError('')
 
-    const roles = getRolesForAccountType(accountType)
-    if (!roles) {
+    if (!['customer', 'business', 'both'].includes(accountType)) {
       setError('Choose how you plan to use HolaLocal.')
       return
     }
@@ -47,13 +45,7 @@ function OnboardingPage() {
     setSubmitting(true)
 
     try {
-      await updateUserProfile({
-        accountType,
-        roles,
-        onboardingCompleted: true,
-        businessProfileRequired: requiresBusinessProfile,
-        businessProfileCompleted: userProfile?.businessProfileCompleted === true,
-      })
+      await configureAccountType(accountType)
 
       navigate(requiresBusinessProfile ? '/business/dashboard' : '/profile', { replace: true })
     } catch (submissionError) {

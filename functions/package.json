@@ -1,0 +1,32 @@
+{
+  "name": "holalocal-functions",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": "20"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "prepare:firebase-contract": "node scripts/prepareFirebaseContractPackage.mjs",
+    "verify:deployment-package": "node scripts/verifyDeploymentPackage.mjs",
+    "bootstrap:first-admin": "node scripts/bootstrapFirstAdmin.mjs",
+    "lint": "eslint .",
+    "test": "node --test tests/*.test.mjs",
+    "test:emulator": "node scripts/runIsolatedEmulatorTests.mjs --project demo-holalocal-functions",
+    "test:callable-emulator": "node scripts/runIsolatedEmulatorTests.mjs --project demo-holalocal-functions",
+    "check:syntax": "node --check src/index.js && node --check src/accountRoleTransition.js && node --check src/adminBusinessReview.js && node --check src/businessModeration.js && node --check src/messageSending.js && node --check src/ownerBusinessCreation.js && node --check src/messageTranslation.js && node --check src/firestoreTranslationSource.js && node --check src/providers/disabledTranslator.js && node --check src/providers/googleCloudTranslator.js && node --check src/providers/mockTranslator.js && node --check src/providers/providerFactory.js && node --check scripts/runIsolatedEmulatorTests.mjs && node --check scripts/prepareFirebaseContractPackage.mjs && node --check scripts/verifyDeploymentPackage.mjs"
+  },
+  "dependencies": {
+    "@google-cloud/translate": "^9.4.2",
+    "@holalocal/firebase-contract": "file:vendor/holalocal-firebase-contract-1.0.0.tgz",
+    "firebase-admin": "^13.10.0",
+    "firebase-functions": "^6.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "eslint": "^10.0.0",
+    "firebase-tools": "^14.12.1",
+    "globals": "^17.0.0"
+  }
+}

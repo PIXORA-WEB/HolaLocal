@@ -2,6 +2,7 @@
 // UI components should consume these functions through AuthenticationContext.
 import {
   browserLocalPersistence,
+  connectAuthEmulator,
   createUserWithEmailAndPassword,
   deleteUser,
   getAuth,
@@ -14,6 +15,11 @@ import {
   signOut,
 } from 'firebase/auth'
 import { getFirebaseApp } from './config.js'
+import {
+  connectFirebaseEmulatorOnce,
+  FIREBASE_EMULATOR_ENDPOINTS,
+  shouldUseFirebaseEmulators,
+} from './emulatorMode.js'
 
 const loadUserService = () => import('../services/userService.js')
 
@@ -22,6 +28,12 @@ let firebaseAuth
 
 export function getFirebaseAuth() {
   firebaseAuth ??= getAuth(getFirebaseApp())
+  if (shouldUseFirebaseEmulators()) {
+    const { host, port } = FIREBASE_EMULATOR_ENDPOINTS.auth
+    connectFirebaseEmulatorOnce(firebaseAuth, () => {
+      connectAuthEmulator(firebaseAuth, `http://${host}:${port}`, { disableWarnings: true })
+    })
+  }
   return firebaseAuth
 }
 
@@ -114,6 +126,7 @@ export function getAuthenticationErrorMessage(error, translate) {
     'auth/too-many-requests': 'auth.errors.tooManyRequests',
     'auth/user-disabled': 'auth.errors.userDisabled',
     'auth/weak-password': 'auth.errors.weakPassword',
+    'business/ambiguous-ownership': 'business.compatibility.ownershipConflict',
   }
   const key = keys[error?.code] ?? 'auth.errors.generic'
   return translate ? translate(key) : key

@@ -9,15 +9,16 @@ import {
   getUserInitials,
   languageOptions,
 } from '../../utils/profile.js'
+import { getLanguageDisplayName } from '../../utils/languages.js'
 
 function ProfilePage() {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation()
   const { signOutUser, updateUserProfile, user, userProfile } = useAuthentication()
   const [editing, setEditing] = useState(false)
   const [firstName, setFirstName] = useState(userProfile?.firstName ?? '')
   const [lastName, setLastName] = useState(userProfile?.lastName ?? '')
-  const [preferredLanguage, setPreferredLanguage] = useState(
-    userProfile?.preferredLanguage ?? 'English',
+  const [preferredLocale, setPreferredLocale] = useState(
+    userProfile?.preferredLocale ?? 'en',
   )
   const [city, setCity] = useState(userProfile?.city ?? '')
   const [country, setCountry] = useState(userProfile?.country ?? 'Spain')
@@ -35,7 +36,7 @@ function ProfilePage() {
   function resetForm() {
     setFirstName(userProfile?.firstName ?? '')
     setLastName(userProfile?.lastName ?? '')
-    setPreferredLanguage(userProfile?.preferredLanguage ?? 'English')
+    setPreferredLocale(userProfile?.preferredLocale ?? 'en')
     setCity(userProfile?.city ?? '')
     setCountry(userProfile?.country ?? 'Spain')
   }
@@ -60,7 +61,7 @@ function ProfilePage() {
     const normalizedFirstName = firstName.trim()
     const normalizedLastName = lastName.trim()
     const normalizedCity = city.trim()
-    const normalizedLanguage = preferredLanguage.trim()
+    const normalizedLanguage = preferredLocale.trim()
 
     if (!normalizedFirstName || !normalizedLastName || !normalizedCity || !normalizedLanguage) {
       setError('First name, last name, preferred language, and city are required.')
@@ -74,7 +75,7 @@ function ProfilePage() {
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
         displayName: getDisplayName(normalizedFirstName, normalizedLastName),
-        preferredLanguage: normalizedLanguage,
+        preferredLocale: normalizedLanguage,
         city: normalizedCity,
         country: country.trim() || 'Spain',
       })
@@ -132,7 +133,7 @@ function ProfilePage() {
         </div>
         <div>
           <dt>Preferred language</dt>
-          <dd>{userProfile?.preferredLanguage || 'Not set'}</dd>
+          <dd>{getLanguageDisplayName(userProfile?.preferredLocale || 'en', i18n.resolvedLanguage)}</dd>
         </div>
         <div>
           <dt>City</dt>
@@ -214,12 +215,12 @@ function ProfilePage() {
           <label htmlFor="edit-language">Preferred language</label>
           <select
             id="edit-language"
-            onChange={(event) => setPreferredLanguage(event.target.value)}
+            onChange={(event) => setPreferredLocale(event.target.value)}
             required
-            value={preferredLanguage}
+            value={preferredLocale}
           >
             {languageOptions.map((language) => (
-              <option key={language} value={language}>{language}</option>
+              <option key={language} value={language}>{getLanguageDisplayName(language, i18n.resolvedLanguage)}</option>
             ))}
           </select>
 

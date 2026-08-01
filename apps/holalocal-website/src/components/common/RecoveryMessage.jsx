@@ -1,14 +1,27 @@
 import { useTranslation } from 'react-i18next'
 
-function RecoveryMessage({ message, onRetry }) {
+function RecoveryMessage({
+  actionLabel,
+  actionPending = false,
+  message,
+  onAction,
+  onRetry,
+}) {
   const { t } = useTranslation()
+  const action = onAction ?? onRetry
 
   return (
     <div className="form-message form-message--error recovery-message" role="alert">
       <p>{message || t('common.requestFailed')}</p>
-      {onRetry && (
-        <button className="button button--secondary" onClick={onRetry} type="button">
-          {t('common.retry')}
+      {action && (
+        <button
+          aria-busy={actionPending || undefined}
+          className="button button--secondary"
+          disabled={actionPending}
+          onClick={action}
+          type="button"
+        >
+          {actionLabel || t('common.retry')}
         </button>
       )}
     </div>

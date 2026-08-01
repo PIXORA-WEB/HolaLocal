@@ -10,11 +10,14 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test:account-compatibility": "node --test tests/accountCompatibility.test.mjs",
+    "test:business-compatibility": "node --test tests/businessCompatibility.test.mjs",
     "preview": "vite preview",
     "cap": "cap"
   },
   "dependencies": {
     "@capacitor/core": "^7.6.7",
+    "@holalocal/firebase-contract": "file:../../shared/firebase-contract",
     "firebase": "^12.15.0",
     "i18next": "^26.3.3",
     "react": "^19.2.7",

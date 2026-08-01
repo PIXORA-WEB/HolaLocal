@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { formatLanguageList } from '../../utils/languages.js'
+import { getBusinessCategoryLabel } from '../../utils/business.js'
 
 function getInitials(name) {
   const initials = String(name ?? '')
@@ -77,10 +78,17 @@ function PublicBusinessCard({
   to,
   variant = 'result',
 }) {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation()
   const isHero = variant === 'hero'
   const isVerified = business.verificationStatus === 'verified'
   const hasRating = business.ratingAverage > 0 && business.ratingCount > 0
+  const languages = Array.isArray(business.languages) ? business.languages : []
+  const categoryLabel = business.category
+    ? getBusinessCategoryLabel(business.category, t)
+    : t('services.notSpecified')
+  const languagesLabel = languages.length > 0
+    ? formatLanguageList(languages, i18n.resolvedLanguage ?? i18n.language)
+    : t('services.notSpecified')
   const variantClass = isHero
     ? ' public-business-card--hero'
     : ` public-business-card--result${selected ? ' is-selected' : ''}`
@@ -127,11 +135,10 @@ function PublicBusinessCard({
       <div className="public-business-card__heading">
         <div>
           <h3>{business.name}</h3>
-          <p>{business.category || t('services.notSpecified')}</p>
+          <p>{categoryLabel}</p>
         </div>
-        <span className={isHero && isVerified ? 'is-verified' : 'is-active'}>
-          {isHero && isVerified && <span aria-hidden="true">✓</span>}
-          {t(isHero && isVerified ? 'marketing.hero.verifiedProfile' : 'marketing.hero.activeProfile')}
+        <span className="is-active">
+          {t(business.isDemo ? 'marketing.hero.exampleProfile' : 'marketing.hero.activeProfile')}
         </span>
       </div>
 
@@ -165,7 +172,7 @@ function PublicBusinessCard({
                 <span aria-hidden="true">🌐</span>
                 <span className="visually-hidden">{t('marketing.hero.languagesLabel')}</span>
               </dt>
-              <dd>{business.languages.length > 0 ? formatLanguageList(business.languages) : t('services.notSpecified')}</dd>
+              <dd>{languagesLabel}</dd>
             </div>
           </dl>
         </div>
@@ -184,7 +191,7 @@ function PublicBusinessCard({
                 <span aria-hidden="true">🌐</span>
                 <span className="visually-hidden">{t('marketing.hero.languagesLabel')}</span>
               </dt>
-              <dd>{business.languages.length > 0 ? formatLanguageList(business.languages) : t('services.notSpecified')}</dd>
+              <dd>{languagesLabel}</dd>
             </div>
           </dl>
           <div className="public-business-card__result-footer">

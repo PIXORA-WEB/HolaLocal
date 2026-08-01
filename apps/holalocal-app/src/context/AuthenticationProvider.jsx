@@ -3,10 +3,13 @@ import {
   loginUser,
   logoutUser,
   observeAuthentication,
+  reloadAuthenticationUser,
   registerUser,
+  resendEmailVerification,
   sendPasswordReset,
 } from '../firebase/auth.js'
 import {
+  configureAccountType as configureAccountTypeDocument,
   ensureUserProfile,
   getUserProfile,
   updateLastActive,
@@ -16,6 +19,7 @@ import AuthenticationContext from './AuthenticationContext.js'
 
 function AuthenticationProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [emailVerified, setEmailVerified] = useState(false)
   const [userProfile, setUserProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [profileLoading, setProfileLoading] = useState(true)
@@ -48,12 +52,13 @@ function AuthenticationProvider({ children }) {
         setLoading(true)
         setProfileLoading(true)
         setUser(user)
+        setEmailVerified(user?.emailVerified === true)
         setSessionError('')
 
         try {
           if (user) {
             const profile = await ensureUserProfile(user)
-            await updateLastActive(user.uid)
+            if (profile?.accountStatus === 'active') await updateLastActive(user.uid)
             if (active) setUserProfile(profile)
           } else {
             setUserProfile(null)
@@ -85,10 +90,23 @@ function AuthenticationProvider({ children }) {
     }
   }, [])
 
-  const signUp = useCallback((email, password) => registerUser(email, password), [])
+  const signUp = useCallback(async (email, password, consent) => {
+    const registration = await registerUser(email, password, consent)
+    const profile = await getUserProfile(registration.user.uid)
+    setUser(registration.user)
+    setEmailVerified(registration.user.emailVerified === true)
+    setUserProfile(profile)
+    return registration
+  }, [])
   const signIn = useCallback((email, password) => loginUser(email, password), [])
   const signOutUser = useCallback(() => logoutUser(), [])
   const resetPassword = useCallback((email) => sendPasswordReset(email), [])
+  const resendVerificationEmail = useCallback(() => resendEmailVerification(user), [user])
+  const refreshEmailVerification = useCallback(async () => {
+    const verified = await reloadAuthenticationUser(user)
+    if (verified) setEmailVerified(true)
+    return verified
+  }, [user])
 
   const updateUserProfile = useCallback(
     async (updates) => {
@@ -100,13 +118,23 @@ function AuthenticationProvider({ children }) {
     },
     [user],
   )
+  const configureAccountType = useCallback(async (accountType) => {
+    if (!user) throw new Error('You must be logged in to update your account type.')
+    const profile = await configureAccountTypeDocument(user.uid, accountType)
+    setUserProfile(profile)
+    return profile
+  }, [user])
 
   const value = useMemo(
     () => ({
       loading,
+      configureAccountType,
+      emailVerified,
       profileLoading,
       refreshUserProfile,
       resetPassword,
+      resendVerificationEmail,
+      refreshEmailVerification,
       sessionError,
       signIn,
       signOutUser,
@@ -117,9 +145,13 @@ function AuthenticationProvider({ children }) {
     }),
     [
       loading,
+      emailVerified,
+      configureAccountType,
       profileLoading,
       refreshUserProfile,
       resetPassword,
+      resendVerificationEmail,
+      refreshEmailVerification,
       sessionError,
       signIn,
       signOutUser,

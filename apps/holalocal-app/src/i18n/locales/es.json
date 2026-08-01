@@ -20,7 +20,10 @@
     "password": "Contraseña",
     "loggingIn": "Iniciando sesión…",
     "newUser": "¿Nuevo en HolaLocal?",
-    "createAccount": "Crear una cuenta"
+    "createAccount": "Crear una cuenta",
+    "registration": { "consentLegend": "Acuerdos legales", "consentRequired": "Acepta los Términos y la Política de privacidad para continuar.", "termsPrefix": "Acepto los", "terms": "Términos", "privacyPrefix": "Acepto la", "privacy": "Política de privacidad" },
+    "verification": { "eyebrow": "Revisa tu bandeja de entrada", "title": "Verifica tu correo", "description": "Hemos enviado un enlace de verificación a {{email}}.", "returnInstruction": "Después de usar el enlace, vuelve a esta aplicación y comprueba la verificación.", "check": "Ya he verificado mi correo", "resend": "Reenviar correo de verificación", "resent": "Se ha enviado un nuevo correo de verificación.", "notVerified": "Tu correo aún no está verificado." },
+    "errors": { "registration": "No hemos podido crear esta cuenta. Intenta iniciar sesión o restablecer la contraseña.", "invalidCredential": "El correo o la contraseña no son correctos.", "invalidEmail": "Introduce un correo válido.", "network": "No se pudo conectar. Inténtalo de nuevo.", "tooManyRequests": "Demasiados intentos. Espera y vuelve a intentarlo.", "disabled": "Esta cuenta no está disponible.", "weakPassword": "Elige una contraseña más segura.", "generic": "Algo ha fallado. Inténtalo de nuevo." }
   },
   "profile": {
     "title": "Perfil",
@@ -37,7 +40,19 @@
     "subscription": "Suscripción",
     "save": "Guardar perfil de negocio",
     "saving": "Guardando negocio…",
-    "primaryLanguage": "Idioma principal"
+    "primaryLanguage": "Idioma principal",
+    "loading": "Cargando tu perfil de negocio…",
+    "setupDeferred": { "title": "La configuración del negocio no está disponible temporalmente", "description": "Tu rol de negocio está guardado, pero estamos actualizando la creación móvil. No se han creado ni modificado datos del negocio." },
+    "editDeferred": { "title": "Estamos actualizando la edición móvil", "description": "Puedes ver tu negocio aquí, pero los cambios móviles no están disponibles temporalmente. Gestiona tu negocio en holalocal.es hasta completar la actualización." },
+    "account": "Cuenta de negocio", "profileStatus": "Estado del perfil", "setupRequired": "Configuración necesaria",
+    "complete": { "title": "Completa tu perfil de negocio", "description": "Añade la información esencial para que los clientes entiendan tus servicios.", "action": "Completar perfil" },
+    "readOnly": { "title": "Este negocio es de solo lectura en móvil", "description": "Este perfil heredado necesita trabajo de compatibilidad antes de poder editarse de forma segura. Gestiónalo en holalocal.es o contacta con soporte." },
+    "trust": { "unverifiedLegacy": "Sin verificación canónica", "noLegacyEntitlement": "Sin suscripción canónica" },
+    "editScope": "Aquí puedes editar los campos canónicos del perfil. Contactos y contenido multimedia son de solo lectura.",
+    "contactMediaReadOnly": "Gestiona contactos y contenido multimedia en holalocal.es hasta completar la privacidad móvil.",
+    "fields": { "name": "Nombre del negocio", "tagline": "Eslogan", "description": "Descripción", "category": "Categoría principal", "chooseCategory": "Elige una categoría", "categories": "Categorías de servicio", "serviceAreas": "Zonas de servicio", "radius": "Radio de servicio (km)", "locality": "Ciudad o localidad", "region": "Región", "countryCode": "Código de país", "languages": "Idiomas hablados" },
+    "categoryLabels": { "cleaning": "Limpieza", "plumbing": "Fontanería", "electrical": "Electricidad", "gardening": "Jardinería", "paintingDecorating": "Pintura y decoración", "buildingRenovation": "Construcción y reformas", "handyman": "Manitas", "airConditioning": "Aire acondicionado", "locksmith": "Cerrajería", "pestControl": "Control de plagas", "poolMaintenance": "Mantenimiento de piscinas", "petServices": "Servicios para mascotas" },
+    "errors": { "ambiguous": "Hemos encontrado más de un perfil de negocio para esta cuenta. No se ha modificado ningún dato. Contacta con soporte.", "invalidOwnership": "No hemos podido identificar de forma segura tu perfil de negocio.", "unsupportedLegacy": "Este negocio heredado es de solo lectura en móvil.", "invalidEdit": "Elige categorías, idiomas y zonas compatibles antes de guardar." }
   },
   "common": {
     "save": "Guardar",

@@ -1,19 +1,32 @@
 import {
   deleteObject,
+  connectStorageEmulator,
   getDownloadURL,
   getStorage,
   ref as storageReference,
   uploadBytes,
 } from 'firebase/storage'
+import { createApplicationError } from '../utils/frontendErrors.js'
 import { getFirebaseApp } from './config.js'
+import {
+  connectFirebaseEmulatorOnce,
+  FIREBASE_EMULATOR_ENDPOINTS,
+  shouldUseFirebaseEmulators,
+} from './emulatorMode.js'
 
 const storage = getStorage(getFirebaseApp())
+if (shouldUseFirebaseEmulators()) {
+  const { host, port } = FIREBASE_EMULATOR_ENDPOINTS.storage
+  connectFirebaseEmulatorOnce(storage, () => connectStorageEmulator(storage, host, port))
+}
 const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
 export function validateImageFile(file, maxSizeBytes = 5 * 1024 * 1024) {
-  if (!file || !allowedImageTypes.has(file.type)) throw new Error('Choose a JPG, PNG, or WebP image.')
+  if (!file || !allowedImageTypes.has(file.type)) {
+    throw createApplicationError('media-invalid-type')
+  }
   if (file.size > maxSizeBytes) {
-    throw new Error(`Image must be smaller than ${Math.round(maxSizeBytes / 1024 / 1024)} MB.`)
+    throw createApplicationError('media-too-large')
   }
 }
 

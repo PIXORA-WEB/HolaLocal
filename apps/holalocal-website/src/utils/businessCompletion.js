@@ -1,10 +1,10 @@
+import { validateBusinessLocation } from './locations.js'
+
 const completionDefinitions = [
   ['name', (business) => Boolean(business?.name?.trim())],
   ['description', (business) => Boolean(business?.description?.trim())],
   ['category', (business) => Boolean(business?.primaryCategoryId)],
-  ['serviceArea', (business) => (
-    (business?.serviceAreas?.length ?? 0) > 0 || Boolean(business?.location?.locality?.trim())
-  )],
+  ['serviceArea', (_business, _options, locationValidation) => locationValidation.valid],
   ['language', (business) => (business?.languages?.length ?? 0) > 0],
   ['logo', (business) => Boolean(business?.profilePhoto?.downloadUrl)],
   ['images', (business) => (
@@ -13,8 +13,12 @@ const completionDefinitions = [
   ['contact', (business) => Boolean(business?.contact?.preferredContactMethod)],
 ]
 
-export function getBusinessProfileCompletion(business) {
-  const items = completionDefinitions.map(([key, check]) => ({ key, complete: check(business) }))
+export function getBusinessProfileCompletion(business, options = {}) {
+  const locationValidation = validateBusinessLocation(business, options)
+  const items = completionDefinitions.map(([key, check]) => ({
+    key,
+    complete: check(business, options, locationValidation),
+  }))
   const completedItems = items.filter(({ complete }) => complete)
   const remainingItems = items.filter(({ complete }) => !complete)
 
@@ -24,6 +28,8 @@ export function getBusinessProfileCompletion(business) {
     remainingItems,
     nextRecommendation: remainingItems[0]?.key ?? null,
     percentage: Math.round((completedItems.length / items.length) * 100),
-    ready: remainingItems.length <= 1,
+    ready: remainingItems.length <= 1
+      && items.find(({ key }) => key === 'serviceArea')?.complete === true,
+    locationValidation,
   }
 }

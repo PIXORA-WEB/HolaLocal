@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
-import { ensureBusinessProfile } from '../../services/businessService.js'
+import { getBusinessByOwnerId } from '../../services/businessService.js'
+import { BUSINESS_CATEGORY_KEYS } from '../../services/businessPayloads.js'
 
 function BusinessDashboardPage() {
   const { t } = useTranslation()
@@ -18,10 +19,10 @@ function BusinessDashboardPage() {
 
     async function loadBusinessProfile() {
       try {
-        const profile = await ensureBusinessProfile(user.uid, userProfile)
+        const profile = await getBusinessByOwnerId(user.uid, userProfile.businessId)
         if (active) setBusinessProfile(profile)
       } catch (loadError) {
-        if (active) setError(getAuthenticationErrorMessage(loadError))
+        if (active) setError(getAuthenticationErrorMessage(loadError, t))
       } finally {
         if (active) setLoading(false)
       }
@@ -32,30 +33,36 @@ function BusinessDashboardPage() {
     return () => {
       active = false
     }
-  }, [user.uid, userProfile])
+  }, [t, user.uid, userProfile.businessId])
 
-  if (loading) return <LoadingScreen message="Loading your business profile…" />
+  if (loading) return <LoadingScreen message={t('business.loading')} />
 
   if (error) {
     return <p className="form-message form-message--error" role="alert">{error}</p>
   }
 
-  if (!businessProfile?.profileCompleted) {
+  if (!businessProfile) {
     return (
       <section className="business-dashboard">
-        <p className="placeholder-page__eyebrow">Business account</p>
-        <h1>Complete your business profile</h1>
-        <p>Add the essential information customers will eventually use to understand your services.</p>
+        <h1>{t('business.setupDeferred.title')}</h1>
+        <p>{t('business.setupDeferred.description')}</p>
+      </section>
+    )
+  }
+
+  if (!businessProfile.profileCompleted) {
+    return (
+      <section className="business-dashboard">
+        <p className="placeholder-page__eyebrow">{t('business.account')}</p>
+        <h1>{businessProfile.editSupport.supported ? t('business.complete.title') : t('business.readOnly.title')}</h1>
+        <p>{businessProfile.editSupport.supported ? t('business.complete.description') : t('business.readOnly.description')}</p>
 
         <div className="business-status-card">
-          <span>Profile status</span>
-          <strong>Setup required</strong>
-          <p>Your business profile is saved as a draft until the required details are completed.</p>
+          <span>{t('business.profileStatus')}</span>
+          <strong>{t('business.setupRequired')}</strong>
         </div>
 
-        <Link className="button button--primary" to="/business/edit">
-          Complete business profile
-        </Link>
+        {businessProfile.editSupport.supported && <Link className="button button--primary" to="/business/edit">{t('business.complete.action')}</Link>}
       </section>
     )
   }
@@ -63,16 +70,18 @@ function BusinessDashboardPage() {
   return (
     <section className="business-dashboard">
       <p className="placeholder-page__eyebrow">{t('business.dashboard')}</p>
-      <h1>{businessProfile.businessName}</h1>
+      <h1>{businessProfile.name}</h1>
 
       <dl className="profile-details business-details">
         <div>
           <dt>Category</dt>
-          <dd>{businessProfile.mainCategory}</dd>
+          <dd>{BUSINESS_CATEGORY_KEYS[businessProfile.primaryCategoryId]
+            ? t(`business.categoryLabels.${BUSINESS_CATEGORY_KEYS[businessProfile.primaryCategoryId]}`)
+            : businessProfile.primaryCategoryId}</dd>
         </div>
         <div>
           <dt>City</dt>
-          <dd>{businessProfile.city}</dd>
+          <dd>{businessProfile.location?.locality}</dd>
         </div>
         <div>
           <dt>Profile status</dt>
@@ -80,17 +89,17 @@ function BusinessDashboardPage() {
         </div>
         <div>
           <dt>Verification</dt>
-          <dd>{businessProfile.isVerified ? 'Verified' : 'Not verified'}</dd>
+          <dd>{businessProfile.verificationStatus ?? t('business.trust.unverifiedLegacy')}</dd>
         </div>
         <div>
           <dt>Subscription</dt>
-          <dd>{businessProfile.subscriptionTier}</dd>
+          <dd>{businessProfile.subscription?.status ?? t('business.trust.noLegacyEntitlement')}</dd>
         </div>
       </dl>
 
-      <Link className="button button--secondary" to="/business/edit">
-        {t('business.edit')}
-      </Link>
+      {businessProfile.editSupport.supported
+        ? <Link className="button button--secondary" to="/business/edit">{t('business.edit')}</Link>
+        : <p className="form-message" role="status">{t('business.readOnly.description')}</p>}
     </section>
   )
 }

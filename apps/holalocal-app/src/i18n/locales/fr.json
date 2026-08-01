@@ -20,7 +20,10 @@
     "password": "Mot de passe",
     "loggingIn": "Connexion…",
     "newUser": "Nouveau sur HolaLocal ?",
-    "createAccount": "Créer un compte"
+    "createAccount": "Créer un compte",
+    "registration": { "consentLegend": "Accords juridiques", "consentRequired": "Acceptez les Conditions et la Politique de confidentialité pour continuer.", "termsPrefix": "J’accepte les", "terms": "Conditions", "privacyPrefix": "J’accepte la", "privacy": "Politique de confidentialité" },
+    "verification": { "eyebrow": "Consultez votre boîte de réception", "title": "Vérifiez votre e-mail", "description": "Nous avons envoyé un lien de vérification à {{email}}.", "returnInstruction": "Après avoir utilisé le lien, revenez dans cette application et vérifiez votre statut.", "check": "J’ai vérifié mon e-mail", "resend": "Renvoyer l’e-mail", "resent": "Un nouvel e-mail de vérification a été envoyé.", "notVerified": "Votre e-mail n’est pas encore vérifié." },
+    "errors": { "registration": "Impossible de créer ce compte. Essayez de vous connecter ou de réinitialiser le mot de passe.", "invalidCredential": "L’e-mail ou le mot de passe est incorrect.", "invalidEmail": "Saisissez une adresse e-mail valide.", "network": "Connexion impossible. Réessayez.", "tooManyRequests": "Trop de tentatives. Patientez puis réessayez.", "disabled": "Ce compte est indisponible.", "weakPassword": "Choisissez un mot de passe plus fort.", "generic": "Une erreur est survenue. Réessayez." }
   },
   "profile": {
     "title": "Profil",
@@ -37,7 +40,19 @@
     "subscription": "Abonnement",
     "save": "Enregistrer le profil",
     "saving": "Enregistrement…",
-    "primaryLanguage": "Langue principale"
+    "primaryLanguage": "Langue principale",
+    "loading": "Chargement de votre profil professionnel…",
+    "setupDeferred": { "title": "La configuration professionnelle est temporairement indisponible", "description": "Votre rôle professionnel est enregistré, mais la création mobile est en cours de mise à jour. Aucune donnée professionnelle n’a été créée ou modifiée." },
+    "editDeferred": { "title": "La modification mobile est en cours de mise à jour", "description": "Vous pouvez consulter votre entreprise ici, mais les modifications mobiles sont temporairement indisponibles. Gérez-la sur holalocal.es en attendant." },
+    "account": "Compte professionnel", "profileStatus": "État du profil", "setupRequired": "Configuration requise",
+    "complete": { "title": "Complétez votre profil professionnel", "description": "Ajoutez les informations essentielles pour présenter vos services.", "action": "Compléter le profil" },
+    "readOnly": { "title": "Cette entreprise est en lecture seule sur mobile", "description": "Ce profil hérité doit être rendu compatible avant toute modification mobile. Gérez-le sur holalocal.es ou contactez l’assistance." },
+    "trust": { "unverifiedLegacy": "Aucune vérification canonique", "noLegacyEntitlement": "Aucun abonnement canonique" },
+    "editScope": "Modifiez ici les champs canoniques. Les contacts et médias restent en lecture seule.",
+    "contactMediaReadOnly": "Gérez les contacts et médias sur holalocal.es jusqu’à la prise en charge mobile.",
+    "fields": { "name": "Nom de l’entreprise", "tagline": "Slogan", "description": "Description", "category": "Catégorie principale", "chooseCategory": "Choisir une catégorie", "categories": "Catégories de service", "serviceAreas": "Zones de service", "radius": "Rayon de service (km)", "locality": "Ville ou localité", "region": "Région", "countryCode": "Code pays", "languages": "Langues parlées" },
+    "categoryLabels": { "cleaning": "Nettoyage", "plumbing": "Plomberie", "electrical": "Électricité", "gardening": "Jardinage", "paintingDecorating": "Peinture et décoration", "buildingRenovation": "Construction et rénovation", "handyman": "Homme à tout faire", "airConditioning": "Climatisation", "locksmith": "Serrurerie", "pestControl": "Lutte antiparasitaire", "poolMaintenance": "Entretien de piscine", "petServices": "Services pour animaux" },
+    "errors": { "ambiguous": "Plusieurs profils professionnels sont associés à ce compte. Aucune donnée n’a été modifiée. Contactez l’assistance.", "invalidOwnership": "Impossible d’identifier votre profil en toute sécurité.", "unsupportedLegacy": "Cette entreprise héritée est en lecture seule sur mobile.", "invalidEdit": "Choisissez des catégories, langues et zones prises en charge avant d’enregistrer." }
   },
   "common": {
     "save": "Enregistrer",

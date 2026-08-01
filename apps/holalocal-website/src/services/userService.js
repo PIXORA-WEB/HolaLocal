@@ -2,6 +2,10 @@
 // Authentication credentials remain the responsibility of Firebase Auth.
 import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
+import { updateAccountRoleCallable } from '../firebase/functionsClient.js'
+import { createApplicationError } from '../utils/frontendErrors.js'
+import { POLICY_VERSION } from '../utils/policies.js'
+import { toWebsiteUserProfile } from './firebaseCompatibility.js'
 
 async function uploadImageFile(...args) {
   const storage = await import('../firebase/storageClient.js')
@@ -24,8 +28,6 @@ const editableProfileFields = new Set([
   'city',
   'country',
   'profileCompleted',
-  'businessProfileCompleted',
-  'businessId',
   'termsAccepted',
   'termsAcceptedAt',
   'termsVersion',
@@ -34,12 +36,6 @@ const editableProfileFields = new Set([
   'privacyVersion',
   'deletionRequestedAt',
 ])
-
-const accountTypes = {
-  customer: ['customer'],
-  business: ['business'],
-  both: ['customer', 'business'],
-}
 
 const consentFields = new Set([
   'termsAccepted',
@@ -109,9 +105,14 @@ function buildNewProfile(uid, profileData = {}) {
   }
 }
 
-export async function getUserProfile(uid) {
+async function getRawUserProfile(uid) {
   const snapshot = await getDoc(userDocument(uid))
   return snapshot.exists() ? snapshot.data() : null
+}
+
+export async function getUserProfile(uid) {
+  const profile = await getRawUserProfile(uid)
+  return profile ? toWebsiteUserProfile(uid, profile) : null
 }
 
 export async function createUserProfile(uid, profileData = {}) {
@@ -153,49 +154,35 @@ export async function updateUserProfile(uid, updates) {
   return getUserProfile(uid)
 }
 
-export async function configureAccountType(uid, accountType) {
-  const roles = accountTypes[accountType]
-  if (!roles) throw new Error('Choose a valid account type.')
+export async function completeAbsentUserProfile(firebaseUser, updates) {
+  if (!firebaseUser?.uid) throw createApplicationError('auth-required')
 
-  const reference = userDocument(uid)
+  const reference = userDocument(firebaseUser.uid)
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(reference)
-    if (!snapshot.exists()) throw new Error('User profile not found.')
+    if (snapshot.exists()) return
 
-    transaction.update(reference, {
-      accountType,
-      roles,
-      onboardingCompleted: true,
-      businessProfileRequired: roles.includes('business'),
-      businessProfileCompleted: snapshot.data().businessProfileCompleted === true,
-      updatedAt: serverTimestamp(),
-    })
+    transaction.set(reference, buildNewProfile(firebaseUser.uid, {
+      email: firebaseUser.email ?? '',
+      displayName: firebaseUser.displayName ?? '',
+      photoURL: null,
+      termsAccepted: true,
+      termsVersion: POLICY_VERSION,
+      privacyAccepted: true,
+      privacyVersion: POLICY_VERSION,
+    }))
   })
 
+  return updateUserProfile(firebaseUser.uid, updates)
+}
+
+export async function configureAccountType(uid, accountType) {
+  await updateAccountRoleCallable({ accountType })
   return getUserProfile(uid)
 }
 
 export async function enableBusinessRole(uid) {
-  const reference = userDocument(uid)
-
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(reference)
-    if (!snapshot.exists()) throw new Error('User profile not found.')
-
-    const profile = snapshot.data()
-    const existingRoles = Array.isArray(profile.roles) ? profile.roles : ['customer']
-    const roles = [...new Set([...existingRoles, 'business'])]
-
-    transaction.update(reference, {
-      accountType: roles.includes('customer') ? 'both' : 'business',
-      roles,
-      onboardingCompleted: true,
-      businessProfileRequired: true,
-      businessProfileCompleted: profile.businessProfileCompleted === true,
-      updatedAt: serverTimestamp(),
-    })
-  })
-
+  await updateAccountRoleCallable({ accountType: 'both' })
   return getUserProfile(uid)
 }
 
@@ -220,16 +207,16 @@ export async function uploadUserProfilePhoto(uid, file) {
     }
 
     return updatedProfile
-  } catch (error) {
+  } catch {
     await deleteImageFile(uploadedPhoto.storagePath).catch(() => undefined)
-    throw error
+    throw createApplicationError('media-save-failed')
   }
 }
 
 export async function ensureUserProfile(firebaseUser) {
   if (!firebaseUser?.uid) throw new Error('An authenticated Firebase user is required.')
 
-  const existingProfile = await getUserProfile(firebaseUser.uid)
+  const existingProfile = await getRawUserProfile(firebaseUser.uid)
 
   if (!existingProfile) {
     return createUserProfile(firebaseUser.uid, {
@@ -266,11 +253,12 @@ export async function ensureUserProfile(firebaseUser) {
     return getUserProfile(firebaseUser.uid)
   }
 
-  return existingProfile
+  return toWebsiteUserProfile(firebaseUser.uid, existingProfile)
 }
 
 export async function updateLastActive(uid) {
   await updateDoc(userDocument(uid), {
     lastActiveAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   })
 }

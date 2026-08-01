@@ -20,7 +20,10 @@
     "password": "Wachtwoord",
     "loggingIn": "Inloggen…",
     "newUser": "Nieuw bij HolaLocal?",
-    "createAccount": "Account maken"
+    "createAccount": "Account maken",
+    "registration": { "consentLegend": "Juridische overeenkomsten", "consentRequired": "Accepteer de Voorwaarden en het Privacybeleid om door te gaan.", "termsPrefix": "Ik ga akkoord met de", "terms": "Voorwaarden", "privacyPrefix": "Ik ga akkoord met het", "privacy": "Privacybeleid" },
+    "verification": { "eyebrow": "Controleer je inbox", "title": "Verifieer je e-mail", "description": "We hebben een verificatielink gestuurd naar {{email}}.", "returnInstruction": "Ga na het gebruiken van de link terug naar deze app en controleer je status.", "check": "Ik heb mijn e-mail geverifieerd", "resend": "Verificatie-e-mail opnieuw sturen", "resent": "Er is een nieuwe verificatie-e-mail verstuurd.", "notVerified": "Je e-mail is nog niet geverifieerd." },
+    "errors": { "registration": "We konden dit account niet maken. Probeer in te loggen of je wachtwoord opnieuw in te stellen.", "invalidCredential": "E-mail of wachtwoord is onjuist.", "invalidEmail": "Voer een geldig e-mailadres in.", "network": "Verbinding mislukt. Probeer opnieuw.", "tooManyRequests": "Te veel pogingen. Wacht en probeer opnieuw.", "disabled": "Dit account is niet beschikbaar.", "weakPassword": "Kies een sterker wachtwoord.", "generic": "Er ging iets mis. Probeer opnieuw." }
   },
   "profile": {
     "title": "Profiel",
@@ -37,7 +40,19 @@
     "subscription": "Abonnement",
     "save": "Bedrijfsprofiel opslaan",
     "saving": "Bedrijf opslaan…",
-    "primaryLanguage": "Primaire taal"
+    "primaryLanguage": "Primaire taal",
+    "loading": "Je bedrijfsprofiel laden…",
+    "setupDeferred": { "title": "Bedrijfsinstellingen zijn tijdelijk niet beschikbaar", "description": "Je bedrijfsrol is opgeslagen, maar mobiele bedrijfscreatie wordt bijgewerkt. Er zijn geen bedrijfsgegevens gemaakt of gewijzigd." },
+    "editDeferred": { "title": "Mobiel bewerken wordt bijgewerkt", "description": "Je kunt je bedrijf hier bekijken, maar mobiele wijzigingen zijn tijdelijk niet beschikbaar. Beheer je bedrijf intussen via holalocal.es." },
+    "account": "Bedrijfsaccount", "profileStatus": "Profielstatus", "setupRequired": "Instellen vereist",
+    "complete": { "title": "Voltooi je bedrijfsprofiel", "description": "Voeg de belangrijkste informatie over je diensten toe.", "action": "Profiel voltooien" },
+    "readOnly": { "title": "Dit bedrijf is alleen-lezen op mobiel", "description": "Dit oude profiel heeft compatibiliteitswerk nodig. Beheer het via holalocal.es of neem contact op met Support." },
+    "trust": { "unverifiedLegacy": "Geen canonieke verificatie", "noLegacyEntitlement": "Geen canoniek abonnement" },
+    "editScope": "Bewerk hier canonieke profielvelden. Contacten en media blijven alleen-lezen.",
+    "contactMediaReadOnly": "Beheer contacten en media via holalocal.es totdat mobiele privacyondersteuning gereed is.",
+    "fields": { "name": "Bedrijfsnaam", "tagline": "Slogan", "description": "Beschrijving", "category": "Hoofdcategorie", "chooseCategory": "Kies een categorie", "categories": "Dienstcategorieën", "serviceAreas": "Werkgebieden", "radius": "Werkstraal (km)", "locality": "Plaats", "region": "Regio", "countryCode": "Landcode", "languages": "Gesproken talen" },
+    "categoryLabels": { "cleaning": "Schoonmaak", "plumbing": "Loodgieterswerk", "electrical": "Elektriciteit", "gardening": "Tuinonderhoud", "paintingDecorating": "Schilderen en decoreren", "buildingRenovation": "Bouw en renovatie", "handyman": "Klusjesman", "airConditioning": "Airconditioning", "locksmith": "Slotenmaker", "pestControl": "Ongediertebestrijding", "poolMaintenance": "Zwembadonderhoud", "petServices": "Dierendiensten" },
+    "errors": { "ambiguous": "Er zijn meerdere bedrijfsprofielen voor dit account gevonden. Er zijn geen gegevens gewijzigd. Neem contact op met Support.", "invalidOwnership": "We konden je bedrijfsprofiel niet veilig identificeren.", "unsupportedLegacy": "Dit oude bedrijf is alleen-lezen op mobiel.", "invalidEdit": "Kies ondersteunde categorieën, talen en gebieden voordat je opslaat." }
   },
   "common": {
     "save": "Opslaan",

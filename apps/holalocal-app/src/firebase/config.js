@@ -4,6 +4,7 @@ import { getApp, getApps, initializeApp } from 'firebase/app'
 import { getAnalytics, isSupported } from 'firebase/analytics'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getFunctions } from 'firebase/functions'
 import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
@@ -39,6 +40,7 @@ if (missingEnvironmentVariables.length > 0) {
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const db = getFirestore(app)
+const functions = getFunctions(app, 'europe-west1')
 const storage = getStorage(app)
 
 // Analytics is unavailable during server/build contexts and in some browsers.
@@ -57,4 +59,4 @@ if (typeof window !== 'undefined') {
     })
 }
 
-export { analytics, app, auth, db, storage }
+export { analytics, app, auth, db, functions, storage }

@@ -20,7 +20,10 @@
     "password": "Passwort",
     "loggingIn": "Anmeldung…",
     "newUser": "Neu bei HolaLocal?",
-    "createAccount": "Konto erstellen"
+    "createAccount": "Konto erstellen",
+    "registration": { "consentLegend": "Rechtliche Vereinbarungen", "consentRequired": "Akzeptieren Sie die Bedingungen und Datenschutzrichtlinie.", "termsPrefix": "Ich akzeptiere die", "terms": "Bedingungen", "privacyPrefix": "Ich akzeptiere die", "privacy": "Datenschutzrichtlinie" },
+    "verification": { "eyebrow": "Posteingang prüfen", "title": "E-Mail bestätigen", "description": "Wir haben einen Bestätigungslink an {{email}} gesendet.", "returnInstruction": "Kehren Sie nach dem Link zu dieser App zurück und prüfen Sie den Status.", "check": "Ich habe meine E-Mail bestätigt", "resend": "Bestätigungs-E-Mail erneut senden", "resent": "Eine neue Bestätigungs-E-Mail wurde gesendet.", "notVerified": "Ihre E-Mail ist noch nicht bestätigt." },
+    "errors": { "registration": "Dieses Konto konnte nicht erstellt werden. Melden Sie sich an oder setzen Sie das Passwort zurück.", "invalidCredential": "E-Mail oder Passwort ist falsch.", "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein.", "network": "Verbindung nicht möglich. Versuchen Sie es erneut.", "tooManyRequests": "Zu viele Versuche. Bitte warten Sie.", "disabled": "Dieses Konto ist nicht verfügbar.", "weakPassword": "Wählen Sie ein stärkeres Passwort.", "generic": "Etwas ist schiefgelaufen. Versuchen Sie es erneut." }
   },
   "profile": {
     "title": "Profil",
@@ -37,7 +40,19 @@
     "subscription": "Abonnement",
     "save": "Unternehmensprofil speichern",
     "saving": "Wird gespeichert…",
-    "primaryLanguage": "Hauptsprache"
+    "primaryLanguage": "Hauptsprache",
+    "loading": "Unternehmensprofil wird geladen…",
+    "setupDeferred": { "title": "Die Unternehmenseinrichtung ist vorübergehend nicht verfügbar", "description": "Ihre Unternehmensrolle ist gespeichert, aber die mobile Erstellung wird aktualisiert. Es wurden keine Unternehmensdaten erstellt oder geändert." },
+    "editDeferred": { "title": "Die mobile Bearbeitung wird aktualisiert", "description": "Sie können Ihr Unternehmen hier ansehen, aber mobile Änderungen sind vorübergehend nicht verfügbar. Verwalten Sie es bis dahin über holalocal.es." },
+    "account": "Unternehmenskonto", "profileStatus": "Profilstatus", "setupRequired": "Einrichtung erforderlich",
+    "complete": { "title": "Unternehmensprofil vervollständigen", "description": "Fügen Sie die wichtigsten Informationen zu Ihren Diensten hinzu.", "action": "Profil vervollständigen" },
+    "readOnly": { "title": "Dieses Unternehmen ist mobil schreibgeschützt", "description": "Dieses alte Profil benötigt Kompatibilitätsarbeit. Verwalten Sie es über holalocal.es oder kontaktieren Sie den Support." },
+    "trust": { "unverifiedLegacy": "Keine kanonische Verifizierung", "noLegacyEntitlement": "Kein kanonisches Abonnement" },
+    "editScope": "Bearbeiten Sie hier kanonische Profilfelder. Kontakte und Medien bleiben schreibgeschützt.",
+    "contactMediaReadOnly": "Kontakte und Medien bleiben bis zur mobilen Datenschutzunterstützung über holalocal.es verwaltbar.",
+    "fields": { "name": "Unternehmensname", "tagline": "Slogan", "description": "Beschreibung", "category": "Hauptkategorie", "chooseCategory": "Kategorie auswählen", "categories": "Dienstkategorien", "serviceAreas": "Servicegebiete", "radius": "Serviceradius (km)", "locality": "Stadt oder Ort", "region": "Region", "countryCode": "Ländercode", "languages": "Gesprochene Sprachen" },
+    "categoryLabels": { "cleaning": "Reinigung", "plumbing": "Sanitär", "electrical": "Elektrik", "gardening": "Gartenpflege", "paintingDecorating": "Maler- und Dekorationsarbeiten", "buildingRenovation": "Bau und Renovierung", "handyman": "Handwerker", "airConditioning": "Klimaanlage", "locksmith": "Schlüsseldienst", "pestControl": "Schädlingsbekämpfung", "poolMaintenance": "Poolpflege", "petServices": "Haustierservice" },
+    "errors": { "ambiguous": "Für dieses Konto wurden mehrere Unternehmensprofile gefunden. Es wurden keine Daten geändert. Kontaktieren Sie den Support.", "invalidOwnership": "Das Unternehmensprofil konnte nicht sicher identifiziert werden.", "unsupportedLegacy": "Dieses alte Unternehmen ist mobil schreibgeschützt.", "invalidEdit": "Wählen Sie unterstützte Kategorien, Sprachen und Gebiete aus." }
   },
   "common": {
     "save": "Speichern",

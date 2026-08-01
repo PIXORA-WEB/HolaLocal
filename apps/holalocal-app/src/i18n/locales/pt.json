@@ -20,7 +20,10 @@
     "password": "Palavra-passe",
     "loggingIn": "A iniciar sessão…",
     "newUser": "Novo no HolaLocal?",
-    "createAccount": "Criar uma conta"
+    "createAccount": "Criar uma conta",
+    "registration": { "consentLegend": "Acordos legais", "consentRequired": "Aceite os Termos e a Política de Privacidade para continuar.", "termsPrefix": "Concordo com os", "terms": "Termos", "privacyPrefix": "Concordo com a", "privacy": "Política de Privacidade" },
+    "verification": { "eyebrow": "Verifique a sua caixa de entrada", "title": "Verifique o seu e-mail", "description": "Enviámos uma ligação de verificação para {{email}}.", "returnInstruction": "Depois de usar a ligação, volte a esta aplicação e verifique o estado.", "check": "Já verifiquei o meu e-mail", "resend": "Reenviar e-mail de verificação", "resent": "Foi enviado um novo e-mail de verificação.", "notVerified": "O seu e-mail ainda não foi verificado." },
+    "errors": { "registration": "Não foi possível criar esta conta. Tente iniciar sessão ou repor a palavra-passe.", "invalidCredential": "O e-mail ou a palavra-passe está incorreto.", "invalidEmail": "Introduza um e-mail válido.", "network": "Não foi possível ligar. Tente novamente.", "tooManyRequests": "Demasiadas tentativas. Aguarde e tente novamente.", "disabled": "Esta conta não está disponível.", "weakPassword": "Escolha uma palavra-passe mais forte.", "generic": "Algo correu mal. Tente novamente." }
   },
   "profile": {
     "title": "Perfil",
@@ -37,7 +40,19 @@
     "subscription": "Subscrição",
     "save": "Guardar perfil do negócio",
     "saving": "A guardar negócio…",
-    "primaryLanguage": "Idioma principal"
+    "primaryLanguage": "Idioma principal",
+    "loading": "A carregar o perfil do negócio…",
+    "setupDeferred": { "title": "A configuração do negócio está temporariamente indisponível", "description": "O seu papel empresarial está guardado, mas a criação móvel está a ser atualizada. Nenhum dado empresarial foi criado ou alterado." },
+    "editDeferred": { "title": "A edição móvel está a ser atualizada", "description": "Pode ver o negócio aqui, mas as alterações móveis estão temporariamente indisponíveis. Faça a gestão através de holalocal.es até à conclusão." },
+    "account": "Conta empresarial", "profileStatus": "Estado do perfil", "setupRequired": "Configuração necessária",
+    "complete": { "title": "Complete o perfil do negócio", "description": "Adicione as informações essenciais sobre os seus serviços.", "action": "Completar perfil" },
+    "readOnly": { "title": "Este negócio é só de leitura no telemóvel", "description": "Este perfil antigo precisa de compatibilidade antes da edição móvel. Faça a gestão em holalocal.es ou contacte o suporte." },
+    "trust": { "unverifiedLegacy": "Sem verificação canónica", "noLegacyEntitlement": "Sem subscrição canónica" },
+    "editScope": "Edite aqui os campos canónicos. Contactos e multimédia continuam só de leitura.",
+    "contactMediaReadOnly": "Faça a gestão de contactos e multimédia em holalocal.es até concluir o suporte móvel.",
+    "fields": { "name": "Nome do negócio", "tagline": "Slogan", "description": "Descrição", "category": "Categoria principal", "chooseCategory": "Escolha uma categoria", "categories": "Categorias de serviço", "serviceAreas": "Áreas de serviço", "radius": "Raio de serviço (km)", "locality": "Cidade ou localidade", "region": "Região", "countryCode": "Código do país", "languages": "Idiomas falados" },
+    "categoryLabels": { "cleaning": "Limpeza", "plumbing": "Canalização", "electrical": "Eletricidade", "gardening": "Jardinagem", "paintingDecorating": "Pintura e decoração", "buildingRenovation": "Construção e renovação", "handyman": "Serviços de manutenção", "airConditioning": "Ar condicionado", "locksmith": "Serralharia", "pestControl": "Controlo de pragas", "poolMaintenance": "Manutenção de piscinas", "petServices": "Serviços para animais" },
+    "errors": { "ambiguous": "Encontrámos mais de um perfil de negócio para esta conta. Nenhum dado foi alterado. Contacte o suporte.", "invalidOwnership": "Não foi possível identificar o perfil com segurança.", "unsupportedLegacy": "Este negócio antigo é só de leitura no telemóvel.", "invalidEdit": "Escolha categorias, idiomas e áreas suportadas antes de guardar." }
   },
   "common": {
     "save": "Guardar",
