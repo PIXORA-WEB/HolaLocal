@@ -1,13 +1,17 @@
 import { createHash } from 'node:crypto'
-import { Timestamp } from 'firebase-admin/firestore'
+import { FieldPath, Timestamp } from 'firebase-admin/firestore'
 import { HttpsError } from 'firebase-functions/v2/https'
 import {
   BUSINESS_CONTACT_ACTIONS,
+  BUSINESS_INSIGHTS_DAYS,
+  BUSINESS_INSIGHTS_MAX_RANGE_DAYS,
   BUSINESS_INSIGHTS_SCHEMA_VERSION,
   BUSINESS_INSIGHT_TOKEN_PATTERN,
   isBusinessContactAction,
   isBusinessInsightEvent,
   isPublicBusinessEligible,
+  inclusiveUtcDateKeys,
+  parseBusinessInsightDate,
   recentUtcDateKeys,
   utcDateKey,
 } from '@holalocal/firebase-contract'
@@ -152,9 +156,41 @@ function publicCounts(data = {}) {
   }
 }
 
+function publicBreakdown(data = {}) {
+  return Object.fromEntries(BUSINESS_CONTACT_ACTIONS.map((action) => [action, number(data.contactActionBreakdown?.[action])]))
+}
+
+function countsWithBreakdown(data = {}) {
+  return { ...publicCounts(data), contactActionBreakdown: publicBreakdown(data) }
+}
+
+function selectedDateRange(data, currentDate) {
+  const hasStart = data.startDate !== undefined
+  const hasEnd = data.endDate !== undefined
+  if (hasStart !== hasEnd) invalid('insight-date-range-required')
+  const endDate = hasEnd ? data.endDate : utcDateKey(currentDate)
+  const startDate = hasStart
+    ? data.startDate
+    : recentUtcDateKeys(currentDate, BUSINESS_INSIGHTS_DAYS)[0]
+  const start = parseBusinessInsightDate(startDate)
+  const end = parseBusinessInsightDate(endDate)
+  if (!start || !end) invalid('invalid-insight-date')
+  if (start > end) invalid('insight-start-after-end')
+  const today = parseBusinessInsightDate(utcDateKey(currentDate))
+  if (end > today) invalid('insight-future-end-date')
+  const dateKeys = inclusiveUtcDateKeys(startDate, endDate)
+  if (dateKeys.length === 0 || dateKeys.length > BUSINESS_INSIGHTS_MAX_RANGE_DAYS) invalid('insight-date-range-too-long')
+  const preset = endDate === utcDateKey(currentDate) && [7, 30, 90].includes(dateKeys.length)
+    ? `last_${dateKeys.length}_days`
+    : 'custom'
+  return { startDate, endDate, dateKeys, preset }
+}
+
 export async function getOwnerBusinessInsights({ uid, data, db, now = () => Timestamp.now() }) {
-  requireStrictObject(data, new Set(['businessId']))
+  requireStrictObject(data, new Set(['businessId', 'startDate', 'endDate']))
   const businessId = requireId(data.businessId)
+  const currentTimestamp = now()
+  const requestedRange = selectedDateRange(data, currentTimestamp.toDate())
   const [userSnapshot, businessSnapshot, aggregateSnapshot] = await Promise.all([
     db.doc(`users/${uid}`).get(),
     db.doc(`businesses/${businessId}`).get(),
@@ -168,23 +204,35 @@ export async function getOwnerBusinessInsights({ uid, data, db, now = () => Time
   if (!businessSnapshot.exists || business?.ownerId !== uid || user.businessId !== businessId) {
     throw new HttpsError('permission-denied', 'business-owner-required')
   }
-  const dateKeys = recentUtcDateKeys(now().toDate())
-  const daySnapshots = await Promise.all(dateKeys.map((key) => db.doc(`businessInsights/${businessId}/days/${key}`).get()))
-  const days = dateKeys.map((date, index) => ({ date, ...publicCounts(daySnapshots[index].data()) }))
+  const daySnapshot = await db.collection(`businessInsights/${businessId}/days`)
+    .where(FieldPath.documentId(), '>=', requestedRange.startDate)
+    .where(FieldPath.documentId(), '<=', requestedRange.endDate)
+    .get()
+  const storedDays = new Map(daySnapshot.docs.map((snapshot) => [snapshot.id, snapshot.data()]))
+  const days = requestedRange.dateKeys.map((date) => ({ date, ...countsWithBreakdown(storedDays.get(date)) }))
   const aggregate = aggregateSnapshot.data() ?? {}
-  const breakdown = Object.fromEntries(BUSINESS_CONTACT_ACTIONS.map((action) => [action, number(aggregate.contactActionBreakdown?.[action])]))
+  const selectedRange = days.reduce((totals, day) => ({
+    profileViews: totals.profileViews + day.profileViews,
+    enquiries: totals.enquiries + day.enquiries,
+    contactActions: totals.contactActions + day.contactActions,
+    contactActionBreakdown: Object.fromEntries(BUSINESS_CONTACT_ACTIONS.map((action) => [
+      action,
+      totals.contactActionBreakdown[action] + day.contactActionBreakdown[action],
+    ])),
+  }), countsWithBreakdown())
   return {
     schemaVersion: BUSINESS_INSIGHTS_SCHEMA_VERSION,
     businessId,
     businessStatus: business.status,
     trackingStartedAt: aggregate.trackingStartedAt?.toDate?.().toISOString() ?? null,
-    allTime: publicCounts(aggregate),
-    last30Days: days.reduce((totals, day) => ({
-      profileViews: totals.profileViews + day.profileViews,
-      enquiries: totals.enquiries + day.enquiries,
-      contactActions: totals.contactActions + day.contactActions,
-    }), publicCounts()),
-    contactActionBreakdown: breakdown,
+    range: {
+      startDate: requestedRange.startDate,
+      endDate: requestedRange.endDate,
+      numberOfDays: requestedRange.dateKeys.length,
+      preset: requestedRange.preset,
+    },
+    selectedRange,
+    allTime: countsWithBreakdown(aggregate),
     days,
   }
 }

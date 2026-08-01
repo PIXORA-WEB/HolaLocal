@@ -154,17 +154,103 @@ test('conversation creation counts one enquiry and retry or messages do not coun
   assert.equal(db.data('businessInsights/biz').enquiries, 1)
 })
 
-test('owner reader authorizes exact active owner and returns empty 30-day boundaries', async () => {
-  const db = new FakeFirestore({
+function ownerDatabase(seed = {}) {
+  return new FakeFirestore({
     'users/owner': { accountStatus: 'active', businessId: 'biz' },
     'users/other': { accountStatus: 'active', businessId: 'other-biz' },
     'businesses/biz': eligibleBusiness(),
+    ...seed,
   })
+}
+
+test('omitted dates return the default inclusive 30-day range with zero-filled days', async () => {
+  const db = ownerDatabase()
   const result = await getOwnerBusinessInsights({ uid: 'owner', data: { businessId: 'biz' }, db, now })
   assert.equal(result.days.length, 30)
   assert.equal(result.days[0].date, '2026-07-03')
   assert.equal(result.days.at(-1).date, '2026-08-01')
+  assert.deepEqual(result.range, { startDate: '2026-07-03', endDate: '2026-08-01', numberOfDays: 30, preset: 'last_30_days' })
   assert.equal(result.trackingStartedAt, null)
-  assert.deepEqual(result.allTime, { profileViews: 0, enquiries: 0, contactActions: 0 })
-  await assert.rejects(getOwnerBusinessInsights({ uid: 'other', data: { businessId: 'biz' }, db, now }), (error) => code(error) === 'permission-denied')
+  assert.deepEqual(result.selectedRange, {
+    profileViews: 0, enquiries: 0, contactActions: 0,
+    contactActionBreakdown: { holalocal: 0, phone: 0, email: 0, whatsapp: 0, website: 0 },
+  })
+})
+
+test('valid 7-day, 30-day and 90-day ranges are recognized as presets', async () => {
+  const db = ownerDatabase()
+  for (const [days, startDate] of [[7, '2026-07-26'], [30, '2026-07-03'], [90, '2026-05-04']]) {
+    const result = await getOwnerBusinessInsights({ uid: 'owner', data: { businessId: 'biz', startDate, endDate: '2026-08-01' }, db, now })
+    assert.equal(result.range.numberOfDays, days)
+    assert.equal(result.range.preset, `last_${days}_days`)
+    assert.equal(result.days[0].date, startDate)
+    assert.equal(result.days.at(-1).date, '2026-08-01')
+  }
+})
+
+test('custom range is inclusive, zero-fills missing dates and aggregates stored daily data', async () => {
+  const db = ownerDatabase({
+    'businessInsights/biz': {
+      profileViews: 100, enquiries: 20, contactActions: 30,
+      contactActionBreakdown: { phone: 12, website: 18 },
+      trackingStartedAt: timestamp('2026-07-01T10:00:00Z'),
+    },
+    'businessInsights/biz/days/2026-07-10': {
+      profileViews: 2, enquiries: 1, contactActions: 3,
+      contactActionBreakdown: { phone: 1, website: 2 },
+    },
+    'businessInsights/biz/days/2026-07-12': {
+      profileViews: 4, enquiries: 2, contactActions: 1,
+      contactActionBreakdown: { phone: 1 },
+    },
+    'businessInsights/biz/days/2026-07-20': { profileViews: 999 },
+  })
+  const result = await getOwnerBusinessInsights({ uid: 'owner', data: { businessId: 'biz', startDate: '2026-07-10', endDate: '2026-07-12' }, db, now })
+  assert.deepEqual(result.range, { startDate: '2026-07-10', endDate: '2026-07-12', numberOfDays: 3, preset: 'custom' })
+  assert.deepEqual(result.days.map((day) => [day.date, day.profileViews]), [['2026-07-10', 2], ['2026-07-11', 0], ['2026-07-12', 4]])
+  assert.deepEqual(result.selectedRange, {
+    profileViews: 6, enquiries: 3, contactActions: 4,
+    contactActionBreakdown: { holalocal: 0, phone: 2, email: 0, whatsapp: 0, website: 2 },
+  })
+  assert.deepEqual(result.allTime, {
+    profileViews: 100, enquiries: 20, contactActions: 30,
+    contactActionBreakdown: { holalocal: 0, phone: 12, email: 0, whatsapp: 0, website: 18 },
+  })
+})
+
+test('date-range validation rejects incomplete, malformed, impossible, reversed, future, oversized and unexpected requests', async () => {
+  const db = ownerDatabase()
+  const invalidRequests = [
+    { startDate: '2026-07-01' },
+    { endDate: '2026-07-01' },
+    { startDate: '07-01-2026', endDate: '2026-07-01' },
+    { startDate: '2026-02-30', endDate: '2026-03-01' },
+    { startDate: '2026-07-02', endDate: '2026-07-01' },
+    { startDate: '2026-07-01', endDate: '2026-08-02' },
+    { startDate: '2025-07-31', endDate: '2026-08-01' },
+    { startDate: '2026-07-01', endDate: '2026-08-01', unexpected: true },
+  ]
+  for (const request of invalidRequests) {
+    await assert.rejects(getOwnerBusinessInsights({ uid: 'owner', data: { businessId: 'biz', ...request }, db, now }), (error) => code(error) === 'invalid-argument')
+  }
+})
+
+test('inclusive 366-day custom range is accepted', async () => {
+  const result = await getOwnerBusinessInsights({
+    uid: 'owner',
+    data: { businessId: 'biz', startDate: '2025-08-01', endDate: '2026-08-01' },
+    db: ownerDatabase(),
+    now,
+  })
+  assert.equal(result.range.numberOfDays, 366)
+  assert.equal(result.days.length, 366)
+})
+
+test('another owner remains denied for custom ranges', async () => {
+  await assert.rejects(getOwnerBusinessInsights({
+    uid: 'other',
+    data: { businessId: 'biz', startDate: '2026-07-26', endDate: '2026-08-01' },
+    db: ownerDatabase(),
+    now,
+  }), (error) => code(error) === 'permission-denied')
 })

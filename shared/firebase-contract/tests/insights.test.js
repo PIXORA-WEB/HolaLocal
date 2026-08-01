@@ -3,9 +3,11 @@ import assert from 'node:assert/strict'
 import {
   BUSINESS_CONTACT_ACTIONS,
   BUSINESS_INSIGHTS_DAYS,
+  inclusiveUtcDateKeys,
   isBusinessContactAction,
   isBusinessInsightEvent,
   recentUtcDateKeys,
+  parseBusinessInsightDate,
   utcDateKey,
 } from '../index.js'
 
@@ -15,6 +17,15 @@ test('insight event and contact action allowlists reject unsupported values', ()
   assert.deepEqual(BUSINESS_CONTACT_ACTIONS, ['holalocal', 'phone', 'email', 'whatsapp', 'website'])
   assert.equal(isBusinessContactAction('website'), true)
   assert.equal(isBusinessContactAction('revenue'), false)
+})
+
+test('business insight dates require exact real UTC calendar dates', () => {
+  assert.equal(parseBusinessInsightDate('2026-02-28')?.toISOString(), '2026-02-28T00:00:00.000Z')
+  for (const invalid of ['2026-2-28', '28-02-2026', '2026-02-30', '2025-02-29', '', null]) {
+    assert.equal(parseBusinessInsightDate(invalid), null)
+  }
+  assert.deepEqual(inclusiveUtcDateKeys('2026-07-30', '2026-08-01'), ['2026-07-30', '2026-07-31', '2026-08-01'])
+  assert.equal(inclusiveUtcDateKeys('2026-08-02', '2026-08-01').length, 0)
 })
 
 test('30-day UTC boundaries are inclusive and ordered', () => {
