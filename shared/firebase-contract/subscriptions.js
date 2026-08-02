@@ -75,31 +75,35 @@ function freezePlan({ id, revision = 1, features, limits }) {
   })
 }
 
+const PRO_LEVEL_FEATURES = Object.freeze({
+  publicListing: true,
+  privateMessaging: true,
+  businessInsights: true,
+  advancedInsights: true,
+  contactActionBreakdown: true,
+  messageTranslation: true,
+  enhancedProfile: true,
+  dataExport: true,
+  enhancedDirectoryVisibility: true,
+  priorityDirectoryVisibility: true,
+  prioritySupport: true,
+})
+
+const PRO_LEVEL_LIMITS = Object.freeze({
+  galleryImages: 8,
+  categoryIds: 30,
+  serviceAreas: 50,
+  languages: 20,
+  insightHistoryDays: 365,
+  translatedMessagesPerMonth: SUBSCRIPTION_LIMIT_UNLIMITED,
+  additionalManagers: 5,
+})
+
 export const PLAN_DEFINITIONS = Object.freeze({
   [PLAN_IDS.EARLY_ACCESS]: freezePlan({
     id: PLAN_IDS.EARLY_ACCESS,
-    features: {
-      publicListing: true,
-      privateMessaging: true,
-      businessInsights: true,
-      advancedInsights: false,
-      contactActionBreakdown: true,
-      messageTranslation: true,
-      enhancedProfile: true,
-      dataExport: false,
-      enhancedDirectoryVisibility: false,
-      priorityDirectoryVisibility: false,
-      prioritySupport: false,
-    },
-    limits: {
-      galleryImages: 8,
-      categoryIds: 30,
-      serviceAreas: 50,
-      languages: 20,
-      insightHistoryDays: SUBSCRIPTION_LIMIT_UNLIMITED,
-      translatedMessagesPerMonth: SUBSCRIPTION_LIMIT_UNLIMITED,
-      additionalManagers: 19,
-    },
+    features: PRO_LEVEL_FEATURES,
+    limits: PRO_LEVEL_LIMITS,
   }),
 
   [PLAN_IDS.STARTER]: freezePlan({
@@ -156,28 +160,8 @@ export const PLAN_DEFINITIONS = Object.freeze({
 
   [PLAN_IDS.PRO]: freezePlan({
     id: PLAN_IDS.PRO,
-    features: {
-      publicListing: true,
-      privateMessaging: true,
-      businessInsights: true,
-      advancedInsights: true,
-      contactActionBreakdown: true,
-      messageTranslation: true,
-      enhancedProfile: true,
-      dataExport: true,
-      enhancedDirectoryVisibility: true,
-      priorityDirectoryVisibility: true,
-      prioritySupport: true,
-    },
-    limits: {
-      galleryImages: 8,
-      categoryIds: 30,
-      serviceAreas: 50,
-      languages: 20,
-      insightHistoryDays: 365,
-      translatedMessagesPerMonth: SUBSCRIPTION_LIMIT_UNLIMITED,
-      additionalManagers: 5,
-    },
+    features: PRO_LEVEL_FEATURES,
+    limits: PRO_LEVEL_LIMITS,
   }),
 })
 

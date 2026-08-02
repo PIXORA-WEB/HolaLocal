@@ -26,6 +26,22 @@ test('subscription comparison renders the shared stable plan catalogue accessibl
     )
   }
   assert.doesNotMatch(source, /['"]additionalManagers['"]/)
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.EARLY_ACCESS].limits.insightHistoryDays, 365)
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.EARLY_ACCESS].limits.additionalManagers, 5)
+  assert.deepEqual(
+    PLAN_DEFINITIONS[PLAN_IDS.EARLY_ACCESS].features,
+    PLAN_DEFINITIONS[PLAN_IDS.PRO].features,
+  )
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.EARLY_ACCESS].features.advancedInsights, true)
+  assert.equal(
+    PLAN_DEFINITIONS[PLAN_IDS.EARLY_ACCESS].features.priorityDirectoryVisibility,
+    true,
+  )
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.EARLY_ACCESS].features.enhancedProfile, true)
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.EARLY_ACCESS].features.prioritySupport, true)
+  assert.match(source, /planCapabilityKeys\(definition\.features\)/)
+  assert.match(source, /key === 'translatedMessagesPerMonth'/)
+  assert.doesNotMatch(source, /planId === PLAN_IDS\.PRO/)
   assert.match(source, /isRecommended = planId === PLAN_IDS\.GROWTH/)
   assert.match(source, /aria-current=\{isCurrentPlan \? 'true' : undefined\}/)
   assert.match(
@@ -70,7 +86,15 @@ test('important English subscription comparison keys resolve without raw keys', 
 
   assert.equal(
     runtime.t('subscription.planDescriptions.early_access'),
-    'Full access to all features currently available during Early Access.',
+    'Full Pro-level access during the Early Access period.',
+  )
+  assert.equal(
+    runtime.t('subscription.earlyAccess.title'),
+    'Full Pro-level access during Early Access',
+  )
+  assert.equal(
+    runtime.t('subscription.earlyAccess.description'),
+    'Early Access businesses receive the same features and limits as Pro at no cost during the Early Access period.',
   )
   assert.equal(
     runtime.t('subscription.planDescriptions.starter'),

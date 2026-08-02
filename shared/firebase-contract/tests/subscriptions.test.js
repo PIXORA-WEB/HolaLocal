@@ -65,6 +65,65 @@ test('every approved plan defines the complete feature and limit contract', () =
   }
 })
 
+test('early access and pro are distinct plans with equal Pro-level entitlements', () => {
+  const earlyAccess = PLAN_DEFINITIONS[PLAN_IDS.EARLY_ACCESS]
+  const pro = PLAN_DEFINITIONS[PLAN_IDS.PRO]
+
+  assert.notEqual(earlyAccess.id, pro.id)
+  assert.notStrictEqual(earlyAccess, pro)
+  assert.notStrictEqual(earlyAccess.features, pro.features)
+  assert.notStrictEqual(earlyAccess.limits, pro.limits)
+  assert.deepEqual(earlyAccess.features, pro.features)
+  assert.deepEqual(earlyAccess.limits, pro.limits)
+  assert.equal(earlyAccess.limits.insightHistoryDays, 365)
+  assert.equal(
+    earlyAccess.limits.translatedMessagesPerMonth,
+    SUBSCRIPTION_LIMIT_UNLIMITED,
+  )
+  assert.equal(earlyAccess.limits.additionalManagers, 5)
+
+  const subscriptionFor = (planId) => ({
+    schemaVersion: 1,
+    planId,
+    planRevision: 1,
+    accessStatus: 'active',
+    assignmentSource: 'system',
+  })
+  const effectiveEarlyAccess = resolveBusinessEntitlements(
+    subscriptionFor(PLAN_IDS.EARLY_ACCESS),
+  )
+  const effectivePro = resolveBusinessEntitlements(subscriptionFor(PLAN_IDS.PRO))
+
+  assert.notEqual(effectiveEarlyAccess.effectivePlanId, effectivePro.effectivePlanId)
+  assert.deepEqual(effectiveEarlyAccess.features, effectivePro.features)
+  assert.deepEqual(effectiveEarlyAccess.limits, effectivePro.limits)
+})
+
+test('starter and growth retain their approved feature and limit definitions', () => {
+  assert.deepEqual(PLAN_DEFINITIONS[PLAN_IDS.STARTER].limits, {
+    galleryImages: 4,
+    categoryIds: 3,
+    serviceAreas: 5,
+    languages: 20,
+    insightHistoryDays: 30,
+    translatedMessagesPerMonth: 50,
+    additionalManagers: 1,
+  })
+  assert.deepEqual(PLAN_DEFINITIONS[PLAN_IDS.GROWTH].limits, {
+    galleryImages: 8,
+    categoryIds: 10,
+    serviceAreas: 20,
+    languages: 20,
+    insightHistoryDays: 90,
+    translatedMessagesPerMonth: 500,
+    additionalManagers: 3,
+  })
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.STARTER].features.advancedInsights, false)
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.STARTER].features.enhancedProfile, false)
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.GROWTH].features.advancedInsights, true)
+  assert.equal(PLAN_DEFINITIONS[PLAN_IDS.GROWTH].features.prioritySupport, false)
+})
+
 test('commercial plan limits remain within defensive document bounds', () => {
   for (const plan of Object.values(PLAN_DEFINITIONS)) {
     assert.equal(plan.limits.galleryImages <= DEFAULT_ARRAY_BOUNDS.galleryImages, true)
