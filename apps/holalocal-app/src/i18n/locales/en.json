@@ -48,6 +48,8 @@
     "complete": { "title": "Complete your business profile", "description": "Add the essential information customers need to understand your services.", "action": "Complete business profile" },
     "readOnly": { "title": "This business is read-only on mobile", "description": "This legacy profile needs compatibility work before mobile editing is safe. Manage it through holalocal.es or contact HolaLocal Support." },
     "trust": { "unverifiedLegacy": "No canonical verification", "noLegacyEntitlement": "No canonical subscription" },
+    "subscriptionPlans": { "early_access": "Early Access", "starter": "Starter", "growth": "Growth", "pro": "Pro" },
+    "subscriptionStatuses": { "scheduled": "Scheduled", "active": "Active", "ended": "Ended" },
     "editScope": "Canonical profile fields can be edited here. Contact and media remain read-only.",
     "contactMediaReadOnly": "Contact and media changes remain available through holalocal.es until mobile privacy handling is completed.",
     "fields": { "name": "Business name", "tagline": "Tagline", "description": "Description", "category": "Main category", "chooseCategory": "Choose a category", "categories": "Service categories", "serviceAreas": "Service areas", "radius": "Service radius (km)", "locality": "City or locality", "region": "Region", "countryCode": "Country code", "languages": "Languages spoken" },

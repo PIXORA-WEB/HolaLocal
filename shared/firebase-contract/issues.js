@@ -16,6 +16,14 @@ export const ISSUE_CODES = /* @__PURE__ */ Object.freeze({
   BUSINESS_CONTACT_REQUIRES_PRIVATE_MIGRATION: 'BUSINESS_CONTACT_REQUIRES_PRIVATE_MIGRATION',
   BUSINESS_PUBLIC_CONTACT_UNSAFE: 'BUSINESS_PUBLIC_CONTACT_UNSAFE',
   BUSINESS_LEGACY_MEDIA: 'BUSINESS_LEGACY_MEDIA',
+  SUBSCRIPTION_MISSING: 'SUBSCRIPTION_MISSING',
+  SUBSCRIPTION_INVALID_STRUCTURE: 'SUBSCRIPTION_INVALID_STRUCTURE',
+  SUBSCRIPTION_LEGACY_TIER: 'SUBSCRIPTION_LEGACY_TIER',
+  SUBSCRIPTION_UNSUPPORTED_SCHEMA_VERSION: 'SUBSCRIPTION_UNSUPPORTED_SCHEMA_VERSION',
+  SUBSCRIPTION_UNKNOWN_PLAN: 'SUBSCRIPTION_UNKNOWN_PLAN',
+  SUBSCRIPTION_UNKNOWN_PLAN_REVISION: 'SUBSCRIPTION_UNKNOWN_PLAN_REVISION',
+  SUBSCRIPTION_INVALID_ACCESS_STATUS: 'SUBSCRIPTION_INVALID_ACCESS_STATUS',
+  SUBSCRIPTION_INVALID_ASSIGNMENT_SOURCE: 'SUBSCRIPTION_INVALID_ASSIGNMENT_SOURCE',
   LANGUAGE_UNKNOWN_CUSTOM: 'LANGUAGE_UNKNOWN_CUSTOM',
   LANGUAGE_DUPLICATE_REMOVED: 'LANGUAGE_DUPLICATE_REMOVED',
   LANGUAGE_PRIMARY_REPAIRED: 'LANGUAGE_PRIMARY_REPAIRED',
@@ -61,6 +69,14 @@ export const ISSUE_CODE_DESCRIPTIONS = /* @__PURE__ */ Object.freeze({
   [ISSUE_CODES.BUSINESS_CONTACT_REQUIRES_PRIVATE_MIGRATION]: 'Legacy contact data requires private-contact migration.',
   [ISSUE_CODES.BUSINESS_PUBLIC_CONTACT_UNSAFE]: 'A public business contact shape can expose hidden data.',
   [ISSUE_CODES.BUSINESS_LEGACY_MEDIA]: 'Legacy media URLs supplied compatibility media.',
+  [ISSUE_CODES.SUBSCRIPTION_MISSING]: 'The canonical subscription map is missing.',
+  [ISSUE_CODES.SUBSCRIPTION_INVALID_STRUCTURE]: 'The subscription value is not a supported map.',
+  [ISSUE_CODES.SUBSCRIPTION_LEGACY_TIER]: 'A legacy nested subscription tier was mapped for compatibility.',
+  [ISSUE_CODES.SUBSCRIPTION_UNSUPPORTED_SCHEMA_VERSION]: 'The subscription schema version is unsupported.',
+  [ISSUE_CODES.SUBSCRIPTION_UNKNOWN_PLAN]: 'The subscription references an unknown plan identifier.',
+  [ISSUE_CODES.SUBSCRIPTION_UNKNOWN_PLAN_REVISION]: 'The subscription references an unsupported plan revision.',
+  [ISSUE_CODES.SUBSCRIPTION_INVALID_ACCESS_STATUS]: 'The subscription access status is unsupported.',
+  [ISSUE_CODES.SUBSCRIPTION_INVALID_ASSIGNMENT_SOURCE]: 'The subscription assignment source is unsupported.',
   [ISSUE_CODES.LANGUAGE_UNKNOWN_CUSTOM]: 'An unknown language was preserved as a deterministic custom value.',
   [ISSUE_CODES.LANGUAGE_DUPLICATE_REMOVED]: 'A duplicate language identifier was removed.',
   [ISSUE_CODES.LANGUAGE_PRIMARY_REPAIRED]: 'primaryLanguage was repaired to the first preserved language.',
@@ -113,7 +129,8 @@ export const ISSUE_CODE_METADATA = /* @__PURE__ */ Object.freeze(Object.fromEntr
               : code.startsWith('LANGUAGE_') ? 'language'
                 : code.startsWith('SERVICE_AREA_') ? 'service_area'
                   : code.startsWith('CONTACT_') ? 'contact'
-                    : code.startsWith('USER_') ? 'user_compatibility'
+                    : code.startsWith('SUBSCRIPTION_') ? 'subscription'
+                      : code.startsWith('USER_') ? 'user_compatibility'
                       : code.startsWith('BUSINESS_') ? 'business_compatibility'
                         : 'compatibility',
     severity: PRIVACY_CODES.has(code) || code.startsWith('VALIDATION_') ||

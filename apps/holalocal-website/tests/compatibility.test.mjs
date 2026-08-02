@@ -927,9 +927,59 @@ test('canonical managed and public business views remain compatible', () => {
   assert.equal(isPublicBusinessEligible(raw), true)
   assert.equal(managed.name, 'Canonical Business')
   assert.equal(managed.businessId, 'business-1')
+  assert.equal(managed.subscription.planId, 'early_access')
+  assert.equal(managed.entitlements.effectivePlanId, 'early_access')
+  assert.equal(managed.entitlements.resolutionSource, 'legacy_compatibility')
+  assert.equal(managed.entitlements.features.businessInsights, true)
+  assert.equal(managed.entitlements.limits.galleryImages, 8)
   assert.equal(publicView.name, 'Canonical Business')
   assert.equal(publicView.status, 'active')
+  assert.equal(publicView.subscriptionTier, 'early_access')
+  assert.equal(publicView.subscriptionStatus, 'active')
+  assert.equal('subscription' in publicView, false)
+  assert.equal('entitlements' in publicView, false)
   assert.equal(publicView.ratingAverage, 4.5)
+})
+
+test('managed business views resolve canonical and malformed subscription states safely', () => {
+  const canonical = toManagedBusinessView('growth-business', canonicalBusiness({
+    subscription: {
+      schemaVersion: 1,
+      planId: 'growth',
+      planRevision: 1,
+      accessStatus: 'active',
+      assignmentSource: 'admin',
+    },
+  }))
+  assert.equal(canonical.subscription.planId, 'growth')
+  assert.equal(canonical.entitlements.assignedPlanId, 'growth')
+  assert.equal(canonical.entitlements.effectivePlanId, 'growth')
+  assert.equal(canonical.entitlements.baselineApplied, true)
+  assert.equal(canonical.entitlements.limits.categoryIds, 30)
+
+  const publicGrowth = toPublicBusinessView('growth-public-business', canonicalBusiness({
+    status: 'active',
+    publishedAt: new TimestampFixture(),
+    subscription: {
+      schemaVersion: 1,
+      planId: 'growth',
+      planRevision: 1,
+      accessStatus: 'active',
+      assignmentSource: 'admin',
+    },
+  }))
+  assert.equal(publicGrowth.subscriptionTier, 'growth')
+  assert.equal(publicGrowth.subscriptionStatus, 'active')
+  assert.equal('subscription' in publicGrowth, false)
+  assert.equal('entitlements' in publicGrowth, false)
+
+  const malformed = toManagedBusinessView('malformed-business', canonicalBusiness({
+    subscription: { schemaVersion: 1, planId: 'unknown' },
+  }))
+  assert.equal(malformed.subscription, null)
+  assert.equal(malformed.entitlements.effectivePlanId, 'early_access')
+  assert.equal(malformed.entitlements.resolutionSource, 'fallback')
+  assert.equal(malformed.entitlements.features.publicListing, true)
 })
 
 test('public directory eligibility only allows active safe records', () => {

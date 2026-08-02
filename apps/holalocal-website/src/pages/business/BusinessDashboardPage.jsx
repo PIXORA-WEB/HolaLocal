@@ -148,7 +148,7 @@ function BusinessDashboardPage() {
   const businessName = businessProfile?.name || t('business.control.yourBusiness')
   const status = businessProfile?.status || 'draft'
   const verificationStatus = businessProfile?.verificationStatus || 'unverified'
-  const subscriptionTier = businessProfile?.subscription?.tier || 'free'
+  const subscriptionTier = businessProfile?.entitlements?.effectivePlanId ?? 'early_access'
   const locality = businessProfile?.location?.locality || ''
   const serviceAreas = businessProfile?.serviceAreas ?? []
   const languages = businessProfile?.languages ?? []

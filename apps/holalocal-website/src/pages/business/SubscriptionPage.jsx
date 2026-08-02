@@ -110,8 +110,8 @@ function SubscriptionPage() {
                   setLoadAttempt((attempt) => attempt + 1)
                 }
 
-  const plan = businessProfile?.subscription?.tier || 'free'
-  const status = businessProfile?.status || 'draft'
+  const plan = businessProfile?.entitlements?.effectivePlanId ?? 'early_access'
+  const subscriptionStatus = businessProfile?.entitlements?.accessStatus ?? 'active'
 
   return (
     <section className="business-subscription">
@@ -142,7 +142,9 @@ function SubscriptionPage() {
               <p>{t('subscription.currentPlan')}</p>
               <h2>{t(`subscription.plans.${plan}`)}</h2>
             </div>
-            <span className={status === 'active' ? 'is-active' : ''}>{t(`business.control.status.${status}`)}</span>
+            <span className={subscriptionStatus === 'active' ? 'is-active' : ''}>
+              {t(`subscription.status.${subscriptionStatus}`)}
+            </span>
           </div>
           <p>{t('subscription.summary', { plan: t(`subscription.plans.${plan}`) })}</p>
           <ul>

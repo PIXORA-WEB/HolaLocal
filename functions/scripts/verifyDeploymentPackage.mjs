@@ -18,6 +18,7 @@ const REQUIRED_CONTRACT_FILES = [
   'contact.js',
   'messaging.js',
   'publication.js',
+  'subscriptions.js',
 ]
 
 const REQUIRED_FUNCTION_FILES = [
@@ -168,7 +169,11 @@ async function assertContractInstalledInsideArtifact(root) {
     throw new Error('@holalocal/firebase-contract installed as a symlink in deployment artifact.')
   }
   const imported = await import(pathToFileURL(join(packageRoot, 'index.js')).href)
-  if (typeof imported.hasCompleteUserProfile !== 'function') {
+  if (
+    typeof imported.hasCompleteUserProfile !== 'function' ||
+    typeof imported.resolveBusinessEntitlements !== 'function' ||
+    typeof imported.buildEarlyAccessSubscriptionState !== 'function'
+  ) {
     throw new Error('@holalocal/firebase-contract import smoke test failed.')
   }
 }

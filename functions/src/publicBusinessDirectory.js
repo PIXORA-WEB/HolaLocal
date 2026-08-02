@@ -4,6 +4,7 @@ import {
   isCustomIdentifier,
   isPublicBusinessEligible,
   projectPublicContact,
+  resolveBusinessEntitlements,
 } from '@holalocal/firebase-contract'
 
 const DEFAULT_MAX_RESULTS = 60
@@ -31,6 +32,7 @@ export function toPublicDirectoryBusiness(documentId, rawDocument) {
   const languages = displayCompatibilityValues(business.languageValues, 'language')
   const serviceAreas = displayCompatibilityValues(business.serviceAreaValues, 'area')
   const primaryLanguage = business.languageValues.find(({ id }) => id === business.primaryLanguage)
+  const entitlements = resolveBusinessEntitlements(rawDocument?.subscription)
 
   return {
     businessId: documentId,
@@ -49,8 +51,8 @@ export function toPublicDirectoryBusiness(documentId, rawDocument) {
     contact: projectPublicContact(business.contact).contact,
     status: business.status,
     verificationStatus: business.verificationStatus ?? 'unverified',
-    subscriptionTier: business.subscription?.tier ?? 'free',
-    subscriptionStatus: business.subscription?.status ?? 'none',
+    subscriptionTier: entitlements.effectivePlanId ?? 'early_access',
+    subscriptionStatus: entitlements.accessStatus ?? 'active',
     ratingAverage: typeof rawDocument?.ratingAverage === 'number' ? rawDocument.ratingAverage : null,
     ratingCount: typeof rawDocument?.ratingCount === 'number' ? rawDocument.ratingCount : 0,
     logoUrl: business.profilePhoto?.downloadUrl ?? null,

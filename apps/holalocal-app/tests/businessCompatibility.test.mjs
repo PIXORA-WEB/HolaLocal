@@ -39,10 +39,40 @@ test('canonical website business is managed, public-safe and editable without mu
   assert.equal(managed.editSupport.supported, true)
   assert.equal(managed.profileCompleted, true)
   assert.equal(managed.createdAt, timestamp)
+  assert.equal(managed.entitlements.effectivePlanId, 'early_access')
+  assert.equal(managed.entitlements.features.businessInsights, true)
   assert.equal(publicView.name, 'Canonical Business')
   assert.equal(publicView.contact.phone, '')
   assert.equal(publicView.contact.website, '')
+  assert.equal(publicView.subscriptionTier, 'early_access')
+  assert.equal(publicView.subscriptionStatus, 'active')
+  assert.equal('subscription' in publicView, false)
+  assert.equal('entitlements' in publicView, false)
   assert.deepEqual(raw, before)
+})
+
+test('canonical subscription plans resolve without exposing trusted subscription data publicly', () => {
+  const raw = canonical({
+    status: 'active',
+    subscription: {
+      schemaVersion: 1,
+      planId: 'growth',
+      planRevision: 1,
+      accessStatus: 'active',
+      assignmentSource: 'admin',
+    },
+  })
+  const managed = toMobileManagedBusiness('growth-business', raw)
+  const publicView = toMobilePublicBusiness('growth-business', raw)
+
+  assert.equal(managed.subscription.planId, 'growth')
+  assert.equal(managed.entitlements.assignedPlanId, 'growth')
+  assert.equal(managed.entitlements.effectivePlanId, 'growth')
+  assert.equal(managed.entitlements.baselineApplied, true)
+  assert.equal(publicView.subscriptionTier, 'growth')
+  assert.equal(publicView.subscriptionStatus, 'active')
+  assert.equal('subscription' in publicView, false)
+  assert.equal('entitlements' in publicView, false)
 })
 
 test('editability predicate rejects unsupported owner, contact, taxonomy and legacy states', () => {

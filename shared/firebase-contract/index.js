@@ -50,3 +50,22 @@ export {
   validateOwnerWritablePayload, validatePrimaryLanguage, validatePrivateContact,
   validatePublicContact, validateRoles, validateSubscriptionStatus, validateVerificationStatus,
 } from './validators.js'
+export {
+  businessEntitlementLimit,
+  buildEarlyAccessSubscriptionState,
+  ENTITLEMENT_FEATURE_KEYS,
+  ENTITLEMENT_LIMIT_KEYS,
+  hasBusinessEntitlement,
+  normalizeBusinessSubscription,
+  PLAN_CATALOGUE_VERSION,
+  PLAN_DEFINITIONS,
+  PLAN_IDS,
+  PLAN_ID_VALUES,
+  resolveBusinessEntitlements,
+  SUBSCRIPTION_ACCESS_STATUSES,
+  SUBSCRIPTION_ASSIGNMENT_SOURCES,
+  SUBSCRIPTION_FALLBACK_REASONS,
+  SUBSCRIPTION_LIMIT_UNLIMITED,
+  SUBSCRIPTION_RESOLUTION_SOURCES,
+  SUBSCRIPTION_SCHEMA_VERSION,
+} from './subscriptions.js'

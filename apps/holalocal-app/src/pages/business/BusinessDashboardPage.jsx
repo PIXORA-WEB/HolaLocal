@@ -67,6 +67,9 @@ function BusinessDashboardPage() {
     )
   }
 
+  const subscriptionPlan = businessProfile.entitlements?.effectivePlanId ?? 'early_access'
+  const subscriptionStatus = businessProfile.entitlements?.accessStatus ?? 'active'
+
   return (
     <section className="business-dashboard">
       <p className="placeholder-page__eyebrow">{t('business.dashboard')}</p>
@@ -92,8 +95,12 @@ function BusinessDashboardPage() {
           <dd>{businessProfile.verificationStatus ?? t('business.trust.unverifiedLegacy')}</dd>
         </div>
         <div>
-          <dt>Subscription</dt>
-          <dd>{businessProfile.subscription?.status ?? t('business.trust.noLegacyEntitlement')}</dd>
+          <dt>{t('business.subscription')}</dt>
+          <dd>
+            {t(`business.subscriptionPlans.${subscriptionPlan}`, { defaultValue: subscriptionPlan })}
+            {' · '}
+            {t(`business.subscriptionStatuses.${subscriptionStatus}`, { defaultValue: subscriptionStatus })}
+          </dd>
         </div>
       </dl>
 

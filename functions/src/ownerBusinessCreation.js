@@ -1,6 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { HttpsError } from 'firebase-functions/v2/https'
-import { hasCompleteUserProfile } from '@holalocal/firebase-contract'
+import { buildEarlyAccessSubscriptionState, hasCompleteUserProfile } from '@holalocal/firebase-contract'
 
 const CONTACT_METHODS = new Set(['holalocal', 'phone', 'email', 'whatsapp'])
 
@@ -92,12 +92,9 @@ function buildDraftBusiness(uid, profile) {
       status: 'draft',
       verificationStatus: 'unverified',
       verifiedAt: null,
-      subscription: {
-        tier: 'free',
-        status: 'none',
-        provider: null,
-        currentPeriodEnd: null,
-      },
+      subscription: buildEarlyAccessSubscriptionState({
+        timestamp: FieldValue.serverTimestamp(),
+      }),
       profileCompleted: false,
       publishedAt: null,
       submittedAt: null,

@@ -90,7 +90,15 @@ function createPack(d) {
     },
     subscription: {
       loading: d.loading, eyebrow: d.businessAccount, description: help,
-      currentPlan: d.currentPlan, plans: { free: d.free }, summary: d.planSummary,
+      currentPlan: d.currentPlan,
+      plans: {
+        free: d.free,
+        early_access: 'Early Access',
+        starter: 'Starter',
+        growth: 'Growth',
+        pro: 'Pro',
+      },
+      summary: d.planSummary,
       features: { manage: d.manageBusiness, marketplace: d.marketplace, future: d.futurePlans },
       comingSoon: d.comingSoon, emptyTitle: d.setupFirst, emptyDescription: help,
     },
@@ -451,6 +459,27 @@ const rejectedStatusTranslations = {
   no: 'Avvist',
 }
 
+
+const subscriptionAccessStatusTranslations = {
+  en: { scheduled: 'Scheduled', active: 'Active', ended: 'Ended' },
+  es: { scheduled: 'Programado', active: 'Activo', ended: 'Finalizado' },
+  fr: { scheduled: 'Programmé', active: 'Actif', ended: 'Terminé' },
+  de: { scheduled: 'Geplant', active: 'Aktiv', ended: 'Beendet' },
+  nl: { scheduled: 'Gepland', active: 'Actief', ended: 'Beëindigd' },
+  pt: { scheduled: 'Agendado', active: 'Ativo', ended: 'Terminado' },
+  pl: { scheduled: 'Zaplanowany', active: 'Aktywny', ended: 'Zakończony' },
+  ro: { scheduled: 'Programat', active: 'Activ', ended: 'Încheiat' },
+  cs: { scheduled: 'Naplánováno', active: 'Aktivní', ended: 'Ukončeno' },
+  sk: { scheduled: 'Naplánované', active: 'Aktívne', ended: 'Ukončené' },
+  hu: { scheduled: 'Ütemezett', active: 'Aktív', ended: 'Lezárult' },
+  uk: { scheduled: 'Заплановано', active: 'Активна', ended: 'Завершена' },
+  it: { scheduled: 'Programmato', active: 'Attivo', ended: 'Terminato' },
+  sv: { scheduled: 'Schemalagd', active: 'Aktiv', ended: 'Avslutad' },
+  da: { scheduled: 'Planlagt', active: 'Aktiv', ended: 'Afsluttet' },
+  fi: { scheduled: 'Ajastettu', active: 'Aktiivinen', ended: 'Päättynyt' },
+  no: { scheduled: 'Planlagt', active: 'Aktiv', ended: 'Avsluttet' },
+}
+
 export const authenticatedTranslations = Object.fromEntries(
   Object.entries(packs).map(([locale, dictionary]) => [
     locale,
@@ -482,6 +511,7 @@ export const authenticatedTranslations = Object.fromEntries(
         pack.business.form.errors.galleryLimit = residual.galleryLimit
         Object.assign(pack.subscription.features, residual.subscriptionFeatures)
       }
+      pack.subscription.status = subscriptionAccessStatusTranslations[locale]
       pack.business.form.saveSuccess = saveSuccess
       pack.business.compatibility = {
         ownershipConflict: ownershipConflictTranslations[locale],

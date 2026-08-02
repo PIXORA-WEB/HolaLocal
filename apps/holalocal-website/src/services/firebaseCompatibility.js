@@ -11,6 +11,7 @@ import {
   locationDisplayLabel,
   ownerMismatch,
   projectPublicContact,
+  resolveBusinessEntitlements,
   resolveLaunchLocation,
 } from '@holalocal/firebase-contract'
 
@@ -118,9 +119,11 @@ function privateContactForManagedView(adapted, privateDocument) {
 export function toManagedBusinessView(documentId, rawDocument, privateDocument = null) {
   const adapted = adaptBusinessDocument(documentId, rawDocument)
   const { business, legacy } = adapted
+  const entitlements = resolveBusinessEntitlements(rawDocument?.subscription)
 
   return {
     ...business,
+    entitlements,
     businessId: documentId,
     ownerId: business.ownerId,
     serviceAreas: displayCompatibilityValues(business.serviceAreaValues, 'area'),
@@ -151,6 +154,7 @@ export function toPublicBusinessView(documentId, rawDocument) {
   const business = adapted.business
   if (!sharedPublicBusinessEligible(rawDocument)) return null
 
+  const entitlements = resolveBusinessEntitlements(rawDocument?.subscription)
   const languages = displayCompatibilityValues(business.languageValues, 'language')
   const serviceAreas = displayCompatibilityValues(
     business.serviceAreaValues,
@@ -175,8 +179,8 @@ export function toPublicBusinessView(documentId, rawDocument) {
     contact: publicContact(business.contact),
     status: business.status,
     verificationStatus: business.verificationStatus ?? 'unverified',
-    subscriptionTier: business.subscription?.tier ?? 'free',
-    subscriptionStatus: business.subscription?.status ?? 'none',
+    subscriptionTier: entitlements.effectivePlanId ?? 'early_access',
+    subscriptionStatus: entitlements.accessStatus ?? 'active',
     ratingAverage: typeof rawDocument?.ratingAverage === 'number' ? rawDocument.ratingAverage : null,
     ratingCount: typeof rawDocument?.ratingCount === 'number' ? rawDocument.ratingCount : 0,
     logoUrl: business.profilePhoto?.downloadUrl ?? null,

@@ -609,7 +609,16 @@
     "description": "Review your current business plan and account status.",
     "currentPlan": "Current plan",
     "plans": {
-      "free": "Free"
+      "free": "Free",
+      "early_access": "Early Access",
+      "starter": "Starter",
+      "growth": "Growth",
+      "pro": "Pro"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "active": "Active",
+      "ended": "Ended"
     },
     "summary": "Your business is currently on the {{plan}} plan. Paid upgrades are not available yet, and no payment details are required.",
     "features": {
