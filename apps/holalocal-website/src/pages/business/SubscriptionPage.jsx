@@ -31,9 +31,9 @@ const PLAN_LIMIT_KEYS = [
   'translatedMessagesPerMonth',
 ]
 
-function formatPlanLimit(t, planId, key, value) {
+function formatPlanLimit(t, key, value) {
   if (value === SUBSCRIPTION_LIMIT_UNLIMITED) {
-    if (planId === PLAN_IDS.PRO && key === 'translatedMessagesPerMonth') {
+    if (key === 'translatedMessagesPerMonth') {
       return t('subscription.limitValues.unlimitedFairUse')
     }
     return t('subscription.limitValues.unlimited')
@@ -262,7 +262,7 @@ function SubscriptionPage() {
                         {PLAN_LIMIT_KEYS.map((limitKey) => (
                           <div key={limitKey}>
                             <dt>{t(`subscription.limitLabels.${limitKey}`)}</dt>
-                            <dd>{formatPlanLimit(t, planId, limitKey, definition.limits[limitKey])}</dd>
+                            <dd>{formatPlanLimit(t, limitKey, definition.limits[limitKey])}</dd>
                           </div>
                         ))}
                       </dl>

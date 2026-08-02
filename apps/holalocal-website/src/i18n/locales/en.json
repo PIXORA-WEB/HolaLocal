@@ -623,8 +623,8 @@
     "summary": "Your business is currently on the {{plan}} plan. Paid upgrades are not available yet, and no payment details are required.",
     "earlyAccess": {
       "eyebrow": "Early Access benefit",
-      "title": "Full current access while HolaLocal grows",
-      "description": "Early Access businesses can continue using all features currently available during this launch period."
+      "title": "Full Pro-level access during Early Access",
+      "description": "Early Access businesses receive the same features and limits as Pro at no cost during the Early Access period."
     },
     "compareEyebrow": "Future plan options",
     "compareTitle": "Choose the right level for your business",
@@ -640,7 +640,7 @@
       "pro": "For established businesses"
     },
     "planDescriptions": {
-      "early_access": "Full access to all features currently available during Early Access.",
+      "early_access": "Full Pro-level access during the Early Access period.",
       "starter": "Essential tools for smaller local businesses.",
       "growth": "More visibility, insights and capacity as your business grows.",
       "pro": "Maximum limits and priority tools for established businesses."
