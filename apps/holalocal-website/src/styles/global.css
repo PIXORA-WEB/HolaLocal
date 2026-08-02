@@ -2958,6 +2958,15 @@
   margin-top: 1.5rem;
 }
 
+.subscription-card .button:disabled {
+  cursor: not-allowed;
+  color: #64748b;
+  border-color: #d8e1eb;
+  background: #edf2f7;
+  box-shadow: none;
+  opacity: 1;
+}
+
 .marketing-home {
   min-width: 0;
   overflow-x: clip;
