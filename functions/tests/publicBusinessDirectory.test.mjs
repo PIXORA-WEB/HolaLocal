@@ -167,3 +167,45 @@ test('authenticated and unauthenticated listPublicBusinesses handlers return the
     'verificationStatus',
   ].sort())
 })
+
+test('public directory safely resolves legacy, canonical and malformed subscription states', () => {
+  const legacy = toPublicDirectoryBusiness('legacy', eligibleBusiness({
+    subscription: { tier: 'free', status: 'none' },
+  }))
+  assert.equal(legacy.subscriptionTier, 'early_access')
+  assert.equal(legacy.subscriptionStatus, 'active')
+
+  const growth = toPublicDirectoryBusiness('growth', eligibleBusiness({
+    subscription: {
+      schemaVersion: 1,
+      planId: 'growth',
+      planRevision: 1,
+      accessStatus: 'active',
+      assignmentSource: 'admin',
+      assignedAt: null,
+      startsAt: null,
+      endsAt: null,
+      updatedAt: null,
+      updatedBy: 'admin-user',
+    },
+  }))
+  assert.equal(growth.subscriptionTier, 'growth')
+  assert.equal(growth.subscriptionStatus, 'active')
+
+  const malformed = toPublicDirectoryBusiness('malformed', eligibleBusiness({
+    subscription: {
+      schemaVersion: 1,
+      planId: 'unknown-plan',
+      planRevision: 1,
+      accessStatus: 'active',
+      assignmentSource: 'admin',
+    },
+  }))
+  assert.equal(malformed.subscriptionTier, 'early_access')
+  assert.equal(malformed.subscriptionStatus, 'active')
+
+  for (const view of [legacy, growth, malformed]) {
+    assert.equal(Object.hasOwn(view, 'subscription'), false)
+    assert.equal(Object.hasOwn(view, 'entitlements'), false)
+  }
+})

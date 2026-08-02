@@ -48,6 +48,8 @@
     "complete": { "title": "Completa tu perfil de negocio", "description": "Añade la información esencial para que los clientes entiendan tus servicios.", "action": "Completar perfil" },
     "readOnly": { "title": "Este negocio es de solo lectura en móvil", "description": "Este perfil heredado necesita trabajo de compatibilidad antes de poder editarse de forma segura. Gestiónalo en holalocal.es o contacta con soporte." },
     "trust": { "unverifiedLegacy": "Sin verificación canónica", "noLegacyEntitlement": "Sin suscripción canónica" },
+    "subscriptionPlans": { "early_access": "Early Access", "starter": "Starter", "growth": "Growth", "pro": "Pro" },
+    "subscriptionStatuses": { "scheduled": "Programado", "active": "Activo", "ended": "Finalizado" },
     "editScope": "Aquí puedes editar los campos canónicos del perfil. Contactos y contenido multimedia son de solo lectura.",
     "contactMediaReadOnly": "Gestiona contactos y contenido multimedia en holalocal.es hasta completar la privacidad móvil.",
     "fields": { "name": "Nombre del negocio", "tagline": "Eslogan", "description": "Descripción", "category": "Categoría principal", "chooseCategory": "Elige una categoría", "categories": "Categorías de servicio", "serviceAreas": "Zonas de servicio", "radius": "Radio de servicio (km)", "locality": "Ciudad o localidad", "region": "Región", "countryCode": "Código de país", "languages": "Idiomas hablados" },

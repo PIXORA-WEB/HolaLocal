@@ -6,6 +6,7 @@ import {
   foundBusiness,
   invalidMapping,
   ownerMismatch,
+  resolveBusinessEntitlements,
 } from '@holalocal/firebase-contract'
 import { CANONICAL_BUSINESS_CATEGORIES, computeBusinessProfileCompleted } from './businessPayloads.js'
 
@@ -65,6 +66,7 @@ export function toMobileManagedBusiness(documentId, rawDocument, privateDocument
   const raw = rawDocument && typeof rawDocument === 'object' && !Array.isArray(rawDocument)
     ? rawDocument : {}
   const business = adapted.business
+  const entitlements = resolveBusinessEntitlements(rawDocument?.subscription)
   const languageValues = business.languageValues.map((value) => ({
     ...value,
     label: value.isCustom && typeof raw.languageLabels?.[value.id] === 'string'
@@ -86,6 +88,7 @@ export function toMobileManagedBusiness(documentId, rawDocument, privateDocument
 
   return {
     ...business,
+    entitlements,
     businessId: documentId,
     ownerId: business.ownerId,
     languageValues,
@@ -123,6 +126,7 @@ export function toMobilePublicBusiness(documentId, rawDocument) {
   const adapted = adaptBusinessDocument(documentId, rawDocument)
   const business = adapted.business
   if (business.status !== 'active') return null
+  const entitlements = resolveBusinessEntitlements(rawDocument?.subscription)
   const contact = business.contact && typeof business.contact === 'object' ? business.contact : {}
   return {
     businessId: documentId,
@@ -147,7 +151,8 @@ export function toMobilePublicBusiness(documentId, rawDocument) {
     },
     status: business.status,
     verificationStatus: business.verificationStatus,
-    subscription: business.subscription,
+    subscriptionTier: entitlements.effectivePlanId ?? 'early_access',
+    subscriptionStatus: entitlements.accessStatus ?? 'active',
     profilePhoto: business.profilePhoto,
   }
 }

@@ -48,6 +48,8 @@
     "complete": { "title": "Unternehmensprofil vervollständigen", "description": "Fügen Sie die wichtigsten Informationen zu Ihren Diensten hinzu.", "action": "Profil vervollständigen" },
     "readOnly": { "title": "Dieses Unternehmen ist mobil schreibgeschützt", "description": "Dieses alte Profil benötigt Kompatibilitätsarbeit. Verwalten Sie es über holalocal.es oder kontaktieren Sie den Support." },
     "trust": { "unverifiedLegacy": "Keine kanonische Verifizierung", "noLegacyEntitlement": "Kein kanonisches Abonnement" },
+    "subscriptionPlans": { "early_access": "Early Access", "starter": "Starter", "growth": "Growth", "pro": "Pro" },
+    "subscriptionStatuses": { "scheduled": "Geplant", "active": "Aktiv", "ended": "Beendet" },
     "editScope": "Bearbeiten Sie hier kanonische Profilfelder. Kontakte und Medien bleiben schreibgeschützt.",
     "contactMediaReadOnly": "Kontakte und Medien bleiben bis zur mobilen Datenschutzunterstützung über holalocal.es verwaltbar.",
     "fields": { "name": "Unternehmensname", "tagline": "Slogan", "description": "Beschreibung", "category": "Hauptkategorie", "chooseCategory": "Kategorie auswählen", "categories": "Dienstkategorien", "serviceAreas": "Servicegebiete", "radius": "Serviceradius (km)", "locality": "Stadt oder Ort", "region": "Region", "countryCode": "Ländercode", "languages": "Gesprochene Sprachen" },

@@ -1,7 +1,8 @@
-import { ACCOUNT_STATUSES, BUSINESS_STATUSES, SUBSCRIPTION_STATUSES, USER_ROLES, VERIFICATION_STATUSES } from './constants.js'
+import { ACCOUNT_STATUSES, BUSINESS_STATUSES, USER_ROLES, VERIFICATION_STATUSES } from './constants.js'
 import { detectUnsafePublicContact } from './contact.js'
 import { ISSUE_CODES, issue } from './issues.js'
 import { normalizePrimaryLanguage, normalizeServiceAreas } from './normalization.js'
+import { normalizeBusinessSubscription } from './subscriptions.js'
 import { hasCompleteUserProfile } from './account.js'
 
 function clone(value) {
@@ -190,6 +191,8 @@ export function adaptBusinessDocument(documentId, rawDocument = {}) {
   }
   const galleryImages = clone(Array.isArray(raw.galleryImages) ? raw.galleryImages : [])
   const location = compatibilityLocation(raw, issues)
+  const subscription = normalizeBusinessSubscription(raw.subscription)
+  issues.push(...subscription.issues)
   for (const [field, missing] of [
     ['documentId', !string(documentId)],
     ['ownerId', !string(raw.ownerId)], ['name', !(canonicalName || legacyName)],
@@ -227,8 +230,7 @@ export function adaptBusinessDocument(documentId, rawDocument = {}) {
       galleryImageURLs: clone(Array.isArray(raw.galleryImageURLs) ? raw.galleryImageURLs : []),
       status: BUSINESS_STATUSES.includes(raw.status) ? raw.status : null,
       verificationStatus: VERIFICATION_STATUSES.includes(raw.verificationStatus) ? raw.verificationStatus : null,
-      subscription: raw.subscription && SUBSCRIPTION_STATUSES.includes(raw.subscription.status)
-        ? clone(raw.subscription) : null,
+      subscription: subscription.subscription,
       profileCompleted: raw.profileCompleted === true,
       createdAt: clone(raw.createdAt ?? null),
       updatedAt: clone(raw.updatedAt ?? null),
