@@ -606,7 +606,7 @@
   "subscription": {
     "loading": "Loading subscription…",
     "eyebrow": "Business account",
-    "description": "Review your current business plan and account status.",
+    "description": "Review your current plan and compare the options being prepared for HolaLocal businesses.",
     "currentPlan": "Current plan",
     "plans": {
       "free": "Free",
@@ -621,12 +621,67 @@
       "ended": "Ended"
     },
     "summary": "Your business is currently on the {{plan}} plan. Paid upgrades are not available yet, and no payment details are required.",
+    "earlyAccess": {
+      "eyebrow": "Early Access benefit",
+      "title": "Full current access while HolaLocal grows",
+      "description": "Early Access businesses can continue using all features currently available during this launch period."
+    },
+    "compareEyebrow": "Future plan options",
+    "compareTitle": "Choose the right level for your business",
+    "compareDescription": "Compare the features and usage limits planned for each HolaLocal business plan.",
+    "badges": {
+      "current": "Current plan",
+      "recommended": "Recommended"
+    },
+    "planAudience": {
+      "early_access": "Launch members",
+      "starter": "For smaller businesses",
+      "growth": "For growing businesses",
+      "pro": "For established businesses"
+    },
+    "planDescriptions": {
+      "early_access": "Full access to all features currently available during Early Access.",
+      "starter": "Essential tools for smaller local businesses.",
+      "growth": "More visibility, insights and capacity as your business grows.",
+      "pro": "Maximum limits and priority tools for established businesses."
+    },
+    "includedTitle": "Plan highlights",
+    "capabilities": {
+      "businessInsights": "Business insights",
+      "advancedInsights": "Advanced business insights",
+      "standardVisibility": "Standard directory visibility",
+      "enhancedVisibility": "Enhanced directory visibility",
+      "priorityVisibility": "Priority directory visibility",
+      "priorityFeatures": "Priority features and support",
+      "standardProfile": "Standard business profile",
+      "enhancedProfile": "Enhanced business profile"
+    },
+    "limitLabels": {
+      "galleryImages": "Gallery images",
+      "categoryIds": "Service categories",
+      "serviceAreas": "Service areas",
+      "languages": "Business languages",
+      "insightHistoryDays": "Insight history",
+      "translatedMessagesPerMonth": "Translated messages"
+    },
+    "limitValues": {
+      "unlimited": "Unlimited",
+      "unlimitedFairUse": "Unlimited under fair use",
+      "galleryImages": "{{count}} images",
+      "categoryIds": "{{count}} categories",
+      "serviceAreas": "{{count}} areas",
+      "languages": "{{count}} languages",
+      "insightHistoryDays": "{{count}} days",
+      "translatedMessagesPerMonth": "{{count}} per month"
+    },
     "features": {
       "manage": "Manage your business information",
       "marketplace": "Appear in the local services marketplace when eligible",
       "future": "Access future plan options from this page"
     },
-    "comingSoon": "Upgrades coming soon",
+    "currentPlanAction": "Your current plan",
+    "comingSoon": "Coming soon",
+    "pricingNote": "Pricing and upgrades will be introduced later. No payment details are required during Early Access.",
     "emptyTitle": "Set up your business first",
     "emptyDescription": "Complete your business profile before reviewing subscription details."
   },
