@@ -1,3 +1,8 @@
+import {
+  PLAN_DEFINITIONS,
+  PLAN_IDS,
+  SUBSCRIPTION_LIMIT_UNLIMITED,
+} from '@holalocal/firebase-contract'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -9,6 +14,56 @@ import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
+
+const PLAN_ORDER = [
+  PLAN_IDS.EARLY_ACCESS,
+  PLAN_IDS.STARTER,
+  PLAN_IDS.GROWTH,
+  PLAN_IDS.PRO,
+]
+
+const PLAN_LIMIT_KEYS = [
+  'galleryImages',
+  'categoryIds',
+  'serviceAreas',
+  'languages',
+  'insightHistoryDays',
+  'translatedMessagesPerMonth',
+]
+
+function formatPlanLimit(t, planId, key, value) {
+  if (value === SUBSCRIPTION_LIMIT_UNLIMITED) {
+    if (planId === PLAN_IDS.PRO && key === 'translatedMessagesPerMonth') {
+      return t('subscription.limitValues.unlimitedFairUse')
+    }
+    return t('subscription.limitValues.unlimited')
+  }
+
+  return t(`subscription.limitValues.${key}`, { count: value })
+}
+
+function planCapabilityKeys(features) {
+  const insights = features.advancedInsights
+    ? 'advancedInsights'
+    : 'businessInsights'
+
+  const visibility = features.priorityDirectoryVisibility
+    ? 'priorityVisibility'
+    : features.enhancedDirectoryVisibility
+      ? 'enhancedVisibility'
+      : 'standardVisibility'
+
+  const profile = features.enhancedProfile
+    ? 'enhancedProfile'
+    : 'standardProfile'
+
+  return [
+    insights,
+    visibility,
+    profile,
+    ...(features.prioritySupport ? ['priorityFeatures'] : []),
+  ]
+}
 
 function SubscriptionPage() {
   const { t } = useTranslation()
@@ -110,7 +165,7 @@ function SubscriptionPage() {
                   setLoadAttempt((attempt) => attempt + 1)
                 }
 
-  const plan = businessProfile?.entitlements?.effectivePlanId ?? 'early_access'
+  const plan = businessProfile?.entitlements?.effectivePlanId ?? PLAN_IDS.EARLY_ACCESS
   const subscriptionStatus = businessProfile?.entitlements?.accessStatus ?? 'active'
 
   return (
@@ -136,26 +191,113 @@ function SubscriptionPage() {
           <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>
         </div>
       ) : (
-        <article className="subscription-card">
-          <div className="subscription-card__heading">
-            <div>
-              <p>{t('subscription.currentPlan')}</p>
-              <h2>{t(`subscription.plans.${plan}`)}</h2>
+        <div className="subscription-content">
+          <article className="subscription-current-card">
+            <div className="subscription-current-card__main">
+              <div className="subscription-current-card__heading">
+                <div>
+                  <p>{t('subscription.currentPlan')}</p>
+                  <h2>{t(`subscription.plans.${plan}`)}</h2>
+                </div>
+                <span className={subscriptionStatus === 'active' ? 'is-active' : ''}>
+                  {t(`subscription.status.${subscriptionStatus}`)}
+                </span>
+              </div>
+              <p>{t('subscription.summary', { plan: t(`subscription.plans.${plan}`) })}</p>
             </div>
-            <span className={subscriptionStatus === 'active' ? 'is-active' : ''}>
-              {t(`subscription.status.${subscriptionStatus}`)}
-            </span>
-          </div>
-          <p>{t('subscription.summary', { plan: t(`subscription.plans.${plan}`) })}</p>
-          <ul>
-            <li>{t('subscription.features.manage')}</li>
-            <li>{t('subscription.features.marketplace')}</li>
-            <li>{t('subscription.features.future')}</li>
-          </ul>
-          <button className="button button--primary" disabled type="button">
-            {t('subscription.comingSoon')}
-          </button>
-        </article>
+
+            <div className="subscription-current-card__notice">
+              <span aria-hidden="true">✦</span>
+              <div>
+                <p>{t('subscription.earlyAccess.eyebrow')}</p>
+                <strong>{t('subscription.earlyAccess.title')}</strong>
+                <span>{t('subscription.earlyAccess.description')}</span>
+              </div>
+            </div>
+          </article>
+
+          <section aria-labelledby="subscription-plans-title" className="subscription-plans">
+            <header className="subscription-plans__heading">
+              <p>{t('subscription.compareEyebrow')}</p>
+              <h2 id="subscription-plans-title">{t('subscription.compareTitle')}</h2>
+              <span>{t('subscription.compareDescription')}</span>
+            </header>
+
+            <div className="subscription-plan-grid">
+              {PLAN_ORDER.map((planId) => {
+                const definition = PLAN_DEFINITIONS[planId]
+                const isCurrentPlan = planId === plan
+                const isRecommended = planId === PLAN_IDS.GROWTH
+                const capabilityKeys = planCapabilityKeys(definition.features)
+
+                return (
+                  <div className="subscription-plan-item" key={planId}>
+                    <article
+                      aria-current={isCurrentPlan ? 'true' : undefined}
+                      className={[
+                        'subscription-plan-card',
+                        isCurrentPlan ? 'is-current' : '',
+                        isRecommended ? 'is-recommended' : '',
+                      ].filter(Boolean).join(' ')}
+                    >
+                      <div className="subscription-plan-card__intro">
+                        <p>{t(`subscription.planAudience.${planId}`)}</p>
+                        <h3>{t(`subscription.plans.${planId}`)}</h3>
+                        <span>{t(`subscription.planDescriptions.${planId}`)}</span>
+                      </div>
+
+                      <div className="subscription-plan-card__capabilities">
+                        <p>{t('subscription.includedTitle')}</p>
+                        <ul>
+                          {capabilityKeys.map((capabilityKey) => (
+                            <li key={capabilityKey}>
+                              <span aria-hidden="true">✓</span>
+                              {t(`subscription.capabilities.${capabilityKey}`)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <dl className="subscription-plan-card__limits">
+                        {PLAN_LIMIT_KEYS.map((limitKey) => (
+                          <div key={limitKey}>
+                            <dt>{t(`subscription.limitLabels.${limitKey}`)}</dt>
+                            <dd>{formatPlanLimit(t, planId, limitKey, definition.limits[limitKey])}</dd>
+                          </div>
+                        ))}
+                      </dl>
+
+                      <button
+                        className="button subscription-plan-card__action"
+                        disabled
+                        type="button"
+                      >
+                        {isCurrentPlan
+                          ? t('subscription.currentPlanAction')
+                          : t('subscription.comingSoon')}
+                      </button>
+                    </article>
+
+                    <div className="subscription-plan-item__statuses">
+                      {isCurrentPlan ? (
+                        <span className="subscription-plan-card__badge subscription-plan-card__badge--current">
+                          {t('subscription.badges.current')}
+                        </span>
+                      ) : null}
+                      {isRecommended ? (
+                        <span className="subscription-plan-card__badge subscription-plan-card__badge--recommended">
+                          {t('subscription.badges.recommended')}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="subscription-plans__note">{t('subscription.pricingNote')}</p>
+          </section>
+        </div>
       )}
     </section>
   )
