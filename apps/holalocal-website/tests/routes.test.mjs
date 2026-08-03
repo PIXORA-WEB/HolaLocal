@@ -179,19 +179,27 @@ test('homepage example cards are generic, translated, labelled, and non-clickabl
   assert.doesNotMatch(await readFile(globalStylesPath, 'utf8'), /\.public-business-card--hero \.public-business-card__heading > span\.is-verified/)
 })
 
-test('homepage only supplements successful directory results with examples', async () => {
-  const home = await readFile(homePath, 'utf8')
+test('homepage keeps the example preview visible across directory states', async () => {
+  const [home, preview] = await Promise.all([
+    readFile(homePath, 'utf8'),
+    readFile(path.resolve(__dirname, '../src/utils/homepagePreview.js'), 'utf8'),
+  ])
 
   assert.match(home, /setDirectoryStatus\('success'\)/)
   assert.match(home, /setDirectoryStatus\('error'\)/)
-  assert.match(home, /const businesses = directoryStatus === 'success'/)
-  assert.match(home, /fallbackBusinesses\.slice\(0, Math\.max\(0, 3 - featuredBusinesses\.length\)\)/)
-  assert.match(home, /directoryStatus === 'error' \? \(/)
+  assert.match(home, /buildHomepagePreviewBusinesses\(/)
+  assert.match(preview, /directoryStatus === 'success' \? liveBusinesses\.slice\(0, limit\) : \[\]/)
+  assert.match(preview, /exampleBusinesses\.slice\(0, Math\.max\(0, limit - live\.length\)\)/)
+  assert.match(preview, /export const HOMEPAGE_PREVIEW_LIMIT = 3/)
+  assert.match(home, /<div className="marketing-hero__viewport">[\s\S]*?businesses\.map/)
+  assert.match(home, /directoryStatus === 'error' && \(/)
   assert.match(home, /t\('marketing\.hero\.loadFailure'\)/)
   assert.match(home, /className="marketing-hero__load-error" role="alert"/)
   assert.match(home, /onClick=\{retryDirectoryLoad\}/)
   assert.match(home, /t\('common\.retry'\)/)
+  assert.match(home, /setFeaturedBusinesses\(\[\]\)[\s\S]*?setDirectoryStatus\('loading'\)/)
   assert.doesNotMatch(home, /\.catch\(\(\) => \{\s*if \(isCurrent\) setFeaturedBusinesses\(\[\]\)/)
+  assert.doesNotMatch(`${home}\n${preview}`, /localStorage|sessionStorage|minInstances|billing/)
 })
 
 test('homepage hero preview uses accessible native carousel controls on mobile', async () => {
@@ -214,7 +222,7 @@ test('homepage hero preview uses accessible native carousel controls on mobile',
   assert.match(home, /aria-label=\{t\('marketing\.hero\.nextBusiness'\)\}/)
   assert.match(home, /id="marketing-hero-preview-position" aria-live="polite"/)
   assert.match(home, /t\('marketing\.hero\.businessPosition'/)
-  assert.match(home, /const displayedHeroIndex = Math\.min\(currentHeroIndex, Math\.max\(0, businesses\.length - 1\)\)/)
+  assert.match(home, /const displayedHeroIndex = boundCarouselIndex\(currentHeroIndex, businesses\.length\)/)
   assert.match(home, /disabled=\{displayedHeroIndex === 0\}/)
   assert.match(home, /disabled=\{displayedHeroIndex >= businesses\.length - 1\}/)
   assert.match(home, /track\.scrollTo\(\{ left: getCardScrollLeft\(track, card\), behavior \}\)/)

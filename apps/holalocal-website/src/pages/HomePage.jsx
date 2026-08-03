@@ -3,6 +3,10 @@ import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import PublicBusinessCard from '../components/common/PublicBusinessCard.jsx'
 import { getFeaturedActiveBusinesses } from '../services/businessService.js'
+import {
+  boundCarouselIndex,
+  buildHomepagePreviewBusinesses,
+} from '../utils/homepagePreview.js'
 
 const howItWorksCards = [
   { key: 'browse', icon: 'search' },
@@ -158,14 +162,13 @@ function HomePage() {
     ratingCount: 0,
     isDemo: true,
   }))
-  const businesses = directoryStatus === 'success'
-    ? [
-        ...featuredBusinesses,
-        ...fallbackBusinesses.slice(0, Math.max(0, 3 - featuredBusinesses.length)),
-      ].slice(0, 3)
-    : []
+  const businesses = buildHomepagePreviewBusinesses(
+    featuredBusinesses,
+    fallbackBusinesses,
+    directoryStatus,
+  )
   const hasMultipleHeroCards = businesses.length > 1
-  const displayedHeroIndex = Math.min(currentHeroIndex, Math.max(0, businesses.length - 1))
+  const displayedHeroIndex = boundCarouselIndex(currentHeroIndex, businesses.length)
 
   const updateCurrentHeroIndex = useCallback(function updateCurrentHeroIndex() {
     const track = heroTrackRef.current
@@ -261,7 +264,20 @@ function HomePage() {
           aria-label={t('marketing.hero.businessesLabel')}
           role="region"
         >
-          {directoryStatus === 'error' ? (
+          <div className="marketing-hero__viewport">
+            <div className="marketing-hero__track" onScroll={updateCurrentHeroIndex} ref={heroTrackRef}>
+              {businesses.map((business) => (
+                <PublicBusinessCard
+                  ariaLabel={business.isDemo ? undefined : `View ${business.name} profile`}
+                  business={business}
+                  key={business.businessId}
+                  to={business.isDemo ? undefined : `/services/${business.businessId}`}
+                  variant="hero"
+                />
+              ))}
+            </div>
+          </div>
+          {directoryStatus === 'error' && (
             <div className="marketing-hero__load-error" role="alert">
               <p>{t('marketing.hero.loadFailure')}</p>
               <button
@@ -273,20 +289,6 @@ function HomePage() {
               >
                 {t('common.retry')}
               </button>
-            </div>
-          ) : (
-            <div className="marketing-hero__viewport">
-              <div className="marketing-hero__track" onScroll={updateCurrentHeroIndex} ref={heroTrackRef}>
-                {businesses.map((business) => (
-                  <PublicBusinessCard
-                    ariaLabel={business.isDemo ? undefined : `View ${business.name} profile`}
-                    business={business}
-                    key={business.businessId}
-                    to={business.isDemo ? undefined : `/services/${business.businessId}`}
-                    variant="hero"
-                  />
-                ))}
-              </div>
             </div>
           )}
           {hasMultipleHeroCards && (
