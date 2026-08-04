@@ -2,11 +2,14 @@ import {
   collection, doc, getDoc, getDocs, limit as firestoreLimit,
   query, serverTimestamp, updateDoc, where,
 } from 'firebase/firestore'
-import { db } from '../firebase/config.js'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from '../firebase/config.js'
 import { resolveMobileBusinessLookup, toMobileManagedBusiness } from './businessCompatibility.js'
 import { buildCanonicalBusinessUpdate } from './businessPayloads.js'
+import { loadManagedBusinessSubscription } from './managedSubscriptionProjection.js'
 
 const MAX_OWNER_CANDIDATES = 21
+const getOwnerSubscriptionStatusCallable = httpsCallable(functions, 'getOwnerSubscriptionStatus')
 
 function businessDocument(businessId) {
   if (!businessId) throw new Error('A business ID is required.')
@@ -17,7 +20,7 @@ function privateBusinessDocument(businessId) {
   return doc(db, 'businessPrivate', businessId)
 }
 
-async function getManagedBusinessById(businessId) {
+async function readManagedBusinessById(businessId) {
   const [businessSnapshot, privateSnapshot] = await Promise.all([
     getDoc(businessDocument(businessId)),
     getDoc(privateBusinessDocument(businessId)),
@@ -28,6 +31,13 @@ async function getManagedBusinessById(businessId) {
     businessSnapshot.data(),
     privateSnapshot.exists() ? privateSnapshot.data() : null,
   )
+}
+
+async function getManagedBusinessById(businessId) {
+  return loadManagedBusinessSubscription({
+    loadManagedBusiness: () => readManagedBusinessById(businessId),
+    loadSubscription: async () => (await getOwnerSubscriptionStatusCallable({ businessId })).data,
+  })
 }
 
 export async function getBusinessById(businessId) {

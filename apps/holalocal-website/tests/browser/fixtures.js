@@ -17,6 +17,13 @@ export const TEST_USERS = Object.freeze({
     preferredLocale: 'en',
     claims: { admin: true },
   }),
+  moderator: Object.freeze({
+    uid: 'browser-moderator',
+    email: 'moderator.browser@example.invalid',
+    displayName: 'Browser Moderator',
+    preferredLocale: 'en',
+    claims: { moderator: true },
+  }),
   customer: Object.freeze({
     uid: 'browser-customer',
     email: 'customer.browser@example.invalid',

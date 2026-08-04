@@ -1,4 +1,5 @@
 import { HttpsError } from 'firebase-functions/v2/https'
+import { loadSubscriptionProjection } from './subscriptionPlanAssignment.js'
 
 const HISTORY_LIMIT = 10
 
@@ -39,11 +40,19 @@ export async function getAdminBusinessReview({ uid, claims, businessId, db }) {
   ])
   if (!businessSnapshot.exists) throw new HttpsError('not-found', 'business-not-found')
   const business = businessSnapshot.data()
-  const ownerSnapshot = await db.doc(`users/${business.ownerId}`).get()
+  const [ownerSnapshot, subscription] = await Promise.all([
+    db.doc(`users/${business.ownerId}`).get(),
+    loadSubscriptionProjection({
+      businessId: safeId, legacyRecord: business.subscription, claims, db,
+    }),
+  ])
   const owner = ownerSnapshot.exists ? ownerSnapshot.data() : {}
+  const managedBusiness = { ...business }
+  delete managedBusiness.subscription
 
   return serialize({
-    business: { businessId: safeId, ...business },
+    business: { businessId: safeId, ...managedBusiness },
+    subscription,
     privateModeration: {
       currentRejection: privateSnapshot.exists
         ? privateSnapshot.data().currentRejection ?? null

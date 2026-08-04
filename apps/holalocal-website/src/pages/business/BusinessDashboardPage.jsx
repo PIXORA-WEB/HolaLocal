@@ -6,7 +6,11 @@ import BusinessInsightsPanel from '../../components/business/BusinessInsightsPan
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { ImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
-import { ensureBusinessProfile, submitBusinessForReview } from '../../services/businessService.js'
+import {
+  ensureBusinessProfile,
+  getOwnerSubscriptionStatus,
+  submitBusinessForReview,
+} from '../../services/businessService.js'
 import { formatLanguageList, getLanguageNameFromCode } from '../../utils/languages.js'
 import { getBusinessProfileCompletion } from '../../utils/businessCompletion.js'
 import {
@@ -18,6 +22,7 @@ import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
+import { loadOwnerSubscriptionProjection } from '../../utils/subscriptionProjection.js'
 
 function BusinessDashboardPage() {
   const { t } = useTranslation()
@@ -31,6 +36,8 @@ function BusinessDashboardPage() {
   const [submittingForReview, setSubmittingForReview] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [recoveryPending, setRecoveryPending] = useState(false)
+  const [subscriptionProjectionUnavailable, setSubscriptionProjectionUnavailable] = useState(false)
+  const [subscriptionProjectionPending, setSubscriptionProjectionPending] = useState(false)
   const attemptedProfileRefreshBusinessIdRef = useRef(null)
   const userId = user.uid
   const userBusinessId = userProfile?.businessId ?? null
@@ -47,7 +54,22 @@ function BusinessDashboardPage() {
           businessId: userBusinessId,
           roles: hasBusinessRole ? ['business'] : [],
         })
-        if (active) setBusinessProfile(profile)
+        if (active) {
+          setBusinessProfile(profile)
+          setLoading(false)
+        }
+        const subscriptionResult = profile?.businessId
+          ? await loadOwnerSubscriptionProjection(() => getOwnerSubscriptionStatus(profile.businessId))
+          : { projection: null, unavailable: false }
+        if (active) {
+          setSubscriptionProjectionUnavailable(subscriptionResult.unavailable)
+          if (subscriptionResult.projection) {
+            setBusinessProfile({
+              ...profile,
+              entitlements: { ...profile.entitlements, ...subscriptionResult.projection },
+            })
+          }
+        }
         if (
           profile?.businessId
           && profile.businessId !== userBusinessId
@@ -79,7 +101,10 @@ function BusinessDashboardPage() {
     setSubmitSuccess('')
     try {
       const submittedBusiness = await submitBusinessForReview(businessProfile.businessId)
-      setBusinessProfile(submittedBusiness)
+      setBusinessProfile({
+        ...submittedBusiness,
+        entitlements: businessProfile.entitlements,
+      })
       setSubmitSuccess(t('business.control.submitSuccess'))
     } catch (submissionError) {
       setSubmitError(classifyFrontendError(submissionError, {
@@ -89,6 +114,29 @@ function BusinessDashboardPage() {
       }))
     } finally {
       setSubmittingForReview(false)
+    }
+  }
+
+  async function retrySubscriptionProjection() {
+    if (!businessProfile?.businessId || subscriptionProjectionPending) return
+    setSubscriptionProjectionPending(true)
+    try {
+      const result = await loadOwnerSubscriptionProjection(
+        () => getOwnerSubscriptionStatus(businessProfile.businessId),
+      )
+      setSubscriptionProjectionUnavailable(result.unavailable)
+      if (result.projection) {
+        setBusinessProfile((current) => ({
+          ...current,
+          entitlements: { ...current.entitlements, ...result.projection },
+        }))
+      }
+    } catch (projectionError) {
+      setError(classifyFrontendError(projectionError, {
+        domain: 'workflow', fallbackType: 'BUSINESS_CREATE_FAILED',
+      }))
+    } finally {
+      setSubscriptionProjectionPending(false)
     }
   }
 
@@ -191,6 +239,12 @@ function BusinessDashboardPage() {
 
   return (
     <section className="business-dashboard">
+      {subscriptionProjectionUnavailable && (
+        <div className="admin-alert admin-alert--notice" role="status">
+          <p>{t('subscriptionProjection.unavailable')}</p>
+          <button className="button button--secondary" disabled={subscriptionProjectionPending} onClick={() => void retrySubscriptionProjection()} type="button">{t(subscriptionProjectionPending ? 'subscriptionProjection.retrying' : 'common.retry')}</button>
+        </div>
+      )}
       <header className="business-summary">
         <div className="business-summary__media">
           <ImageAvatar alt={t('business.form.media.logoAlt', { name: businessName })} className="image-avatar--business-logo" name={businessName} src={businessProfile?.logoUrl} />

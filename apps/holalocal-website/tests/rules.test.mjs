@@ -187,6 +187,15 @@ async function seed() {
       contact: { ...activeContact, email: 'private@example.test' },
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     })
+    await setDoc(doc(database, 'businessSubscriptions', 'active-business'), {
+      schemaVersion: 1, businessId: 'active-business', planId: 'pro', planRevision: 1,
+      accessStatus: 'active', assignmentSource: 'admin', assignmentVersion: 1,
+      updatedBy: 'admin', assignedAt: serverTimestamp(), startsAt: serverTimestamp(),
+      endsAt: null, updatedAt: serverTimestamp(),
+    })
+    await setDoc(doc(database, 'businessSubscriptions', 'active-business', 'assignmentEvents', 'request_123456789'), {
+      requestId: 'request_123456789', adminUid: 'admin', reason: 'Private audit reason',
+    })
   })
 }
 
@@ -455,11 +464,31 @@ describe('business documents', () => {
       { businessName: 'Changed legacy name', updatedAt: serverTimestamp() },
     ))
   })
-  test('only safe active businesses are public', async () => {
-    await assertSucceeds(getDoc(doc(environment.unauthenticatedContext().firestore(), 'businesses', 'active-business')))
+  test('raw business documents are never public', async () => {
+    await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), 'businesses', 'active-business')))
+    await assertFails(getDoc(doc(environment.authenticatedContext('customer').firestore(), 'businesses', 'active-business')))
     await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), 'businesses', 'draft-business')))
     await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), 'businesses', 'unsafe-active-business')))
     await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), 'businesses', 'unsafe-website-business')))
+  })
+  test('private subscriptions and assignment history deny every client role', async () => {
+    const contexts = [
+      environment.unauthenticatedContext(),
+      environment.authenticatedContext('customer'),
+      environment.authenticatedContext('owner'),
+      environment.authenticatedContext('manager'),
+      environment.authenticatedContext('moderator', { moderator: true }),
+      environment.authenticatedContext('admin', { admin: true }),
+    ]
+    for (const context of contexts) {
+      const database = context.firestore()
+      const subscription = doc(database, 'businessSubscriptions', 'active-business')
+      const event = doc(database, 'businessSubscriptions', 'active-business', 'assignmentEvents', 'request_123456789')
+      await assertFails(getDoc(subscription))
+      await assertFails(getDoc(event))
+      await assertFails(updateDoc(subscription, { planId: 'starter' }))
+      await assertFails(setDoc(event, { requestId: 'different' }))
+    }
   })
   test('website visibility follows the same public-contact invariant as other channels', async () => {
     const reference = doc(environment.authenticatedContext('owner').firestore(), 'businesses', 'draft-business')

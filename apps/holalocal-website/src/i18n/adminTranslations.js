@@ -40,9 +40,88 @@ const ownerMessages = {
 
 const reasonKeys = ['incomplete_profile', 'unclear_service_information', 'location_or_service_area', 'contact_information', 'logo_or_gallery', 'unsupported_or_inappropriate_content', 'other']
 
+const subscriptionProjectionMessages = {
+  en: ['The authoritative subscription status is temporarily unavailable. The plan shown below comes from the saved business profile and may be out of date.', 'Retrying…'],
+  es: ['El estado autorizado de la suscripción no está disponible temporalmente. El plan mostrado procede del perfil guardado del negocio y puede estar desactualizado.', 'Reintentando…'],
+  fr: ["Le statut d’abonnement de référence est temporairement indisponible. Le forfait affiché provient du profil enregistré de l’entreprise et peut être obsolète.", 'Nouvelle tentative…'],
+  de: ['Der verbindliche Abonnementstatus ist vorübergehend nicht verfügbar. Der angezeigte Tarif stammt aus dem gespeicherten Unternehmensprofil und kann veraltet sein.', 'Erneuter Versuch…'],
+  nl: ['De gezaghebbende abonnementsstatus is tijdelijk niet beschikbaar. Het getoonde abonnement komt uit het opgeslagen bedrijfsprofiel en kan verouderd zijn.', 'Opnieuw proberen…'],
+  pt: ['O estado oficial da subscrição está temporariamente indisponível. O plano apresentado provém do perfil guardado da empresa e pode estar desatualizado.', 'A tentar novamente…'],
+  pl: ['Aktualny status subskrypcji jest tymczasowo niedostępny. Wyświetlany plan pochodzi z zapisanego profilu firmy i może być nieaktualny.', 'Ponawianie…'],
+  ro: ['Starea oficială a abonamentului este temporar indisponibilă. Planul afișat provine din profilul salvat al companiei și poate fi învechit.', 'Se reîncearcă…'],
+  cs: ['Autoritativní stav předplatného je dočasně nedostupný. Zobrazený tarif pochází z uloženého profilu firmy a nemusí být aktuální.', 'Opakování…'],
+  sk: ['Autoritatívny stav predplatného je dočasne nedostupný. Zobrazený program pochádza z uloženého profilu firmy a nemusí byť aktuálny.', 'Opakovanie…'],
+  hu: ['A hiteles előfizetési állapot átmenetileg nem érhető el. A megjelenített csomag a mentett vállalkozási profilból származik, és elavult lehet.', 'Újrapróbálkozás…'],
+  uk: ['Офіційний стан підписки тимчасово недоступний. Показаний план взято зі збереженого профілю компанії, тому він може бути застарілим.', 'Повторна спроба…'],
+  it: ["Lo stato autorevole dell’abbonamento non è temporaneamente disponibile. Il piano mostrato proviene dal profilo salvato dell’attività e potrebbe non essere aggiornato.", 'Nuovo tentativo…'],
+  sv: ['Den auktoritativa prenumerationsstatusen är tillfälligt otillgänglig. Planen som visas kommer från den sparade företagsprofilen och kan vara inaktuell.', 'Försöker igen…'],
+  da: ['Den autoritative abonnementsstatus er midlertidigt utilgængelig. Den viste plan kommer fra den gemte virksomhedsprofil og kan være forældet.', 'Prøver igen…'],
+  fi: ['Virallinen tilaustila ei ole tilapäisesti käytettävissä. Näytetty tilaus on peräisin tallennetusta yritysprofiilista ja voi olla vanhentunut.', 'Yritetään uudelleen…'],
+  no: ['Den autoritative abonnementsstatusen er midlertidig utilgjengelig. Planen som vises, kommer fra den lagrede bedriftsprofilen og kan være utdatert.', 'Prøver på nytt…'],
+}
+
+const adminSubscriptionMessages = {
+  en: ['Subscription plan', 'Assign a plan', 'Manually assigned', 'No manual plan assigned', 'Required. Maximum {{max}} characters.', 'No manual plan has been assigned yet. Confirming a plan will create the business’s private subscription record.', 'Moderation decision'],
+  es: ['Plan de suscripción', 'Asignar un plan', 'Asignado manualmente', 'Sin plan asignado manualmente', 'Obligatorio. Máximo {{max}} caracteres.', 'Todavía no se ha asignado ningún plan manualmente. Al confirmar un plan se creará el registro privado de suscripción del negocio.', 'Decisión de moderación'],
+  fr: ["Formule d’abonnement", 'Attribuer une formule', 'Attribuée manuellement', 'Aucune formule attribuée manuellement', 'Obligatoire. {{max}} caractères maximum.', "Aucune formule n’a encore été attribuée manuellement. La confirmation créera le dossier d’abonnement privé de l’entreprise.", 'Décision de modération'],
+  de: ['Abonnement', 'Tarif zuweisen', 'Manuell zugewiesen', 'Kein Tarif manuell zugewiesen', 'Erforderlich. Maximal {{max}} Zeichen.', 'Es wurde noch kein Tarif manuell zugewiesen. Durch die Bestätigung wird der private Abonnementdatensatz des Unternehmens erstellt.', 'Moderationsentscheidung'],
+  nl: ['Abonnement', 'Een abonnement toewijzen', 'Handmatig toegewezen', 'Geen abonnement handmatig toegewezen', 'Verplicht. Maximaal {{max}} tekens.', 'Er is nog geen abonnement handmatig toegewezen. Door een abonnement te bevestigen, wordt het privé-abonnementsrecord van het bedrijf aangemaakt.', 'Moderatiebeslissing'],
+  pt: ['Plano de subscrição', 'Atribuir um plano', 'Atribuído manualmente', 'Nenhum plano atribuído manualmente', 'Obrigatório. Máximo de {{max}} caracteres.', 'Ainda não foi atribuído nenhum plano manualmente. A confirmação criará o registo privado de subscrição da empresa.', 'Decisão de moderação'],
+  pl: ['Plan subskrypcji', 'Przypisz plan', 'Przypisany ręcznie', 'Brak planu przypisanego ręcznie', 'Wymagane. Maksymalnie {{max}} znaków.', 'Nie przypisano jeszcze planu ręcznie. Potwierdzenie planu utworzy prywatny rekord subskrypcji firmy.', 'Decyzja moderacyjna'],
+  ro: ['Plan de abonament', 'Atribuie un plan', 'Atribuit manual', 'Niciun plan atribuit manual', 'Obligatoriu. Maximum {{max}} de caractere.', 'Nu a fost atribuit încă niciun plan manual. Confirmarea unui plan va crea înregistrarea privată a abonamentului companiei.', 'Decizie de moderare'],
+  cs: ['Plán předplatného', 'Přiřadit plán', 'Přiřazeno ručně', 'Žádný plán nebyl přiřazen ručně', 'Povinné. Maximálně {{max}} znaků.', 'Dosud nebyl ručně přiřazen žádný plán. Potvrzením plánu se vytvoří soukromý záznam předplatného firmy.', 'Rozhodnutí moderátora'],
+  sk: ['Program predplatného', 'Priradiť program', 'Priradené ručne', 'Žiadny program nebol priradený ručne', 'Povinné. Maximálne {{max}} znakov.', 'Zatiaľ nebol ručne priradený žiadny program. Potvrdením programu sa vytvorí súkromný záznam predplatného firmy.', 'Rozhodnutie moderátora'],
+  hu: ['Előfizetési csomag', 'Csomag hozzárendelése', 'Manuálisan hozzárendelve', 'Nincs manuálisan hozzárendelt csomag', 'Kötelező. Legfeljebb {{max}} karakter.', 'Még nincs manuálisan hozzárendelt csomag. A csomag megerősítése létrehozza a vállalkozás privát előfizetési rekordját.', 'Moderálási döntés'],
+  uk: ['План підписки', 'Призначити план', 'Призначено вручну', 'План не призначено вручну', 'Обов’язково. Максимум {{max}} символів.', 'План ще не призначено вручну. Підтвердження плану створить приватний запис підписки компанії.', 'Рішення модерації'],
+  it: ['Piano di abbonamento', 'Assegna un piano', 'Assegnato manualmente', 'Nessun piano assegnato manualmente', 'Obbligatorio. Massimo {{max}} caratteri.', "Non è ancora stato assegnato alcun piano manualmente. La conferma creerà il record privato dell’abbonamento dell’attività.", 'Decisione di moderazione'],
+  sv: ['Abonnemangsplan', 'Tilldela en plan', 'Manuellt tilldelad', 'Ingen plan har tilldelats manuellt', 'Obligatoriskt. Högst {{max}} tecken.', 'Ingen plan har ännu tilldelats manuellt. När planen bekräftas skapas företagets privata abonnemangspost.', 'Moderationsbeslut'],
+  da: ['Abonnementsplan', 'Tildel en plan', 'Manuelt tildelt', 'Ingen plan er tildelt manuelt', 'Påkrævet. Maksimalt {{max}} tegn.', 'Der er endnu ikke tildelt en plan manuelt. Når planen bekræftes, oprettes virksomhedens private abonnementspost.', 'Moderationsbeslutning'],
+  fi: ['Tilauspaketti', 'Määritä paketti', 'Määritetty manuaalisesti', 'Pakettia ei ole määritetty manuaalisesti', 'Pakollinen. Enintään {{max}} merkkiä.', 'Pakettia ei ole vielä määritetty manuaalisesti. Paketin vahvistaminen luo yrityksen yksityisen tilaustietueen.', 'Moderointipäätös'],
+  no: ['Abonnementsplan', 'Tildel en plan', 'Manuelt tildelt', 'Ingen plan er tildelt manuelt', 'Påkrevd. Maksimalt {{max}} tegn.', 'Ingen plan er ennå tildelt manuelt. Når planen bekreftes, opprettes bedriftens private abonnementspost.', 'Modereringsbeslutning'],
+}
+
+const adminRailMessages = {
+  en: ['Private business details', 'Business review tools', 'Moderation history ({{count}})', 'Current plan', 'No manual assignment', 'Using fallback plan', 'Assigning a plan will create the private subscription record.', 'Choose a plan', 'Required', '{{current}} / {{max}}', 'Plan history ({{count}})', '{{count}} image', '{{count}} images'],
+  es: ['Datos privados del negocio', 'Herramientas de revisión del negocio', 'Historial de moderación ({{count}})', 'Plan actual', 'Sin asignación manual', 'Usando un plan alternativo', 'Asignar un plan creará el registro privado de suscripción.', 'Elegir un plan', 'Obligatorio', '{{current}} / {{max}}', 'Historial de planes ({{count}})', '{{count}} imagen', '{{count}} imágenes'],
+  fr: ["Détails privés de l’entreprise", "Outils de vérification de l’entreprise", 'Historique de modération ({{count}})', 'Formule actuelle', 'Aucune attribution manuelle', 'Formule de secours utilisée', "L’attribution d’une formule créera le dossier d’abonnement privé.", 'Choisir une formule', 'Obligatoire', '{{current}} / {{max}}', 'Historique des formules ({{count}})', '{{count}} image', '{{count}} images'],
+  de: ['Private Unternehmensdaten', 'Werkzeuge zur Unternehmensprüfung', 'Moderationsverlauf ({{count}})', 'Aktueller Tarif', 'Keine manuelle Zuweisung', 'Ersatztarif wird verwendet', 'Durch die Zuweisung eines Tarifs wird der private Abonnementdatensatz erstellt.', 'Tarif auswählen', 'Erforderlich', '{{current}} / {{max}}', 'Tarifverlauf ({{count}})', '{{count}} Bild', '{{count}} Bilder'],
+  nl: ['Privébedrijfsgegevens', 'Hulpmiddelen voor bedrijfsbeoordeling', 'Moderatiegeschiedenis ({{count}})', 'Huidig abonnement', 'Geen handmatige toewijzing', 'Terugvalabonnement wordt gebruikt', 'Door een abonnement toe te wijzen wordt het privé-abonnementsrecord aangemaakt.', 'Kies een abonnement', 'Verplicht', '{{current}} / {{max}}', 'Abonnementsgeschiedenis ({{count}})', '{{count}} afbeelding', '{{count}} afbeeldingen'],
+  pt: ['Dados privados da empresa', 'Ferramentas de revisão da empresa', 'Histórico de moderação ({{count}})', 'Plano atual', 'Sem atribuição manual', 'A usar plano alternativo', 'A atribuição de um plano criará o registo privado da subscrição.', 'Escolher um plano', 'Obrigatório', '{{current}} / {{max}}', 'Histórico de planos ({{count}})', '{{count}} imagem', '{{count}} imagens'],
+  pl: ['Prywatne dane firmy', 'Narzędzia weryfikacji firmy', 'Historia moderacji ({{count}})', 'Bieżący plan', 'Brak ręcznego przypisania', 'Używany jest plan zastępczy', 'Przypisanie planu utworzy prywatny rekord subskrypcji.', 'Wybierz plan', 'Wymagane', '{{current}} / {{max}}', 'Historia planów ({{count}})', '{{count}} obraz', '{{count}} obrazy'],
+  ro: ['Detalii private ale companiei', 'Instrumente de verificare a companiei', 'Istoric de moderare ({{count}})', 'Plan actual', 'Fără atribuire manuală', 'Se folosește planul de rezervă', 'Atribuirea unui plan va crea înregistrarea privată a abonamentului.', 'Alege un plan', 'Obligatoriu', '{{current}} / {{max}}', 'Istoric planuri ({{count}})', '{{count}} imagine', '{{count}} imagini'],
+  cs: ['Soukromé údaje firmy', 'Nástroje kontroly firmy', 'Historie moderování ({{count}})', 'Aktuální plán', 'Bez ručního přiřazení', 'Používá se náhradní plán', 'Přiřazením plánu se vytvoří soukromý záznam předplatného.', 'Vyberte plán', 'Povinné', '{{current}} / {{max}}', 'Historie plánů ({{count}})', '{{count}} obrázek', '{{count}} obrázky'],
+  sk: ['Súkromné údaje firmy', 'Nástroje kontroly firmy', 'História moderovania ({{count}})', 'Aktuálny program', 'Bez ručného priradenia', 'Používa sa náhradný program', 'Priradením programu sa vytvorí súkromný záznam predplatného.', 'Vyberte program', 'Povinné', '{{current}} / {{max}}', 'História programov ({{count}})', '{{count}} obrázok', '{{count}} obrázky'],
+  hu: ['Privát vállalkozási adatok', 'Vállalkozás-ellenőrzési eszközök', 'Moderálási előzmények ({{count}})', 'Jelenlegi csomag', 'Nincs manuális hozzárendelés', 'Tartalék csomag használata', 'A csomag hozzárendelése létrehozza a privát előfizetési rekordot.', 'Csomag választása', 'Kötelező', '{{current}} / {{max}}', 'Csomagelőzmények ({{count}})', '{{count}} kép', '{{count}} kép'],
+  uk: ['Приватні дані компанії', 'Інструменти перевірки компанії', 'Історія модерації ({{count}})', 'Поточний план', 'Без ручного призначення', 'Використовується резервний план', 'Призначення плану створить приватний запис підписки.', 'Виберіть план', 'Обов’язково', '{{current}} / {{max}}', 'Історія планів ({{count}})', '{{count}} зображення', '{{count}} зображення'],
+  it: ["Dati privati dell’attività", "Strumenti di revisione dell’attività", 'Cronologia moderazione ({{count}})', 'Piano attuale', 'Nessuna assegnazione manuale', 'Piano di riserva in uso', "L’assegnazione di un piano creerà il record privato dell’abbonamento.", 'Scegli un piano', 'Obbligatorio', '{{current}} / {{max}}', 'Cronologia piani ({{count}})', '{{count}} immagine', '{{count}} immagini'],
+  sv: ['Privata företagsuppgifter', 'Verktyg för företagsgranskning', 'Moderationshistorik ({{count}})', 'Nuvarande plan', 'Ingen manuell tilldelning', 'Reservplan används', 'När en plan tilldelas skapas den privata abonnemangsposten.', 'Välj en plan', 'Obligatoriskt', '{{current}} / {{max}}', 'Planhistorik ({{count}})', '{{count}} bild', '{{count}} bilder'],
+  da: ['Private virksomhedsoplysninger', 'Værktøjer til virksomhedsgennemgang', 'Moderationshistorik ({{count}})', 'Nuværende plan', 'Ingen manuel tildeling', 'Reserveplan anvendes', 'Når en plan tildeles, oprettes den private abonnementspost.', 'Vælg en plan', 'Påkrævet', '{{current}} / {{max}}', 'Planhistorik ({{count}})', '{{count}} billede', '{{count}} billeder'],
+  fi: ['Yrityksen yksityiset tiedot', 'Yrityksen tarkistustyökalut', 'Moderointihistoria ({{count}})', 'Nykyinen paketti', 'Ei manuaalista määritystä', 'Varapaketti käytössä', 'Paketin määrittäminen luo yksityisen tilaustietueen.', 'Valitse paketti', 'Pakollinen', '{{current}} / {{max}}', 'Pakettihistoria ({{count}})', '{{count}} kuva', '{{count}} kuvaa'],
+  no: ['Private bedriftsopplysninger', 'Verktøy for bedriftsgjennomgang', 'Modereringshistorikk ({{count}})', 'Nåværende plan', 'Ingen manuell tildeling', 'Reserveplan brukes', 'Når en plan tildeles, opprettes den private abonnementsposten.', 'Velg en plan', 'Påkrevd', '{{current}} / {{max}}', 'Planhistorikk ({{count}})', '{{count}} bilde', '{{count}} bilder'],
+}
+
 export const ownerRejectionTranslations = Object.fromEntries(Object.entries(reasonLabels).map(([locale, labels]) => {
   const owner = ownerMessages[locale]
+  const subscriptionProjection = subscriptionProjectionMessages[locale]
+  const adminSubscription = adminSubscriptionMessages[locale]
+  const adminRail = adminRailMessages[locale]
   return [locale, {
+    subscriptionProjection: { unavailable: subscriptionProjection[0], retrying: subscriptionProjection[1] },
+    admin: {
+      review: {
+        moderationDecision: adminSubscription[6], privateDetails: adminRail[0],
+        reviewTools: adminRail[1], historyCount: adminRail[2],
+        imageCount_one: adminRail[11], imageCount_other: adminRail[12],
+      },
+      subscription: {
+        title: adminSubscription[0], selectedPlan: adminSubscription[1],
+        manuallyAssigned: adminSubscription[2], noManualAssignment: adminSubscription[3],
+        reasonHelp: adminSubscription[4], fallbackWarning: adminSubscription[5],
+        currentPlan: adminRail[3], fallbackStatus: adminRail[4], usingFallback: adminRail[5],
+        fallbackNotice: adminRail[6], choosePlan: adminRail[7], required: adminRail[8],
+        characterCount: adminRail[9], historyCount: adminRail[10],
+      },
+    },
     rejection: {
       reason: Object.fromEntries(reasonKeys.map((key, index) => [key, labels[index]])),
       owner: { eyebrow: owner[0], title: owner[1], category: owner[2], nextStep: owner[3], edit: owner[4] },
@@ -51,6 +130,10 @@ export const ownerRejectionTranslations = Object.fromEntries(Object.entries(reas
 }))
 
 export const adminEnglishTranslations = {
+  subscriptionProjection: {
+    unavailable: 'The authoritative subscription status is temporarily unavailable. The plan shown below comes from the saved business profile and may be out of date.',
+    retrying: 'Retrying…',
+  },
   admin: {
     common: { notProvided: 'Not provided' },
     navigation: {
@@ -103,15 +186,17 @@ export const adminEnglishTranslations = {
       businessId: 'Business ID', ownerUid: 'Owner UID', ownerName: 'Owner name',
       ownerEmail: 'Owner email', ownerLocale: 'Owner locale', submitted: 'Submitted',
       previousGuidance: 'Previous rejection guidance', history: 'Recent moderation history',
-      noHistory: 'No moderation events yet.', technicalDetails: 'Technical details',
+      historyCount: 'Moderation history ({{count}})', noHistory: 'No moderation events yet.', technicalDetails: 'Technical details',
+      privateDetails: 'Private business details', reviewTools: 'Business review tools',
       readinessEyebrow: 'Canonical requirements', checklist: 'Review checklist',
       requirementsPresent: '{{complete}} of {{total}} required fields present',
       profileCompleteness: 'Profile completeness: {{percentage}}%',
       checklistNote: 'This checklist is a review aid. The backend performs the authoritative publication eligibility check.',
       checkPassed: 'Present', checkAttention: 'Check', mediaEyebrow: 'Profile media', gallery: 'Gallery',
-      imageCount: '{{count}} images', noGallery: 'No gallery images were submitted.',
+      imageCount_one: '{{count}} image', imageCount_other: '{{count}} images', noGallery: 'No gallery images were submitted.',
       approve: 'Approve and publish', reject: 'Reject',
       decisionHeading: 'Choose a moderation decision',
+      moderationDecision: 'Moderation decision',
       decisionHelp: 'Publishing makes an eligible profile public. Rejecting returns it to the owner with your guidance.',
       publishNotVerify: 'Publishing this profile does not mark the business as verified.',
       processing: 'Processing…', approved: 'Business approved and published.', rejected: 'Business rejected and guidance saved.',
@@ -122,6 +207,35 @@ export const adminEnglishTranslations = {
       reason: 'Reason category', selectReason: 'Select a reason', reasonRequired: 'Choose a reason category.',
       guidance: 'Owner-facing guidance', guidanceHelp: 'Enter {{min}}–{{max}} characters. This is shown as plain text.',
       guidanceLength: 'Guidance must contain between {{min}} and {{max}} characters.',
+    },
+    subscription: {
+      title: 'Subscription plan', effectivePlan: 'Current effective plan',
+      storedPlan: 'Stored assigned plan', assignmentStatus: 'Assignment status',
+      source: 'Assignment source', version: 'Assignment version', selectedPlan: 'Assign a plan',
+      manuallyAssigned: 'Manually assigned', noManualAssignment: 'No manual plan assigned',
+      currentPlan: 'Current plan', fallbackStatus: 'No manual assignment',
+      usingFallback: 'Using fallback plan', fallbackNotice: 'Assigning a plan will create the private subscription record.',
+      choosePlan: 'Choose a plan', required: 'Required', characterCount: '{{current}} / {{max}}',
+      reason: 'Administrator reason', reasonHelp: 'Required. Maximum {{max}} characters.',
+      reasonError: 'Enter a reason of no more than {{max}} characters.', reviewChange: 'Review plan assignment',
+      moderatorReadOnly: 'Moderators can review subscription state, but only administrators can assign plans.',
+      suspendedWarning: 'This business is suspended. The plan can be assigned, but the business remains suspended.',
+      malformedWarning: 'The trusted subscription state is missing or malformed. Confirming will create or repair the private authoritative record.',
+      fallbackWarning: 'No manual plan has been assigned yet. Confirming a plan will create the business’s private subscription record.',
+      repairConfirmation: 'This assignment will initialise or repair trusted subscription state.',
+      history: 'Recent plan-assignment history', historyCount: 'Plan history ({{count}})', noHistory: 'No plan-assignment events yet.',
+      confirmTitle: 'Confirm subscription plan assignment',
+      confirmDescription: 'Assign {{selected}} to {{name}}? The current effective plan is {{current}}.',
+      confirm: 'Confirm plan assignment', stale: 'Another administrator changed this subscription. The latest state has been loaded; review and confirm again.',
+      archived: 'Archived businesses cannot receive plan assignments.',
+      sources: {
+        private_authoritative: 'Private authoritative record', legacy_fallback: 'Legacy fallback',
+        early_access_fallback: 'Early Access fallback', malformed_fallback: 'Malformed-state fallback',
+      },
+      results: {
+        initialized: 'Private subscription state initialised.', changed: 'Subscription plan changed.',
+        repaired: 'Malformed subscription state repaired.', no_change: 'Plan confirmed; no subscription change was required.',
+      },
     },
     errors: {
       loadTitle: 'Unable to load administrator data',

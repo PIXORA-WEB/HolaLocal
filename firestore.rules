@@ -426,11 +426,19 @@ service cloud.firestore {
     }
 
     match /businesses/{businessId} {
-      allow read: if hasSafePublicBusinessData(resource.data) || managesBusiness(businessId) || isModerator();
+      allow read: if managesBusiness(businessId) || isModerator();
       allow create: if false;
       allow update: if managesBusiness(businessId)
         && validBusinessOwnerUpdate();
       allow delete: if false;
+    }
+
+    match /businessSubscriptions/{businessId} {
+      allow read, write: if false;
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
     }
 
     match /businessPrivate/{businessId} {

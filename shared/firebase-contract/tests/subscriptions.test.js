@@ -14,6 +14,8 @@ import {
   PLAN_IDS,
   PLAN_ID_VALUES,
   resolveBusinessEntitlements,
+  resolveAuthoritativeBusinessEntitlements,
+  resolveAuthoritativeBusinessSubscription,
   SUBSCRIPTION_ACCESS_STATUSES,
   SUBSCRIPTION_ASSIGNMENT_SOURCES,
   SUBSCRIPTION_FALLBACK_REASONS,
@@ -347,4 +349,28 @@ test('feature and limit helpers reject unknown entitlement keys', () => {
     8,
   )
   assert.equal(businessEntitlementLimit(resolved, 'unknownLimit'), null)
+})
+
+test('authoritative subscription resolution is private-first and never revives legacy state', () => {
+  const legacy = buildEarlyAccessSubscriptionState()
+  const privateGrowth = { ...legacy, planId: 'growth', planRevision: PLAN_DEFINITIONS.growth.revision, assignmentSource: 'admin' }
+  const resolved = resolveAuthoritativeBusinessEntitlements(privateGrowth, legacy)
+  assert.equal(resolved.effectivePlanId, 'growth')
+  assert.equal(resolved.authoritySource, 'private_authoritative')
+
+  const malformed = resolveAuthoritativeBusinessSubscription(
+    { schemaVersion: 1, planId: 'invalid' },
+    privateGrowth,
+    { privateRecordExists: true },
+  )
+  assert.equal(malformed.authoritySource, 'malformed_fallback')
+  assert.equal(malformed.normalized.subscription, null)
+})
+
+test('authoritative subscription resolution uses legacy only while private state is absent', () => {
+  const legacy = { tier: 'free' }
+  const resolved = resolveAuthoritativeBusinessEntitlements(null, legacy, { privateRecordExists: false })
+  assert.equal(resolved.effectivePlanId, 'early_access')
+  assert.equal(resolved.authoritySource, 'legacy_fallback')
+  assert.equal(resolved.isLegacyFallback, true)
 })

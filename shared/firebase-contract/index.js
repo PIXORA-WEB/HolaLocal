@@ -62,6 +62,8 @@ export {
   PLAN_IDS,
   PLAN_ID_VALUES,
   resolveBusinessEntitlements,
+  resolveAuthoritativeBusinessEntitlements,
+  resolveAuthoritativeBusinessSubscription,
   SUBSCRIPTION_ACCESS_STATUSES,
   SUBSCRIPTION_ASSIGNMENT_SOURCES,
   SUBSCRIPTION_FALLBACK_REASONS,

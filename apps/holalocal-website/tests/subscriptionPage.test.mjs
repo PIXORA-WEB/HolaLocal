@@ -54,6 +54,12 @@ test('subscription comparison renders the shared stable plan catalogue accessibl
   )
   assert.doesNotMatch(source, /stripe|checkout|paymentIntent|billingInterval|currency|priceId/i)
   assert.doesNotMatch(source, /[$€£]\s*\d|\d\s*[$€£]/)
+  assert.match(source, /getOwnerSubscriptionStatus/)
+  assert.match(source, /subscriptionStatusProjection\?\.effectivePlanId/)
+  assert.match(source, /businessProfile\?\.entitlements\?\.effectivePlanId/)
+  assert.match(source, /subscriptionProjectionUnavailable/)
+  assert.match(source, /retrySubscriptionProjection/)
+  assert.match(source, /loadOwnerSubscriptionProjection/)
 })
 
 test('important English subscription comparison keys resolve without raw keys', async () => {

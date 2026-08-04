@@ -52,6 +52,24 @@ async function resetPendingBusiness() {
   await Promise.all(events.map((event) => event.delete()))
 }
 
+async function resetSubscriptionState() {
+  const subscriptionRef = db.doc(`businessSubscriptions/${TEST_BUSINESS_ID}`)
+  const events = await subscriptionRef.collection('assignmentEvents').listDocuments()
+  await Promise.all(events.map((event) => event.delete()))
+  await subscriptionRef.delete()
+}
+
+async function assignmentCallable(page, payload) {
+  return page.evaluate(async (input) => {
+    const { assignBusinessSubscriptionPlan } = await import('/src/services/adminService.js')
+    try {
+      return { ok: true, value: await assignBusinessSubscriptionPlan(input) }
+    } catch (error) {
+      return { ok: false, code: error.code, message: error.message }
+    }
+  }, payload)
+}
+
 async function storageRead(page, storagePath) {
   return page.evaluate(async (path) => {
     const { getBytes, ref } = await import('/@id/firebase/storage')
@@ -66,13 +84,222 @@ async function storageRead(page, storagePath) {
 }
 
 test.describe.serial('emulator-only Admin Dashboard smoke', () => {
+  test('subscription assignment, private boundaries, owner projection, moderator access and responsive UI', async ({ browser }) => {
+    await Promise.all([resetPendingBusiness(), resetSubscriptionState()])
+    const assignmentReason = 'Approved Growth access for the local browser validation.'
+    const noChangeReason = 'Reconfirmed Growth after reviewing the current business requirements.'
+
+    const admin = await browser.newContext()
+    const adminPage = await admin.newPage()
+    await signIn(adminPage, TEST_USERS.admin)
+    await adminPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
+
+    const subscriptionSection = adminPage.getByRole('heading', { name: 'Subscription plan' }).locator('..')
+    await expect(subscriptionSection).toBeVisible()
+    await expect(subscriptionSection).toContainText('No manual assignment')
+    await expect(subscriptionSection).not.toContainText('Fallback plan · No manual assignment')
+    await expect(subscriptionSection).not.toContainText('Assignment version')
+    await expect(subscriptionSection).not.toContainText('Not provided')
+    const planRadios = subscriptionSection.getByRole('radio')
+    await expect(planRadios).toHaveCount(4)
+    for (const planName of ['Early Access', 'Starter', 'Growth', 'Pro']) {
+      await expect(subscriptionSection.getByRole('radio', { name: planName })).toBeVisible()
+    }
+    const earlyAccessRadio = subscriptionSection.getByRole('radio', { name: 'Early Access' })
+    const growthRadio = subscriptionSection.getByRole('radio', { name: 'Growth' })
+    await expect(earlyAccessRadio).toBeChecked()
+    const initialPlanHistory = subscriptionSection.locator('.admin-plan-history')
+    await expect(initialPlanHistory).not.toHaveAttribute('open', '')
+    await expect(initialPlanHistory.getByText('Plan history (0)')).toBeVisible()
+
+    await adminPage.getByRole('button', { name: 'Review plan assignment' }).click()
+    await expect(adminPage.getByRole('dialog')).toHaveCount(0)
+    await expect(adminPage.locator('#subscription-reason-error[role="alert"]')).toBeVisible()
+    await expect(adminPage.getByLabel('Administrator reason')).toBeFocused()
+
+    await earlyAccessRadio.focus()
+    await adminPage.keyboard.press('ArrowDown')
+    await adminPage.keyboard.press('ArrowDown')
+    await expect(growthRadio).toBeChecked()
+    await adminPage.getByLabel('Administrator reason').fill(assignmentReason)
+    await adminPage.getByRole('button', { name: 'Review plan assignment' }).click()
+    const confirmation = adminPage.getByRole('dialog')
+    await expect(confirmation).toBeVisible()
+    await expect(confirmation).toContainText('Browser Smoke Cleaning')
+    await expect(confirmation).toContainText('Early Access')
+    await expect(confirmation).toContainText('Growth')
+    await expect(confirmation).toContainText(assignmentReason)
+    await confirmation.getByRole('button', { name: 'Confirm plan assignment' }).click()
+    await expect(adminPage.locator('.form-message[role="status"]')).toContainText('Private subscription state initialised.')
+    await expect(adminPage.getByText('Growth', { exact: true }).first()).toBeVisible()
+    await expect(growthRadio).toBeChecked()
+    await expect(subscriptionSection.getByText('Plan history (1)')).toBeVisible()
+    await subscriptionSection.getByText('Plan history (1)').click()
+    await expect(subscriptionSection).toContainText(`Early Access → Growth`)
+    await expect(subscriptionSection).toContainText(assignmentReason)
+
+    let subscription = (await db.doc(`businessSubscriptions/${TEST_BUSINESS_ID}`).get()).data()
+    let assignmentEvents = await db.collection(`businessSubscriptions/${TEST_BUSINESS_ID}/assignmentEvents`).get()
+    expect(subscription).toMatchObject({
+      schemaVersion: 1,
+      businessId: TEST_BUSINESS_ID,
+      planId: 'growth',
+      planRevision: 1,
+      accessStatus: 'active',
+      assignmentSource: 'admin',
+      updatedBy: TEST_USERS.admin.uid,
+      assignmentVersion: 1,
+    })
+    expect(subscription.assignedAt).toBeTruthy()
+    expect(subscription.startsAt).toBeTruthy()
+    expect(subscription.updatedAt).toBeTruthy()
+    expect(assignmentEvents.size).toBe(1)
+    expect(assignmentEvents.docs[0].data()).toMatchObject({
+      outcome: 'initialized', changed: true, previousPlanId: 'early_access',
+      newPlanId: 'growth', assignmentVersionBefore: 0, assignmentVersionAfter: 1,
+      reason: assignmentReason, adminUid: TEST_USERS.admin.uid,
+    })
+
+    await adminPage.getByLabel('Administrator reason').fill(noChangeReason)
+    await adminPage.getByRole('button', { name: 'Review plan assignment' }).click()
+    await adminPage.getByRole('dialog').getByRole('button', { name: 'Confirm plan assignment' }).click()
+    await expect(adminPage.locator('.form-message[role="status"]')).toContainText('Plan confirmed; no subscription change was required.')
+    subscription = (await db.doc(`businessSubscriptions/${TEST_BUSINESS_ID}`).get()).data()
+    assignmentEvents = await db.collection(`businessSubscriptions/${TEST_BUSINESS_ID}/assignmentEvents`).get()
+    expect(subscription.assignmentVersion).toBe(1)
+    expect(assignmentEvents.size).toBe(2)
+    expect(assignmentEvents.docs.map((event) => event.data().outcome).sort()).toEqual(['initialized', 'no_change'])
+    await expect(subscriptionSection.getByText('Plan history (2)')).toBeVisible()
+    if (!await subscriptionSection.locator('.admin-plan-history').evaluate((element) => element.open)) {
+      await subscriptionSection.getByText('Plan history (2)').click()
+    }
+    await expect(subscriptionSection).toContainText(noChangeReason)
+
+    const owner = await browser.newContext()
+    const ownerPage = await owner.newPage()
+    await signIn(ownerPage, TEST_USERS.owner)
+    const ownerDirectAccess = await ownerPage.evaluate(async (businessId) => {
+      const { addDoc, collection, doc, getDoc, getDocs, setDoc } = await import('/@id/firebase/firestore')
+      const { db: firestore } = await import('/src/firebase/firestoreClient.js')
+      const attempts = {}
+      for (const [name, operation] of Object.entries({
+        readLatest: () => getDoc(doc(firestore, 'businessSubscriptions', businessId)),
+        writeLatest: () => setDoc(doc(firestore, 'businessSubscriptions', businessId), { planId: 'pro' }),
+        readEvents: () => getDocs(collection(firestore, 'businessSubscriptions', businessId, 'assignmentEvents')),
+        writeEvent: () => addDoc(collection(firestore, 'businessSubscriptions', businessId, 'assignmentEvents'), { outcome: 'changed' }),
+      })) {
+        try {
+          await operation()
+          attempts[name] = 'allowed'
+        } catch (error) {
+          attempts[name] = error.code
+        }
+      }
+      return attempts
+    }, TEST_BUSINESS_ID)
+    for (const result of Object.values(ownerDirectAccess)) expect(result).not.toBe('allowed')
+
+    await ownerPage.goto('/business/subscription')
+    await expect(ownerPage.locator('.subscription-current-card h2')).toContainText(/Growth|Crecimiento/)
+    await expect(ownerPage.locator('.subscription-plan-card[aria-current="true"]')).toContainText(/Growth|Crecimiento/)
+    await expect(ownerPage.locator('body')).not.toContainText(assignmentReason)
+    await expect(ownerPage.locator('body')).not.toContainText(noChangeReason)
+    await expect(ownerPage.locator('body')).not.toContainText(TEST_USERS.admin.uid)
+    await ownerPage.goto('/business/dashboard')
+    await expect(ownerPage.locator('.business-dashboard')).toBeVisible()
+    await expect(ownerPage.locator('.business-dashboard')).toContainText(/Growth|Crecimiento/)
+
+    const moderator = await browser.newContext()
+    const moderatorPage = await moderator.newPage()
+    await signIn(moderatorPage, TEST_USERS.moderator)
+    await moderatorPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
+    const moderatorSection = moderatorPage.getByRole('heading', { name: 'Subscription plan' }).locator('..')
+    await expect(moderatorSection).toContainText('Growth')
+    await expect(moderatorSection).toContainText('Manually assigned')
+    await expect(moderatorSection).toContainText('only administrators can assign plans')
+    await expect(moderatorSection.getByRole('radio')).toHaveCount(0)
+    await expect(moderatorPage.getByLabel('Administrator reason')).toHaveCount(0)
+    await expect(moderatorPage.getByRole('button', { name: 'Review plan assignment' })).toHaveCount(0)
+    const moderatorAssignment = await assignmentCallable(moderatorPage, {
+      businessId: TEST_BUSINESS_ID,
+      planId: 'pro',
+      reason: 'Moderator must not be able to assign this plan.',
+      requestId: 'browser_moderator_assignment_denied',
+      expectedAssignmentVersion: 1,
+    })
+    expect(moderatorAssignment.ok).toBe(false)
+    expect(moderatorAssignment.code).toContain('permission-denied')
+    expect((await db.doc(`businessSubscriptions/${TEST_BUSINESS_ID}`).get()).data().planId).toBe('growth')
+
+    for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+      await adminPage.setViewportSize({ width, height: width < 900 ? 844 : 1000 })
+      await adminPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
+      const section = adminPage.getByRole('heading', { name: 'Subscription plan' }).locator('..')
+      await expect(section).toBeVisible()
+      await expect(section.getByRole('radio', { name: 'Growth' })).toBeEnabled()
+      await expect(adminPage.getByLabel('Administrator reason')).toBeEditable()
+      await expect(adminPage.getByText('Required', { exact: true })).toBeVisible()
+      await expect(adminPage.getByText('0 / 2,000', { exact: true })).toBeVisible()
+      await expect(adminPage.getByRole('heading', { name: 'Moderation decision' })).toBeVisible()
+      await expect(adminPage.getByRole('button', { name: 'Approve and publish' })).toBeVisible()
+      await expect(adminPage.getByRole('button', { name: 'Reject', exact: true })).toBeVisible()
+      const layout = await adminPage.evaluate(() => {
+        const sectionElement = document.querySelector('#subscription-assignment-title')?.parentElement
+        const rail = document.querySelector('.admin-review-rail')
+        const radioGroup = sectionElement?.querySelector('.admin-plan-choice-group')
+        const privateCard = document.querySelector('#private-details-title')?.parentElement
+        const moderationCard = document.querySelector('#moderation-decision-title')?.parentElement
+        return {
+          pageOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          sectionOverflow: sectionElement ? sectionElement.scrollWidth > sectionElement.clientWidth : true,
+          radioOverflow: radioGroup ? radioGroup.scrollWidth > radioGroup.clientWidth : true,
+          railOverflowY: rail ? getComputedStyle(rail).overflowY : 'missing',
+          railPosition: rail ? getComputedStyle(rail).position : 'missing',
+          duplicateStatus: Boolean(privateCard?.querySelector('.admin-status')),
+          moderationBeforeSubscription: Boolean(moderationCard && sectionElement && moderationCard.compareDocumentPosition(sectionElement) & Node.DOCUMENT_POSITION_FOLLOWING),
+          moderationVisuallyBeforeSubscription: Boolean(moderationCard && sectionElement && moderationCard.getBoundingClientRect().top < sectionElement.getBoundingClientRect().top),
+          historyCollapsed: !sectionElement?.querySelector('.admin-plan-history')?.open,
+        }
+      })
+      expect(layout.pageOverflow, `${width}px page overflow`).toBe(false)
+      expect(layout.sectionOverflow, `${width}px subscription overflow`).toBe(false)
+      expect(layout.radioOverflow, `${width}px radio-card overflow`).toBe(false)
+      expect(['auto', 'scroll']).not.toContain(layout.railOverflowY)
+      expect(layout.railPosition, `${width}px rail position`).toBe('static')
+      expect(layout.duplicateStatus, `${width}px duplicate status`).toBe(false)
+      expect(layout.moderationBeforeSubscription, `${width}px DOM card order`).toBe(true)
+      expect(layout.moderationVisuallyBeforeSubscription, `${width}px visual card order`).toBe(true)
+      expect(layout.historyCollapsed, `${width}px plan history default`).toBe(true)
+
+      await adminPage.getByLabel('Administrator reason').fill('Responsive confirmation inspection only.')
+      await adminPage.getByRole('button', { name: 'Review plan assignment' }).click()
+      const dialog = adminPage.getByRole('dialog')
+      await expect(dialog).toBeVisible()
+      const dialogLayout = await dialog.evaluate((element) => {
+        const bounds = element.getBoundingClientRect()
+        return {
+          fitsHorizontally: bounds.left >= 0 && bounds.right <= window.innerWidth,
+          fitsVertically: bounds.top >= 0 && bounds.bottom <= window.innerHeight,
+          contentAccessible: element.scrollHeight <= element.clientHeight || getComputedStyle(element).overflowY !== 'visible',
+        }
+      })
+      expect(dialogLayout.fitsHorizontally, `${width}px dialog width`).toBe(true)
+      expect(dialogLayout.fitsVertically, `${width}px dialog height`).toBe(true)
+      expect(dialogLayout.contentAccessible, `${width}px dialog scrolling`).toBe(true)
+      await adminPage.keyboard.press('Escape')
+      await expect(dialog).toHaveCount(0)
+    }
+
+    await Promise.all([admin.close(), owner.close(), moderator.close()])
+  })
+
   test('route claims, rejection, owner resubmission, approval, privacy and responsive UI', async ({ browser }) => {
     await resetPendingBusiness()
     const anonymous = await browser.newContext()
     const anonymousPage = await anonymous.newPage()
     await anonymousPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
     await expect(anonymousPage).toHaveURL(/\/login/)
-    await expect(anonymousPage.getByText('Private moderation information')).toHaveCount(0)
+    await expect(anonymousPage.getByText('Private business details')).toHaveCount(0)
     expect(await storageRead(
       anonymousPage,
       `businesses/${TEST_BUSINESS_ID}/logos/logo.png`,
@@ -138,7 +365,8 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     await row.getByRole('link', { name: /Review Browser Smoke Cleaning/ }).click()
 
     await expect(adminPage.getByRole('heading', { name: 'Public profile information' })).toBeVisible()
-    await expect(adminPage.getByRole('heading', { name: 'Private moderation information' })).toBeVisible()
+    await expect(adminPage.getByRole('heading', { name: 'Private business details' })).toBeVisible()
+    await expect(adminPage.getByText('1 image', { exact: true })).toBeVisible()
     await expect(adminPage.getByText(/\d+ of \d+ required fields present/)).toBeVisible()
     await expect(adminPage.getByText('Publishing this profile does not mark the business as verified.')).toBeVisible()
     await expect(adminPage.getByText(TEST_USERS.owner.email, { exact: true })).toBeVisible()
@@ -229,7 +457,7 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     await expect(ownerPage.locator('.business-form__success[role="status"]')).toBeVisible()
     await ownerPage.goto('/business/dashboard')
     await ownerPage.getByRole('button', { name: /Enviar a revisión|Submit for review/i }).click()
-    await expect(ownerPage.getByRole('status')).toBeVisible()
+    await expect(ownerPage.locator('.form-message--success[role="status"]')).toBeVisible()
     business = (await db.doc(`businesses/${TEST_BUSINESS_ID}`).get()).data()
     privateBusiness = (await db.doc(`businessPrivate/${TEST_BUSINESS_ID}`).get()).data()
     expect(business.status).toBe('pending_review')
@@ -271,15 +499,17 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     for (const width of [320, 390, 768, 1024, 1440, 1920]) {
       await adminPage.setViewportSize({ width, height: width < 900 ? 844 : 1000 })
       await adminPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
-      await expect(adminPage.getByRole('heading', { name: 'Private moderation information' })).toBeVisible()
+      await expect(adminPage.getByRole('heading', { name: 'Private business details' })).toBeVisible()
       const reviewLayout = await adminPage.evaluate(() => ({
         columns: getComputedStyle(document.querySelector('.admin-review__workspace')).gridTemplateColumns.split(' ').length,
         overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-        sticky: getComputedStyle(document.querySelector('.admin-moderation-panel')).position,
+        railOverflowY: getComputedStyle(document.querySelector('.admin-review-rail')).overflowY,
+        railPosition: getComputedStyle(document.querySelector('.admin-review-rail')).position,
       }))
       expect(reviewLayout.overflow, `${width}px review overflow`).toBe(false)
       expect(reviewLayout.columns, `${width}px review columns`).toBe(width <= 896 ? 1 : 2)
-      expect(reviewLayout.sticky, `${width}px moderation position`).toBe(width <= 896 ? 'static' : 'sticky')
+      expect(['auto', 'scroll']).not.toContain(reviewLayout.railOverflowY)
+      expect(reviewLayout.railPosition, `${width}px review rail position`).toBe('static')
     }
 
     await adminPage.setViewportSize({ width: 390, height: 844 })
