@@ -9,11 +9,19 @@ import { Link, useNavigate } from 'react-router-dom'
 import LoadingScreen from '../../components/common/LoadingScreen.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
-import { ensureBusinessProfile } from '../../services/businessService.js'
+import {
+  ensureBusinessProfile,
+  getOwnerSubscriptionStatus,
+} from '../../services/businessService.js'
 import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
+import {
+  loadOwnerSubscriptionProjection,
+  safeSubscriptionAccessStatus,
+  safeSubscriptionPlanId,
+} from '../../utils/subscriptionProjection.js'
 
 const PLAN_ORDER = [
   PLAN_IDS.EARLY_ACCESS,
@@ -70,10 +78,13 @@ function SubscriptionPage() {
   const navigate = useNavigate()
   const { refreshUserProfile, signOutUser, user, userProfile } = useAuthentication()
   const [businessProfile, setBusinessProfile] = useState(null)
+  const [subscriptionStatusProjection, setSubscriptionStatusProjection] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [recoveryPending, setRecoveryPending] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const [subscriptionProjectionUnavailable, setSubscriptionProjectionUnavailable] = useState(false)
+  const [subscriptionProjectionPending, setSubscriptionProjectionPending] = useState(false)
   const attemptedProfileRefreshBusinessIdRef = useRef(null)
   const userId = user.uid
   const userBusinessId = userProfile?.businessId ?? null
@@ -87,7 +98,17 @@ function SubscriptionPage() {
       roles: hasBusinessRole ? ['business'] : [],
     })
       .then(async (profile) => {
-        if (active) setBusinessProfile(profile)
+        if (active) {
+          setBusinessProfile(profile)
+          setLoading(false)
+        }
+        const result = profile?.businessId
+          ? await loadOwnerSubscriptionProjection(() => getOwnerSubscriptionStatus(profile.businessId))
+          : { projection: null, unavailable: false }
+        if (active) {
+          setSubscriptionStatusProjection(result.projection)
+          setSubscriptionProjectionUnavailable(result.unavailable)
+        }
         if (
           profile?.businessId
           && profile.businessId !== userBusinessId
@@ -147,6 +168,24 @@ function SubscriptionPage() {
     }
   }
 
+  async function retrySubscriptionProjection() {
+    if (!businessProfile?.businessId || subscriptionProjectionPending) return
+    setSubscriptionProjectionPending(true)
+    try {
+      const result = await loadOwnerSubscriptionProjection(
+        () => getOwnerSubscriptionStatus(businessProfile.businessId),
+      )
+      setSubscriptionStatusProjection(result.projection)
+      setSubscriptionProjectionUnavailable(result.unavailable)
+    } catch (projectionError) {
+      setError(classifyFrontendError(projectionError, {
+        domain: 'workflow', fallbackType: 'BUSINESS_CREATE_FAILED',
+      }))
+    } finally {
+      setSubscriptionProjectionPending(false)
+    }
+  }
+
   const errorAction = error?.recovery === 'sign-in'
     ? () => navigate('/login')
     : error?.recovery === 'verify-email'
@@ -165,8 +204,14 @@ function SubscriptionPage() {
                   setLoadAttempt((attempt) => attempt + 1)
                 }
 
-  const plan = businessProfile?.entitlements?.effectivePlanId ?? PLAN_IDS.EARLY_ACCESS
-  const subscriptionStatus = businessProfile?.entitlements?.accessStatus ?? 'active'
+  const plan = safeSubscriptionPlanId(
+    subscriptionStatusProjection?.effectivePlanId,
+    safeSubscriptionPlanId(businessProfile?.entitlements?.effectivePlanId),
+  )
+  const subscriptionStatus = safeSubscriptionAccessStatus(
+    subscriptionStatusProjection?.accessStatus,
+    safeSubscriptionAccessStatus(businessProfile?.entitlements?.accessStatus),
+  )
 
   return (
     <section className="business-subscription">
@@ -175,6 +220,13 @@ function SubscriptionPage() {
         <h1>{t('business.subscription')}</h1>
         <p>{t('subscription.description')}</p>
       </header>
+
+      {subscriptionProjectionUnavailable && businessProfile && (
+        <div className="admin-alert admin-alert--notice" role="status">
+          <p>{t('subscriptionProjection.unavailable')}</p>
+          <button className="button button--secondary" disabled={subscriptionProjectionPending} onClick={() => void retrySubscriptionProjection()} type="button">{t(subscriptionProjectionPending ? 'subscriptionProjection.retrying' : 'common.retry')}</button>
+        </div>
+      )}
 
       {error ? (
         <RecoveryMessage

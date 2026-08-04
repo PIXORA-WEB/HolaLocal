@@ -20,6 +20,10 @@ export const ownerEnglishRejectionTranslations = {
 }
 
 export const adminEnglishTranslations = {
+  subscriptionProjection: {
+    unavailable: 'The authoritative subscription status is temporarily unavailable. The plan shown below comes from the saved business profile and may be out of date.',
+    retrying: 'Retrying…',
+  },
   admin: {
     common: { notProvided: 'Not provided' },
     navigation: {
@@ -72,15 +76,17 @@ export const adminEnglishTranslations = {
       businessId: 'Business ID', ownerUid: 'Owner UID', ownerName: 'Owner name',
       ownerEmail: 'Owner email', ownerLocale: 'Owner locale', submitted: 'Submitted',
       previousGuidance: 'Previous rejection guidance', history: 'Recent moderation history',
-      noHistory: 'No moderation events yet.', technicalDetails: 'Technical details',
+      historyCount: 'Moderation history ({{count}})', noHistory: 'No moderation events yet.', technicalDetails: 'Technical details',
+      privateDetails: 'Private business details', reviewTools: 'Business review tools',
       readinessEyebrow: 'Canonical requirements', checklist: 'Review checklist',
       requirementsPresent: '{{complete}} of {{total}} required fields present',
       profileCompleteness: 'Profile completeness: {{percentage}}%',
       checklistNote: 'This checklist is a review aid. The backend performs the authoritative publication eligibility check.',
       checkPassed: 'Present', checkAttention: 'Check', mediaEyebrow: 'Profile media', gallery: 'Gallery',
-      imageCount: '{{count}} images', noGallery: 'No gallery images were submitted.',
+      imageCount_one: '{{count}} image', imageCount_other: '{{count}} images', noGallery: 'No gallery images were submitted.',
       approve: 'Approve and publish', reject: 'Reject',
       decisionHeading: 'Choose a moderation decision',
+      moderationDecision: 'Moderation decision',
       decisionHelp: 'Publishing makes an eligible profile public. Rejecting returns it to the owner with your guidance.',
       publishNotVerify: 'Publishing this profile does not mark the business as verified.',
       processing: 'Processing…', approved: 'Business approved and published.', rejected: 'Business rejected and guidance saved.',
@@ -91,6 +97,35 @@ export const adminEnglishTranslations = {
       reason: 'Reason category', selectReason: 'Select a reason', reasonRequired: 'Choose a reason category.',
       guidance: 'Owner-facing guidance', guidanceHelp: 'Enter {{min}}–{{max}} characters. This is shown as plain text.',
       guidanceLength: 'Guidance must contain between {{min}} and {{max}} characters.',
+    },
+    subscription: {
+      title: 'Subscription plan', effectivePlan: 'Current effective plan',
+      storedPlan: 'Stored assigned plan', assignmentStatus: 'Assignment status',
+      source: 'Assignment source', version: 'Assignment version', selectedPlan: 'Assign a plan',
+      manuallyAssigned: 'Manually assigned', noManualAssignment: 'No manual plan assigned',
+      currentPlan: 'Current plan', fallbackStatus: 'No manual assignment',
+      usingFallback: 'Using fallback plan', fallbackNotice: 'Assigning a plan will create the private subscription record.',
+      choosePlan: 'Choose a plan', required: 'Required', characterCount: '{{current}} / {{max}}',
+      reason: 'Administrator reason', reasonHelp: 'Required. Maximum {{max}} characters.',
+      reasonError: 'Enter a reason of no more than {{max}} characters.', reviewChange: 'Review plan assignment',
+      moderatorReadOnly: 'Moderators can review subscription state, but only administrators can assign plans.',
+      suspendedWarning: 'This business is suspended. The plan can be assigned, but the business remains suspended.',
+      malformedWarning: 'The trusted subscription state is missing or malformed. Confirming will create or repair the private authoritative record.',
+      fallbackWarning: 'No manual plan has been assigned yet. Confirming a plan will create the business’s private subscription record.',
+      repairConfirmation: 'This assignment will initialise or repair trusted subscription state.',
+      history: 'Recent plan-assignment history', historyCount: 'Plan history ({{count}})', noHistory: 'No plan-assignment events yet.',
+      confirmTitle: 'Confirm subscription plan assignment',
+      confirmDescription: 'Assign {{selected}} to {{name}}? The current effective plan is {{current}}.',
+      confirm: 'Confirm plan assignment', stale: 'Another administrator changed this subscription. The latest state has been loaded; review and confirm again.',
+      archived: 'Archived businesses cannot receive plan assignments.',
+      sources: {
+        private_authoritative: 'Private authoritative record', legacy_fallback: 'Legacy fallback',
+        early_access_fallback: 'Early Access fallback', malformed_fallback: 'Malformed-state fallback',
+      },
+      results: {
+        initialized: 'Private subscription state initialised.', changed: 'Subscription plan changed.',
+        repaired: 'Malformed subscription state repaired.', no_change: 'Plan confirmed; no subscription change was required.',
+      },
     },
     errors: {
       loadTitle: 'Unable to load administrator data',

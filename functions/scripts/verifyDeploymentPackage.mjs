@@ -30,6 +30,9 @@ const REQUIRED_FUNCTION_FILES = [
   'src/ownerBusinessCreation.js',
   'src/messageSending.js',
   'src/businessModeration.js',
+  'src/subscriptionPlanAssignment.js',
+  'src/ownerSubscriptionStatus.js',
+  'src/publicBusinessDirectory.js',
 ]
 
 const FORBIDDEN_SEGMENTS = new Set([
@@ -172,7 +175,8 @@ async function assertContractInstalledInsideArtifact(root) {
   if (
     typeof imported.hasCompleteUserProfile !== 'function' ||
     typeof imported.resolveBusinessEntitlements !== 'function' ||
-    typeof imported.buildEarlyAccessSubscriptionState !== 'function'
+    typeof imported.buildEarlyAccessSubscriptionState !== 'function' ||
+    typeof imported.resolveAuthoritativeBusinessEntitlements !== 'function'
   ) {
     throw new Error('@holalocal/firebase-contract import smoke test failed.')
   }

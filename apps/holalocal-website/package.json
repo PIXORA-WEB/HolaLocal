@@ -30,7 +30,8 @@
     "preview": "vite preview",
     "test:rules": "firebase emulators:exec --config ../../firebase.json --project demo-holalocal-rules --only firestore,storage \"node --test tests/rules.test.mjs\"",
     "test:compatibility": "node --test tests/compatibility.test.mjs",
-    "test:admin-browser": "node tests/browser/runAdminBrowserSmoke.mjs"
+    "test:admin-browser": "node tests/browser/runAdminBrowserSmoke.mjs",
+    "preview:admin-browser": "node tests/browser/runAdminBrowserPreview.mjs"
   },
   "dependencies": {
     "@holalocal/firebase-contract": "file:../../shared/firebase-contract",

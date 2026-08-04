@@ -1619,7 +1619,7 @@ test('business creation uses the trusted callable without browser owner discover
   assert.doesNotMatch(businessService, /addDoc\(|setDoc\(|doc\(collection\(db, 'businesses'\)\)/)
 })
 
-test('public directory uses the callable while exact public document reads stay direct', async () => {
+test('public directory and exact public detail use safe callable projections', async () => {
   const [businessService, functionsClient, servicesPage] = await Promise.all([
     readFile(new URL('../src/services/businessService.js', import.meta.url), 'utf8'),
     readFile(new URL('../src/firebase/functionsClient.js', import.meta.url), 'utf8'),
@@ -1633,14 +1633,15 @@ test('public directory uses the callable while exact public document reads stay 
   )?.[0] ?? ''
 
   assert.match(functionsClient, /httpsCallable\(functions, 'listPublicBusinesses'\)/)
+  assert.match(functionsClient, /httpsCallable\(functions, 'getPublicBusiness'\)/)
   assert.match(activeDirectorySource, /listPublicBusinessesCallable\(\{ maxResults: resultLimit \}\)/)
   assert.doesNotMatch(activeDirectorySource, /collection\(db, 'businesses'\)|getDocs\(|where\(|orderBy\(/)
   assert.match(activeDirectorySource, /return Array\.isArray\(result\.data\?\.businesses\)/)
   assert.match(servicesPage, /setBusinesses\(activeBusinesses\)/)
   assert.match(servicesPage, /services\.emptyTitle/)
 
-  assert.match(publicDetailSource, /getDoc\(businessDocument\(businessId\)\)/)
-  assert.match(publicDetailSource, /toPublicBusiness\(snapshot\)/)
+  assert.match(publicDetailSource, /getPublicBusinessCallable\(\{ businessId \}\)/)
+  assert.doesNotMatch(publicDetailSource, /getDoc\(|businessDocument\(|toPublicBusiness/)
 })
 
 test('canonical customer, business and combined roles retain route-facing semantics', () => {

@@ -30,6 +30,31 @@ test('admin review returns only limited owner fields and recent protected modera
   assert.equal(result.privateModeration.currentRejection.guidance, 'Prior guidance')
   assert.equal(result.history.length, 1)
   assert.equal(result.owner.privateAddress, undefined)
+  assert.equal(result.business.subscription, undefined)
+  assert.equal(result.subscription.canAssign, true)
+  assert.equal(result.subscription.sourceType, 'early_access_fallback')
+})
+
+test('admin review gives moderator a read-only limited subscription projection', async () => {
+  const db = new FakeFirestore({
+    'businesses/business-1': {
+      ownerId: 'owner-1', name: 'Review me', status: 'suspended', subscription: { tier: 'free' },
+    },
+    'users/owner-1': {},
+    'businessSubscriptions/business-1': {
+      schemaVersion: 1, businessId: 'business-1', planId: 'pro', planRevision: 1,
+      accessStatus: 'active', assignmentSource: 'admin', assignmentVersion: 2,
+      updatedBy: 'private-admin', privateNote: 'hidden',
+    },
+  })
+  const result = await getAdminBusinessReview({
+    uid: 'moderator-1', claims: { moderator: true }, businessId: 'business-1', db,
+  })
+  assert.equal(result.subscription.effectivePlanId, 'pro')
+  assert.equal(result.subscription.assignmentVersion, 2)
+  assert.equal(result.subscription.canAssign, false)
+  assert.equal(result.subscription.updatedBy, undefined)
+  assert.equal(result.subscription.privateNote, undefined)
 })
 
 test('admin review denies an ordinary authenticated business owner', async () => {

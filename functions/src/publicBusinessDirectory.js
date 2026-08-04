@@ -4,7 +4,7 @@ import {
   isCustomIdentifier,
   isPublicBusinessEligible,
   projectPublicContact,
-  resolveBusinessEntitlements,
+  resolveAuthoritativeBusinessEntitlements,
 } from '@holalocal/firebase-contract'
 
 const DEFAULT_MAX_RESULTS = 60
@@ -26,13 +26,17 @@ export function normalizePublicBusinessLimit(value) {
   return Math.min(Math.max(Math.trunc(numericValue), 1), MAX_RESULTS)
 }
 
-export function toPublicDirectoryBusiness(documentId, rawDocument) {
+export function toPublicDirectoryBusiness(documentId, rawDocument, privateSubscription = null, privateRecordExists = false) {
   if (!isPublicBusinessEligible(rawDocument)) return null
   const { business } = adaptBusinessDocument(documentId, rawDocument)
   const languages = displayCompatibilityValues(business.languageValues, 'language')
   const serviceAreas = displayCompatibilityValues(business.serviceAreaValues, 'area')
   const primaryLanguage = business.languageValues.find(({ id }) => id === business.primaryLanguage)
-  const entitlements = resolveBusinessEntitlements(rawDocument?.subscription)
+  const entitlements = resolveAuthoritativeBusinessEntitlements(
+    privateSubscription,
+    rawDocument?.subscription,
+    { privateRecordExists },
+  )
 
   return {
     businessId: documentId,
@@ -69,9 +73,38 @@ export async function listPublicBusinesses({ maxResults, db }) {
     .limit(limit)
     .get()
 
-  return {
-    businesses: snapshot.docs
-      .map((document) => toPublicDirectoryBusiness(document.id, document.data()))
-      .filter(Boolean),
+  const publicDocuments = snapshot.docs.filter((document) => isPublicBusinessEligible(document.data()))
+  if (publicDocuments.length === 0) return { businesses: [] }
+  const subscriptionSnapshots = await db.getAll(...publicDocuments.map(
+    (document) => db.doc(`businessSubscriptions/${document.id}`),
+  ))
+  const projected = publicDocuments.map((document, index) => {
+    const subscription = subscriptionSnapshots[index]
+    return toPublicDirectoryBusiness(
+      document.id,
+      document.data(),
+      subscription.exists ? subscription.data() : null,
+      subscription.exists,
+    )
+  })
+  return { businesses: projected.filter(Boolean) }
+}
+
+export async function getPublicBusiness({ businessId, db }) {
+  if (typeof businessId !== 'string' || !businessId.trim() || businessId.includes('/') || businessId.length > 128) {
+    throw new HttpsError('invalid-argument', 'invalid-business-id')
   }
+  const safeId = businessId.trim()
+  const business = await db.doc(`businesses/${safeId}`).get()
+  if (!business.exists) throw new HttpsError('not-found', 'business-not-found')
+  if (!isPublicBusinessEligible(business.data())) throw new HttpsError('not-found', 'business-not-found')
+  const subscription = await db.doc(`businessSubscriptions/${safeId}`).get()
+  const projected = toPublicDirectoryBusiness(
+    safeId,
+    business.data(),
+    subscription.exists ? subscription.data() : null,
+    subscription.exists,
+  )
+  if (!projected) throw new HttpsError('not-found', 'business-not-found')
+  return { business: projected }
 }

@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
 import {
+  assignBusinessSubscriptionPlanCallable,
   getAdminBusinessReviewCallable,
   moderateBusinessCallable,
 } from '../firebase/functionsClient.js'
@@ -76,6 +77,15 @@ export async function moderateBusiness({
     reasonCode: reasonCode ?? null,
     guidance: guidance ?? null,
     requestId,
+  })
+  return result.data
+}
+
+export async function assignBusinessSubscriptionPlan({
+  businessId, planId, reason, requestId, expectedAssignmentVersion,
+}) {
+  const result = await assignBusinessSubscriptionPlanCallable({
+    businessId, planId, reason, requestId, expectedAssignmentVersion,
   })
   return result.data
 }

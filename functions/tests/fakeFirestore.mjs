@@ -22,6 +22,7 @@ class FakeDocRef {
   }
 
   get() {
+    this.database.readPaths.push(this.path)
     return Promise.resolve(this.database.snapshot(this.path))
   }
 
@@ -128,6 +129,7 @@ class FakeTransaction {
 export class FakeFirestore {
   constructor(seed = {}) {
     this.store = new Map(Object.entries(seed).map(([path, data]) => [path, structuredClone(data)]))
+    this.readPaths = []
   }
 
   doc(path) {
@@ -136,6 +138,11 @@ export class FakeFirestore {
 
   collection(path) {
     return new FakeCollectionRef(this, path)
+  }
+
+  async getAll(...references) {
+    this.getAllCalls = (this.getAllCalls ?? 0) + 1
+    return Promise.all(references.map((reference) => reference.get()))
   }
 
   snapshot(path) {

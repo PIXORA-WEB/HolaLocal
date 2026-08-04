@@ -4,12 +4,17 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { transitionAccountRole } from './accountRoleTransition.js'
 import { getAdminBusinessReview as runGetAdminBusinessReview } from './adminBusinessReview.js'
+import { assignBusinessSubscriptionPlan as runAssignBusinessSubscriptionPlan } from './subscriptionPlanAssignment.js'
 import { moderateBusiness as runBusinessModeration } from './businessModeration.js'
 import { createFirestoreTranslationSource } from './firestoreTranslationSource.js'
 import { processMessageTranslation } from './messageTranslation.js'
 import { sendConversationMessage } from './messageSending.js'
 import { ensureOwnerBusiness as runEnsureOwnerBusiness } from './ownerBusinessCreation.js'
-import { listPublicBusinesses as runListPublicBusinesses } from './publicBusinessDirectory.js'
+import {
+  getPublicBusiness as runGetPublicBusiness,
+  listPublicBusinesses as runListPublicBusinesses,
+} from './publicBusinessDirectory.js'
+import { getOwnerSubscriptionStatus as runGetOwnerSubscriptionStatus } from './ownerSubscriptionStatus.js'
 import {
   countCreatedConversation,
   getOwnerBusinessInsights as runGetOwnerBusinessInsights,
@@ -91,10 +96,49 @@ export async function handleGetAdminBusinessReview(request, db) {
   })
 }
 
+function requireExactInput(data, allowedKeys) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new HttpsError('invalid-argument', 'invalid-request-payload')
+  }
+  if (Object.keys(data).some((key) => !allowedKeys.includes(key))) {
+    throw new HttpsError('invalid-argument', 'unexpected-request-field')
+  }
+}
+
+export async function handleAssignBusinessSubscriptionPlan(request, db) {
+  const uid = requireCallableUid(request)
+  requireExactInput(request.data, [
+    'businessId', 'planId', 'reason', 'requestId', 'expectedAssignmentVersion',
+  ])
+  return runAssignBusinessSubscriptionPlan({
+    uid,
+    claims: request.auth?.token,
+    businessId: request.data.businessId,
+    planId: request.data.planId,
+    reason: request.data.reason,
+    requestId: request.data.requestId,
+    expectedAssignmentVersion: request.data.expectedAssignmentVersion,
+    db: db ?? getFirestore(),
+  })
+}
+
 export async function handleListPublicBusinesses(request, db) {
   return runListPublicBusinesses({
     maxResults: request.data?.maxResults,
     db: db ?? getFirestore(),
+  })
+}
+
+export async function handleGetPublicBusiness(request, db) {
+  requireExactInput(request.data, ['businessId'])
+  return runGetPublicBusiness({ businessId: request.data.businessId, db: db ?? getFirestore() })
+}
+
+export async function handleGetOwnerSubscriptionStatus(request, db) {
+  const uid = requireCallableUid(request)
+  requireExactInput(request.data, ['businessId'])
+  return runGetOwnerSubscriptionStatus({
+    uid, businessId: request.data.businessId, db: db ?? getFirestore(),
   })
 }
 
@@ -163,9 +207,24 @@ export const getAdminBusinessReview = onCall(
   async (request) => handleGetAdminBusinessReview(request),
 )
 
+export const assignBusinessSubscriptionPlan = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleAssignBusinessSubscriptionPlan(request),
+)
+
 export const listPublicBusinesses = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleListPublicBusinesses(request),
+)
+
+export const getPublicBusiness = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleGetPublicBusiness(request),
+)
+
+export const getOwnerSubscriptionStatus = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleGetOwnerSubscriptionStatus(request),
 )
 
 export const recordBusinessInsight = onCall(

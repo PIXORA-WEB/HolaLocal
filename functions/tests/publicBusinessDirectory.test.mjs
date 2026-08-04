@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { FakeFirestore } from './fakeFirestore.mjs'
-import { handleListPublicBusinesses } from '../src/index.js'
+import { handleGetPublicBusiness, handleListPublicBusinesses } from '../src/index.js'
 import {
   listPublicBusinesses,
   normalizePublicBusinessLimit,
@@ -66,6 +66,30 @@ test('listPublicBusinesses returns safe public businesses in published order', a
 
   assert.deepEqual(result.businesses.map((business) => business.businessId), ['newer', 'older'])
   assert.deepEqual(result.businesses.map((business) => business.name), ['Newer', 'Older'])
+  assert.equal(db.getAllCalls, 1)
+})
+
+test('public directory batches bounded private state and preserves private-first fallback semantics', async () => {
+  const db = new FakeFirestore({
+    'businesses/legacy': eligibleBusiness({ name: 'Legacy', publishedAt: publishedAt(0) }),
+    'businesses/private': eligibleBusiness({ name: 'Private', publishedAt: publishedAt(1) }),
+    'businesses/malformed': eligibleBusiness({ name: 'Malformed', publishedAt: publishedAt(2) }),
+    'businessSubscriptions/private': {
+      schemaVersion: 1, planId: 'growth', planRevision: 1,
+      accessStatus: 'active', assignmentSource: 'admin',
+    },
+    'businessSubscriptions/malformed': { schemaVersion: 1, planId: 'unknown' },
+  })
+  const result = await listPublicBusinesses({ maxResults: 10, db })
+  assert.deepEqual(result.businesses.map(({ businessId }) => businessId), ['legacy', 'private', 'malformed'])
+  assert.deepEqual(result.businesses.map(({ subscriptionTier }) => subscriptionTier), ['early_access', 'growth', 'early_access'])
+  assert.equal(db.getAllCalls, 1)
+})
+
+test('empty public directory performs no private subscription operation', async () => {
+  const db = new FakeFirestore()
+  assert.deepEqual(await listPublicBusinesses({ maxResults: 10, db }), { businesses: [] })
+  assert.equal(db.getAllCalls, undefined)
 })
 
 test('listPublicBusinesses excludes non-public lifecycle and malformed candidates', async () => {
@@ -207,5 +231,26 @@ test('public directory safely resolves legacy, canonical and malformed subscript
   for (const view of [legacy, growth, malformed]) {
     assert.equal(Object.hasOwn(view, 'subscription'), false)
     assert.equal(Object.hasOwn(view, 'entitlements'), false)
+  }
+})
+
+test('public detail returns the same bounded projection and private assignment takes precedence', async () => {
+  const db = new FakeFirestore({
+    'businesses/business-1': eligibleBusiness({
+      ownerId: 'private-owner',
+      managerIds: ['private-owner'],
+      privateContact: 'must-not-leak',
+      subscription: { tier: 'free' },
+    }),
+    'businessSubscriptions/business-1': {
+      schemaVersion: 1, businessId: 'business-1', planId: 'growth', planRevision: 1,
+      accessStatus: 'active', assignmentSource: 'admin', assignmentVersion: 1,
+      updatedBy: 'admin-private', reason: 'private reason', requestId: 'private-request',
+    },
+  })
+  const result = await handleGetPublicBusiness({ data: { businessId: 'business-1' } }, db)
+  assert.equal(result.business.subscriptionTier, 'growth')
+  for (const field of ['ownerId', 'privateContact', 'subscription', 'updatedBy', 'reason', 'requestId']) {
+    assert.equal(Object.hasOwn(result.business, field), false)
   }
 })

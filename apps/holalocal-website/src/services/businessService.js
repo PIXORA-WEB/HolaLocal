@@ -10,7 +10,12 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
-import { ensureOwnerBusinessCallable, listPublicBusinessesCallable } from '../firebase/functionsClient.js'
+import {
+  ensureOwnerBusinessCallable,
+  getOwnerSubscriptionStatusCallable,
+  getPublicBusinessCallable,
+  listPublicBusinessesCallable,
+} from '../firebase/functionsClient.js'
 import { createApplicationError } from '../utils/frontendErrors.js'
 import {
   hasCompletePublicBusinessProfile,
@@ -20,7 +25,6 @@ import {
 import {
   resolveWebsiteBusinessLookup,
   toManagedBusinessView,
-  toPublicBusinessView,
 } from './firebaseCompatibility.js'
 import { isOwnerEditableBusinessStatus } from '../utils/business.js'
 
@@ -137,10 +141,6 @@ function storedPublicContact(contact = {}) {
   return projectPublicContact(sanitizeContact(contact)).contact
 }
 
-function toPublicBusiness(snapshot) {
-  return toPublicBusinessView(snapshot.id, snapshot.data())
-}
-
 export async function getActivePublicBusinesses(maxResults = 60) {
   const resultLimit = Math.min(Math.max(Number(maxResults) || 1, 1), 100)
   const result = await listPublicBusinessesCallable({ maxResults: resultLimit })
@@ -155,9 +155,18 @@ export async function getFeaturedActiveBusinesses(maxResults = 60) {
 }
 
 export async function getPublicBusinessById(businessId) {
-  const snapshot = await getDoc(businessDocument(businessId))
-  if (!snapshot.exists()) return null
-  return toPublicBusiness(snapshot)
+  try {
+    const result = await getPublicBusinessCallable({ businessId })
+    return result.data?.business ?? null
+  } catch (error) {
+    if (error?.code?.includes('not-found')) return null
+    throw error
+  }
+}
+
+export async function getOwnerSubscriptionStatus(businessId) {
+  const result = await getOwnerSubscriptionStatusCallable({ businessId })
+  return result.data
 }
 
 export async function getBusinessById(businessId) {

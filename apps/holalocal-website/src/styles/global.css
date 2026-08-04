@@ -6148,7 +6148,7 @@
 .admin-table-panel,
 .admin-alert,
 .admin-empty,
-.admin-moderation-panel {
+.admin-rail-card {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -6286,19 +6286,18 @@
 .admin-review__gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.65rem; }
 .admin-review__gallery img { display: block; width: 100%; max-height: 10rem; aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 0.7rem; object-fit: cover; background: #eef2f7; }
 
-.admin-moderation-panel { display: grid; max-height: calc(100vh - 2.5rem); gap: 1rem; padding: 1.15rem; overflow-y: auto; position: sticky; top: 1.25rem; }
-.admin-moderation-panel__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.7rem; padding-bottom: 0.9rem; border-bottom: 1px solid #edf1f5; }
-.admin-moderation-panel__heading h2 { margin: 0; color: var(--brand-navy); font-size: 1rem; }
+.admin-review-rail { display: grid; min-width: 0; gap: 1rem; align-self: start; }
+.admin-rail-card { display: grid; min-width: 0; gap: 0.85rem; padding: 1.05rem; }
+.admin-rail-card > .admin-eyebrow { margin-bottom: -0.35rem; }
+.admin-rail-card > h2 { margin: 0; color: var(--brand-navy); font-size: 0.95rem; }
+.admin-rail-card__description { margin: 0; color: #5e6d80; font-size: 0.7rem; line-height: 1.55; }
 .admin-previous-guidance { padding: 0.85rem; border-left: 0.25rem solid #d46b51; border-radius: 0.5rem; background: #fff7f5; }
 .admin-previous-guidance strong { color: #823a2e; font-size: 0.7rem; }
 .admin-previous-guidance p { margin: 0.35rem 0 0; color: #68473f; font-size: 0.72rem; line-height: 1.5; white-space: pre-wrap; }
 .admin-review__actions { display: grid; grid-template-columns: 1fr; gap: 0.6rem; padding-block: 0.25rem; }
 .admin-review__actions .button { width: 100%; margin: 0; }
 .admin-decision-section { display: grid; gap: 0.8rem; padding-top: 0.9rem; border-top: 1px solid #edf1f5; }
-.admin-publishing-note { padding: 0.8rem; border: 1px solid #d8e4f0; border-radius: 0.65rem; background: #f6f9fc; }
-.admin-publishing-note strong { color: var(--brand-navy); font-size: 0.72rem; }
-.admin-publishing-note p { margin: 0.3rem 0 0; color: #5e6d80; font-size: 0.68rem; line-height: 1.5; }
-.admin-publishing-note p:last-child { color: #493a78; font-weight: 750; }
+.admin-publishing-caution { margin: 0; padding: 0.6rem 0.7rem; border-radius: 0.55rem; color: #493a78; background: #f7f4ff; font-size: 0.66rem; font-weight: 750; line-height: 1.45; }
 .button--danger { border-color: #b74435; color: #ffffff; background: #b74435; }
 .button--danger:hover { border-color: #97372b; background: #97372b; }
 
@@ -6314,8 +6313,46 @@
 .admin-history p { margin: 0.15rem 0 0; }
 .admin-history blockquote { margin: 0.45rem 0 0; padding: 0.55rem; border-radius: 0.45rem; color: #5b4a46; background: #faf3f1; font-size: 0.66rem; white-space: pre-wrap; }
 .admin-history-empty { color: var(--muted); font-size: 0.72rem; }
-.admin-technical-details { padding-top: 0.8rem; border-top: 1px solid #edf1f5; }
-.admin-technical-details summary { color: #536176; font-size: 0.7rem; font-weight: 800; cursor: pointer; }
+.admin-subscription-section { display: grid; min-width: 0; gap: 0.85rem; }
+.admin-subscription-summary { display: grid; min-width: 0; justify-items: start; gap: 0.4rem; padding: 0.75rem; border: 1px solid #e5e0f6; border-radius: 0.7rem; background: #fbfaff; }
+.admin-subscription-summary .admin-eyebrow { margin: 0; font-size: 0.58rem; }
+.admin-subscription-summary__status { margin: 0; color: var(--muted); font-size: 0.66rem; line-height: 1.4; }
+.admin-subscription-plan-badge { display: inline-flex; min-width: 0; align-items: center; padding: 0.38rem 0.65rem; border: 1px solid #d7ccf8; border-radius: 999px; color: #5036a5; background: #f4f0ff; font-size: 0.7rem; font-weight: 850; line-height: 1.2; overflow-wrap: anywhere; }
+.admin-subscription-warning { margin: 0; padding: 0.65rem 0.75rem; }
+.admin-subscription-warning p { font-size: 0.66rem; line-height: 1.45; }
+.admin-subscription-fallback-note { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.55rem; align-items: start; padding: 0.6rem 0.65rem; border: 1px solid #eadfae; border-radius: 0.6rem; background: #fffdf5; }
+.admin-subscription-fallback-note > span { display: grid; width: 1.1rem; height: 1.1rem; place-items: center; border-radius: 50%; color: #78601a; background: #f4e7ad; font-size: 0.62rem; font-weight: 900; }
+.admin-subscription-fallback-note strong { display: block; color: #66531a; font-size: 0.66rem; }
+.admin-subscription-fallback-note p { margin: 0.15rem 0 0; color: #75652e; font-size: 0.63rem; line-height: 1.4; }
+.admin-subscription-form { display: grid; min-width: 0; gap: 0.55rem; padding-top: 0.2rem; }
+.admin-subscription-form label { color: #344358; font-size: 0.7rem; font-weight: 800; }
+.admin-subscription-form textarea { width: 100%; min-width: 0; padding: 0.65rem 0.7rem; border: 1px solid #aeb9c8; border-radius: 0.55rem; background: #ffffff; color: #24344b; font: inherit; }
+.admin-subscription-form textarea { resize: vertical; }
+.admin-plan-choice-group { display: grid; min-width: 0; gap: 0.45rem; margin: 0; padding: 0; border: 0; }
+.admin-plan-choice-group legend { margin-bottom: 0.5rem; padding: 0; color: #344358; font-size: 0.7rem; font-weight: 800; }
+.admin-plan-choice { display: grid; min-height: 2.65rem; grid-template-columns: auto minmax(0, 1fr); gap: 0.65rem; align-items: center; padding: 0.65rem 0.7rem; border: 1px solid #d9dfe8; border-radius: 0.65rem; background: #ffffff; cursor: pointer; transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease; }
+.admin-plan-choice:hover { border-color: #aa99dc; background: #fbf9ff; }
+.admin-plan-choice:has(input:checked) { border-color: #7459c6; background: #f5f1ff; box-shadow: 0 0 0 1px rgb(116 89 198 / 8%); }
+.admin-plan-choice:focus-within { outline: 3px solid var(--brand-orange); outline-offset: 2px; }
+.admin-plan-choice input { width: 1.05rem; height: 1.05rem; margin: 0; border: 2px solid #9ba7b7; border-radius: 50%; appearance: none; background: #ffffff; cursor: pointer; }
+.admin-plan-choice input:checked { border: 0.3rem solid #6d4fc0; }
+.admin-plan-choice input:focus-visible { outline: none; }
+.admin-plan-choice__indicator { display: none; }
+.admin-reason-helper { display: flex; justify-content: space-between; gap: 0.75rem; margin-top: -0.15rem; color: var(--muted); font-size: 0.62rem; line-height: 1.4; }
+.admin-subscription-review-button { width: 100%; margin-top: 0.2rem; border-color: #8e79cf; color: #5941a6; background: #ffffff; }
+.admin-subscription-review-button:hover { border-color: #6e55bc; color: #452d96; background: #f7f4ff; }
+.admin-subscription-read-only { margin: 0; padding: 0.65rem 0.75rem; border-radius: 0.55rem; color: #536176; background: #f5f7fa; font-size: 0.68rem; line-height: 1.5; }
+.admin-subscription-section .admin-history { min-width: 0; }
+.admin-subscription-section .admin-history li,
+.admin-subscription-section .admin-history li > div,
+.admin-subscription-section .admin-history blockquote { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.admin-history-disclosure { min-width: 0; border-top: 1px solid #edf1f5; }
+.admin-history-disclosure summary,
+.admin-technical-details summary { padding-top: 0.75rem; color: #536176; font-size: 0.68rem; font-weight: 800; cursor: pointer; }
+.admin-history-disclosure__content { min-width: 0; padding-top: 0.75rem; }
+.admin-history-disclosure__content > .admin-history-empty { margin: 0; }
+.admin-technical-details { padding-block: 0.85rem; }
+.admin-technical-details summary { padding: 0; }
 
 .admin-dialog { display: grid; width: min(32rem, 80vw); gap: 0.8rem; padding: 1rem; }
 .admin-dialog h2, .admin-dialog p { margin: 0; }
@@ -6375,7 +6412,6 @@
   .admin-mobile-drawer__footer { display: grid; gap: 1rem; margin-top: auto; padding-top: 1.5rem; }
   .admin-main { padding: 1.25rem; }
   .admin-review__workspace { grid-template-columns: 1fr; }
-  .admin-moderation-panel { max-height: none; overflow: visible; position: static; }
 }
 
 @media (max-width: 44rem) {
@@ -6406,6 +6442,7 @@
   .admin-review__logo, .admin-review__logo-fallback { width: 3.75rem; height: 3.75rem; }
   .admin-review__facts-grid { grid-template-columns: 1fr; }
   .admin-review__gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-rail-card { padding: 0.9rem; }
   .admin-dialog { width: min(30rem, 78vw); padding: 0.25rem; }
   .admin-dialog__actions { display: grid; grid-template-columns: 1fr; }
   .admin-dialog__actions .button { width: 100%; margin: 0; }

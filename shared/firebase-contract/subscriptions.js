@@ -304,6 +304,49 @@ export function normalizeBusinessSubscription(rawSubscription) {
   })
 }
 
+// A private document, once present, is authoritative even when malformed. This
+// prevents an invalid trusted record from silently reviving a legacy public
+// assignment. Legacy data is consulted only while no private record exists.
+export function resolveAuthoritativeBusinessSubscription(
+  privateSubscription,
+  legacySubscription,
+  { privateRecordExists = privateSubscription != null } = {},
+) {
+  const rawSubscription = privateRecordExists ? privateSubscription : legacySubscription
+  const normalized = normalizeBusinessSubscription(rawSubscription)
+  return Object.freeze({
+    rawSubscription,
+    normalized,
+    authoritySource: privateRecordExists
+      ? normalized.source === 'fallback' ? 'malformed_fallback' : 'private_authoritative'
+      : normalized.source === 'fallback'
+        ? 'early_access_fallback'
+        : 'legacy_fallback',
+    isPrivateAuthoritative: privateRecordExists,
+    isLegacyFallback: !privateRecordExists && normalized.source !== 'fallback',
+    isMalformed: normalized.source === 'fallback',
+  })
+}
+
+export function resolveAuthoritativeBusinessEntitlements(
+  privateSubscription,
+  legacySubscription,
+  options = {},
+) {
+  const authority = resolveAuthoritativeBusinessSubscription(
+    privateSubscription,
+    legacySubscription,
+    options,
+  )
+  return Object.freeze({
+    ...resolveBusinessEntitlements(authority.rawSubscription),
+    authoritySource: authority.authoritySource,
+    isPrivateAuthoritative: authority.isPrivateAuthoritative,
+    isLegacyFallback: authority.isLegacyFallback,
+    isMalformed: authority.isMalformed,
+  })
+}
+
 function emptyFeatures() {
   return Object.fromEntries(FEATURE_KEYS.map((key) => [key, false]))
 }

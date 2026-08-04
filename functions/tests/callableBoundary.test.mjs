@@ -18,6 +18,7 @@ test('callable exports remain registered in europe-west1', async () => {
     'updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'moderateBusiness',
     'getAdminBusinessReview', 'listPublicBusinesses', 'recordBusinessInsight',
     'getOwnerBusinessInsights',
+    'assignBusinessSubscriptionPlan', 'getPublicBusiness', 'getOwnerSubscriptionStatus',
   ]) {
     assert.match(source, new RegExp(`export const ${callableName} = onCall`))
   }
