@@ -12,6 +12,20 @@ import {
 import { authenticatedTranslations } from '../src/i18n/locales/authenticatedTranslations.js'
 
 const i18nSourceUrl = new URL('../src/i18n/index.js', import.meta.url)
+const expectedLocales = [
+  'en', 'es', 'fr', 'de', 'nl', 'pt', 'pl', 'ro', 'cs',
+  'sk', 'hu', 'uk', 'it', 'sv', 'da', 'fi', 'no',
+]
+const requiredOwnerRejectionKeys = ['eyebrow', 'title', 'category', 'nextStep', 'edit']
+const requiredRejectionReasonKeys = [
+  'incomplete_profile',
+  'unclear_service_information',
+  'location_or_service_area',
+  'contact_information',
+  'logo_or_gallery',
+  'unsupported_or_inappropriate_content',
+  'other',
+]
 
 test('the initial i18n module eagerly includes only default-locale resources', async () => {
   const source = await readFile(i18nSourceUrl, 'utf8')
@@ -40,14 +54,13 @@ test('locale loading is cached and language changes use last-selection-wins sequ
 
 test('the synchronous English fallback matches the complete translation source', () => {
   assert.deepEqual(adminEnglishTranslations, legacyAdminEnglishTranslations)
-  assert.deepEqual(ownerEnglishRejectionTranslations, ownerRejectionTranslations.en)
+  assert.deepEqual(
+    ownerEnglishRejectionTranslations.rejection,
+    ownerRejectionTranslations.en.rejection,
+  )
 })
 
 test('authenticated lifecycle statuses map independently in every locale', () => {
-  const expectedLocales = [
-    'en', 'es', 'fr', 'de', 'nl', 'pt', 'pl', 'ro', 'cs',
-    'sk', 'hu', 'uk', 'it', 'sv', 'da', 'fi', 'no',
-  ]
   const expectedRejectedStatuses = {
     en: 'Rejected',
     es: 'Rechazado',
@@ -124,7 +137,27 @@ test('legacy lifecycle indexes remain aligned around the independent rejected ke
 })
 
 test('owner-facing rejection translations remain unchanged', () => {
-  assert.deepEqual(ownerEnglishRejectionTranslations, ownerRejectionTranslations.en)
+  assert.deepEqual(
+    ownerEnglishRejectionTranslations.rejection,
+    ownerRejectionTranslations.en.rejection,
+  )
+  assert.deepEqual(
+    Object.keys(ownerRejectionTranslations.en.rejection.owner).sort(),
+    [...requiredOwnerRejectionKeys].sort(),
+  )
+  assert.deepEqual(
+    Object.keys(ownerRejectionTranslations.en.rejection.reason).sort(),
+    [...requiredRejectionReasonKeys].sort(),
+  )
+  for (const locale of expectedLocales) {
+    const rejection = ownerRejectionTranslations[locale]?.rejection
+    for (const key of requiredOwnerRejectionKeys) {
+      assert.ok(rejection?.owner?.[key]?.trim(), `${locale}: rejection.owner.${key}`)
+    }
+    for (const key of requiredRejectionReasonKeys) {
+      assert.ok(rejection?.reason?.[key]?.trim(), `${locale}: rejection.reason.${key}`)
+    }
+  }
   assert.equal(
     ownerRejectionTranslations.es.rejection.owner.title,
     'Tu negocio necesita cambios',
