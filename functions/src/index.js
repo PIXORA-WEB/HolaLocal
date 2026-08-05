@@ -33,6 +33,14 @@ export const PUBLIC_CALLABLE_OPTIONS = {
   region: MESSAGE_TRANSLATION_REGION,
   invoker: 'public',
 }
+export const BUSINESS_INSIGHT_CALLABLE_OPTIONS = {
+  region: MESSAGE_TRANSLATION_REGION,
+  invoker: 'public',
+  maxInstances: 5,
+  timeoutSeconds: 15,
+  concurrency: 20,
+  minInstances: 0,
+}
 
 function requireCallableUid(request) {
   const uid = request.auth?.uid
@@ -228,7 +236,7 @@ export const getOwnerSubscriptionStatus = onCall(
 )
 
 export const recordBusinessInsight = onCall(
-  PUBLIC_CALLABLE_OPTIONS,
+  BUSINESS_INSIGHT_CALLABLE_OPTIONS,
   async (request) => handleRecordBusinessInsight(request),
 )
 

@@ -108,21 +108,33 @@ class FakeCollectionRef {
 class FakeTransaction {
   constructor(database) {
     this.database = database
+    this.operations = []
   }
 
   async get(reference) {
+    this.database.readPaths.push(reference.path)
     return this.database.snapshot(reference.path)
   }
 
   set(reference, data, options = {}) {
-    const current = this.database.store.get(reference.path)
-    this.database.store.set(reference.path, options.merge && current ? { ...current, ...data } : data)
+    this.operations.push({ type: 'set', reference, data, options })
   }
 
   update(reference, update) {
-    const current = this.database.store.get(reference.path)
-    if (!current) throw new Error(`Missing document: ${reference.path}`)
-    this.database.store.set(reference.path, { ...current, ...update })
+    this.operations.push({ type: 'update', reference, data: update })
+  }
+
+  commit() {
+    for (const operation of this.operations) {
+      const { path } = operation.reference
+      const current = this.database.store.get(path)
+      if (operation.type === 'update' && !current) throw new Error(`Missing document: ${path}`)
+      const next = operation.type === 'update' || (operation.options?.merge && current)
+        ? { ...current, ...operation.data }
+        : operation.data
+      this.database.store.set(path, next)
+      this.database.writePaths.push(path)
+    }
   }
 }
 
@@ -130,6 +142,7 @@ export class FakeFirestore {
   constructor(seed = {}) {
     this.store = new Map(Object.entries(seed).map(([path, data]) => [path, structuredClone(data)]))
     this.readPaths = []
+    this.writePaths = []
   }
 
   doc(path) {
@@ -150,7 +163,10 @@ export class FakeFirestore {
   }
 
   async runTransaction(callback) {
-    return callback(new FakeTransaction(this))
+    const transaction = new FakeTransaction(this)
+    const result = await callback(transaction)
+    transaction.commit()
+    return result
   }
 
   data(path) {

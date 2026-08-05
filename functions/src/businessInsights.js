@@ -15,6 +15,14 @@ import {
   recentUtcDateKeys,
   utcDateKey,
 } from '@holalocal/firebase-contract'
+import {
+  BUSINESS_INSIGHT_GLOBAL_HOURLY_LIMIT,
+  BUSINESS_INSIGHT_PER_BUSINESS_HOURLY_LIMIT,
+  assertBusinessInsightLimit,
+  businessInsightRateLimitReferences,
+  rateLimitCount,
+  rateLimitDocument,
+} from './businessInsightRateLimit.js'
 
 const ALLOWED_TRACKING_FIELDS = new Set(['businessId', 'eventType', 'contactAction', 'eventToken'])
 const DEDUPE_HOURS = 24
@@ -90,35 +98,68 @@ export async function recordBusinessInsight({ data, db, now = () => Timestamp.no
   if (data.eventType === 'contact_action' && !isBusinessContactAction(data.contactAction)) invalid('unsupported-contact-action')
   if (data.eventType === 'profile_view' && data.contactAction !== undefined) invalid('unexpected-contact-action')
 
-  const businessRef = db.doc(`businesses/${businessId}`)
-  const businessSnapshot = await businessRef.get()
-  if (!businessSnapshot.exists || !isPublicBusinessEligible(businessSnapshot.data())) {
-    throw new HttpsError('failed-precondition', 'business-not-public')
-  }
-  if (data.eventType === 'contact_action' && !contactAvailable(businessSnapshot.data(), data.contactAction)) {
-    throw new HttpsError('failed-precondition', 'contact-action-unavailable')
-  }
-
   const timestamp = now()
   const digest = tokenDigest({ ...data, businessId })
+  const businessRef = db.doc(`businesses/${businessId}`)
   const aggregateRef = db.doc(`businessInsights/${businessId}`)
   const dayRef = aggregateRef.collection('days').doc(utcDateKey(timestamp.toDate()))
   const dedupeRef = aggregateRef.collection('insightDedupe').doc(digest)
+  const rateLimits = businessInsightRateLimitReferences(db, businessId, timestamp)
   const delta = increments(data.eventType, data.contactAction)
-  let counted = false
 
-  await db.runTransaction(async (transaction) => {
+  const counted = await db.runTransaction(async (transaction) => {
+    const businessSnapshot = await transaction.get(businessRef)
+    if (!businessSnapshot.exists || !isPublicBusinessEligible(businessSnapshot.data())) {
+      throw new HttpsError('failed-precondition', 'business-not-public')
+    }
+    if (data.eventType === 'contact_action' && !contactAvailable(businessSnapshot.data(), data.contactAction)) {
+      throw new HttpsError('failed-precondition', 'contact-action-unavailable')
+    }
+
     const duplicate = await transaction.get(dedupeRef)
-    if (isUnexpiredDedupe(duplicate, timestamp)) return
+    if (isUnexpiredDedupe(duplicate, timestamp)) return false
+    const globalRateLimit = await transaction.get(rateLimits.globalRef)
+    const globalCount = rateLimitCount(globalRateLimit, {
+      scope: 'global', window: rateLimits.window,
+    })
+    assertBusinessInsightLimit(
+      globalCount,
+      BUSINESS_INSIGHT_GLOBAL_HOURLY_LIMIT,
+      'business-insight-global-rate-limit',
+    )
+    const businessRateLimit = await transaction.get(rateLimits.businessRef)
+    const businessCount = rateLimitCount(businessRateLimit, {
+      scope: 'business', businessId, window: rateLimits.window,
+    })
+    assertBusinessInsightLimit(
+      businessCount,
+      BUSINESS_INSIGHT_PER_BUSINESS_HOURLY_LIMIT,
+      'business-insight-business-rate-limit',
+    )
     const aggregate = await transaction.get(aggregateRef)
     const day = await transaction.get(dayRef)
     transaction.set(dedupeRef, {
       expiresAt: Timestamp.fromMillis(timestamp.toMillis() + DEDUPE_HOURS * 60 * 60 * 1000),
       createdAt: timestamp,
     })
+    transaction.set(rateLimits.globalRef, rateLimitDocument({
+      snapshot: globalRateLimit,
+      scope: 'global',
+      count: globalCount + 1,
+      timestamp,
+      window: rateLimits.window,
+    }))
+    transaction.set(rateLimits.businessRef, rateLimitDocument({
+      snapshot: businessRateLimit,
+      scope: 'business',
+      businessId,
+      count: businessCount + 1,
+      timestamp,
+      window: rateLimits.window,
+    }))
     transaction.set(aggregateRef, aggregateUpdate(aggregate.data(), delta, timestamp, !aggregate.exists || !aggregate.data().trackingStartedAt), { merge: true })
     transaction.set(dayRef, aggregateUpdate(day.data(), delta, timestamp, !day.exists), { merge: true })
-    counted = true
+    return true
   })
   return { ok: true, counted }
 }

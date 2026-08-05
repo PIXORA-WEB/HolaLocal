@@ -2,6 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
+if (process.env.HOLALOCAL_CALLABLE_BOUNDARY === '1') {
+  await import('./businessInsightsEmulator.test.mjs')
+}
+
 test('callable boundary harness runs only under demo project isolation', () => {
   if (process.env.HOLALOCAL_CALLABLE_BOUNDARY !== '1') return
   const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT
@@ -23,4 +27,5 @@ test('callable exports remain registered in europe-west1', async () => {
     assert.match(source, new RegExp(`export const ${callableName} = onCall`))
   }
   assert.match(source, /region: MESSAGE_TRANSLATION_REGION/)
+  assert.match(source, /recordBusinessInsight = onCall\(\s*BUSINESS_INSIGHT_CALLABLE_OPTIONS,/s)
 })
