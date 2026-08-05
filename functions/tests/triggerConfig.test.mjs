@@ -11,6 +11,7 @@ test('message translation trigger pins the Firestore region to europe-west1', as
 
   assert.match(source, /MESSAGE_TRANSLATION_REGION = 'europe-west1'/)
   assert.match(source, /PUBLIC_CALLABLE_OPTIONS = \{\s*region: MESSAGE_TRANSLATION_REGION,\s*invoker: 'public',\s*\}/s)
+  assert.match(source, /BUSINESS_INSIGHT_CALLABLE_OPTIONS = \{\s*region: MESSAGE_TRANSLATION_REGION,\s*invoker: 'public',\s*maxInstances: 5,\s*timeoutSeconds: 15,\s*concurrency: 20,\s*minInstances: 0,\s*\}/s)
   assert.match(source, /region: MESSAGE_TRANSLATION_REGION/)
   assert.match(source, /updateAccountRole = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /ensureOwnerBusiness = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
@@ -20,6 +21,7 @@ test('message translation trigger pins the Firestore region to europe-west1', as
   assert.match(source, /assignBusinessSubscriptionPlan = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /getPublicBusiness = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /getOwnerSubscriptionStatus = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
+  assert.match(source, /recordBusinessInsight = onCall\(\s*BUSINESS_INSIGHT_CALLABLE_OPTIONS,/s)
   assert.match(source, /process\.env\[TRANSLATION_PROVIDER_CONFIG\]/)
   assert.doesNotMatch(source, /FUNCTIONS_REGION/)
   assert.doesNotMatch(source, /process\.env\.[A-Z_]*REGION/)
@@ -28,13 +30,15 @@ test('message translation trigger pins the Firestore region to europe-west1', as
 test('only callable functions opt in to public Cloud Run invocation', async () => {
   const source = await readFile(indexUrl, 'utf8')
 
-  assert.equal(source.match(/invoker: 'public'/g)?.length, 1)
+  assert.equal(source.match(/invoker: 'public'/g)?.length, 2)
   assert.match(source, /translateCreatedMessage = onDocumentCreated\(\s*\{\s*document: 'conversations\/\{conversationId\}\/messages\/\{messageId\}',\s*region: MESSAGE_TRANSLATION_REGION,\s*\}/s)
   assert.doesNotMatch(source, /translateCreatedMessage = onDocumentCreated\(\s*PUBLIC_CALLABLE_OPTIONS/s)
 
   for (const callableName of ['updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'moderateBusiness', 'listPublicBusinesses', 'assignBusinessSubscriptionPlan', 'getPublicBusiness', 'getOwnerSubscriptionStatus']) {
     assert.match(source, new RegExp(`${callableName} = onCall\\(\\s*PUBLIC_CALLABLE_OPTIONS,`, 's'))
   }
+  assert.match(source, /recordBusinessInsight = onCall\(\s*BUSINESS_INSIGHT_CALLABLE_OPTIONS,/s)
+  assert.doesNotMatch(source, /recordBusinessInsight = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
 })
 
 test('functions package keeps the Node 20 runtime and demo emulator script', async () => {

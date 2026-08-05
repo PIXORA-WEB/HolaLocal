@@ -7,6 +7,12 @@ import {
   getOwnerBusinessInsights,
   recordBusinessInsight,
 } from '../src/businessInsights.js'
+import {
+  BUSINESS_INSIGHT_GLOBAL_HOURLY_LIMIT,
+  BUSINESS_INSIGHT_PER_BUSINESS_HOURLY_LIMIT,
+  BUSINESS_INSIGHT_RATE_LIMIT_RETENTION_HOURS,
+  businessInsightRateLimitReferences,
+} from '../src/businessInsightRateLimit.js'
 
 const fixedNow = Timestamp.fromDate(new Date('2026-08-01T12:00:00Z'))
 const now = () => fixedNow
@@ -35,6 +41,10 @@ function dedupePath(db, businessId = 'biz') {
   return [...db.store.keys()].find((path) => path.startsWith(`businessInsights/${businessId}/insightDedupe/`))
 }
 
+function rateLimitPaths(db) {
+  return [...db.store.keys()].filter((path) => path.startsWith('businessInsightRateLimitHours/'))
+}
+
 const profileRequest = (businessId = 'biz') => ({
   businessId,
   eventType: 'profile_view',
@@ -50,6 +60,119 @@ test('valid public profile view aggregates once and stores no private values', a
   assert.equal(db.data('businessInsights/biz/days/2026-08-01').profileViews, 1)
   assert.equal(JSON.stringify([...db.store.values()]).includes('123'), true)
   assert.equal(JSON.stringify(db.data('businessInsights/biz')).includes('123'), false)
+  const ratePaths = rateLimitPaths(db)
+  assert.equal(ratePaths.length, 2)
+  const rateDocuments = ratePaths.map((path) => db.data(path))
+  assert.deepEqual(rateDocuments.map((document) => document.scope).sort(), ['business', 'global'])
+  for (const document of rateDocuments) {
+    assert.equal(document.schemaVersion, 1)
+    assert.equal(document.count, 1)
+    for (const field of ['windowStartedAt', 'windowEndsAt', 'createdAt', 'updatedAt', 'expiresAt']) {
+      assert.equal(typeof document[field].toMillis, 'function')
+    }
+    assert.equal(
+      document.expiresAt.toMillis() - document.windowEndsAt.toMillis(),
+      BUSINESS_INSIGHT_RATE_LIMIT_RETENTION_HOURS * 60 * 60 * 1000,
+    )
+  }
+  const serializedRateDocuments = JSON.stringify(rateDocuments)
+  for (const forbidden of ['abcdefghijklmnop', '123', 'example.test', 'eventToken', 'digest', 'ipAddress']) {
+    assert.equal(serializedRateDocuments.includes(forbidden), false)
+  }
+})
+
+test('duplicate requests consume no quota and create no writes', async () => {
+  const db = new FakeFirestore({ 'businesses/biz': eligibleBusiness() })
+  const request = profileRequest()
+  await recordBusinessInsight({ data: request, db, now })
+  const rateCounts = rateLimitPaths(db).map((path) => db.data(path).count)
+  db.writePaths.length = 0
+
+  assert.deepEqual(await recordBusinessInsight({ data: request, db, now }), { ok: true, counted: false })
+  assert.deepEqual(rateLimitPaths(db).map((path) => db.data(path).count), rateCounts)
+  assert.deepEqual(db.writePaths, [])
+})
+
+test('global hourly limit rejects without partial state', async () => {
+  const db = new FakeFirestore({ 'businesses/biz': eligibleBusiness() })
+  await recordBusinessInsight({ data: profileRequest(), db, now })
+  const { globalRef } = businessInsightRateLimitReferences(db, 'biz', fixedNow)
+  db.store.set(globalRef.path, {
+    ...db.data(globalRef.path),
+    count: BUSINESS_INSIGHT_GLOBAL_HOURLY_LIMIT,
+  })
+  db.writePaths.length = 0
+  const before = new Map(db.store)
+
+  await assert.rejects(
+    recordBusinessInsight({
+      data: { ...profileRequest(), eventToken: 'differenttoken1234' }, db, now,
+    }),
+    (error) => code(error) === 'resource-exhausted'
+      && error.message === 'business-insight-global-rate-limit',
+  )
+  assert.deepEqual(db.writePaths, [])
+  assert.deepEqual(db.store, before)
+})
+
+test('per-business hourly limit rejects without partial state', async () => {
+  const db = new FakeFirestore({ 'businesses/biz': eligibleBusiness() })
+  await recordBusinessInsight({ data: profileRequest(), db, now })
+  const { businessRef } = businessInsightRateLimitReferences(db, 'biz', fixedNow)
+  db.store.set(businessRef.path, {
+    ...db.data(businessRef.path),
+    count: BUSINESS_INSIGHT_PER_BUSINESS_HOURLY_LIMIT,
+  })
+  db.writePaths.length = 0
+  const before = new Map(db.store)
+
+  await assert.rejects(
+    recordBusinessInsight({
+      data: { ...profileRequest(), eventToken: 'differenttoken1234' }, db, now,
+    }),
+    (error) => code(error) === 'resource-exhausted'
+      && error.message === 'business-insight-business-rate-limit',
+  )
+  assert.deepEqual(db.writePaths, [])
+  assert.deepEqual(db.store, before)
+})
+
+test('hourly counters roll over without resetting permanent analytics', async () => {
+  const db = new FakeFirestore({ 'businesses/biz': eligibleBusiness() })
+  await recordBusinessInsight({
+    data: profileRequest(), db, now: () => timestamp('2026-08-01T12:59:59Z'),
+  })
+  await recordBusinessInsight({
+    data: { ...profileRequest(), eventToken: 'differenttoken1234' },
+    db,
+    now: () => timestamp('2026-08-01T13:00:00Z'),
+  })
+
+  assert.equal(db.data('businessInsights/biz').profileViews, 2)
+  assert.equal(db.data('businessInsights/biz/days/2026-08-01').profileViews, 2)
+  assert.equal(rateLimitPaths(db).length, 4)
+  assert.deepEqual(rateLimitPaths(db).map((path) => db.data(path).count), [1, 1, 1, 1])
+})
+
+test('invalid and non-public requests do not touch rate counters', async () => {
+  const invalidDb = new FakeFirestore({ 'businesses/biz': eligibleBusiness() })
+  await assert.rejects(
+    recordBusinessInsight({ data: { ...profileRequest(), unexpected: true }, db: invalidDb, now }),
+    (error) => code(error) === 'invalid-argument',
+  )
+  assert.deepEqual(invalidDb.readPaths, [])
+  assert.deepEqual(invalidDb.writePaths, [])
+  assert.deepEqual(rateLimitPaths(invalidDb), [])
+
+  for (const overrides of [{ status: 'suspended' }, { publishedAt: null }]) {
+    const db = new FakeFirestore({ 'businesses/biz': eligibleBusiness(overrides) })
+    await assert.rejects(
+      recordBusinessInsight({ data: profileRequest(), db, now }),
+      (error) => code(error) === 'failed-precondition',
+    )
+    assert.deepEqual(db.writePaths, [])
+    assert.deepEqual(rateLimitPaths(db), [])
+  }
 })
 
 test('identical profile token remains deduplicated across UTC midnight within 24 hours', async () => {
