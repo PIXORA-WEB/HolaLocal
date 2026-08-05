@@ -85,8 +85,21 @@ test('active pages use mapped workflow errors and never render raw exception mes
   }
 
   assert.match(dashboard, /fallbackType: 'BUSINESS_SUBMIT_FAILED'/)
-  assert.match(dashboard, /setBusinessProfile\(submittedBusiness\)/)
-  assert.match(dashboard, /setSubmitSuccess\(t\('business\.control\.submitSuccess'\)\)/)
+  const submitHandler = dashboard.slice(
+    dashboard.indexOf('async function handleSubmitForReview()'),
+    dashboard.indexOf('async function retrySubscriptionProjection()'),
+  )
+  assert.match(submitHandler, /const submittedBusiness = await submitBusinessForReview\(businessProfile\.businessId\)/)
+  assert.match(submitHandler, /setBusinessProfile\(\{/)
+  assert.match(submitHandler, /\.\.\.submittedBusiness/)
+  assert.match(submitHandler, /entitlements: businessProfile\.entitlements/)
+  assert.ok(
+    submitHandler.indexOf("setSubmitSuccess(t('business.control.submitSuccess'))")
+      > submitHandler.indexOf('setBusinessProfile({'),
+    'submission success must be shown only after the returned business state is applied',
+  )
+  assert.match(submitHandler, /classifyFrontendError\(submissionError, \{/)
+  assert.doesNotMatch(submitHandler, /submissionError\.message|\.message\s*\|\|\s*t\(/)
   assert.match(editor, /fallbackType: 'BUSINESS_CREATE_FAILED'/)
   assert.match(profile, /fallbackType: 'ACCOUNT_TRANSITION_FAILED'/)
   assert.match(onboarding, /fallbackType: 'ACCOUNT_TRANSITION_FAILED'/)

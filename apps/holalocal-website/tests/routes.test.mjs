@@ -35,6 +35,10 @@ const profilePagePath = path.resolve(__dirname, '../src/pages/customer/ProfilePa
 const privacyPath = path.resolve(__dirname, '../src/pages/PrivacyPage.jsx')
 const termsPath = path.resolve(__dirname, '../src/pages/TermsPage.jsx')
 const businessDetailPath = path.resolve(__dirname, '../src/components/common/BusinessDetailPanel.jsx')
+const publicBusinessDirectoryPath = path.resolve(
+  __dirname,
+  '../../../functions/src/publicBusinessDirectory.js',
+)
 
 function readCssBlock(styles, selector) {
   const start = styles.indexOf(`${selector} {`)
@@ -42,6 +46,14 @@ function readCssBlock(styles, selector) {
   const end = styles.indexOf('\n}', start)
   assert.notEqual(end, -1, `Expected CSS block for ${selector}`)
   return styles.slice(start, end + 2)
+}
+
+function readExportedFunction(source, name, nextName) {
+  const start = source.indexOf(`export async function ${name}`)
+  assert.notEqual(start, -1, `Expected exported function ${name}`)
+  const end = nextName ? source.indexOf(`export async function ${nextName}`, start) : source.length
+  assert.notEqual(end, -1, `Expected exported function ${nextName}`)
+  return source.slice(start, end)
 }
 
 test('public production routes use the full homepage and services pages', async () => {
@@ -446,9 +458,10 @@ test('mobile header keeps the full brand visible while preserving controls', asy
 })
 
 test('services page uses the shared directory implementation and safe states', async () => {
-  const [source, businessService] = await Promise.all([
+  const [source, businessService, publicBusinessDirectory] = await Promise.all([
     readFile(servicesPath, 'utf8'),
     readFile(businessServicePath, 'utf8'),
+    readFile(publicBusinessDirectoryPath, 'utf8'),
   ])
 
   assert.match(source, /getActivePublicBusinesses/)
@@ -460,8 +473,25 @@ test('services page uses the shared directory implementation and safe states', a
   assert.match(source, /services\.emptyAction/)
   assert.match(source, /services\.loadError/)
   assert.match(source, /to=\{`\/services\/\$\{business\.businessId\}/)
-  assert.match(businessService, /toPublicBusiness\(snapshot\)/)
-  assert.match(businessService, /listPublicBusinessesCallable\(\{ maxResults: resultLimit \}\)/)
+  const listPublicGetter = readExportedFunction(
+    businessService,
+    'getActivePublicBusinesses',
+    'getFeaturedActiveBusinesses',
+  )
+  const detailPublicGetter = readExportedFunction(
+    businessService,
+    'getPublicBusinessById',
+    'getOwnerSubscriptionStatus',
+  )
+  assert.match(listPublicGetter, /listPublicBusinessesCallable\(\{ maxResults: resultLimit \}\)/)
+  assert.match(detailPublicGetter, /getPublicBusinessCallable\(\{ businessId \}\)/)
+  for (const publicGetter of [listPublicGetter, detailPublicGetter]) {
+    assert.doesNotMatch(publicGetter, /\b(?:getDoc|getDocs|collection|query)\s*\(/)
+  }
+  assert.match(publicBusinessDirectory, /isPublicBusinessEligible\(rawDocument\)/)
+  assert.match(publicBusinessDirectory, /projectPublicContact\(business\.contact\)\.contact/)
+  assert.match(publicBusinessDirectory, /resolveAuthoritativeBusinessEntitlements\(/)
+  assert.doesNotMatch(publicBusinessDirectory, /return \{\s*business(?:es)?:\s*(?:business|snapshot)\.data\(\)/)
   assert.doesNotMatch(source, /example-|isDemo/)
 })
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import test from 'node:test'
 import { classifyFrontendError } from '../src/utils/frontendErrors.js'
+import { buildHomepagePreviewBusinesses } from '../src/utils/homepagePreview.js'
 import { authenticatedTranslations } from '../src/i18n/locales/authenticatedTranslations.js'
 
 const source = (path) => fs.readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -39,13 +40,38 @@ test('contextual save translations exist in every locale pack', () => {
   }
 })
 
-test('homepage retry reruns the existing request without exposing examples after failure', () => {
+test('homepage preview safely separates live results, examples and retry state', () => {
   const home = source('../src/pages/HomePage.jsx')
+  const liveBusinesses = [{ businessId: 'live-business' }]
+  const examples = [
+    { businessId: 'example-one', isDemo: true },
+    { businessId: 'example-two', isDemo: true },
+  ]
+
+  assert.deepEqual(buildHomepagePreviewBusinesses(liveBusinesses, examples, 'loading'), examples)
+  assert.deepEqual(buildHomepagePreviewBusinesses(liveBusinesses, examples, 'error'), examples)
+  assert.deepEqual(buildHomepagePreviewBusinesses([], examples, 'success'), examples)
+  assert.equal(
+    buildHomepagePreviewBusinesses(liveBusinesses, examples, 'success')[0],
+    liveBusinesses[0],
+  )
+  for (const status of ['loading', 'error']) {
+    const preview = buildHomepagePreviewBusinesses(liveBusinesses, examples, status)
+    assert.equal(preview.some((business) => business.businessId === 'live-business'), false)
+    assert.equal(preview.every((business) => business.isDemo === true), true)
+  }
+
   assert.match(home, /const \[directoryLoadAttempt, setDirectoryLoadAttempt\] = useState\(0\)/)
   assert.match(home, /getFeaturedActiveBusinesses\(60\)/)
   assert.match(home, /\}, \[directoryLoadAttempt\]\)/)
-  assert.match(home, /setFeaturedBusinesses\(\[\]\)\s*setDirectoryStatus\('loading'\)\s*setDirectoryLoadAttempt/s)
-  assert.match(home, /directoryStatus === 'success'[\s\S]*fallbackBusinesses/)
+  const retryHandler = home.slice(
+    home.indexOf('function retryDirectoryLoad()'),
+    home.indexOf('const fallbackBusinesses'),
+  )
+  assert.match(retryHandler, /setFeaturedBusinesses\(\[\]\)/)
+  assert.match(retryHandler, /setDirectoryStatus\('loading'\)/)
+  assert.match(retryHandler, /setDirectoryLoadAttempt\(\(attempt\) => attempt \+ 1\)/)
+  assert.match(home, /isDemo: true/)
   assert.match(home, /disabled=\{directoryStatus === 'loading'\}/)
   assert.match(home, /\{t\('common.retry'\)\}/)
 })
