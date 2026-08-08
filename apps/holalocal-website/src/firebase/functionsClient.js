@@ -15,6 +15,8 @@ if (shouldUseFirebaseEmulators()) {
 export const ensureOwnerBusinessCallable = httpsCallable(functions, 'ensureOwnerBusiness')
 export const listPublicBusinessesCallable = httpsCallable(functions, 'listPublicBusinesses')
 export const sendMessageCallable = httpsCallable(functions, 'sendMessage')
+export const openBusinessConversationCallable = httpsCallable(functions, 'openBusinessConversation')
+export const getConversationBusinessContextCallable = httpsCallable(functions, 'getConversationBusinessContext')
 export const moderateBusinessCallable = httpsCallable(functions, 'moderateBusiness')
 export const getAdminBusinessReviewCallable = httpsCallable(functions, 'getAdminBusinessReview')
 export const assignBusinessSubscriptionPlanCallable = httpsCallable(functions, 'assignBusinessSubscriptionPlan')

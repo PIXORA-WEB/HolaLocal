@@ -9,6 +9,10 @@ import { moderateBusiness as runBusinessModeration } from './businessModeration.
 import { createFirestoreTranslationSource } from './firestoreTranslationSource.js'
 import { processMessageTranslation } from './messageTranslation.js'
 import { sendConversationMessage } from './messageSending.js'
+import {
+  getConversationBusinessContext as runGetConversationBusinessContext,
+  openBusinessConversation as runOpenBusinessConversation,
+} from './conversationContext.js'
 import { ensureOwnerBusiness as runEnsureOwnerBusiness } from './ownerBusinessCreation.js'
 import {
   getPublicBusiness as runGetPublicBusiness,
@@ -76,6 +80,26 @@ export async function handleSendMessage(request, db) {
     conversationId: request.data?.conversationId,
     requestId: request.data?.requestId,
     text: request.data?.text,
+    db: db ?? getFirestore(),
+  })
+}
+
+export async function handleOpenBusinessConversation(request, db) {
+  const uid = requireCallableUid(request)
+  requireExactInput(request.data, ['businessId'])
+  return runOpenBusinessConversation({
+    uid,
+    businessId: request.data.businessId,
+    db: db ?? getFirestore(),
+  })
+}
+
+export async function handleGetConversationBusinessContext(request, db) {
+  const uid = requireCallableUid(request)
+  requireExactInput(request.data, ['conversationId'])
+  return runGetConversationBusinessContext({
+    uid,
+    conversationId: request.data.conversationId,
     db: db ?? getFirestore(),
   })
 }
@@ -203,6 +227,16 @@ export const ensureOwnerBusiness = onCall(
 export const sendMessage = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleSendMessage(request),
+)
+
+export const openBusinessConversation = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleOpenBusinessConversation(request),
+)
+
+export const getConversationBusinessContext = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleGetConversationBusinessContext(request),
 )
 
 export const moderateBusiness = onCall(

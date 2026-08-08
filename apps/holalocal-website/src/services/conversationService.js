@@ -8,26 +8,23 @@ import {
   onSnapshot,
   orderBy,
   query,
-  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
 } from 'firebase/firestore'
 import {
-  buildConversationId,
   conversationInboxQueryFilters,
-  CONVERSATION_SCHEMA_VERSION,
-  CONVERSATION_STATUS_ACTIVE,
-  existingConversationQueryFilters,
   getConversationActivityTime,
-  hasOwnerOnlyConversationParticipants,
   isConversationHiddenForUser,
   MAX_MESSAGE_LENGTH,
 } from '@holalocal/firebase-contract'
-import { sendMessageCallable } from '../firebase/functionsClient.js'
+import {
+  getConversationBusinessContextCallable,
+  openBusinessConversationCallable,
+  sendMessageCallable,
+} from '../firebase/functionsClient.js'
 import { db } from '../firebase/firestoreClient.js'
 import { createApplicationError } from '../utils/frontendErrors.js'
-import { getPublicBusinessById } from './businessService.js'
 
 const MAX_MESSAGES = 100
 
@@ -40,99 +37,11 @@ function messageCollection(conversationId) {
   return collection(conversationDocument(conversationId), 'messages')
 }
 
-function participantState() {
-  return {
-    lastReadAt: null,
-    archivedAt: null,
-    mutedUntil: null,
-    deletedAt: null,
-  }
-}
-
-function isCompatibleConversation(snapshot, customerId, businessId) {
-  const conversation = snapshot.data()
-  return conversation.customerId === customerId
-    && conversation.businessId === businessId
-    && conversation.status === CONVERSATION_STATUS_ACTIVE
-}
-
-function isRestorableForUser(snapshot, userId) {
-  const currentState = snapshot.data().participantState?.[userId]
-  return Boolean(currentState?.deletedAt || currentState?.archivedAt)
-}
-
-function buildInitialConversation(customerId, business) {
-  const participantIds = [customerId, business.ownerId]
-  const participantStates = Object.fromEntries(
-    participantIds.map((participantId) => [participantId, participantState()]),
-  )
-
-  return {
-    businessId: business.businessId,
-    customerId,
-    participantIds,
-    participantState: participantStates,
-    schemaVersion: CONVERSATION_SCHEMA_VERSION,
-    lastMessage: null,
-    lastMessageAt: null,
-    status: CONVERSATION_STATUS_ACTIVE,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  }
-}
-
-async function findExistingConversation(customerId, businessId) {
-  const snapshot = await getDocs(query(
-    collection(db, 'conversations'),
-    ...existingConversationQueryFilters(customerId, businessId).map((constraint) => where(...constraint)),
-  ))
-
-  return snapshot.docs.filter((conversation) => (
-    isCompatibleConversation(conversation, customerId, businessId)
-  ))
-}
-
-export async function getOrCreateConversationForBusiness(customerId, business) {
+export async function getOrCreateConversationForBusiness(customerId, businessId) {
   if (!customerId) throw new Error('You must be logged in to message a business.')
-  if (!business?.businessId || !business.ownerId) {
-    throw new Error('This business cannot receive messages yet.')
-  }
-  if (business.status !== CONVERSATION_STATUS_ACTIVE) {
-    throw new Error('This business is not currently available for messages.')
-  }
-  if (business.ownerId === customerId) {
-    throw new Error('You cannot start a customer conversation with your own business.')
-  }
-
-  const canonicalConversationId = buildConversationId(customerId, business.businessId)
-  const existingConversations = await findExistingConversation(customerId, business.businessId)
-
-  if (existingConversations.length > 1) {
-    throw new Error('Multiple matching conversations need manual review before messaging can continue.')
-  }
-
-  if (existingConversations.length === 1) {
-    const [existingConversation] = existingConversations
-    if (isRestorableForUser(existingConversation, customerId)) {
-      await restoreConversationForUser(existingConversation.id, customerId)
-    }
-    return existingConversation.id
-  }
-
-  await runTransaction(db, async (transaction) => {
-    const reference = conversationDocument(canonicalConversationId)
-    const snapshot = await transaction.get(reference)
-    if (snapshot.exists()) {
-      if (!isCompatibleConversation(snapshot, customerId, business.businessId)) {
-        throw new Error('The existing conversation identity does not match this business.')
-      }
-      return
-    }
-
-    transaction.set(reference, buildInitialConversation(customerId, business))
-  })
-
-  return canonicalConversationId
+  if (!businessId) throw new Error('This business cannot receive messages yet.')
+  const result = await openBusinessConversationCallable({ businessId })
+  return result.data?.conversationId
 }
 
 export const findOrCreateConversation = getOrCreateConversationForBusiness
@@ -150,11 +59,6 @@ function visibleConversationsForUser(conversations, userId) {
     .sort((first, second) => (
       getConversationActivityTime(second) - getConversationActivityTime(first)
     ))
-}
-
-function isOwnerOnlyConversationForBusiness(conversation, business) {
-  return Boolean(business?.ownerId)
-    && hasOwnerOnlyConversationParticipants(conversation, business.ownerId)
 }
 
 function conversationsForUserQuery(userId) {
@@ -194,12 +98,12 @@ export async function getConversationForUser(conversationId, userId) {
   if (!conversation.participantIds?.includes(userId)) {
     throw createApplicationError('conversation-access-denied')
   }
-  const business = await getPublicBusinessById(conversation.businessId)
-  if (!isOwnerOnlyConversationForBusiness(conversation, business)) {
-    throw createApplicationError('conversation-access-denied')
-  }
-
   return { conversationId: snapshot.id, ...conversation }
+}
+
+export async function getParticipantBusinessContext(conversationId) {
+  const result = await getConversationBusinessContextCallable({ conversationId })
+  return result.data?.businessContext ?? null
 }
 
 export async function hideConversationForUser(conversationId, userId) {

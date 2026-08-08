@@ -5,6 +5,7 @@ import {
   MAX_MESSAGE_LENGTH,
   shouldAdvanceConversationPreview,
 } from '@holalocal/firebase-contract'
+import { assertActiveAccountSnapshot, assertBusinessAllowsMessages } from './conversationContext.js'
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,80}$/
 
@@ -97,9 +98,12 @@ export async function sendConversationMessage({
   const messageId = buildIdempotentMessageId(safeUid, safeRequestId)
   const conversationRef = db.doc(`conversations/${safeConversationId}`)
   const messageRef = conversationRef.collection('messages').doc(messageId)
+  const userRef = db.doc(`users/${safeUid}`)
 
   let result
   await db.runTransaction(async (transaction) => {
+    const userSnapshot = await transaction.get(userRef)
+    assertActiveAccountSnapshot(userSnapshot)
     const conversationSnapshot = await transaction.get(conversationRef)
     if (!conversationSnapshot.exists) throw new HttpsError('not-found', 'conversation-not-found')
     const conversation = conversationSnapshot.data()
@@ -125,6 +129,8 @@ export async function sendConversationMessage({
       result = { ok: true, messageId, idempotent: true }
       return
     }
+
+    assertBusinessAllowsMessages(business)
 
     const createdAt = now()
     const message = {

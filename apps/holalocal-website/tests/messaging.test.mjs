@@ -86,8 +86,24 @@ test('messages page preserves send, error feedback and disabled states', async (
   assert.match(source, /disabled=\{sending \|\| !messageText\.trim\(\)\}/)
   assert.match(source, /onSubmit=\{handleSend\}/)
   assert.match(source, /subscribeToMessages/)
+  assert.match(source, /getParticipantBusinessContext/)
+  assert.match(source, /business\.canSendMessages \? \(/)
+  assert.match(source, /t\('messages\.messagingClosed'\)/)
+  assert.match(source, /t\('messages\.profileUnavailableDescription'\)/)
+  assert.match(source, /business\.profileAvailable/)
   assert.match(source, /dispatchConversation\(\{ type: 'sendSucceeded', conversationId, operationId \}\)/)
   assert.match(source, /catch \(sendError\) \{\s*dispatchConversation\(/)
+})
+
+test('conversation detail loads participant context and history independently of public profile availability', async () => {
+  const source = await readFile(messagesPageUrl, 'utf8')
+
+  assert.match(source, /Promise\.all\(\[\s*getConversationForUser\(conversationId, user\.uid\),\s*getParticipantBusinessContext\(conversationId\),/s)
+  assert.match(source, /unsubscribe = subscribeToMessages\(/)
+  assert.match(source, /!business\.profileAvailable/)
+  assert.match(source, /business\.canSendMessages \? \([\s\S]*className="message-composer"/)
+  assert.match(source, /t\('messages\.messagingClosed'\)/)
+  assert.doesNotMatch(source, /getPublicBusinessById/)
 })
 
 test('conversation view state is isolated by routed conversation before effects run', () => {
@@ -175,7 +191,7 @@ test('message listener failure is terminal and cannot render successful-empty hi
   assert.equal(state.error.type, 'MESSAGE_LOAD_FAILED')
 })
 
-test('conversation enrichment omits unavailable entries without discarding valid conversations', async () => {
+test('conversation enrichment retains participant-safe non-public business context', async () => {
   const conversations = [
     {
       businessId: 'available-business',
@@ -202,23 +218,25 @@ test('conversation enrichment omits unavailable entries without discarding valid
       participantIds: ['customer-d', 'owner-d'],
     },
   ]
-  const businesses = {
-    'available-business': { name: 'Visible business', ownerId: 'owner-a' },
-    'missing-business': null,
+  const contexts = {
+    'conversation-a': { name: 'Visible business', profileAvailable: true, canSendMessages: true },
+    'conversation-b': { name: 'Former business', profileAvailable: false, canSendMessages: false },
   }
-  const result = await enrichConversationSummaries(conversations, async (businessId) => {
-    if (businessId === 'private-business') {
+  const result = await enrichConversationSummaries(conversations, async (conversationId) => {
+    if (conversationId === 'conversation-c') {
       throw { code: 'firestore/permission-denied', message: 'suspended internal status' }
     }
-    if (businessId === 'network-business') {
+    if (conversationId === 'conversation-d') {
       throw { code: 'firestore/unavailable', message: 'projects/private-project' }
     }
-    return businesses[businessId]
+    return contexts[conversationId]
   })
 
-  assert.deepEqual(result.map(({ conversationId }) => conversationId), ['conversation-a'])
+  assert.deepEqual(result.map(({ conversationId }) => conversationId), ['conversation-a', 'conversation-b'])
   assert.equal(result[0].business.name, 'Visible business')
-  assert.doesNotMatch(JSON.stringify(result), /suspended|private-project|missing-business/)
+  assert.equal(result[1].business.name, 'Former business')
+  assert.equal(result[1].business.profileAvailable, false)
+  assert.doesNotMatch(JSON.stringify(result), /suspended|private-project/)
 })
 
 test('conversation enrichment escalates a complete infrastructure failure', async () => {
@@ -523,16 +541,17 @@ test('header and inbox derive unread state from the shared helper', async () => 
   assert.match(unreadHook, /if \(!userId\)/)
 })
 
-test('website messaging filters conversations to customer plus exact business owner', async () => {
-  const [service, stateHelper] = await Promise.all([
+test('website messaging delegates participant and owner validation to the context callable', async () => {
+  const [service, stateHelper, messagesPage] = await Promise.all([
     readFile(serviceUrl, 'utf8'),
     readFile(messageStateUrl, 'utf8'),
+    readFile(messagesPageUrl, 'utf8'),
   ])
 
-  assert.match(service, /hasOwnerOnlyConversationParticipants/)
-  assert.match(service, /isOwnerOnlyConversationForBusiness\(conversation, business\)/)
-  assert.match(stateHelper, /hasOwnerOnlyConversationParticipants\(conversation, business\.ownerId\)/)
-  assert.doesNotMatch(service, /managerIds.*participantIds/)
+  assert.match(service, /getConversationBusinessContextCallable\(\{ conversationId \}\)/)
+  assert.match(stateHelper, /loadBusinessContext\(conversation\.conversationId\)/)
+  assert.match(messagesPage, /conversation\.customerId !== user\.uid/)
+  assert.doesNotMatch(`${service}\n${stateHelper}\n${messagesPage}`, /getPublicBusinessById|business\?*\.ownerId/)
 })
 
 test('message routes and business-profile CTA remain wired to existing flows', async () => {
@@ -544,23 +563,19 @@ test('message routes and business-profile CTA remain wired to existing flows', a
 
   assert.match(routes, /path="messages"/)
   assert.match(routes, /path="messages\/:conversationId"/)
-  assert.match(servicesPage, /getOrCreateConversationForBusiness\(user\.uid, selectedBusiness\)/)
+  assert.match(servicesPage, /getOrCreateConversationForBusiness\(user\.uid, selectedBusiness\.businessId\)/)
   assert.match(servicesPage, /navigate\(`\/messages\/\$\{conversationId\}`\)/)
   assert.match(servicesPage, /setAuthPromptReason\('message'\)/)
   assert.match(detailPanel, /t\('publicBusinessDetail\.messageBusiness'\)/)
   assert.match(detailPanel, /onClick=\{onMessage\}/)
 })
 
-test('conversation creation uses a deterministic transaction-safe identity', async () => {
+test('conversation creation delegates authoritative identity to the server callable', async () => {
   const source = await readFile(serviceUrl, 'utf8')
 
-  assert.match(source, /runTransaction/)
-  assert.match(source, /buildConversationId\(customerId, business\.businessId\)/)
-  assert.match(source, /transaction\.get\(reference\)/)
-  assert.match(source, /transaction\.set\(reference, buildInitialConversation\(customerId, business\)\)/)
-  assert.match(source, /Multiple matching conversations need manual review/)
+  assert.match(source, /openBusinessConversationCallable\(\{ businessId \}\)/)
   assert.match(source, /export const findOrCreateConversation = getOrCreateConversationForBusiness/)
-  assert.doesNotMatch(source, /addDoc/)
+  assert.doesNotMatch(source, /ownerId|runTransaction|buildConversationId|addDoc/)
 })
 
 test('production conversation queries use the trusted schema and matching indexes', async () => {
@@ -572,8 +587,7 @@ test('production conversation queries use the trusted schema and matching indexe
   const indexes = JSON.parse(indexesText).indexes
 
   assert.match(service, /conversationInboxQueryFilters\(userId\)/)
-  assert.match(service, /existingConversationQueryFilters\(customerId, businessId\)/)
-  assert.match(service, /schemaVersion: CONVERSATION_SCHEMA_VERSION/)
+  assert.match(service, /openBusinessConversationCallable/)
   assert.match(rules, /allow get: if hasActiveAccount\(\)/)
   assert.match(rules, /allow list: if hasActiveAccount\(\)/)
   assert.match(rules, /resource\.data\.schemaVersion == 1/)

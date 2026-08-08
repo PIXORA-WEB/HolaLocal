@@ -5,8 +5,10 @@ import {
   handleAssignBusinessSubscriptionPlan,
   handleGetOwnerSubscriptionStatus,
   handleGetPublicBusiness,
+  handleGetConversationBusinessContext,
   handleModerateBusiness,
   handleSendMessage,
+  handleOpenBusinessConversation,
   handleUpdateAccountRole,
 } from '../src/index.js'
 
@@ -36,6 +38,8 @@ test('unauthenticated callable handlers reject before Firestore access', async (
     () => handleSendMessage({
       data: { conversationId: 'conversation-1', requestId: 'request-123', text: 'Hello' },
     }, db),
+    () => handleOpenBusinessConversation({ data: { businessId: 'business-1' } }, db),
+    () => handleGetConversationBusinessContext({ data: { conversationId: 'conversation-1' } }, db),
     () => handleModerateBusiness({
       data: { businessId: 'business-1', operation: 'publish' },
     }, db),
@@ -65,6 +69,32 @@ test('owner subscription handler still authenticates before payload or Firestore
   await assert.rejects(
     () => handleGetOwnerSubscriptionStatus({ data: { businessId: 'business-1' } }, forbiddenDb()),
     (error) => codeFrom(error) === 'unauthenticated',
+  )
+})
+
+test('conversation handlers authenticate before payload validation and reject expanded payloads', async () => {
+  const db = forbiddenDb()
+  await assert.rejects(
+    () => handleOpenBusinessConversation({ data: { businessId: 'business-1' } }, db),
+    (error) => codeFrom(error) === 'unauthenticated',
+  )
+  await assert.rejects(
+    () => handleGetConversationBusinessContext({ data: { conversationId: 'conversation-1' } }, db),
+    (error) => codeFrom(error) === 'unauthenticated',
+  )
+  await assert.rejects(
+    () => handleOpenBusinessConversation({
+      auth: { uid: 'customer', token: {} },
+      data: { businessId: 'business-1', ownerId: 'must-not-be-accepted' },
+    }, db),
+    (error) => codeFrom(error) === 'invalid-argument',
+  )
+  await assert.rejects(
+    () => handleGetConversationBusinessContext({
+      auth: { uid: 'customer', token: {} },
+      data: { conversationId: 'conversation-1', businessId: 'unexpected' },
+    }, db),
+    (error) => codeFrom(error) === 'invalid-argument',
   )
 })
 
