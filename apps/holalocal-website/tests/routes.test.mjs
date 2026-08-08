@@ -312,7 +312,7 @@ test('public business detail uses i18n while preserving business data and action
   assert.match(detail, /onClick=\{onReport\}/)
   assert.match(services, /onMessage=\{\(\) => void handleMessageBusiness\(\)\}/)
   assert.match(services, /onReport=\{handleReportBusiness\}/)
-  assert.match(services, /getOrCreateConversationForBusiness\(user\.uid, selectedBusiness\)/)
+  assert.match(services, /getOrCreateConversationForBusiness\(user\.uid, selectedBusiness\.businessId\)/)
   assert.match(services, /createBusinessReport\(\{/)
 })
 

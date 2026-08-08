@@ -1,5 +1,3 @@
-import { hasOwnerOnlyConversationParticipants } from '@holalocal/firebase-contract'
-
 export function createInboxViewState(userId = null) {
   return {
     error: null,
@@ -50,11 +48,11 @@ function isExpectedUnavailableProjection(error) {
   return ['not-found', 'permission-denied'].includes(normalizedErrorCode(error))
 }
 
-export async function enrichConversationSummaries(conversations, loadBusiness) {
+export async function enrichConversationSummaries(conversations, loadBusinessContext) {
   const settled = await Promise.all(conversations.map(async (conversation) => {
     try {
-      const business = await loadBusiness(conversation.businessId)
-      if (!business || !hasOwnerOnlyConversationParticipants(conversation, business.ownerId)) {
+      const business = await loadBusinessContext(conversation.conversationId)
+      if (!business) {
         return { status: 'unavailable' }
       }
       return { status: 'available', value: { ...conversation, business } }

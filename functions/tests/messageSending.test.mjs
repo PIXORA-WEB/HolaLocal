@@ -9,6 +9,9 @@ function codeFrom(error) {
 
 function dbWithConversation(overrides = {}) {
   return new FakeFirestore({
+    'users/customer': { accountStatus: 'active', deletionRequestedAt: null },
+    'users/owner': { accountStatus: 'active', deletionRequestedAt: null },
+    'users/unrelated': { accountStatus: 'active', deletionRequestedAt: null },
     'businesses/business-1': {
       ownerId: 'owner',
       managerIds: ['owner', 'manager'],
@@ -43,6 +46,7 @@ test('sendMessage uses stable sender-owned message IDs for idempotent retries', 
     db,
     now,
   })
+  db.store.get('businesses/business-1').status = 'suspended'
   const retry = await sendConversationMessage({
     uid: 'customer',
     conversationId: 'customer__business-1',
@@ -58,6 +62,48 @@ test('sendMessage uses stable sender-owned message IDs for idempotent retries', 
   assert.equal(retry.idempotent, true)
   assert.equal(db.data(`conversations/customer__business-1/messages/${messageId}`).text, 'Hello owner')
   assert.equal(db.data('conversations/customer__business-1').lastMessage.messageId, messageId)
+})
+
+test('sendMessage allows active non-public businesses and rejects closed lifecycles atomically', async () => {
+  const active = dbWithConversation()
+  active.store.get('businesses/business-1').publishedAt = null
+  await sendConversationMessage({
+    uid: 'customer', conversationId: 'customer__business-1', requestId: 'active-123',
+    text: 'Existing conversation', db: active,
+  })
+  assert.ok(active.data('conversations/customer__business-1/messages/customer_active-123'))
+
+  for (const status of ['pending_review', 'rejected', 'suspended', 'archived', 'deleted']) {
+    const db = dbWithConversation()
+    db.store.get('businesses/business-1').status = status
+    const beforeConversation = structuredClone(db.data('conversations/customer__business-1'))
+    await assert.rejects(() => sendConversationMessage({
+      uid: 'customer', conversationId: 'customer__business-1', requestId: `closed-${status}`,
+      text: 'Must not be stored', db,
+    }), (error) => codeFrom(error) === 'failed-precondition')
+    assert.deepEqual(db.data('conversations/customer__business-1'), beforeConversation)
+    assert.equal(db.data(`conversations/customer__business-1/messages/customer_closed-${status}`), undefined)
+    assert.deepEqual(db.writePaths, [])
+  }
+})
+
+test('sendMessage rejects inactive accounts before writing and restored active businesses succeed', async () => {
+  const inactive = dbWithConversation()
+  inactive.store.set('users/customer', { accountStatus: 'suspended', deletionRequestedAt: null })
+  await assert.rejects(() => sendConversationMessage({
+    uid: 'customer', conversationId: 'customer__business-1', requestId: 'inactive-123',
+    text: 'Blocked', db: inactive,
+  }), (error) => codeFrom(error) === 'failed-precondition')
+  assert.deepEqual(inactive.writePaths, [])
+
+  const restored = dbWithConversation()
+  restored.store.get('businesses/business-1').status = 'suspended'
+  restored.store.get('businesses/business-1').status = 'active'
+  const result = await sendConversationMessage({
+    uid: 'customer', conversationId: 'customer__business-1', requestId: 'restored-123',
+    text: 'Welcome back', db: restored,
+  })
+  assert.equal(result.ok, true)
 })
 
 test('sendMessage rejects request ID reuse with different content', async () => {

@@ -160,7 +160,7 @@ test('launch-critical operational translations are complete for every locale', a
   const english = await readJsonLocale('en')
   const englishResource = resourceForLocale('en', english, english)
   const namespacePaths = [
-    ['messages', 53],
+    ['messages', 56],
     ['reports', 18],
     ['onboarding', 12],
     ['auth.errors', 10],
