@@ -166,7 +166,7 @@ function ServicesPage() {
     setMessaging(true)
     setMessagingError('')
     try {
-      const conversationId = await getOrCreateConversationForBusiness(user.uid, selectedBusiness)
+      const conversationId = await getOrCreateConversationForBusiness(user.uid, selectedBusiness.businessId)
       navigate(`/messages/${conversationId}`)
     } catch {
       setMessagingError(t('publicBusinessDetail.messageError'))

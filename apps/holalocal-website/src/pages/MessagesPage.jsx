@@ -12,9 +12,9 @@ import { ImageAvatar } from '../components/common/PublicBusinessCard.jsx'
 import LoadingScreen from '../components/common/LoadingScreen.jsx'
 import RecoveryMessage from '../components/common/RecoveryMessage.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
-import { getPublicBusinessById } from '../services/businessService.js'
 import {
   getConversationForUser,
+  getParticipantBusinessContext,
   hideConversationForUser,
   markConversationReadForUser,
   createMessageRequestId,
@@ -101,7 +101,7 @@ function MessagesPage() {
       (items) => {
         const currentRequest = requestId + 1
         requestId = currentRequest
-        enrichConversationSummaries(items, getPublicBusinessById)
+        enrichConversationSummaries(items, getParticipantBusinessContext)
           .then((summaries) => {
             if (active && currentRequest === requestId) {
               dispatchInbox({
@@ -156,9 +156,11 @@ function MessagesPage() {
     let unsubscribe = () => undefined
     dispatchConversation({ type: 'loadStarted', conversationId })
 
-    getConversationForUser(conversationId, user.uid)
-      .then(async (loadedConversation) => {
-        const loadedBusiness = await getPublicBusinessById(loadedConversation.businessId)
+    Promise.all([
+      getConversationForUser(conversationId, user.uid),
+      getParticipantBusinessContext(conversationId),
+    ])
+      .then(([loadedConversation, loadedBusiness]) => {
         if (!active) return
 
         if (!loadedBusiness) {
@@ -326,7 +328,7 @@ function MessagesPage() {
 
   const customerLanguage = userProfile?.preferredLocale ?? t('messages.preferredLanguageFallback')
   const businessLanguage = business?.primaryLanguage ?? business?.languages?.[0] ?? t('messages.businessLanguageFallback')
-  const isBusinessParticipant = conversation && business?.ownerId === user.uid
+  const isBusinessParticipant = Boolean(conversation && conversation.customerId !== user.uid)
   const activeLanguage = isBusinessParticipant ? businessLanguage : customerLanguage
   const otherParticipantName = isBusinessParticipant
     ? t('messages.customerFallback')
@@ -458,7 +460,11 @@ function MessagesPage() {
                 />
                 <div>
                   <h2>{business.name}</h2>
-                  <p>{business.category || t('messages.localBusiness')} · {t('messages.activeProfile')}</p>
+                  <p>
+                    {business.profileAvailable
+                      ? t('messages.activeProfile')
+                      : t('messages.profileUnavailable')}
+                  </p>
                 </div>
                 <button
                   className="conversation-view__delete"
@@ -532,6 +538,10 @@ function MessagesPage() {
                 <li aria-hidden="true" className="message-list__end" ref={messagesEndRef} />
               </ol>
 
+              {!business.profileAvailable && (
+                <p className="form-message" role="status">{t('messages.profileUnavailableDescription')}</p>
+              )}
+              {business.canSendMessages ? (
               <form className="message-composer" onSubmit={handleSend}>
                 <label className="visually-hidden" htmlFor="message-text">{t('messages.messageLabel')}</label>
                 <textarea
@@ -558,6 +568,9 @@ function MessagesPage() {
                   {sending ? t('messages.sending') : t('messages.send')}
                 </button>
               </form>
+              ) : (
+                <p className="form-message" role="status">{t('messages.messagingClosed')}</p>
+              )}
             </>
           ) : null}
         </section>

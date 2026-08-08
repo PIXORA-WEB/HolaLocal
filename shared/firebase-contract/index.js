@@ -23,7 +23,8 @@ export {
 } from './lookup.js'
 export {
   getConversationActivityTime,
-  buildConversationId, conversationInboxQueryFilters, existingConversationQueryFilters,
+  buildConversationId, buildLegacyConversationId, conversationInboxQueryFilters,
+  conversationMatchesPair, existingConversationQueryFilters,
   CONVERSATION_ID_SEPARATOR, CONVERSATION_SCHEMA_VERSION, CONVERSATION_STATUS_ACTIVE,
   hasOwnerOnlyConversationParticipants, isConversationHiddenForUser, isConversationIdFor,
   isConversationUnreadForUser, isSupportedTranslationLanguage, isTerminalTranslationStatus,

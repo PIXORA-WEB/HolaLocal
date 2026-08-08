@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import {
   ACCOUNT_STATUSES, BUSINESS_STATUSES, CONTACT_METHODS, ISSUE_CODES, SUBSCRIPTION_STATUSES,
   SUPPORTED_LANGUAGE_CODES, USER_ROLES, VERIFICATION_STATUSES, adaptBusinessDocument,
-  adaptUserDocument, ambiguousBusinesses, buildConversationId, businessNotFound, detectUnsafePublicContact,
+  adaptUserDocument, ambiguousBusinesses, buildConversationId, buildLegacyConversationId,
+  businessNotFound, conversationMatchesPair, detectUnsafePublicContact,
   conversationInboxQueryFilters, CONVERSATION_SCHEMA_VERSION, existingConversationQueryFilters,
   locationDisplayLabel, resolveLaunchLocation, searchLaunchLocations, validateBusinessLocation,
   foundBusiness, getConversationActivityTime, hasOwnerOnlyConversationParticipants, invalidMapping,
@@ -78,6 +79,17 @@ test('messaging translation helpers normalize backend-managed translation state'
 test('messaging helpers build deterministic customer and business conversation IDs', () => {
   const conversationId = buildConversationId('customer-1', 'business-1')
   assert.equal(conversationId, 'customer-1__business-1')
+  assert.equal(buildLegacyConversationId('customer-1', 'business-1'), conversationId)
+  assert.equal(conversationMatchesPair(
+    { customerId: 'customer-1', businessId: 'business-1' },
+    'customer-1',
+    'business-1',
+  ), true)
+  assert.equal(conversationMatchesPair(
+    { customerId: 'customer-1', businessId: 'business-2' },
+    'customer-1',
+    'business-1',
+  ), false)
   assert.equal(isConversationIdFor(conversationId, 'customer-1', 'business-1'), true)
   assert.equal(isConversationIdFor(conversationId, 'customer-2', 'business-1'), false)
   assert.equal(MAX_MESSAGE_LENGTH, 4000)

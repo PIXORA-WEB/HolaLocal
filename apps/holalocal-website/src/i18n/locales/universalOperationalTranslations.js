@@ -737,6 +737,93 @@ const messagingErrorTranslations = {
   },
 }
 
+const conversationLifecycleTranslations = {
+  es: {
+    profileUnavailable: 'Perfil no disponible actualmente',
+    profileUnavailableDescription: 'Este perfil de empresa no está disponible actualmente. El historial de mensajes existente sigue disponible.',
+    messagingClosed: 'Actualmente no se pueden enviar mensajes nuevos en esta conversación.',
+  },
+  fr: {
+    profileUnavailable: 'Profil actuellement indisponible',
+    profileUnavailableDescription: 'Ce profil professionnel est actuellement indisponible. Votre historique de messages reste accessible.',
+    messagingClosed: 'Il est actuellement impossible d’envoyer de nouveaux messages dans cette conversation.',
+  },
+  de: {
+    profileUnavailable: 'Profil derzeit nicht verfügbar',
+    profileUnavailableDescription: 'Dieses Unternehmensprofil ist derzeit nicht verfügbar. Ihr bisheriger Nachrichtenverlauf bleibt verfügbar.',
+    messagingClosed: 'In dieser Unterhaltung können derzeit keine neuen Nachrichten gesendet werden.',
+  },
+  nl: {
+    profileUnavailable: 'Profiel momenteel niet beschikbaar',
+    profileUnavailableDescription: 'Dit bedrijfsprofiel is momenteel niet beschikbaar. Je bestaande berichtgeschiedenis blijft beschikbaar.',
+    messagingClosed: 'Er kunnen momenteel geen nieuwe berichten in dit gesprek worden verzonden.',
+  },
+  pt: {
+    profileUnavailable: 'Perfil atualmente indisponível',
+    profileUnavailableDescription: 'Este perfil de empresa está atualmente indisponível. O histórico de mensagens existente continua disponível.',
+    messagingClosed: 'Não é possível enviar novas mensagens nesta conversa neste momento.',
+  },
+  pl: {
+    profileUnavailable: 'Profil jest obecnie niedostępny',
+    profileUnavailableDescription: 'Ten profil firmy jest obecnie niedostępny. Dotychczasowa historia wiadomości pozostaje dostępna.',
+    messagingClosed: 'Obecnie nie można wysyłać nowych wiadomości w tej rozmowie.',
+  },
+  ro: {
+    profileUnavailable: 'Profil indisponibil momentan',
+    profileUnavailableDescription: 'Acest profil de firmă este momentan indisponibil. Istoricul existent al mesajelor rămâne disponibil.',
+    messagingClosed: 'Momentan nu pot fi trimise mesaje noi în această conversație.',
+  },
+  cs: {
+    profileUnavailable: 'Profil je momentálně nedostupný',
+    profileUnavailableDescription: 'Tento firemní profil je momentálně nedostupný. Dosavadní historie zpráv zůstává dostupná.',
+    messagingClosed: 'V této konverzaci nyní nelze posílat nové zprávy.',
+  },
+  sk: {
+    profileUnavailable: 'Profil je momentálne nedostupný',
+    profileUnavailableDescription: 'Tento firemný profil je momentálne nedostupný. Doterajšia história správ zostáva dostupná.',
+    messagingClosed: 'V tejto konverzácii momentálne nemožno posielať nové správy.',
+  },
+  hu: {
+    profileUnavailable: 'A profil jelenleg nem érhető el',
+    profileUnavailableDescription: 'Ez a vállalkozási profil jelenleg nem érhető el. A korábbi üzenetelőzmények továbbra is elérhetők.',
+    messagingClosed: 'Ebben a beszélgetésben jelenleg nem küldhetők új üzenetek.',
+  },
+  uk: {
+    profileUnavailable: 'Профіль наразі недоступний',
+    profileUnavailableDescription: 'Цей бізнес-профіль наразі недоступний. Наявна історія повідомлень залишається доступною.',
+    messagingClosed: 'Наразі в цій розмові не можна надсилати нові повідомлення.',
+  },
+  it: {
+    profileUnavailable: 'Profilo attualmente non disponibile',
+    profileUnavailableDescription: 'Questo profilo attività non è attualmente disponibile. La cronologia dei messaggi esistente resta accessibile.',
+    messagingClosed: 'Al momento non è possibile inviare nuovi messaggi in questa conversazione.',
+  },
+  sv: {
+    profileUnavailable: 'Profilen är inte tillgänglig just nu',
+    profileUnavailableDescription: 'Företagsprofilen är inte tillgänglig just nu. Din befintliga meddelandehistorik är fortfarande tillgänglig.',
+    messagingClosed: 'Det går inte att skicka nya meddelanden i den här konversationen just nu.',
+  },
+  da: {
+    profileUnavailable: 'Profilen er ikke tilgængelig i øjeblikket',
+    profileUnavailableDescription: 'Virksomhedsprofilen er ikke tilgængelig i øjeblikket. Din eksisterende beskedhistorik er stadig tilgængelig.',
+    messagingClosed: 'Der kan ikke sendes nye beskeder i denne samtale i øjeblikket.',
+  },
+  fi: {
+    profileUnavailable: 'Profiili ei ole tällä hetkellä saatavilla',
+    profileUnavailableDescription: 'Yritysprofiili ei ole tällä hetkellä saatavilla. Aiempi viestihistoria on edelleen käytettävissä.',
+    messagingClosed: 'Tähän keskusteluun ei voi tällä hetkellä lähettää uusia viestejä.',
+  },
+  no: {
+    profileUnavailable: 'Profilen er ikke tilgjengelig akkurat nå',
+    profileUnavailableDescription: 'Bedriftsprofilen er ikke tilgjengelig akkurat nå. Den eksisterende meldingshistorikken er fortsatt tilgjengelig.',
+    messagingClosed: 'Det kan ikke sendes nye meldinger i denne samtalen akkurat nå.',
+  },
+}
+
+for (const [locale, translations] of Object.entries(conversationLifecycleTranslations)) {
+  Object.assign(universalOperationalTranslations[locale].messages, translations)
+}
+
 for (const [locale, translations] of Object.entries(messagingErrorTranslations)) {
   Object.assign(universalOperationalTranslations[locale].messages.errors, translations)
 }

@@ -3,6 +3,10 @@ import { createRequire } from 'node:module'
 import { after, before, test } from 'node:test'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
+import {
+  buildCollisionSafeConversationId,
+  openBusinessConversation,
+} from '../src/conversationContext.js'
 import { recordBusinessInsight } from '../src/businessInsights.js'
 import {
   BUSINESS_INSIGHT_GLOBAL_HOURLY_LIMIT,
@@ -57,6 +61,49 @@ function rateDocument({ scope, businessId, count, current }) {
 
 async function seedBusiness(businessId) {
   await db.doc(`businesses/${businessId}`).set(eligibleBusiness())
+}
+
+async function seedConversationIdentity(customerId, businessId, ownerId) {
+  await Promise.all([
+    db.doc(`users/${customerId}`).set({ accountStatus: 'active', deletionRequestedAt: null }),
+    db.doc(`businesses/${businessId}`).set(eligibleBusiness({ ownerId, managerIds: [ownerId] })),
+  ])
+}
+
+function openConversation(customerId, businessId) {
+  return openBusinessConversation({ uid: customerId, businessId, db })
+}
+
+async function oldStyleOpenConversation(customerId, businessId, ownerId) {
+  const existing = await db.collection('conversations')
+    .where('customerId', '==', customerId)
+    .where('businessId', '==', businessId)
+    .where('status', '==', 'active')
+    .where('schemaVersion', '==', 1)
+    .get()
+  if (!existing.empty) return existing.docs[0].id
+  const conversationId = `${customerId}__${businessId}`
+  await db.runTransaction(async (transaction) => {
+    const reference = db.doc(`conversations/${conversationId}`)
+    const snapshot = await transaction.get(reference)
+    if (snapshot.exists) {
+      const stored = snapshot.data()
+      if (stored.customerId !== customerId || stored.businessId !== businessId) {
+        throw new Error('legacy-conversation-identity-mismatch')
+      }
+      return
+    }
+    transaction.set(reference, {
+      businessId, customerId, participantIds: [customerId, ownerId],
+      participantState: {
+        [customerId]: { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
+        [ownerId]: { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
+      },
+      schemaVersion: 1, status: 'active', lastMessage: null, lastMessageAt: null,
+      createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
+    })
+  })
+  return conversationId
 }
 
 async function record(businessId, eventToken, current) {
@@ -204,4 +251,87 @@ test('existing catch-all Rules deny direct rate-limit access', { skip: !enabled 
   const reference = doc(clientDb, 'businessInsightRateLimitHours/client-attempt')
   await assertFails(getDoc(reference))
   await assertFails(setDoc(reference, { count: 1 }))
+})
+
+test('real transactions create one conversation for concurrent identical opens', { skip: !enabled }, async () => {
+  const customerId = 'conversation-same-customer'
+  const businessId = 'conversation-same-business'
+  await seedConversationIdentity(customerId, businessId, 'conversation-same-owner')
+
+  const results = await Promise.all([
+    openConversation(customerId, businessId),
+    openConversation(customerId, businessId),
+  ])
+  assert.equal(results[0].conversationId, `${customerId}__${businessId}`)
+  assert.equal(results[1].conversationId, results[0].conversationId)
+  const conversations = await db.collection('conversations')
+    .where('customerId', '==', customerId).where('businessId', '==', businessId).get()
+  assert.equal(conversations.size, 1)
+  assert.deepEqual(Object.keys(conversations.docs[0].data().businessSnapshot).sort(), [
+    'logoUrl', 'name', 'primaryLanguage',
+  ])
+  assert.equal('ownerId' in conversations.docs[0].data().businessSnapshot, false)
+})
+
+test('real transactions split concurrent ambiguous legacy pairs between legacy and v2', { skip: !enabled }, async () => {
+  const pairs = [
+    { customerId: 'collision-a__b', businessId: 'c', ownerId: 'collision-owner-a' },
+    { customerId: 'collision-a', businessId: 'b__c', ownerId: 'collision-owner-b' },
+  ]
+  await Promise.all(pairs.map(({ customerId, businessId, ownerId }) => (
+    seedConversationIdentity(customerId, businessId, ownerId)
+  )))
+
+  const results = await Promise.all(pairs.map(({ customerId, businessId }) => (
+    openConversation(customerId, businessId)
+  )))
+  assert.equal(new Set(results.map(({ conversationId }) => conversationId)).size, 2)
+  assert.equal(results.some(({ conversationId }) => conversationId === 'collision-a__b__c'), true)
+  assert.equal(results.some(({ conversationId }) => conversationId.startsWith('v2_')), true)
+  for (const pair of pairs) {
+    const conversations = await db.collection('conversations')
+      .where('customerId', '==', pair.customerId).where('businessId', '==', pair.businessId).get()
+    assert.equal(conversations.size, 1)
+  }
+})
+
+test('old pair lookup discovers existing v2 before any legacy creation', { skip: !enabled }, async () => {
+  const customerId = 'old-client-customer'
+  const businessId = 'old-client-business'
+  const ownerId = 'old-client-owner'
+  const v2Id = buildCollisionSafeConversationId(customerId, businessId)
+  await seedConversationIdentity(customerId, businessId, ownerId)
+  await db.doc(`conversations/${v2Id}`).set({
+    businessId, customerId, participantIds: [customerId, ownerId],
+    participantState: {
+      [customerId]: { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
+      [ownerId]: { lastReadAt: null, archivedAt: null, mutedUntil: null, deletedAt: null },
+    },
+    schemaVersion: 1, status: 'active', lastMessage: null, lastMessageAt: null,
+    createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
+  })
+
+  const oldLookup = await db.collection('conversations')
+    .where('customerId', '==', customerId)
+    .where('businessId', '==', businessId)
+    .where('status', '==', 'active')
+    .where('schemaVersion', '==', 1)
+    .get()
+  assert.deepEqual(oldLookup.docs.map(({ id }) => id), [v2Id])
+  assert.equal((await db.doc(`conversations/${customerId}__${businessId}`).get()).exists, false)
+})
+
+test('old-style and server creation race for one pair without duplicating it', { skip: !enabled }, async () => {
+  const customerId = 'mixed-client-customer'
+  const businessId = 'mixed-client-business'
+  const ownerId = 'mixed-client-owner'
+  await seedConversationIdentity(customerId, businessId, ownerId)
+  const results = await Promise.all([
+    oldStyleOpenConversation(customerId, businessId, ownerId),
+    openConversation(customerId, businessId).then(({ conversationId }) => conversationId),
+  ])
+  assert.equal(results[0], results[1])
+  const conversations = await db.collection('conversations')
+    .where('customerId', '==', customerId).where('businessId', '==', businessId).get()
+  assert.equal(conversations.size, 1)
 })

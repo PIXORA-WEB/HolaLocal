@@ -814,6 +814,63 @@ describe('business documents', () => {
 })
 
 describe('conversations and messages', () => {
+  test('server-created v2 conversations with snapshots preserve participant-only access', async () => {
+    const conversationId = 'v2_rules-safe-conversation'
+    const payload = conversation({
+      businessSnapshot: {
+        name: 'Active business',
+        logoUrl: null,
+        primaryLanguage: 'en',
+      },
+    })
+    await seedConversationWithoutRules(conversationId, payload)
+    await seedMessageWithoutRules(conversationId, 'history-message')
+
+    const customer = environment.authenticatedContext('customer').firestore()
+    const owner = environment.authenticatedContext('owner').firestore()
+    const unrelated = environment.authenticatedContext('unrelated').firestore()
+    await assertSucceeds(getDoc(doc(customer, 'conversations', conversationId)))
+    await assertSucceeds(getDoc(doc(owner, 'conversations', conversationId)))
+    await assertFails(getDoc(doc(unrelated, 'conversations', conversationId)))
+    await assertSucceeds(getDoc(doc(customer, `conversations/${conversationId}/messages`, 'history-message')))
+    await assertSucceeds(getDoc(doc(owner, `conversations/${conversationId}/messages`, 'history-message')))
+    await assertFails(getDoc(doc(unrelated, `conversations/${conversationId}/messages`, 'history-message')))
+
+    const customerInbox = await assertSucceeds(getDocs(inboxQuery(customer, 'customer')))
+    assert.deepEqual(customerInbox.docs.map(({ id }) => id), [conversationId])
+    const existingPair = await assertSucceeds(getDocs(existingConversationQuery(
+      customer,
+      'customer',
+      'active-business',
+    )))
+    assert.deepEqual(existingPair.docs.map(({ id }) => id), [conversationId])
+
+    const customerReference = doc(customer, 'conversations', conversationId)
+    await assertSucceeds(updateDoc(
+      customerReference,
+      new FieldPath('participantState', 'customer', 'archivedAt'),
+      serverTimestamp(),
+      'updatedAt',
+      serverTimestamp(),
+    ))
+    await assertFails(updateDoc(
+      customerReference,
+      new FieldPath('participantState', 'customer', 'archivedAt'),
+      null,
+      'businessSnapshot',
+      { name: 'Forged business', logoUrl: null, primaryLanguage: 'en' },
+      'updatedAt',
+      serverTimestamp(),
+    ))
+    await assertFails(setDoc(
+      doc(environment.authenticatedContext('customer').firestore(), 'conversations', 'v2_client-created'),
+      payload,
+    ))
+
+    const legacyId = canonicalConversationId('customer', 'active-business')
+    await seedConversationWithoutRules(legacyId, conversation())
+    await assertSucceeds(getDoc(doc(customer, 'conversations', legacyId)))
+  })
   test('valid customer-to-business conversation succeeds', async () => {
     const database = environment.authenticatedContext('customer').firestore()
     const conversationId = canonicalConversationId()

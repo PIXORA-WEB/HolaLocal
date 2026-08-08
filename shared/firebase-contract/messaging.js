@@ -20,11 +20,24 @@ export const MESSAGE_TRANSLATION_REASONS = Object.freeze([
   'provider_rejected',
 ])
 
-export function buildConversationId(customerId, businessId) {
+export function buildLegacyConversationId(customerId, businessId) {
   if (!isValidConversationIdPart(customerId) || !isValidConversationIdPart(businessId)) {
     throw new Error('A valid customer ID and business ID are required.')
   }
   return `${customerId}${CONVERSATION_ID_SEPARATOR}${businessId}`
+}
+
+// Compatibility alias for clients that still create the legacy document path directly.
+export function buildConversationId(customerId, businessId) {
+  return buildLegacyConversationId(customerId, businessId)
+}
+
+export function conversationMatchesPair(conversation, customerId, businessId) {
+  return Boolean(conversation)
+    && isValidConversationIdPart(customerId)
+    && isValidConversationIdPart(businessId)
+    && conversation.customerId === customerId
+    && conversation.businessId === businessId
 }
 
 export function conversationInboxQueryFilters(userId) {
