@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import logoIcon from '../../assets/logos/logo-icon-display.png'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
@@ -8,6 +8,7 @@ import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
+import { internalPathFromLocation } from '../../utils/internalNavigation.js'
 
 const onboardingOptions = ['customer', 'business', 'both']
 
@@ -15,6 +16,7 @@ function OnboardingPage() {
   const { t } = useTranslation()
   const { completeOnboarding, sessionError, signOutUser } = useAuthentication()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const intent = searchParams.get('intent')
   const [accountType, setAccountType] = useState(
@@ -58,7 +60,8 @@ function OnboardingPage() {
     try {
       await completeOnboarding(accountType)
 
-      navigate(requiresBusinessProfile ? '/business/dashboard' : '/profile', { replace: true })
+      const fallback = requiresBusinessProfile ? '/business/dashboard' : '/profile'
+      navigate(internalPathFromLocation(location.state?.from, fallback), { replace: true })
     } catch (submissionError) {
       setError(classifyFrontendError(submissionError, {
         domain: 'workflow',

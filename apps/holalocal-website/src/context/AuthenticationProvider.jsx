@@ -12,6 +12,7 @@ import { getFirebaseApp } from '../firebase/config.js'
 import AuthenticationContext from './AuthenticationContext.js'
 
 const loadUserService = () => import('../services/userService.js')
+const loadFunctionsClient = () => import('../firebase/functionsClient.js')
 
 function AuthenticationProvider({ children }) {
   // Validate and initialize inside the error boundary's render tree. This keeps
@@ -220,8 +221,20 @@ function AuthenticationProvider({ children }) {
     return profile
   }, [user])
 
+  const acceptLegalConsent = useCallback(async () => {
+    if (!user) throw new Error('You must be logged in to accept the legal documents.')
+    const { acceptLegalConsentCallable } = await loadFunctionsClient()
+    const response = await acceptLegalConsentCallable({
+      acceptTerms: true,
+      acceptPrivacy: true,
+    })
+    const profile = await refreshUserProfile(user)
+    return { consent: response.data, profile }
+  }, [refreshUserProfile, user])
+
   const value = useMemo(
     () => ({
+      acceptLegalConsent,
       completeUserProfile,
       enableBusinessAccess,
       completeOnboarding,
@@ -243,6 +256,7 @@ function AuthenticationProvider({ children }) {
       userProfile,
     }),
     [
+      acceptLegalConsent,
       completeUserProfile,
       completeOnboarding,
       emailVerified,

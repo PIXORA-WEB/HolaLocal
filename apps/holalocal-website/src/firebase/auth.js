@@ -20,6 +20,7 @@ import {
   FIREBASE_EMULATOR_ENDPOINTS,
   shouldUseFirebaseEmulators,
 } from './emulatorMode.js'
+import { shouldMaintainProfileAfterLogin } from './loginProfilePolicy.js'
 
 const loadUserService = () => import('../services/userService.js')
 
@@ -86,7 +87,7 @@ export async function loginUser(email, password) {
   const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email, password)
   const { ensureUserProfile, getUserProfile, updateLastActive } = await loadUserService()
   const existingProfile = await getUserProfile(credential.user.uid)
-  if (!existingProfile || (existingProfile.accountStatus === 'active' && existingProfile.deletionRequestedAt == null)) {
+  if (shouldMaintainProfileAfterLogin(existingProfile)) {
     await ensureUserProfile(credential.user)
     await updateLastActive(credential.user.uid)
   }

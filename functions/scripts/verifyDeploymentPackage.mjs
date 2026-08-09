@@ -16,6 +16,7 @@ const REQUIRED_CONTRACT_FILES = [
   'account.js',
   'adapters.js',
   'contact.js',
+  'legalConsent.js',
   'messaging.js',
   'publication.js',
   'subscriptions.js',
@@ -26,6 +27,7 @@ const REQUIRED_FUNCTION_FILES = [
   'package-lock.json',
   `vendor/${CONTRACT_PACKAGE_NAME}`,
   'src/index.js',
+  'src/legalConsent.js',
   'src/accountRoleTransition.js',
   'src/ownerBusinessCreation.js',
   'src/messageSending.js',
@@ -176,7 +178,8 @@ async function assertContractInstalledInsideArtifact(root) {
     typeof imported.hasCompleteUserProfile !== 'function' ||
     typeof imported.resolveBusinessEntitlements !== 'function' ||
     typeof imported.buildEarlyAccessSubscriptionState !== 'function' ||
-    typeof imported.resolveAuthoritativeBusinessEntitlements !== 'function'
+    typeof imported.resolveAuthoritativeBusinessEntitlements !== 'function' ||
+    typeof imported.hasCurrentLegalConsent !== 'function'
   ) {
     throw new Error('@holalocal/firebase-contract import smoke test failed.')
   }

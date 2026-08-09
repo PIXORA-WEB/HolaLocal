@@ -15,6 +15,7 @@ import ScrollToTopOnNavigation from './ScrollToTopOnNavigation.jsx'
 const CompleteProfilePage = lazy(() => import('../pages/auth/CompleteProfilePage.jsx'))
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage.jsx'))
 const LoginPage = lazy(() => import('../pages/auth/LoginPage.jsx'))
+const LegalConsentPage = lazy(() => import('../pages/auth/LegalConsentPage.jsx'))
 const OnboardingPage = lazy(() => import('../pages/auth/OnboardingPage.jsx'))
 const RegisterPage = lazy(() => import('../pages/auth/RegisterPage.jsx'))
 const VerificationPendingPage = lazy(() => import('../pages/auth/VerificationPendingPage.jsx'))
@@ -103,7 +104,13 @@ function AppRoutes() {
           </Route>
         </Route>
 
-        <Route element={<ProtectedRoute allowIncompleteOnboarding allowIncompleteProfile allowUnverified />}>
+        <Route element={<ProtectedRoute allowIncompleteOnboarding allowIncompleteProfile allowMissingConsent />}>
+          <Route element={<AuthLayout />}>
+            <Route path="legal-consent" element={<LegalConsentPage />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute allowIncompleteOnboarding allowIncompleteProfile allowMissingConsent allowUnverified />}>
           <Route element={<AuthLayout />}>
             <Route path="verify-email" element={<VerificationPendingPage />} />
           </Route>
@@ -115,11 +122,13 @@ function AppRoutes() {
           </Route>
         </Route>
 
-        <Route element={<AdminRoute />}>
-          <Route path="admin" element={<AdminLayout />}>
-            <Route index element={<AdminOverviewPage />} />
-            <Route path="businesses" element={<AdminBusinessesPage />} />
-            <Route path="businesses/:businessId" element={<AdminBusinessReviewPage />} />
+        <Route element={<ProtectedRoute allowIncompleteOnboarding allowIncompleteProfile />}>
+          <Route element={<AdminRoute />}>
+            <Route path="admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverviewPage />} />
+              <Route path="businesses" element={<AdminBusinessesPage />} />
+              <Route path="businesses/:businessId" element={<AdminBusinessReviewPage />} />
+            </Route>
           </Route>
         </Route>
 

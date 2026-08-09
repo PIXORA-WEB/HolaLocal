@@ -4,7 +4,8 @@ import BlockedAccountScreen, {
   ProfileUnavailableScreen,
 } from '../components/common/BlockedAccountScreen.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
-import { hasBlockedAccountStatus } from '../utils/accountStatus.js'
+import { internalPathFromLocation } from '../utils/internalNavigation.js'
+import { authenticatedPublicDecision } from './accountRoutePolicy.js'
 
 function PublicRoute() {
   const {
@@ -16,22 +17,31 @@ function PublicRoute() {
     userProfile,
   } = useAuthentication()
   const location = useLocation()
+  const decision = authenticatedPublicDecision({
+    emailVerified,
+    loading,
+    profileLoading,
+    profileStatus,
+    user,
+    userProfile,
+  })
 
-  if (loading) return <LoadingScreen />
+  if (decision === 'loading') return <LoadingScreen />
 
   if (user) {
-    if (!emailVerified) {
-      return <Navigate replace state={{ from: location.state?.from }} to="/verify-email" />
-    }
-    if (profileStatus === 'unavailable') {
+    if (decision === 'profile_unavailable') {
       return <ProfileUnavailableScreen />
     }
-    if (profileLoading || profileStatus === 'loading') return <LoadingScreen />
-
-    if (hasBlockedAccountStatus(userProfile)) {
+    if (decision === 'blocked') {
       return <BlockedAccountScreen accountStatus={userProfile.accountStatus} />
     }
-    let destination = location.state?.from?.pathname ?? '/'
+    if (decision === 'verify_email') {
+      return <Navigate replace state={{ from: location.state?.from }} to="/verify-email" />
+    }
+    if (decision === 'legal_consent') {
+      return <Navigate replace state={{ from: location.state?.from }} to="/legal-consent" />
+    }
+    let destination = internalPathFromLocation(location.state?.from)
 
     if (userProfile?.profileCompleted !== true) {
       destination = '/complete-profile'

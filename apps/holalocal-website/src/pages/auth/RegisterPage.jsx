@@ -5,7 +5,10 @@ import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import FormFieldError from '../../components/common/FormFieldError.jsx'
 import PasswordField from '../../components/common/PasswordField.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
-import { POLICY_VERSION } from '../../utils/policies.js'
+import {
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_TERMS_VERSION,
+} from '../../utils/policies.js'
 
 function RegisterPage() {
   const { t } = useTranslation()
@@ -44,9 +47,9 @@ function RegisterPage() {
     try {
       const registration = await signUp(email.trim(), password, {
         termsAccepted,
-        termsVersion: POLICY_VERSION,
+        termsVersion: CURRENT_TERMS_VERSION,
         privacyAccepted,
-        privacyVersion: POLICY_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
       })
       const intent = searchParams.get('intent')
       navigate(intent ? `/verify-email?intent=${intent}` : '/verify-email', {

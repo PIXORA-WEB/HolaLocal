@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { acceptLegalConsent as runAcceptLegalConsent } from './legalConsent.js'
 import { transitionAccountRole } from './accountRoleTransition.js'
 import { getAdminBusinessReview as runGetAdminBusinessReview } from './adminBusinessReview.js'
 import { assignBusinessSubscriptionPlan as runAssignBusinessSubscriptionPlan } from './subscriptionPlanAssignment.js'
@@ -100,6 +101,19 @@ export async function handleGetConversationBusinessContext(request, db) {
   return runGetConversationBusinessContext({
     uid,
     conversationId: request.data.conversationId,
+    db: db ?? getFirestore(),
+  })
+}
+
+export async function handleAcceptLegalConsent(request, db) {
+  const uid = requireCallableUid(request)
+  requireExactInput(request.data, ['acceptTerms', 'acceptPrivacy'])
+  return runAcceptLegalConsent({
+    uid,
+    email: request.auth?.token?.email,
+    emailVerified: request.auth?.token?.email_verified === true,
+    acceptTerms: request.data.acceptTerms,
+    acceptPrivacy: request.data.acceptPrivacy,
     db: db ?? getFirestore(),
   })
 }
@@ -237,6 +251,11 @@ export const openBusinessConversation = onCall(
 export const getConversationBusinessContext = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleGetConversationBusinessContext(request),
+)
+
+export const acceptLegalConsent = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleAcceptLegalConsent(request),
 )
 
 export const moderateBusiness = onCall(

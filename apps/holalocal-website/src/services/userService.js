@@ -4,7 +4,7 @@ import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebas
 import { db } from '../firebase/firestoreClient.js'
 import { updateAccountRoleCallable } from '../firebase/functionsClient.js'
 import { createApplicationError } from '../utils/frontendErrors.js'
-import { POLICY_VERSION } from '../utils/policies.js'
+import { hasCurrentLegalConsent } from '../utils/policies.js'
 import { toWebsiteUserProfile } from './firebaseCompatibility.js'
 
 async function uploadImageFile(...args) {
@@ -28,12 +28,6 @@ const editableProfileFields = new Set([
   'city',
   'country',
   'profileCompleted',
-  'termsAccepted',
-  'termsAcceptedAt',
-  'termsVersion',
-  'privacyAccepted',
-  'privacyAcceptedAt',
-  'privacyVersion',
   'deletionRequestedAt',
 ])
 
@@ -123,16 +117,6 @@ export async function createUserProfile(uid, profileData = {}) {
 
     if (!snapshot.exists()) {
       transaction.set(reference, buildNewProfile(uid, profileData))
-    } else if (profileData.termsAccepted === true && profileData.privacyAccepted === true) {
-      transaction.update(reference, {
-        termsAccepted: true,
-        termsAcceptedAt: serverTimestamp(),
-        termsVersion: profileData.termsVersion,
-        privacyAccepted: true,
-        privacyAcceptedAt: serverTimestamp(),
-        privacyVersion: profileData.privacyVersion,
-        updatedAt: serverTimestamp(),
-      })
     }
   })
 
@@ -156,23 +140,10 @@ export async function updateUserProfile(uid, updates) {
 
 export async function completeAbsentUserProfile(firebaseUser, updates) {
   if (!firebaseUser?.uid) throw createApplicationError('auth-required')
-
-  const reference = userDocument(firebaseUser.uid)
-  await runTransaction(db, async (transaction) => {
-    const snapshot = await transaction.get(reference)
-    if (snapshot.exists()) return
-
-    transaction.set(reference, buildNewProfile(firebaseUser.uid, {
-      email: firebaseUser.email ?? '',
-      displayName: firebaseUser.displayName ?? '',
-      photoURL: null,
-      termsAccepted: true,
-      termsVersion: POLICY_VERSION,
-      privacyAccepted: true,
-      privacyVersion: POLICY_VERSION,
-    }))
-  })
-
+  const existingProfile = await getRawUserProfile(firebaseUser.uid)
+  if (!hasCurrentLegalConsent(existingProfile)) {
+    throw createApplicationError('legal-consent-required')
+  }
   return updateUserProfile(firebaseUser.uid, updates)
 }
 

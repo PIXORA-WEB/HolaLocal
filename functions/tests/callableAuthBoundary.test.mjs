@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  handleAcceptLegalConsent,
   handleEnsureOwnerBusiness,
   handleAssignBusinessSubscriptionPlan,
   handleGetOwnerSubscriptionStatus,
@@ -33,6 +34,7 @@ function forbiddenDb() {
 test('unauthenticated callable handlers reject before Firestore access', async () => {
   const db = forbiddenDb()
   const cases = [
+    () => handleAcceptLegalConsent({ data: { acceptTerms: true, acceptPrivacy: true } }, db),
     () => handleUpdateAccountRole({ data: { accountType: 'customer' } }, db),
     () => handleEnsureOwnerBusiness({ data: {} }, db),
     () => handleSendMessage({
@@ -48,6 +50,57 @@ test('unauthenticated callable handlers reject before Firestore access', async (
 
   for (const run of cases) {
     await assert.rejects(run, (error) => codeFrom(error) === 'unauthenticated')
+  }
+})
+
+test('legal consent handler rejects client-controlled identity version timestamp and profile fields', async () => {
+  const db = forbiddenDb()
+  for (const unexpected of [
+    { uid: 'another-user' },
+    { termsVersion: '999' },
+    { privacyVersion: '999' },
+    { termsAcceptedAt: 'client-time' },
+    { role: 'admin' },
+  ]) {
+    await assert.rejects(
+      () => handleAcceptLegalConsent({
+        auth: { uid: 'user-1', token: { email: 'user@example.test', email_verified: true } },
+        data: { acceptTerms: true, acceptPrivacy: true, ...unexpected },
+      }, db),
+      (error) => error.code === 'invalid-argument' && error.message === 'unexpected-request-field',
+    )
+  }
+})
+
+test('legal consent handler requires verified email before Firestore access', async () => {
+  for (const token of [{ email_verified: false }, {}, { email_verified: 'true' }]) {
+    await assert.rejects(
+      () => handleAcceptLegalConsent({
+        auth: { uid: 'user-1', token },
+        data: { acceptTerms: true, acceptPrivacy: true },
+      }, forbiddenDb()),
+      (error) => error.code === 'failed-precondition' && error.message === 'email-verification-required',
+    )
+  }
+})
+
+test('legal consent handler accepts only the exact acknowledgement payload', async () => {
+  const malformed = [null, undefined, [], 'yes', 1, true, false, {},
+    { acceptTerms: true }, { acceptPrivacy: true },
+    { acceptTerms: false, acceptPrivacy: true },
+    { acceptTerms: true, acceptPrivacy: false },
+    { acceptTerms: 1, acceptPrivacy: true },
+    { acceptTerms: true, acceptPrivacy: 'true' },
+    { acceptTerms: {}, acceptPrivacy: true },
+    { acceptTerms: true, acceptPrivacy: true, nested: {} },
+  ]
+  for (const data of malformed) {
+    await assert.rejects(
+      () => handleAcceptLegalConsent({
+        auth: { uid: 'user-1', token: { email_verified: true } }, data,
+      }, forbiddenDb()),
+      (error) => error.code === 'invalid-argument',
+    )
   }
 })
 

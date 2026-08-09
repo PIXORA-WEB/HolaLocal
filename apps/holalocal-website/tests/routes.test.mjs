@@ -507,6 +507,7 @@ test('account onboarding uses the trusted callable instead of direct role writes
     subscription,
     authenticationProvider,
     protectedRoute,
+    routePolicy,
     profilePage,
   ] = await Promise.all([
     readFile(userServicePath, 'utf8'),
@@ -519,6 +520,7 @@ test('account onboarding uses the trusted callable instead of direct role writes
     readFile(subscriptionPath, 'utf8'),
     readFile(authenticationProviderPath, 'utf8'),
     readFile(protectedRoutePath, 'utf8'),
+    readFile(path.resolve(__dirname, '../src/routes/accountRoutePolicy.js'), 'utf8'),
     readFile(profilePagePath, 'utf8'),
   ])
 
@@ -526,7 +528,8 @@ test('account onboarding uses the trusted callable instead of direct role writes
   assert.match(userService, /updateAccountRoleCallable\(\{ accountType \}\)/)
   assert.doesNotMatch(userService, /roles,\s*$/m)
   assert.doesNotMatch(userService, /businessProfileRequired: roles\.includes/)
-  assert.match(onboarding, /navigate\(requiresBusinessProfile \? '\/business\/dashboard' : '\/profile'/)
+  assert.match(onboarding, /const fallback = requiresBusinessProfile \? '\/business\/dashboard' : '\/profile'/)
+  assert.match(onboarding, /navigate\(internalPathFromLocation\(location\.state\?\.from, fallback\)/)
   assert.match(onboarding, /alt=\{t\('onboarding\.logoAlt'\)\}/)
   assert.doesNotMatch(onboarding, /`\$\{brand\.name\} logo`/)
   assert.match(businessRoute, /userProfile\?\.roles\?\.includes\('business'\)/)
@@ -554,7 +557,7 @@ test('account onboarding uses the trusted callable instead of direct role writes
     authenticationProvider,
     /if \(!background && requestId === profileRequestIdRef\.current\) setProfileLoading\(false\)/,
   )
-  assert.match(protectedRoute, /profileLoading \|\| profileStatus === 'loading'/)
+  assert.match(routePolicy, /profileLoading \|\| profileStatus === 'loading'/)
   assert.match(businessRoute, /loading \|\| profileLoading \|\| profileStatus === 'loading'/)
   assert.match(profilePage, /refreshUserProfile\(user\)/)
   assert.doesNotMatch(profilePage, /refreshUserProfile\(user, \{ background: true \}\)/)
@@ -568,11 +571,12 @@ test('account onboarding uses the trusted callable instead of direct role writes
 })
 
 test('profile restoration failures remain distinct from confirmed incomplete profiles', async () => {
-  const [provider, protectedRoute, publicRoute, businessRoute, unavailableScreen] =
+  const [provider, protectedRoute, publicRoute, routePolicy, businessRoute, unavailableScreen] =
     await Promise.all([
       readFile(authenticationProviderPath, 'utf8'),
       readFile(protectedRoutePath, 'utf8'),
       readFile(publicRoutePath, 'utf8'),
+      readFile(path.resolve(__dirname, '../src/routes/accountRoutePolicy.js'), 'utf8'),
       readFile(businessRoutePath, 'utf8'),
       readFile(blockedAccountScreenPath, 'utf8'),
     ])
@@ -590,27 +594,18 @@ test('profile restoration failures remain distinct from confirmed incomplete pro
   assert.match(provider, /retryUserProfile/)
   assert.match(provider, /retainUnavailable: true/)
 
-  for (const route of [protectedRoute, publicRoute, businessRoute]) {
-    assert.match(route, /profileStatus === 'unavailable'/)
+  for (const route of [protectedRoute, publicRoute]) {
+    assert.match(route, /decision === 'profile_unavailable'/)
     assert.match(route, /<ProfileUnavailableScreen \/>/)
   }
+  assert.match(businessRoute, /profileStatus === 'unavailable'/)
+  assert.match(businessRoute, /<ProfileUnavailableScreen \/>/)
 
-  assert.ok(
-    protectedRoute.indexOf("profileStatus === 'unavailable'") <
-      protectedRoute.indexOf("userProfile?.profileCompleted !== true"),
-  )
-  assert.ok(
-    protectedRoute.indexOf('!allowUnverified && !emailVerified') <
-      protectedRoute.indexOf("profileStatus === 'unavailable'"),
-  )
-  assert.ok(
-    publicRoute.indexOf("profileStatus === 'unavailable'") <
-      publicRoute.indexOf("userProfile?.profileCompleted !== true"),
-  )
-  assert.ok(
-    publicRoute.indexOf('!emailVerified') <
-      publicRoute.indexOf("profileStatus === 'unavailable'"),
-  )
+  assert.ok(routePolicy.indexOf("profileStatus === 'unavailable'") < routePolicy.indexOf('!allowUnverified && !emailVerified'))
+  assert.ok(routePolicy.indexOf('!allowUnverified && !emailVerified') < routePolicy.indexOf('!allowMissingConsent && !hasCurrentLegalConsent'))
+  assert.ok(routePolicy.indexOf('!allowMissingConsent && !hasCurrentLegalConsent') < routePolicy.indexOf("userProfile?.profileCompleted !== true"))
+  assert.match(protectedRoute, /decision === 'profile_unavailable'/)
+  assert.match(publicRoute, /decision === 'profile_unavailable'/)
   assert.match(unavailableScreen, /retryUserProfile/)
   assert.match(unavailableScreen, /signOutUser/)
   assert.match(unavailableScreen, /account\.profileUnavailable\.description/)
@@ -619,7 +614,7 @@ test('profile restoration failures remain distinct from confirmed incomplete pro
   assert.doesNotMatch(unavailableScreen, /complete-profile|onboarding/)
 })
 
-test('confirmed absent profile completion uses the canonical race-safe creation path', async () => {
+test('profile completion cannot fabricate legal consent for an absent profile', async () => {
   const [provider, completionPage, userService, rules] = await Promise.all([
     readFile(authenticationProviderPath, 'utf8'),
     readFile(path.resolve(__dirname, '../src/pages/auth/CompleteProfilePage.jsx'), 'utf8'),
@@ -634,12 +629,9 @@ test('confirmed absent profile completion uses the canonical race-safe creation 
     /profileStatus === 'absent'\s*\? await completeAbsentUserProfile\(user, updates\)\s*: await updateUserProfileDocument\(user\.uid, updates\)/s,
   )
   assert.match(provider, /setUserProfile\(profile\)\s*setProfileStatus\('loaded'\)/)
-  assert.match(
-    userService,
-    /export async function completeAbsentUserProfile\(firebaseUser, updates\)[\s\S]*?runTransaction\(db, async \(transaction\) => \{[\s\S]*?if \(snapshot\.exists\(\)\) return[\s\S]*?transaction\.set\(reference, buildNewProfile\(firebaseUser\.uid,/s,
-  )
-  assert.match(userService, /termsAccepted: true,\s*termsVersion: POLICY_VERSION/s)
-  assert.match(userService, /privacyAccepted: true,\s*privacyVersion: POLICY_VERSION/s)
+  assert.match(userService, /export async function completeAbsentUserProfile\(firebaseUser, updates\)[\s\S]*?hasCurrentLegalConsent\(existingProfile\)/s)
+  assert.doesNotMatch(userService, /completeAbsentUserProfile[\s\S]*?termsAccepted: true/)
+  assert.doesNotMatch(userService, /completeAbsentUserProfile[\s\S]*?privacyAccepted: true/)
   assert.match(userService, /return updateUserProfile\(firebaseUser\.uid, updates\)/)
   assert.doesNotMatch(userService, /completeAbsentUserProfile[\s\S]*?(?:businesses|businessPrivate)/)
   assert.match(rules, /request\.resource\.data\.profileCompleted == false/)
