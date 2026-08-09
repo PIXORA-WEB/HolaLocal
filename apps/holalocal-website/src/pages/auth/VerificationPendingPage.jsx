@@ -29,15 +29,21 @@ function VerificationPendingPage() {
   const destination = intent ? `/complete-profile?intent=${intent}` : '/complete-profile'
 
   useEffect(() => {
-    if (emailVerified) navigate(destination, { replace: true })
-  }, [destination, emailVerified, navigate])
+    if (emailVerified) navigate(destination, {
+      replace: true,
+      state: { from: location.state?.from },
+    })
+  }, [destination, emailVerified, location.state?.from, navigate])
 
   async function checkVerification() {
     setError('')
     setChecking(true)
     try {
       const verified = await refreshEmailVerification()
-      if (verified) navigate(destination, { replace: true })
+      if (verified) navigate(destination, {
+        replace: true,
+        state: { from: location.state?.from },
+      })
       else setMessage(t('auth.verification.notVerified'))
     } catch (verificationError) {
       setError(getAuthenticationErrorMessage(verificationError, t))

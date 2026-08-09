@@ -7,6 +7,7 @@ import {
   ownerEnglishRejectionTranslations,
 } from './defaultTranslations.js'
 import { englishLegalPages } from './englishLegalPages.js'
+import { legalConsentEnglishTranslations } from './legalConsentEnglishTranslations.js'
 import en from './locales/en.json'
 import { mergeLocale } from './locales/mergeLocale.js'
 
@@ -41,6 +42,7 @@ const englishResource = mergeLocale(
   adminEnglishTranslations,
   ownerEnglishRejectionTranslations,
   { legalPages: englishLegalPages },
+  legalConsentEnglishTranslations,
   { locations: { areas: serviceAreaLabels } },
 )
 const loadedLocales = new Set(['en'])
@@ -66,6 +68,7 @@ export async function loadLocale(languageCode) {
     localeLoaders[code](),
     import('./locales/authenticatedTranslations.js'),
     import('./locales/fallbackLocaleCompletionTranslations.js'),
+    import('./locales/legalConsentTranslations.js'),
     import('./locales/legalContent.js'),
     import('./locales/universalOperationalTranslations.js'),
     import('./adminTranslations.js'),
@@ -73,6 +76,7 @@ export async function loadLocale(languageCode) {
     { default: baseLocale },
     { authenticatedTranslations },
     { fallbackLocaleCompletionTranslations },
+    { legalConsentTranslations },
     { legalPageContent },
     { universalOperationalTranslations },
     { ownerRejectionTranslations },
@@ -82,6 +86,7 @@ export async function loadLocale(languageCode) {
       baseLocale,
       authenticatedTranslations[code],
       fallbackLocaleCompletionTranslations[code],
+      legalConsentTranslations[code],
       universalOperationalTranslations[code],
       adminEnglishTranslations,
       ownerRejectionTranslations[code],

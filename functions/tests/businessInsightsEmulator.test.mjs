@@ -8,6 +8,7 @@ import {
   openBusinessConversation,
 } from '../src/conversationContext.js'
 import { recordBusinessInsight } from '../src/businessInsights.js'
+import { acceptLegalConsent } from '../src/legalConsent.js'
 import {
   BUSINESS_INSIGHT_GLOBAL_HOURLY_LIMIT,
   BUSINESS_INSIGHT_PER_BUSINESS_HOURLY_LIMIT,
@@ -149,6 +150,30 @@ test('real transaction counts concurrent identical tokens exactly once', { skip:
   assert.equal(results.filter((result) => !result.counted).length, 9)
   assert.equal((await db.doc(`businessInsights/${businessId}`).get()).data().profileViews, 1)
   assert.equal((await db.collection(`businessInsights/${businessId}/insightDedupe`).get()).size, 1)
+})
+
+test('real concurrent legal-consent transactions preserve one complete user profile', { skip: !enabled }, async () => {
+  const uid = 'concurrent-legal-consent'
+  const reference = db.doc(`users/${uid}`)
+  await reference.set({
+    uid, email: 'consent@example.invalid', accountStatus: 'active',
+    deletionRequestedAt: null, roles: ['customer'], privateField: 'preserved',
+    profileCompleted: false, onboardingCompleted: false,
+  })
+  const invoke = () => acceptLegalConsent({
+    uid, email: 'consent@example.invalid', emailVerified: true,
+    acceptTerms: true, acceptPrivacy: true, db,
+  })
+  const results = await Promise.all([invoke(), invoke()])
+  const stored = (await reference.get()).data()
+  assert.deepEqual(results[0], results[1])
+  assert.equal(stored.termsAccepted, true)
+  assert.equal(stored.privacyAccepted, true)
+  assert.equal(stored.termsVersion, '1.0')
+  assert.equal(stored.privacyVersion, '1.0')
+  assert.equal(stored.privateField, 'preserved')
+  assert.deepEqual(stored.roles, ['customer'])
+  assert.equal((await db.collection('users').where('uid', '==', uid).get()).size, 1)
 })
 
 test('ten simulated callers share one business limit and final slot', { skip: !enabled }, async () => {

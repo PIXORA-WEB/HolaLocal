@@ -17,6 +17,7 @@ export const listPublicBusinessesCallable = httpsCallable(functions, 'listPublic
 export const sendMessageCallable = httpsCallable(functions, 'sendMessage')
 export const openBusinessConversationCallable = httpsCallable(functions, 'openBusinessConversation')
 export const getConversationBusinessContextCallable = httpsCallable(functions, 'getConversationBusinessContext')
+export const acceptLegalConsentCallable = httpsCallable(functions, 'acceptLegalConsent')
 export const moderateBusinessCallable = httpsCallable(functions, 'moderateBusiness')
 export const getAdminBusinessReviewCallable = httpsCallable(functions, 'getAdminBusinessReview')
 export const assignBusinessSubscriptionPlanCallable = httpsCallable(functions, 'assignBusinessSubscriptionPlan')

@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import LoadingScreen from '../components/common/LoadingScreen.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
+import { hasAdminAccessClaim } from './adminAccessPolicy.js'
 
 function AdminRoute() {
   const { t } = useTranslation()
@@ -15,7 +16,7 @@ function AdminRoute() {
     if (!user) return () => { active = false }
     user.getIdTokenResult(claimState.attempt > 0).then((token) => {
       if (!active) return
-      const authorised = token.claims.admin === true || token.claims.moderator === true
+      const authorised = hasAdminAccessClaim(token.claims)
       setClaimState((state) => ({ ...state, status: authorised ? 'authorised' : 'unauthorised' }))
     }).catch((error) => {
       if (!active) return

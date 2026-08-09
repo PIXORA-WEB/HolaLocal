@@ -396,6 +396,38 @@ describe('users and account lifecycle', () => {
       updatedAt: serverTimestamp(),
     }))
   })
+  test('callable-created consent profile can complete normally without changing consent', async () => {
+    const uid = 'consent-recovery'
+    const acceptedAt = Timestamp.fromMillis(1_700_000_000_000)
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users', uid), {
+        uid, email: `${uid}@example.invalid`, displayName: '', displayNameNormalized: '',
+        firstName: '', lastName: '', photoURL: null, profilePhoto: null,
+        accountType: 'customer', roles: ['customer'], accountStatus: 'active',
+        profileCompleted: false, onboardingCompleted: false,
+        businessProfileRequired: false, businessProfileCompleted: false, businessId: null,
+        createdAt: acceptedAt, updatedAt: acceptedAt, lastActiveAt: acceptedAt,
+        deletionRequestedAt: null, deletionScheduledFor: null, anonymizedAt: null,
+        termsAccepted: true, termsAcceptedAt: acceptedAt, termsVersion: '1.0',
+        privacyAccepted: true, privacyAcceptedAt: acceptedAt, privacyVersion: '1.0',
+      })
+    })
+    const reference = doc(environment.authenticatedContext(uid).firestore(), 'users', uid)
+    await assertSucceeds(updateDoc(reference, {
+      firstName: 'Consent', lastName: 'Recovery', displayName: 'Consent Recovery',
+      displayNameNormalized: 'consent recovery', preferredLocale: 'en',
+      city: 'Marbella', country: 'Spain', profileCompleted: true,
+      updatedAt: serverTimestamp(),
+    }))
+    const completed = (await getDoc(reference)).data()
+    assert.equal(completed.profileCompleted, true)
+    assert.equal(completed.termsAcceptedAt.toMillis(), acceptedAt.toMillis())
+    assert.equal(completed.privacyAcceptedAt.toMillis(), acceptedAt.toMillis())
+    await assertFails(updateDoc(reference, {
+      termsAcceptedAt: serverTimestamp(), privacyAcceptedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }))
+  })
   test('completed users cannot clear required profile fields while retaining completion', async () => {
     await assertFails(updateDoc(doc(environment.authenticatedContext('owner').firestore(), 'users', 'owner'), {
       city: '',

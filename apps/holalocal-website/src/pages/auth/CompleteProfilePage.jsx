@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
@@ -12,6 +12,7 @@ function CompleteProfilePage() {
   const { t } = useTranslation()
   const { completeUserProfile, sessionError, userProfile } = useAuthentication()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const [firstName, setFirstName] = useState(userProfile?.firstName ?? '')
   const [lastName, setLastName] = useState(userProfile?.lastName ?? '')
@@ -58,7 +59,10 @@ function CompleteProfilePage() {
         profileCompleted: true,
       })
       const intent = searchParams.get('intent')
-      navigate(intent ? `/onboarding?intent=${intent}` : '/onboarding', { replace: true })
+      navigate(intent ? `/onboarding?intent=${intent}` : '/onboarding', {
+        replace: true,
+        state: { from: location.state?.from },
+      })
     } catch (submissionError) {
       setError(getAuthenticationErrorMessage(submissionError, t))
     } finally {
