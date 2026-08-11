@@ -1,3 +1,5 @@
+import { deletionDisclosureEnglishTranslations } from './deletionDisclosureEnglishTranslations.js'
+
 export const accountDeletionEnglishTranslations = {
   accountDeletion: {
     request: {
@@ -7,6 +9,7 @@ export const accountDeletionEnglishTranslations = {
       open: 'Request account deletion',
       dialogTitle: 'Request account deletion',
       warning: 'Your normal account access will be restricted while the request is pending. Nothing is deleted by this request.',
+      retainedRecords: deletionDisclosureEnglishTranslations.request,
       password: 'Current password',
       confirm: 'I understand that my account access will be restricted pending review.',
       confirmationRequired: 'Enter your password and confirm before continuing.',

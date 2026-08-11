@@ -471,6 +471,10 @@ function ProfilePage() {
           </header>
           <form className="auth-form" onSubmit={handleDeletionRequest}>
             <p>{t('accountDeletion.request.warning')}</p>
+            <p>
+              {t('accountDeletion.request.retainedRecords')}{' '}
+              <Link to="/privacy">{t('footer.privacy')}</Link>.
+            </p>
             <label htmlFor="account-deletion-password">{t('accountDeletion.request.password')}</label>
             <input autoComplete="current-password" id="account-deletion-password" onChange={(event) => setDeletionPassword(event.target.value)} required type="password" value={deletionPassword} />
             <label className="checkbox-label" htmlFor="account-deletion-confirmation">

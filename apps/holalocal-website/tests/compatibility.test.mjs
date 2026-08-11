@@ -630,7 +630,7 @@ test('the authoritative 30-item completion-locale residual manifest is fully loc
     const resource = resourceForLocale(code, english, await readBaseLocale(code, english))
     const legalStrings = flattenLegalStrings(resource.legalPages.terms.sections)
       .concat(flattenLegalStrings(resource.legalPages.privacy.sections))
-    assert.equal(legalStrings.length, 55, `${code}: all 55 directly rendered legal strings remain present`)
+    assert.equal(legalStrings.length, 57, `${code}: all 57 directly rendered legal strings remain present`)
     for (const text of legalStrings) {
       assert.equal(typeof text, 'string', `${code}: legal content is a string`)
       assert.notEqual(text.trim(), '', `${code}: legal content is non-empty`)
@@ -1445,6 +1445,10 @@ test('legal page body content is locale-driven and structurally complete for eve
   assert.equal(englishResource.legalPages.version, 'Version 1 · Effective 4 July 2026')
   assert.equal(englishResource.legalPages.terms.sections[0].paragraphs[0].startsWith(canonicalTermsSentence), true)
   assert.equal(englishResource.legalPages.privacy.sections[0].paragraphs[0].startsWith(canonicalPrivacySentence), true)
+  const englishDeletion = englishResource.legalPages.privacy.sections.find(({ key }) => key === 'deletion')
+  assert.equal(englishDeletion.paragraphs.length, 3)
+  assert.match(englishDeletion.paragraphs.join(' '), /pseudonymous structural identifiers/)
+  assert.match(englishDeletion.paragraphs.join(' '), /They are not anonymous/)
   assert.deepEqual(Object.keys(legalPageContent).sort(), expectedLocaleCodes)
 
   for (const { code } of supportedUILanguages) {
@@ -1484,6 +1488,12 @@ test('legal page body content is locale-driven and structurally complete for eve
       assert.equal(section.paragraphs?.length ?? 0, canonical.paragraphs?.length ?? 0, `${code}: privacy ${section.key} paragraph count`)
       assert.equal(section.items?.length ?? 0, canonical.items?.length ?? 0, `${code}: privacy ${section.key} item count`)
     })
+    const deletionSection = resource.legalPages.privacy.sections.find(({ key }) => key === 'deletion')
+    assert.equal(deletionSection.paragraphs.length, 3, `${code}: deletion disclosure paragraph count`)
+    if (code !== 'en') {
+      assert.notEqual(deletionSection.paragraphs[1], englishDeletion.paragraphs[1], `${code}: localized deletion disclosure`)
+      assert.notEqual(deletionSection.paragraphs[2], englishDeletion.paragraphs[2], `${code}: localized pseudonym disclosure`)
+    }
 
     const legalStrings = flattenLegalStrings(resource.legalPages.terms.sections)
       .concat(flattenLegalStrings(resource.legalPages.privacy.sections))

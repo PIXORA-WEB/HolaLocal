@@ -47,6 +47,8 @@ test('request UI reauthenticates, confirms, blocks owners, and never claims comp
   ])
   assert.match(profilePage, /reauthenticateUserWithPassword\(user, deletionPassword\)/)
   assert.match(profilePage, /deletionConfirmed/)
+  assert.match(profilePage, /accountDeletion\.request\.retainedRecords/)
+  assert.match(profilePage, /<Link to="\/privacy">/)
   assert.match(profilePage, /result\?\.blocked && result\.reason === 'owned-businesses'/)
   assert.match(profilePage, /navigate\('\/account-deletion', \{ replace: true \}\)/)
   assert.match(auth, /reauthenticateWithCredential/)
@@ -76,11 +78,14 @@ test('generic website profile writes exclude trusted deletion fields', async () 
 
 test('all supported locales define the complete account-deletion pack', async () => {
   const translations = await import('../src/i18n/accountDeletionTranslations.js')
+  const english = await import('../src/i18n/deletionDisclosureEnglishTranslations.js')
   const expected = ['es','fr','de','nl','pt','it','pl','ro','cs','sk','hu','uk','sv','da','fi','no']
   assert.deepEqual(Object.keys(translations.accountDeletionTranslations).sort(), expected.sort())
   for (const locale of expected) {
     const pack = translations.accountDeletionTranslations[locale].accountDeletion
     assert.ok(pack.request.submit)
+    assert.ok(pack.request.retainedRecords)
+    assert.notEqual(pack.request.retainedRecords, english.deletionDisclosureEnglishTranslations.request)
     assert.ok(pack.request.ownedBusinessBlock.includes('{{count}}'))
     assert.ok(pack.status.cancel)
     assert.ok(pack.errors.recentAuth)

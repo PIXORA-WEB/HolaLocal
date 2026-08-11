@@ -1,8 +1,11 @@
-function pack(d) {
+import { deletionDisclosureTranslations } from './deletionDisclosureTranslations.js'
+
+function pack(d, code) {
   return { accountDeletion: {
     request: {
       eyebrow: d[0], title: d[1], description: d[2], open: d[3], dialogTitle: d[4],
       warning: d[5], password: d[6], confirm: d[7], confirmationRequired: d[8],
+      retainedRecords: deletionDisclosureTranslations[code].request,
       submit: d[9], submitting: d[10], ownedBusinessBlock: d[11],
     },
     status: {
@@ -32,4 +35,4 @@ export const accountDeletionTranslations = Object.fromEntries(Object.entries({
   da:['Sletning af konto','Slet din konto','Anmod om administrativt assisteret kontosletning.','Anmod om sletning','Anmod om kontosletning','Normal adgang begrænses under gennemgangen. Anmodningen sletter ingen data.','Nuværende adgangskode','Jeg forstår, at adgangen begrænses under gennemgangen.','Indtast adgangskoden og bekræft.','Send anmodning','Sender…','Afklar først dine {{count}} ejede virksomheder.','Sletning anmodet','Anmodningen er modtaget, og normal adgang er begrænset under behandlingen.','Ingen data er nødvendigvis slettet endnu.','Annuller anmodning','Annullerer…','Log ind igen med din adgangskode.','Ejeroplysningerne kræver administrativ gennemgang.','Anmodningen kunne ikke sendes. Ingen data blev slettet.','Anmodningen kunne ikke annulleres.','Status kunne ikke indlæses.','Log ud mislykkedes.'],
   fi:['Tilin poistaminen','Poista tilisi','Pyydä ylläpitäjän avustamaa tilin poistamista.','Pyydä poistamista','Pyydä tilin poistamista','Normaalia käyttöä rajoitetaan tarkistuksen aikana. Pyyntö ei poista tietoja.','Nykyinen salasana','Ymmärrän, että käyttöä rajoitetaan tarkistuksen aikana.','Anna salasana ja vahvista.','Lähetä pyyntö','Lähetetään…','Ratkaise ensin omistamasi {{count}} yritystä.','Poistamista pyydetty','Pyyntö on vastaanotettu ja normaalia käyttöä on rajoitettu käsittelyn aikana.','Tietoja ei välttämättä ole vielä poistettu.','Peruuta pyyntö','Peruutetaan…','Kirjaudu uudelleen salasanallasi.','Omistustiedot vaativat ylläpitäjän tarkistuksen.','Pyyntöä ei voitu lähettää. Tietoja ei poistettu.','Pyyntöä ei voitu peruuttaa.','Tilaa ei voitu ladata.','Uloskirjautuminen epäonnistui.'],
   no:['Sletting av konto','Slett kontoen din','Be om administratorassistert kontosletting.','Be om sletting','Be om kontosletting','Normal tilgang begrenses under gjennomgangen. Forespørselen sletter ingen data.','Nåværende passord','Jeg forstår at tilgangen begrenses under gjennomgangen.','Skriv inn passordet og bekreft.','Send forespørsel','Sender…','Avklar først dine {{count}} eide virksomheter.','Sletting forespurt','Forespørselen er mottatt, og normal tilgang er begrenset under behandlingen.','Ingen data er nødvendigvis slettet ennå.','Avbryt forespørsel','Avbryter…','Logg inn igjen med passordet.','Eieropplysningene krever administrativ gjennomgang.','Forespørselen kunne ikke sendes. Ingen data ble slettet.','Forespørselen kunne ikke avbrytes.','Status kunne ikke lastes.','Utlogging mislyktes.'],
-}).map(([code, values]) => [code, pack(values)]))
+}).map(([code, values]) => [code, pack(values, code)]))

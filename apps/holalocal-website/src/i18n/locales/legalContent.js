@@ -1,4 +1,5 @@
 import { englishLegalPages } from '../englishLegalPages.js'
+import { deletionDisclosureTranslations } from '../deletionDisclosureTranslations.js'
 
 const termsSectionsEs = [
   { key: 'platform', title: 'La plataforma HolaLocal', paragraphs: ['HolaLocal es un mercado local en desarrollo. Las funciones pueden cambiarse, pausarse o eliminarse a medida que evoluciona el servicio. Al participar, aceptas usar el servicio de forma responsable y entiendes que la experiencia seguirá mejorando.'] },
@@ -423,7 +424,7 @@ const translatedCopies = {
   },
 }
 
-export const legalPageContent = {
+const baseLegalPageContent = {
   en: englishLegalPages,
   es: { terms: { sections: termsSectionsEs }, privacy: { sections: privacySectionsEs } },
   fr: translatedCopies.fr,
@@ -442,3 +443,25 @@ export const legalPageContent = {
   fi: translatedCopies.fi,
   no: translatedCopies.no,
 }
+
+function addDeletionDisclosure(content, code) {
+  if (code === 'en') return content
+  return {
+    ...content,
+    privacy: {
+      sections: content.privacy.sections.map((section) => section.key === 'deletion'
+        ? {
+            ...section,
+            paragraphs: [section.paragraphs[0], ...deletionDisclosureTranslations[code].privacy],
+          }
+        : section),
+    },
+  }
+}
+
+export const legalPageContent = Object.fromEntries(
+  Object.entries(baseLegalPageContent).map(([code, content]) => [
+    code,
+    addDeletionDisclosure(content, code),
+  ]),
+)
