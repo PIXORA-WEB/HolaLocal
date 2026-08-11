@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test'
+import { Buffer } from 'node:buffer'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
 import {
   TEST_BUSINESS_ID,
+  TEST_LEGACY_GALLERY_PATH,
+  TEST_LEGACY_GALLERY_URL,
+  TEST_LEGACY_LOGO_PATH,
+  TEST_LEGACY_LOGO_URL,
   TEST_PASSWORD,
   TEST_PROJECT_ID,
   TEST_USERS,
@@ -13,12 +18,70 @@ const adminApp = getApps().find((app) => app.name === 'browser-tests')
 const db = getFirestore(adminApp)
 db.settings({ host: '127.0.0.1:8080', ssl: false })
 
+const onePixelPng = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+)
+
+const activeTestContexts = new Set()
+
+async function newTestContext(browser) {
+  const context = await browser.newContext()
+  activeTestContexts.add(context)
+  for (const url of [TEST_LEGACY_LOGO_URL, TEST_LEGACY_GALLERY_URL]) {
+    await context.route(url, (route) => route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: onePixelPng,
+    }))
+  }
+  return context
+}
+
+async function closeTestContext(context) {
+  if (!context) return
+  activeTestContexts.delete(context)
+  await context.close()
+}
+
+async function warmAuthenticatedBrowserReads(page, user) {
+  await page.evaluate(async ({ businessId, warmAdmin, warmOwner }) => {
+    const {
+      getAdminBusinessReviewCallable,
+      getOwnerBusinessInsightsCallable,
+      getOwnerSubscriptionStatusCallable,
+      listPublicBusinessesCallable,
+    } = await import('/src/firebase/functionsClient.js')
+    const warmStrictModePair = (callable, payload) => Promise.all([
+      callable(payload),
+      callable(payload),
+    ])
+    if (warmAdmin) {
+      await warmStrictModePair(getAdminBusinessReviewCallable, { businessId })
+      await warmStrictModePair(listPublicBusinessesCallable, { maxResults: 60 })
+    }
+    if (warmOwner) {
+      await warmStrictModePair(getOwnerSubscriptionStatusCallable, { businessId })
+      await warmStrictModePair(getOwnerBusinessInsightsCallable, { businessId })
+    }
+  }, {
+    businessId: TEST_BUSINESS_ID,
+    warmAdmin: user.claims.admin === true,
+    warmOwner: user.uid === TEST_USERS.owner.uid,
+  })
+}
+
 async function signIn(page, user) {
   await page.goto('/login')
   await page.getByLabel(/email/i).fill(user.email)
   await page.getByLabel(/^password$/i).fill(TEST_PASSWORD)
   await page.getByRole('button', { name: /log in|sign in/i }).click()
   await expect(page).not.toHaveURL(/\/login/)
+  await expect(page.locator('html')).toHaveAttribute('lang', user.preferredLocale)
+  await expect(page.locator('.account-menu > summary').filter({
+    hasText: user.displayName.split(' ')[0],
+  })).toBeVisible()
+  await warmAuthenticatedBrowserReads(page, user)
 }
 
 async function signOutWithSdk(page) {
@@ -84,12 +147,18 @@ async function storageRead(page, storagePath) {
 }
 
 test.describe.serial('emulator-only Admin Dashboard smoke', () => {
+  test.afterEach(async () => {
+    const contexts = [...activeTestContexts]
+    activeTestContexts.clear()
+    await Promise.all(contexts.map((context) => context.close().catch(() => undefined)))
+  })
+
   test('subscription assignment, private boundaries, owner projection, moderator access and responsive UI', async ({ browser }) => {
     await Promise.all([resetPendingBusiness(), resetSubscriptionState()])
     const assignmentReason = 'Approved Growth access for the local browser validation.'
     const noChangeReason = 'Reconfirmed Growth after reviewing the current business requirements.'
 
-    const admin = await browser.newContext()
+    const admin = await newTestContext(browser)
     const adminPage = await admin.newPage()
     await signIn(adminPage, TEST_USERS.admin)
     await adminPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
@@ -175,7 +244,7 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     }
     await expect(subscriptionSection).toContainText(noChangeReason)
 
-    const owner = await browser.newContext()
+    const owner = await newTestContext(browser)
     const ownerPage = await owner.newPage()
     await signIn(ownerPage, TEST_USERS.owner)
     const ownerDirectAccess = await ownerPage.evaluate(async (businessId) => {
@@ -208,8 +277,9 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     await ownerPage.goto('/business/dashboard')
     await expect(ownerPage.locator('.business-dashboard')).toBeVisible()
     await expect(ownerPage.locator('.business-dashboard')).toContainText(/Growth|Crecimiento/)
+    await closeTestContext(owner)
 
-    const moderator = await browser.newContext()
+    const moderator = await newTestContext(browser)
     const moderatorPage = await moderator.newPage()
     await signIn(moderatorPage, TEST_USERS.moderator)
     await moderatorPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
@@ -230,6 +300,7 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     expect(moderatorAssignment.ok).toBe(false)
     expect(moderatorAssignment.code).toContain('permission-denied')
     expect((await db.doc(`businessSubscriptions/${TEST_BUSINESS_ID}`).get()).data().planId).toBe('growth')
+    await closeTestContext(moderator)
 
     for (const width of [320, 390, 768, 1024, 1440, 1920]) {
       await adminPage.setViewportSize({ width, height: width < 900 ? 844 : 1000 })
@@ -290,22 +361,23 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
       await expect(dialog).toHaveCount(0)
     }
 
-    await Promise.all([admin.close(), owner.close(), moderator.close()])
+    await closeTestContext(admin)
   })
 
   test('route claims, rejection, owner resubmission, approval, privacy and responsive UI', async ({ browser }) => {
     await resetPendingBusiness()
-    const anonymous = await browser.newContext()
+    const anonymous = await newTestContext(browser)
     const anonymousPage = await anonymous.newPage()
     await anonymousPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
     await expect(anonymousPage).toHaveURL(/\/login/)
     await expect(anonymousPage.getByText('Private business details')).toHaveCount(0)
     expect(await storageRead(
       anonymousPage,
-      `businesses/${TEST_BUSINESS_ID}/logos/logo.png`,
+      TEST_LEGACY_LOGO_PATH,
     )).not.toBe('allowed')
+    await closeTestContext(anonymous)
 
-    const customer = await browser.newContext()
+    const customer = await newTestContext(browser)
     const customerPage = await customer.newPage()
     await signIn(customerPage, TEST_USERS.customer)
     await customerPage.goto('/admin')
@@ -335,10 +407,11 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     expect(deniedReview).not.toBe('allowed')
     expect(await storageRead(
       customerPage,
-      `businesses/${TEST_BUSINESS_ID}/gallery/gallery.png`,
+      TEST_LEGACY_GALLERY_PATH,
     )).not.toBe('allowed')
+    await closeTestContext(customer)
 
-    const admin = await browser.newContext()
+    const admin = await newTestContext(browser)
     const adminPage = await admin.newPage()
     await signIn(adminPage, TEST_USERS.admin)
     await adminPage.goto('/admin')
@@ -378,7 +451,7 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     await expect(adminPage.locator('.admin-review__gallery img')).toHaveJSProperty('complete', true)
     expect(await storageRead(
       adminPage,
-      `businesses/${TEST_BUSINESS_ID}/logos/logo.png`,
+      TEST_LEGACY_LOGO_PATH,
     )).toBe('allowed')
 
     const rejectButton = adminPage.getByRole('button', { name: 'Reject', exact: true })
@@ -400,9 +473,16 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
       await new Promise((resolve) => setTimeout(resolve, 500))
       await route.continue()
     }, { times: 1 })
+    const moderationResponse = adminPage.waitForResponse((response) => (
+      response.url().includes('/moderateBusiness') && response.ok()
+    ))
+    const refreshedReviewResponse = adminPage.waitForResponse((response) => (
+      response.url().includes('/getAdminBusinessReview') && response.ok()
+    ))
     const rejectSubmission = submitReject.click()
     await expect(submitReject).toBeDisabled()
-    await rejectSubmission
+    await Promise.all([rejectSubmission, moderationResponse, refreshedReviewResponse])
+    await expect(adminPage.locator('.admin-status--rejected')).toContainText('Rejected')
     await expect(adminPage.locator('.form-message[role="status"]')).toContainText('Business rejected and guidance saved.')
 
     let business = (await db.doc(`businesses/${TEST_BUSINESS_ID}`).get()).data()
@@ -415,7 +495,7 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     expect(events.size).toBe(1)
     expect(events.docs[0].data().moderatorUid).toBe(TEST_USERS.admin.uid)
 
-    const owner = await browser.newContext()
+    const owner = await newTestContext(browser)
     const ownerPage = await owner.newPage()
     await signIn(ownerPage, TEST_USERS.owner)
     await ownerPage.goto('/business/dashboard')
@@ -464,6 +544,7 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     expect(privateBusiness.currentRejection).toBeNull()
     events = await db.collection(`businesses/${TEST_BUSINESS_ID}/moderationEvents`).get()
     expect(events.size).toBe(1)
+    await closeTestContext(owner)
 
     await adminPage.reload()
     await expect(adminPage.getByRole('button', { name: 'Approve and publish' })).toBeVisible()
@@ -478,15 +559,18 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     expect(business.verificationStatus).toBe('unverified')
     expect(events.size).toBe(2)
 
-    await anonymousPage.goto('/services')
-    await expect(anonymousPage.getByText('Browser Smoke Cleaning')).toBeVisible()
-    await anonymousPage.getByText('Browser Smoke Cleaning').first().click()
-    await expect(anonymousPage.getByText(TEST_USERS.owner.email)).toHaveCount(0)
-    await expect(anonymousPage.getByText('clarify each service')).toHaveCount(0)
+    const publicVisitor = await newTestContext(browser)
+    const publicPage = await publicVisitor.newPage()
+    await publicPage.goto('/services')
+    await expect(publicPage.getByText('Browser Smoke Cleaning')).toBeVisible()
+    await publicPage.getByText('Browser Smoke Cleaning').first().click()
+    await expect(publicPage.getByText(TEST_USERS.owner.email)).toHaveCount(0)
+    await expect(publicPage.getByText('clarify each service')).toHaveCount(0)
+    await closeTestContext(publicVisitor)
 
+    await adminPage.goto('/admin/businesses?status=active')
     for (const width of [320, 390, 768, 1024, 1440, 1920]) {
       await adminPage.setViewportSize({ width, height: width < 900 ? 844 : 1000 })
-      await adminPage.goto('/admin/businesses?status=active')
       const responsiveList = adminPage.locator(width <= 704 ? '.admin-business-cards' : '.admin-table-panel')
       await expect(responsiveList.getByText('Browser Smoke Cleaning', { exact: true })).toBeVisible()
       const overflow = await adminPage.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
@@ -496,9 +580,9 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
       expect(await adminPage.locator('.admin-sidebar').isVisible()).toBe(width > 896)
     }
 
+    await adminPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
     for (const width of [320, 390, 768, 1024, 1440, 1920]) {
       await adminPage.setViewportSize({ width, height: width < 900 ? 844 : 1000 })
-      await adminPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
       await expect(adminPage.getByRole('heading', { name: 'Private business details' })).toBeVisible()
       const reviewLayout = await adminPage.evaluate(() => ({
         columns: getComputedStyle(document.querySelector('.admin-review__workspace')).gridTemplateColumns.split(' ').length,
@@ -528,26 +612,22 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     await expect(adminPage).toHaveURL(/\/login/)
     await adminPage.reload()
     await expect(adminPage).toHaveURL(/\/login/)
-    await Promise.all([anonymous.close(), customer.close(), owner.close(), admin.close()])
+    await closeTestContext(admin)
   })
 
   test('real callable stale, concurrency and payload-bound idempotency', async ({ browser }) => {
     await resetPendingBusiness()
-    const first = await browser.newContext()
-    const second = await browser.newContext()
+    const first = await newTestContext(browser)
+    const second = await newTestContext(browser)
     const firstPage = await first.newPage()
     const secondPage = await second.newPage()
     await signIn(firstPage, TEST_USERS.admin)
     await signIn(secondPage, TEST_USERS.adminTwo)
 
-    await Promise.all([
-      firstPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`),
-      secondPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`),
-    ])
-    await Promise.all([
-      expect(firstPage.getByRole('button', { name: 'Approve and publish' })).toBeVisible(),
-      expect(secondPage.getByRole('button', { name: 'Reject', exact: true })).toBeVisible(),
-    ])
+    await firstPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
+    await expect(firstPage.getByRole('button', { name: 'Approve and publish' })).toBeVisible()
+    await secondPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
+    await expect(secondPage.getByRole('button', { name: 'Reject', exact: true })).toBeVisible()
     expect((await callable(firstPage, {
       businessId: TEST_BUSINESS_ID,
       operation: 'publish',
@@ -607,7 +687,7 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     expect(events.size).toBe(1)
     const current = (await db.doc(`businessPrivate/${TEST_BUSINESS_ID}`).get()).data().currentRejection
     expect(current.guidance).toBe(original.guidance)
-    await Promise.all([first.close(), second.close()])
+    await Promise.all([closeTestContext(first), closeTestContext(second)])
   })
 
   test('locale chunks are asynchronous, persisted and last selection wins', async ({ page }) => {

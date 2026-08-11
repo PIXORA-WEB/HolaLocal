@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { Timestamp } from 'firebase-admin/firestore'
 import { FakeFirestore } from './fakeFirestore.mjs'
 import {
   buildCollisionSafeConversationId,
@@ -36,7 +37,7 @@ function eligibleBusiness(overrides = {}) {
       whatsappNumber: '', whatsappVisible: false, website: '', websiteVisible: false,
       preferredContactMethod: 'holalocal', allowCallbackRequests: false,
     },
-    profilePhoto: { downloadUrl: 'https://cdn.example/safe-logo.jpg' },
+    logoStoragePath: 'businesses/business-1/logos/logo',
     privateNote: 'never return',
     subscription: { planId: 'private-plan' },
     ...overrides,
@@ -82,17 +83,18 @@ test('openBusinessConversation creates the canonical conversation with a minimal
 
   assert.equal(result.conversationId, 'customer__business-1')
   assert.deepEqual(Object.keys(result.businessContext).sort(), [
-    'availability', 'businessId', 'canSendMessages', 'logoUrl', 'name',
+    'availability', 'businessId', 'canSendMessages', 'logoStoragePath', 'logoUrl', 'name',
     'primaryLanguage', 'profileAvailable',
   ])
   assert.equal('ownerId' in result.businessContext, false)
   const stored = db.data('conversations/customer__business-1')
   assert.deepEqual(stored.businessSnapshot, {
     name: 'Safe Business',
-    logoUrl: 'https://cdn.example/safe-logo.jpg',
+    logoUrl: null,
+    logoStoragePath: 'businesses/business-1/logos/logo',
     primaryLanguage: 'en',
   })
-  assert.deepEqual(Object.keys(stored.businessSnapshot).sort(), ['logoUrl', 'name', 'primaryLanguage'])
+  assert.deepEqual(Object.keys(stored.businessSnapshot).sort(), ['logoStoragePath', 'logoUrl', 'name', 'primaryLanguage'])
   assert.equal(JSON.stringify(result).includes('privateNote'), false)
   assert.equal(JSON.stringify(result).includes('subscription'), false)
 })
@@ -110,6 +112,41 @@ test('openBusinessConversation reuses and restores the deterministic existing co
   assert.equal(result.conversationId, 'customer__business-1')
   assert.equal(db.data('conversations/customer__business-1').participantState.customer.archivedAt, null)
   assert.equal(db.data('conversations/customer__business-1').participantState.customer.deletedAt, null)
+})
+
+test('terminal deleted-participant conversation cannot be reopened or duplicated', async () => {
+  const deletedAt = Timestamp.fromMillis(1700000000000)
+  const db = contextDb()
+  Object.assign(db.store.get('conversations/customer__business-1'), {
+    status: 'participant_deleted',
+    participantTombstones: { customer: { type: 'deleted_user', deletedAt } },
+  })
+  const beforeWrites = db.writePaths.length
+  await assert.rejects(
+    () => openBusinessConversation({ uid: 'customer', businessId: 'business-1', db }),
+    (error) => error.code === 'failed-precondition'
+      && error.message === 'conversation-participant-deleted',
+  )
+  assert.equal(db.data('conversations/customer__business-1').status, 'participant_deleted')
+  assert.equal(db.data('conversations/customer__business-1').participantTombstones.customer.type, 'deleted_user')
+  assert.equal(db.data(buildCollisionSafeConversationId('customer', 'business-1')), undefined)
+  assert.equal(db.writePaths.length, beforeWrites)
+})
+
+test('terminal context remains available to the surviving owner without a customer profile', async () => {
+  const deletedAt = Timestamp.fromMillis(1700000000000)
+  const db = contextDb()
+  Object.assign(db.store.get('conversations/customer__business-1'), {
+    status: 'participant_deleted',
+    participantTombstones: { customer: { type: 'deleted_user', deletedAt } },
+  })
+  db.store.delete('users/customer')
+  const result = await getConversationBusinessContext({
+    uid: 'owner', conversationId: 'customer__business-1', db,
+  })
+  assert.equal(result.businessContext.canSendMessages, false)
+  assert.equal(result.businessContext.name, 'Safe Business')
+  assert.equal(JSON.stringify(result).includes('customer'), false)
 })
 
 test('collision-safe IDs are stable unambiguous and support Unicode and legacy delimiters', () => {
@@ -291,6 +328,23 @@ test('participant context handles missing conversations and snapshot/no-snapshot
   })
   assert.equal(withSnapshot.businessContext.name, 'Former Business')
   assert.equal(withSnapshot.businessContext.canSendMessages, false)
+
+  const unsafeSnapshot = await getConversationBusinessContext({
+    uid: 'customer', conversationId: 'customer__business-1',
+    db: contextDb({
+      business: null,
+      storedConversation: conversation({
+        businessSnapshot: {
+          name: 'Former Business',
+          logoUrl: 'https://evil.example/logo.jpg',
+          logoStoragePath: 'businesses/other/logos/logo',
+          primaryLanguage: 'es',
+        },
+      }),
+    }),
+  })
+  assert.equal(unsafeSnapshot.businessContext.logoUrl, null)
+  assert.equal(unsafeSnapshot.businessContext.logoStoragePath, null)
 
   const withoutSnapshot = await getConversationBusinessContext({
     uid: 'customer', conversationId: 'customer__business-1',

@@ -6,6 +6,7 @@ import {
   projectPublicContact,
   resolveAuthoritativeBusinessEntitlements,
 } from '@holalocal/firebase-contract'
+import { projectSafeBusinessMedia } from './businessMediaProjection.js'
 
 const DEFAULT_MAX_RESULTS = 60
 const MAX_RESULTS = 100
@@ -37,6 +38,7 @@ export function toPublicDirectoryBusiness(documentId, rawDocument, privateSubscr
     rawDocument?.subscription,
     { privateRecordExists },
   )
+  const media = projectSafeBusinessMedia(documentId, rawDocument)
 
   return {
     businessId: documentId,
@@ -51,7 +53,8 @@ export function toPublicDirectoryBusiness(documentId, rawDocument, privateSubscr
     description: business.description,
     tagline: business.tagline,
     services: [...business.categoryIds],
-    galleryUrls: [...business.galleryImageURLs],
+    galleryUrls: media.galleryUrls,
+    galleryStoragePaths: media.galleryStoragePaths,
     contact: projectPublicContact(business.contact).contact,
     status: business.status,
     verificationStatus: business.verificationStatus ?? 'unverified',
@@ -59,7 +62,8 @@ export function toPublicDirectoryBusiness(documentId, rawDocument, privateSubscr
     subscriptionStatus: entitlements.accessStatus ?? 'active',
     ratingAverage: typeof rawDocument?.ratingAverage === 'number' ? rawDocument.ratingAverage : null,
     ratingCount: typeof rawDocument?.ratingCount === 'number' ? rawDocument.ratingCount : 0,
-    logoUrl: business.profilePhoto?.downloadUrl ?? null,
+    logoUrl: media.logoUrl,
+    logoStoragePath: media.logoStoragePath,
     profileComplete: business.profileCompleted === true,
   }
 }

@@ -210,14 +210,34 @@ service cloud.firestore {
         );
     }
 
-    function validUserOwnerUpdate() {
+    function validCanonicalProfileMedia(userId, profilePhoto, photoURL) {
+      return profilePhoto is map
+        && profilePhoto.keys().hasOnly(['storagePath'])
+        && profilePhoto.storagePath == 'users/' + userId + '/profile/avatar'
+        && photoURL == null;
+    }
+
+    function validProfileMediaUpdate(userId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let nextProfilePhoto = request.resource.data.get('profilePhoto', null);
+      let nextPhotoURL = request.resource.data.get('photoURL', null);
+      return !changed.hasAny(['profilePhoto', 'photoURL'])
+        || (
+          nextProfilePhoto == resource.data.get('profilePhoto', null)
+          && nextPhotoURL == resource.data.get('photoURL', null)
+        )
+        || (nextProfilePhoto == null && nextPhotoURL == null)
+        || validCanonicalProfileMedia(userId, nextProfilePhoto, nextPhotoURL);
+    }
+
+    function validUserOwnerUpdate(userId) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName', 'displayNameNormalized', 'firstName', 'lastName',
           'photoURL', 'profilePhoto', 'preferredLocale', 'city', 'country',
           'profileCompleted', 'accountType', 'onboardingCompleted',
           'termsAccepted', 'termsAcceptedAt', 'termsVersion',
           'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion',
-          'deletionRequestedAt', 'lastActiveAt', 'updatedAt'
+          'lastActiveAt', 'updatedAt'
         ])
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
@@ -228,6 +248,7 @@ service cloud.firestore {
         && request.resource.data.businessProfileRequired == resource.data.businessProfileRequired
         && request.resource.data.businessProfileCompleted == resource.data.businessProfileCompleted
         && request.resource.data.accountStatus == resource.data.accountStatus
+        && request.resource.data.deletionRequestedAt == resource.data.deletionRequestedAt
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.deletionScheduledFor == resource.data.deletionScheduledFor
         && request.resource.data.anonymizedAt == resource.data.anonymizedAt
@@ -235,6 +256,7 @@ service cloud.firestore {
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastActiveAt'])
           || request.resource.data.lastActiveAt == request.time)
         && validUserCompletionState()
+        && validProfileMediaUpdate(userId)
         && validProfileCompletedUpdate()
         && validCustomerOnboardingUpdate()
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
@@ -261,6 +283,7 @@ service cloud.firestore {
         'description', 'primaryCategoryId', 'categoryIds', 'serviceAreas',
         'serviceRadiusKm', 'location', 'contact', 'languages', 'primaryLanguage',
         'profilePhoto', 'coverPhoto', 'galleryImageURLs', 'galleryImages',
+        'logoStoragePath', 'galleryStoragePaths',
         'galleryCount', 'ratingAverage', 'ratingCount', 'status',
         'verificationStatus', 'verifiedAt', 'subscription', 'profileCompleted',
         'publishedAt', 'submittedAt', 'deletionRequestedAt', 'deletedAt',
@@ -268,8 +291,31 @@ service cloud.firestore {
       ]);
     }
 
-    function validBusinessCreate() {
+    function validCanonicalBusinessMedia(data, businessId) {
+      let allowedGalleryPaths = [
+        'businesses/' + businessId + '/photos/0',
+        'businesses/' + businessId + '/photos/1',
+        'businesses/' + businessId + '/photos/2',
+        'businesses/' + businessId + '/photos/3',
+        'businesses/' + businessId + '/photos/4',
+        'businesses/' + businessId + '/photos/5',
+        'businesses/' + businessId + '/photos/6',
+        'businesses/' + businessId + '/photos/7'
+      ];
+      return (!data.keys().hasAny(['logoStoragePath'])
+          || data.logoStoragePath == null
+          || (data.logoStoragePath is string
+            && data.logoStoragePath == 'businesses/' + businessId + '/logos/logo'))
+        && (!data.keys().hasAny(['galleryStoragePaths'])
+          || (data.galleryStoragePaths is list
+            && data.galleryStoragePaths.size() <= 8
+            && data.galleryStoragePaths.hasOnly(allowedGalleryPaths)
+            && data.galleryStoragePaths.toSet().size() == data.galleryStoragePaths.size()));
+    }
+
+    function validBusinessCreate(businessId) {
       return validBusinessKeys(request.resource.data)
+        && validCanonicalBusinessMedia(request.resource.data, businessId)
         && request.resource.data.keys().hasAll([
           'ownerId', 'managerIds', 'name', 'nameNormalized', 'slug', 'tagline',
           'description', 'primaryCategoryId', 'categoryIds', 'serviceAreas',
@@ -303,7 +349,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt;
     }
 
-    function validBusinessDraftEdit() {
+    function validBusinessDraftEdit(businessId) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'name', 'tagline', 'description', 'primaryCategoryId', 'categoryIds',
           'serviceAreas', 'serviceRadiusKm', 'location', 'contact', 'languages',
@@ -311,6 +357,7 @@ service cloud.firestore {
           'updatedAt'
         ])
         && validBusinessKeys(request.resource.data)
+        && validCanonicalBusinessMedia(request.resource.data, businessId)
         && immutableBusinessIdentity()
         && resource.data.status in ['draft', 'rejected']
         && request.resource.data.status == resource.data.status
@@ -330,11 +377,12 @@ service cloud.firestore {
         && (request.resource.data.status != 'active' || hasSafePublicBusinessData(request.resource.data));
     }
 
-    function validBusinessSubmitForReview() {
+    function validBusinessSubmitForReview(businessId) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'status', 'submittedAt', 'updatedAt'
         ])
         && validBusinessKeys(request.resource.data)
+        && validCanonicalBusinessMedia(request.resource.data, businessId)
         && immutableBusinessIdentity()
         && resource.data.status in ['draft', 'rejected']
         && request.resource.data.status == 'pending_review'
@@ -354,13 +402,13 @@ service cloud.firestore {
         && hasCompletePublicBusinessProfile(request.resource.data);
     }
 
-    function validBusinessOwnerUpdate() {
+    function validBusinessOwnerUpdate(businessId) {
       return resource.data.status in ['draft', 'rejected']
         && (
           (request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
-            && validBusinessSubmitForReview())
+            && validBusinessSubmitForReview(businessId))
           || (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
-            && validBusinessDraftEdit())
+            && validBusinessDraftEdit(businessId))
         );
     }
 
@@ -421,15 +469,20 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow update: if isOwner(userId)
         && hasActiveAccount()
-        && validUserOwnerUpdate();
+        && validUserOwnerUpdate(userId);
       allow delete: if false;
+    }
+
+    match /accountDeletionRequests/{userId} {
+      allow get: if isOwner(userId);
+      allow list, create, update, delete: if false;
     }
 
     match /businesses/{businessId} {
       allow read: if managesBusiness(businessId) || isModerator();
       allow create: if false;
       allow update: if managesBusiness(businessId)
-        && validBusinessOwnerUpdate();
+        && validBusinessOwnerUpdate(businessId);
       allow delete: if false;
     }
 
@@ -494,7 +547,7 @@ service cloud.firestore {
           && resource.data.customerId is string
           && resource.data.participantIds is list
           && resource.data.participantIds.size() == 2
-          && resource.data.status == 'active'
+          && (resource.data.status == 'active' || validParticipantDeletedConversation())
           && (!resource.data.keys().hasAny(['schemaVersion'])
             || resource.data.schemaVersion == 1)
           && storedBusiness().ownerId is string
@@ -509,6 +562,27 @@ service cloud.firestore {
           ]);
       }
 
+      function validDeletedUserTombstone() {
+        return resource.data.get('participantTombstones', {}) is map
+          && resource.data.get('participantTombstones', {}).keys().hasOnly([resource.data.customerId])
+          && resource.data.get('participantTombstones', {}).get(resource.data.customerId, {}) is map
+          && resource.data.get('participantTombstones', {}).get(resource.data.customerId, {}).keys().hasOnly([
+            'type', 'deletedAt'
+          ])
+          && resource.data.get('participantTombstones', {}).get(resource.data.customerId, {}).get('type', null) == 'deleted_user'
+          && resource.data.get('participantTombstones', {}).get(resource.data.customerId, {}).get('deletedAt', null) is timestamp;
+      }
+
+      function validParticipantDeletedConversation() {
+        return resource.data.status == 'participant_deleted'
+          && validDeletedUserTombstone();
+      }
+
+      function canReadStoredConversation() {
+        return resource.data.status == 'active'
+          || validParticipantDeletedConversation();
+      }
+
       function validConversationId() {
         return conversationId == request.resource.data.customerId + '__' + request.resource.data.businessId;
       }
@@ -516,7 +590,8 @@ service cloud.firestore {
       function validQueryableConversation() {
         return resource.data.keys().hasAll(['schemaVersion', 'status'])
           && resource.data.schemaVersion == 1
-          && resource.data.status == 'active';
+          && (resource.data.status == 'active'
+            || resource.data.status == 'participant_deleted');
       }
 
       function validParticipantState() {
@@ -615,6 +690,7 @@ service cloud.firestore {
 
       allow get: if hasActiveAccount()
         && validStoredConversation()
+        && canReadStoredConversation()
         && request.auth.uid in resource.data.participantIds;
       allow list: if hasActiveAccount()
         && validQueryableConversation()
@@ -665,7 +741,8 @@ service cloud.firestore {
             && parentConversation().customerId is string
             && parentConversation().participantIds is list
             && parentConversation().participantIds.size() == 2
-            && parentConversation().status == 'active'
+            && (parentConversation().status == 'active'
+              || validDeletedParticipantParentConversation())
             && parentBusiness().ownerId is string
             && parentConversation().customerId != parentBusiness().ownerId
             && parentConversation().participantIds.hasAll([
@@ -676,6 +753,19 @@ service cloud.firestore {
               parentConversation().customerId,
               parentBusiness().ownerId
             ]);
+        }
+        function validDeletedParticipantParentConversation() {
+          return parentConversation().status == 'participant_deleted'
+            && parentConversation().get('participantTombstones', {}) is map
+            && parentConversation().get('participantTombstones', {}).keys().hasOnly([
+              parentConversation().customerId
+            ])
+            && parentConversation().get('participantTombstones', {}).get(parentConversation().customerId, {}) is map
+            && parentConversation().get('participantTombstones', {}).get(parentConversation().customerId, {}).keys().hasOnly([
+              'type', 'deletedAt'
+            ])
+            && parentConversation().get('participantTombstones', {}).get(parentConversation().customerId, {}).get('type', null) == 'deleted_user'
+            && parentConversation().get('participantTombstones', {}).get(parentConversation().customerId, {}).get('deletedAt', null) is timestamp;
         }
         allow read: if hasActiveAccount()
           && validParentConversation()

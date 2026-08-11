@@ -15,10 +15,13 @@ import {
   getOwnerSubscriptionStatusCallable,
   getPublicBusinessCallable,
   listPublicBusinessesCallable,
+  manageBusinessMediaCallable,
 } from '../firebase/functionsClient.js'
 import { createApplicationError } from '../utils/frontendErrors.js'
 import {
   hasCompletePublicBusinessProfile,
+  isCanonicalBusinessGalleryPath,
+  parseLegacyFirebaseBusinessMediaUrl,
   projectPublicContact,
   validateBusinessLocation,
 } from '@holalocal/firebase-contract'
@@ -27,15 +30,47 @@ import {
   toManagedBusinessView,
 } from './firebaseCompatibility.js'
 import { isOwnerEditableBusinessStatus } from '../utils/business.js'
-
-async function uploadImageFile(...args) {
-  const storage = await import('../firebase/storageClient.js')
-  return storage.uploadImageFile(...args)
-}
+import { resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
+import {
+  runBusinessGalleryUploads,
+  runBusinessLogoUpload,
+  selectAvailableCanonicalGallerySlot,
+} from './businessMediaWorkflow.js'
 
 async function deleteImageFile(...args) {
   const storage = await import('../firebase/storageClient.js')
   return storage.deleteImageFile(...args)
+}
+
+async function uploadCanonicalImageFile(...args) {
+  const storage = await import('../firebase/storageClient.js')
+  return storage.uploadCanonicalImageFile(...args)
+}
+
+const BUSINESS_MEDIA_ACTIONS = new Set(['set-logo', 'add-gallery', 'remove-gallery', 'clear-logo'])
+export { selectAvailableCanonicalGallerySlot }
+
+export async function finalizeBusinessMedia(action, businessId, storagePath, callable = manageBusinessMediaCallable) {
+  if (!BUSINESS_MEDIA_ACTIONS.has(action)) throw createApplicationError('media-save-failed')
+  const payload = { action, businessId, storagePath }
+  const result = await callable(payload)
+  return result.data
+}
+
+async function presentBusiness(business) {
+  return business?.businessId
+    ? resolveBusinessMediaPresentation(business.businessId, business)
+    : business
+}
+
+async function presentManagedBusiness(business) {
+  if (!business?.businessId) return business
+  const presented = await presentBusiness(business)
+  try {
+    return { ...presented, entitlements: await getOwnerSubscriptionStatus(business.businessId) }
+  } catch {
+    return presented
+  }
 }
 
 export const BUSINESS_STATUSES = [
@@ -144,9 +179,9 @@ function storedPublicContact(contact = {}) {
 export async function getActivePublicBusinesses(maxResults = 60) {
   const resultLimit = Math.min(Math.max(Number(maxResults) || 1, 1), 100)
   const result = await listPublicBusinessesCallable({ maxResults: resultLimit })
-  return Array.isArray(result.data?.businesses)
-    ? result.data.businesses.filter((business) => business?.businessId && business?.name)
-    : []
+  const businesses = Array.isArray(result.data?.businesses)
+    ? result.data.businesses.filter((business) => business?.businessId && business?.name) : []
+  return Promise.all(businesses.map(presentBusiness))
 }
 
 export async function getFeaturedActiveBusinesses(maxResults = 60) {
@@ -157,7 +192,7 @@ export async function getFeaturedActiveBusinesses(maxResults = 60) {
 export async function getPublicBusinessById(businessId) {
   try {
     const result = await getPublicBusinessCallable({ businessId })
-    return result.data?.business ?? null
+    return presentBusiness(result.data?.business ?? null)
   } catch (error) {
     if (error?.code?.includes('not-found')) return null
     throw error
@@ -171,7 +206,7 @@ export async function getOwnerSubscriptionStatus(businessId) {
 
 export async function getBusinessById(businessId) {
   const snapshot = await getDoc(businessDocument(businessId))
-  return snapshot.exists() ? toManagedBusinessView(snapshot.id, snapshot.data()) : null
+  return snapshot.exists() ? presentManagedBusiness(toManagedBusinessView(snapshot.id, snapshot.data())) : null
 }
 
 async function getManagedBusinessById(businessId) {
@@ -180,11 +215,11 @@ async function getManagedBusinessById(businessId) {
     getDoc(privateBusinessDocument(businessId)),
   ])
   if (!businessSnapshot.exists()) return null
-  return toManagedBusinessView(
+  return presentManagedBusiness(toManagedBusinessView(
     businessSnapshot.id,
     businessSnapshot.data(),
     privateSnapshot.exists() ? privateSnapshot.data() : null,
-  )
+  ))
 }
 
 async function candidateById(businessId, source, { missingIsInvalid = false, permissionDeniedIsInvalid = false } = {}) {
@@ -332,60 +367,40 @@ export async function submitBusinessForReview(businessId) {
   return getManagedBusinessById(businessId)
 }
 
-export async function uploadBusinessLogo(businessId, file) {
-  const existingBusiness = await getBusinessById(businessId)
-  const uploadedLogo = await uploadImageFile(`businesses/${businessId}/logos`, file)
-
-  try {
-    const updatedBusiness = await updateBusinessProfile(businessId, {
-      profilePhoto: { ...uploadedLogo, updatedAt: new Date().toISOString() },
-    })
-    if (existingBusiness?.profilePhoto?.storagePath) {
-      await deleteImageFile(existingBusiness.profilePhoto.storagePath).catch(() => undefined)
-    }
-    return updatedBusiness
-  } catch {
-    await deleteImageFile(uploadedLogo.storagePath).catch(() => undefined)
-    throw createApplicationError('media-save-failed')
-  }
+export async function uploadBusinessLogo(businessId, file, dependencies = {}) {
+  const getBusiness = dependencies.getBusiness ?? getBusinessById
+  const upload = dependencies.upload ?? uploadCanonicalImageFile
+  const finalize = dependencies.finalize ?? finalizeBusinessMedia
+  const remove = dependencies.remove ?? deleteImageFile
+  return runBusinessLogoUpload(businessId, file, { getBusiness, upload, finalize, remove })
 }
 
-export async function uploadBusinessGalleryImages(businessId, files) {
-  const existingBusiness = await getBusinessById(businessId)
-  const uploadedImages = []
-
-  try {
-    for (const file of files) {
-      const image = await uploadImageFile(`businesses/${businessId}/photos`, file)
-      uploadedImages.push({ ...image, updatedAt: new Date().toISOString() })
-    }
-  } catch (error) {
-    await Promise.all(uploadedImages.map(({ storagePath }) => deleteImageFile(storagePath).catch(() => undefined)))
-    throw error
-  }
-
-  const galleryImages = [...(existingBusiness?.galleryImages ?? []), ...uploadedImages].slice(0, 8)
-  try {
-    return await updateBusinessProfile(businessId, {
-      galleryImages,
-      galleryImageURLs: galleryImages.map(({ downloadUrl }) => downloadUrl),
-    })
-  } catch {
-    await Promise.all(uploadedImages.map(({ storagePath }) => deleteImageFile(storagePath).catch(() => undefined)))
-    throw createApplicationError('media-save-failed')
-  }
+export async function uploadBusinessGalleryImages(businessId, files, dependencies = {}) {
+  const getBusiness = dependencies.getBusiness ?? getBusinessById
+  const upload = dependencies.upload ?? uploadCanonicalImageFile
+  const finalize = dependencies.finalize ?? finalizeBusinessMedia
+  return runBusinessGalleryUploads(businessId, files, { getBusiness, upload, finalize })
 }
 
-export async function deleteBusinessGalleryImage(businessId, image) {
+export async function deleteBusinessGalleryImage(businessId, image, dependencies = {}) {
+  const getBusiness = dependencies.getBusiness ?? getBusinessById
+  const finalize = dependencies.finalize ?? finalizeBusinessMedia
+  const remove = dependencies.remove ?? deleteImageFile
+  if (image?.kind === 'canonical' && isCanonicalBusinessGalleryPath(image.storagePath, businessId)) {
+    await finalize('remove-gallery', businessId, image.storagePath)
+    return getBusiness(businessId)
+  }
+  const legacy = parseLegacyFirebaseBusinessMediaUrl(image?.downloadUrl, businessId)
+  if (legacy?.kind !== 'gallery') throw createApplicationError('media-delete-failed')
   const existingBusiness = await getBusinessById(businessId)
-  const galleryImages = (existingBusiness?.galleryImages ?? []).filter(
-    (candidate) => candidate.storagePath !== image.storagePath && candidate.downloadUrl !== image.downloadUrl,
+  const remainingLegacy = (existingBusiness?.legacyGalleryEntries ?? []).filter(
+    (candidate) => candidate.storagePath !== legacy.storagePath,
   )
   const updatedBusiness = await updateBusinessProfile(businessId, {
-    galleryImages,
-    galleryImageURLs: galleryImages.map(({ downloadUrl }) => downloadUrl),
+    galleryImages: remainingLegacy.map(({ downloadUrl, storagePath }) => ({ downloadUrl, storagePath })),
+    galleryImageURLs: remainingLegacy.map(({ downloadUrl }) => downloadUrl),
   })
-  if (image.storagePath) await deleteImageFile(image.storagePath).catch(() => undefined)
+  await remove(legacy.storagePath).catch(() => undefined)
   return updatedBusiness
 }
 

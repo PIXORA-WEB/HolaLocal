@@ -18,8 +18,8 @@ function dateText(value, language) {
 function BusinessLogo({ business }) {
   return (
     <span className="admin-business-logo">
-      {business.profilePhoto?.downloadUrl
-        ? <img alt="" src={business.profilePhoto.downloadUrl} />
+      {business.logoUrl
+        ? <img alt="" src={business.logoUrl} />
         : <span aria-hidden="true">{business.name?.charAt(0) || '?'}</span>}
     </span>
   )

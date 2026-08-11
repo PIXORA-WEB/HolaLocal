@@ -1,6 +1,8 @@
 export const CONVERSATION_ID_SEPARATOR = '__'
 export const CONVERSATION_SCHEMA_VERSION = 1
 export const CONVERSATION_STATUS_ACTIVE = 'active'
+export const CONVERSATION_STATUS_PARTICIPANT_DELETED = 'participant_deleted'
+export const CONVERSATION_TOMBSTONE_TYPE_DELETED_USER = 'deleted_user'
 export const MAX_MESSAGE_LENGTH = 4000
 export const MESSAGE_TRANSLATION_STATUSES = Object.freeze([
   'processing', 'completed', 'not_required', 'failed',
@@ -46,9 +48,35 @@ export function conversationInboxQueryFilters(userId) {
   }
   return [
     ['participantIds', 'array-contains', userId],
-    ['status', '==', CONVERSATION_STATUS_ACTIVE],
+    ['status', 'in', [CONVERSATION_STATUS_ACTIVE, CONVERSATION_STATUS_PARTICIPANT_DELETED]],
     ['schemaVersion', '==', CONVERSATION_SCHEMA_VERSION],
   ]
+}
+
+export function deletedUserTombstoneFor(conversation, participantId) {
+  if (!conversation || !isValidConversationIdPart(participantId)) return null
+  const tombstone = conversation.participantTombstones?.[participantId]
+  if (!tombstone || typeof tombstone !== 'object' || Array.isArray(tombstone)) return null
+  if (Object.keys(tombstone).sort().join(',') !== 'deletedAt,type') return null
+  if (tombstone.type !== CONVERSATION_TOMBSTONE_TYPE_DELETED_USER) return null
+  if (!isFirestoreTimestampLike(tombstone.deletedAt)) return null
+  return tombstone
+}
+
+export function isParticipantDeletedConversation(conversation) {
+  return Boolean(
+    conversation
+    && conversation.status === CONVERSATION_STATUS_PARTICIPANT_DELETED
+    && Array.isArray(conversation.participantIds)
+    && conversation.participantIds.length === 2
+    && typeof conversation.customerId === 'string'
+    && conversation.participantIds.includes(conversation.customerId)
+    && deletedUserTombstoneFor(conversation, conversation.customerId),
+  )
+}
+
+export function isConversationSendable(conversation) {
+  return conversation?.status === CONVERSATION_STATUS_ACTIVE
 }
 
 export function existingConversationQueryFilters(customerId, businessId) {
@@ -189,4 +217,18 @@ function timestampToMillis(value) {
   if (value instanceof Date) return value.getTime()
   if (typeof value === 'number' && Number.isFinite(value)) return value
   return null
+}
+
+function isFirestoreTimestampLike(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const { seconds, nanoseconds } = value
+  if (!Number.isInteger(seconds) || !Number.isInteger(nanoseconds)) return false
+  if (nanoseconds < 0 || nanoseconds > 999999999 || typeof value.toMillis !== 'function') return false
+  try {
+    const millis = value.toMillis()
+    return Number.isFinite(millis)
+      && Math.abs(millis - (seconds * 1000 + nanoseconds / 1e6)) < 0.000001
+  } catch {
+    return false
+  }
 }

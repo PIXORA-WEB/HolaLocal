@@ -6,9 +6,9 @@ const completionDefinitions = [
   ['category', (business) => Boolean(business?.primaryCategoryId)],
   ['serviceArea', (_business, _options, locationValidation) => locationValidation.valid],
   ['language', (business) => (business?.languages?.length ?? 0) > 0],
-  ['logo', (business) => Boolean(business?.profilePhoto?.downloadUrl)],
+  ['logo', (business) => Boolean(business?.logoUrl ?? business?.profilePhoto?.downloadUrl)],
   ['images', (business) => (
-    (business?.galleryImages?.length ?? business?.galleryImageURLs?.length ?? 0) > 0
+    (business?.galleryEntries?.length ?? business?.galleryImages?.length ?? business?.galleryImageURLs?.length ?? 0) > 0
   )],
   ['contact', (business) => Boolean(business?.contact?.preferredContactMethod)],
 ]

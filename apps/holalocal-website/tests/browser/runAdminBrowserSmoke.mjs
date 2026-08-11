@@ -58,7 +58,7 @@ const child = spawn('firebase', [
   projectId,
   '--only',
   'auth,firestore,storage,functions',
-  'node tests/browser/seedAdminBrowser.mjs && playwright test --config playwright.admin.config.js',
+  'node tests/browser/seedAdminBrowser.mjs && node tests/browser/warmAdminBrowser.mjs && playwright test --config playwright.admin.config.js',
 ], { env, stdio: 'inherit' })
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

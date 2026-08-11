@@ -52,6 +52,10 @@ function codeFrom(error) {
   return error?.code
 }
 
+function legacyMediaUrl(path) {
+  return `https://firebasestorage.googleapis.com/v0/b/holalocal-491c9.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media&token=01234567-89ab-4cde-8fab-0123456789ab`
+}
+
 test('listPublicBusinesses callable allows unauthenticated callers and returns empty results', async () => {
   const result = await handleListPublicBusinesses({ data: {} }, new FakeFirestore())
   assert.deepEqual(result, { businesses: [] })
@@ -174,8 +178,10 @@ test('authenticated and unauthenticated listPublicBusinesses handlers return the
     'contact',
     'description',
     'galleryUrls',
+    'galleryStoragePaths',
     'languages',
     'logoUrl',
+    'logoStoragePath',
     'name',
     'primaryLanguage',
     'profileComplete',
@@ -253,4 +259,31 @@ test('public detail returns the same bounded projection and private assignment t
   for (const field of ['ownerId', 'privateContact', 'subscription', 'updatedBy', 'reason', 'requestId']) {
     assert.equal(Object.hasOwn(result.business, field), false)
   }
+})
+
+test('public projections expose only business-bound canonical or strictly valid legacy media', () => {
+  const validLogo = legacyMediaUrl('businesses/business-1/logos/legacy.jpg')
+  const validGallery = legacyMediaUrl('businesses/business-1/photos/legacy.jpg')
+  const safe = toPublicDirectoryBusiness('business-1', eligibleBusiness({
+    logoStoragePath: 'businesses/business-1/logos/logo',
+    galleryStoragePaths: ['businesses/business-1/photos/0'],
+    profilePhoto: { downloadUrl: validLogo, originalName: 'not-public.jpg' },
+    galleryImages: [{ downloadUrl: validGallery, originalName: 'not-public-gallery.jpg' }],
+  }))
+  assert.equal(safe.logoUrl, validLogo)
+  assert.equal(safe.logoStoragePath, 'businesses/business-1/logos/logo')
+  assert.deepEqual(safe.galleryUrls, [validGallery])
+  assert.deepEqual(safe.galleryStoragePaths, ['businesses/business-1/photos/0'])
+  assert.equal(JSON.stringify(safe).includes('originalName'), false)
+
+  const unsafe = toPublicDirectoryBusiness('business-1', eligibleBusiness({
+    logoStoragePath: 'businesses/other/logos/logo',
+    galleryStoragePaths: ['businesses/other/photos/0'],
+    profilePhoto: { downloadUrl: 'https://evil.example/logo.jpg' },
+    galleryImages: [{ downloadUrl: legacyMediaUrl('businesses/other/photos/wrong.jpg') }],
+  }))
+  assert.equal(unsafe.logoUrl, null)
+  assert.equal(unsafe.logoStoragePath, null)
+  assert.deepEqual(unsafe.galleryUrls, [])
+  assert.deepEqual(unsafe.galleryStoragePaths, [])
 })

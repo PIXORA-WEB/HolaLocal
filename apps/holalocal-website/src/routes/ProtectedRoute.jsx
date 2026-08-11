@@ -9,6 +9,7 @@ import { protectedAccountDecision } from './accountRoutePolicy.js'
 function ProtectedRoute({
   allowIncompleteOnboarding = false,
   allowIncompleteProfile = false,
+  allowDeletionPending = false,
   allowMissingConsent = false,
   allowUnverified = false,
 }) {
@@ -24,6 +25,7 @@ function ProtectedRoute({
   const decision = protectedAccountDecision({
     allowIncompleteOnboarding,
     allowIncompleteProfile,
+    allowDeletionPending,
     allowMissingConsent,
     allowUnverified,
     emailVerified,
@@ -46,6 +48,10 @@ function ProtectedRoute({
 
   if (decision === 'blocked') {
     return <BlockedAccountScreen accountStatus={userProfile.accountStatus} />
+  }
+
+  if (decision === 'account_deletion') {
+    return <Navigate replace to="/account-deletion" />
   }
 
   if (decision === 'verify_email') {

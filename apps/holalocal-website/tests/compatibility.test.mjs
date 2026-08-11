@@ -1636,7 +1636,8 @@ test('public directory and exact public detail use safe callable projections', a
   assert.match(functionsClient, /httpsCallable\(functions, 'getPublicBusiness'\)/)
   assert.match(activeDirectorySource, /listPublicBusinessesCallable\(\{ maxResults: resultLimit \}\)/)
   assert.doesNotMatch(activeDirectorySource, /collection\(db, 'businesses'\)|getDocs\(|where\(|orderBy\(/)
-  assert.match(activeDirectorySource, /return Array\.isArray\(result\.data\?\.businesses\)/)
+  assert.match(activeDirectorySource, /const businesses = Array\.isArray\(result\.data\?\.businesses\)/)
+  assert.match(activeDirectorySource, /return Promise\.all\(businesses\.map\(presentBusiness\)\)/)
   assert.match(servicesPage, /setBusinesses\(activeBusinesses\)/)
   assert.match(servicesPage, /services\.emptyTitle/)
 

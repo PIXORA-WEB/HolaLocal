@@ -7,10 +7,10 @@ service firebase.storage {
     }
 
     function hasActiveAccount() {
-      let user = firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
       return signedIn()
-        && user.accountStatus == 'active'
-        && user.deletionRequestedAt == null;
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.accountStatus == 'active'
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.deletionRequestedAt == null;
     }
 
     function isModerator() {
@@ -21,30 +21,166 @@ service firebase.storage {
             && request.auth.token.admin == true));
     }
 
-    function validImage() {
-      return request.resource != null
-        && request.resource.size < 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    function businessExists(businessId) {
+      return firestore.exists(/databases/(default)/documents/businesses/$(businessId));
+    }
+
+    function businessData(businessId) {
+      return firestore.get(/databases/(default)/documents/businesses/$(businessId)).data;
     }
 
     function managesBusiness(businessId) {
-      let business = firestore.get(/databases/(default)/documents/businesses/$(businessId)).data;
       return hasActiveAccount()
-        && (business.ownerId == request.auth.uid || request.auth.uid in business.managerIds);
+        && businessExists(businessId)
+        && (businessData(businessId).ownerId == request.auth.uid
+          || request.auth.uid in businessData(businessId).managerIds);
     }
 
-    match /users/{userId}/profile/{fileName} {
-      allow read: if hasActiveAccount();
-      allow create, update: if hasActiveAccount() && request.auth.uid == userId && validImage();
+    function managesEditableBusiness(businessId) {
+      return managesBusiness(businessId)
+        && businessData(businessId).status in ['draft', 'rejected']
+        && businessData(businessId).deletionRequestedAt == null
+        && businessData(businessId).deletedAt == null;
+    }
+
+    function validCanonicalImageUpload() {
+      return request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)')
+        && request.resource.metadata.size() == 0;
+    }
+
+    function safePublicContact(contact) {
+      return contact is map
+        && contact.keys().hasOnly([
+          'phone', 'phoneVisible', 'email', 'emailVisible', 'whatsappNumber',
+          'whatsappVisible', 'website', 'websiteVisible', 'preferredContactMethod',
+          'allowCallbackRequests'
+        ])
+        && contact.phoneVisible is bool
+        && contact.emailVisible is bool
+        && contact.whatsappVisible is bool
+        && contact.websiteVisible is bool
+        && contact.allowCallbackRequests is bool
+        && contact.phone is string
+        && contact.email is string
+        && contact.whatsappNumber is string
+        && contact.website is string
+        && (contact.phoneVisible || contact.phone == '')
+        && (contact.emailVisible || contact.email == '')
+        && (contact.whatsappVisible || contact.whatsappNumber == '')
+        && (contact.websiteVisible || contact.website == '')
+        && contact.preferredContactMethod in ['holalocal', 'phone', 'email', 'whatsapp']
+        && (contact.preferredContactMethod == 'holalocal'
+          || (contact.preferredContactMethod == 'phone' && contact.phoneVisible && contact.phone.size() > 0)
+          || (contact.preferredContactMethod == 'email' && contact.emailVisible && contact.email.size() > 0)
+          || (contact.preferredContactMethod == 'whatsapp' && contact.whatsappVisible && contact.whatsappNumber.size() > 0));
+    }
+
+    function hasCompletePublicBusinessProfile(data) {
+      return data.ownerId is string
+        && data.ownerId.size() > 0
+        && data.managerIds is list
+        && data.ownerId in data.managerIds
+        && data.name is string
+        && data.name.size() > 0
+        && data.description is string
+        && data.description.size() > 0
+        && data.primaryCategoryId is string
+        && data.primaryCategoryId.size() > 0
+        && data.categoryIds is list
+        && data.categoryIds.size() > 0
+        && data.serviceAreas is list
+        && data.serviceAreas.size() > 0
+        && data.languages is list
+        && data.languages.size() > 0
+        && data.primaryLanguage in data.languages
+        && data.location is map
+        && data.location.locality is string
+        && data.location.locality.size() > 0
+        && data.location.region is string
+        && data.location.region.size() > 0
+        && data.location.countryCode is string
+        && data.location.countryCode.size() > 0;
+    }
+
+    function isPublicBusinessEligible(businessId) {
+      let data = businessData(businessId);
+      return businessExists(businessId)
+        && data.status == 'active'
+        && data.publishedAt != null
+        && data.deletedAt == null
+        && data.deletionRequestedAt == null
+        && data.contact is map
+        && safePublicContact(data.contact)
+        && hasCompletePublicBusinessProfile(data)
+        && !data.keys().hasAny(['phone', 'email', 'whatsapp', 'whatsappNumber']);
+    }
+
+    function isReferencedCanonicalLogo(businessId) {
+      let data = businessData(businessId);
+      return data.keys().hasAll(['logoStoragePath'])
+        && data.logoStoragePath == 'businesses/' + businessId + '/logos/logo';
+    }
+
+    function isReferencedCanonicalGallerySlot(businessId, slot) {
+      let data = businessData(businessId);
+      return data.keys().hasAll(['galleryStoragePaths'])
+        && data.galleryStoragePaths is list
+        && 'businesses/' + businessId + '/photos/' + slot in data.galleryStoragePaths;
+    }
+
+    match /users/{userId}/profile/avatar {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create, update: if hasActiveAccount()
+        && request.auth.uid == userId
+        && validCanonicalImageUpload();
       allow delete: if hasActiveAccount() && request.auth.uid == userId;
     }
 
-    match /businesses/{businessId}/{folder}/{fileName} {
-      allow read: if firestore.get(/databases/(default)/documents/businesses/$(businessId)).data.status == 'active'
+    match /users/{userId}/profile/{legacyFileName} {
+      allow get, delete: if legacyFileName != 'avatar'
+        && signedIn()
+        && request.auth.uid == userId;
+      allow list, create, update: if false;
+    }
+
+    match /businesses/{businessId}/logos/logo {
+      allow get: if (isPublicBusinessEligible(businessId) && isReferencedCanonicalLogo(businessId))
         || managesBusiness(businessId)
-        || (isModerator() && folder in ['logos', 'photos']);
-      allow create, update: if folder in ['logos', 'photos'] && managesBusiness(businessId) && validImage();
-      allow delete: if managesBusiness(businessId);
+        || isModerator();
+      allow list: if false;
+      allow create, update: if managesEditableBusiness(businessId) && validCanonicalImageUpload();
+      allow delete: if managesEditableBusiness(businessId);
+    }
+
+    match /businesses/{businessId}/photos/{slot} {
+      allow get: if slot in ['0', '1', '2', '3', '4', '5', '6', '7']
+        && ((isPublicBusinessEligible(businessId) && isReferencedCanonicalGallerySlot(businessId, slot))
+          || managesBusiness(businessId)
+          || isModerator());
+      allow list: if false;
+      allow create, update: if slot in ['0', '1', '2', '3', '4', '5', '6', '7']
+        && managesEditableBusiness(businessId)
+        && validCanonicalImageUpload();
+      allow delete: if slot in ['0', '1', '2', '3', '4', '5', '6', '7']
+        && managesEditableBusiness(businessId);
+    }
+
+    match /businesses/{businessId}/logos/{legacyFileName} {
+      allow get: if legacyFileName != 'logo'
+        && (managesBusiness(businessId) || isModerator());
+      allow delete: if legacyFileName != 'logo' && managesEditableBusiness(businessId);
+      allow list, create, update: if false;
+    }
+
+    match /businesses/{businessId}/photos/{legacyFileName} {
+      allow get: if !(legacyFileName in ['0', '1', '2', '3', '4', '5', '6', '7'])
+        && (managesBusiness(businessId) || isModerator());
+      allow delete: if !(legacyFileName in ['0', '1', '2', '3', '4', '5', '6', '7'])
+        && managesEditableBusiness(businessId);
+      allow list, create, update: if false;
     }
 
     match /{allPaths=**} {

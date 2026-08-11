@@ -3,7 +3,9 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 if (process.env.HOLALOCAL_CALLABLE_BOUNDARY === '1') {
+  await import('./accountDeletionPrimitivesEmulator.test.mjs')
   await import('./businessInsightsEmulator.test.mjs')
+  await import('./businessMediaEmulator.test.mjs')
 }
 
 test('callable boundary harness runs only under demo project isolation', () => {
@@ -24,6 +26,8 @@ test('callable exports remain registered in europe-west1', async () => {
     'getOwnerBusinessInsights',
     'assignBusinessSubscriptionPlan', 'getPublicBusiness', 'getOwnerSubscriptionStatus',
     'openBusinessConversation', 'getConversationBusinessContext',
+    'manageBusinessMedia', 'requestAccountDeletion', 'cancelAccountDeletion',
+    'finalizeAccountDeletion', 'listAdminAccountDeletionRequests',
   ]) {
     assert.match(source, new RegExp(`export const ${callableName} = onCall`))
   }

@@ -19,6 +19,11 @@ test('message translation trigger pins the Firestore region to europe-west1', as
   assert.match(source, /openBusinessConversation = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /getConversationBusinessContext = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /acceptLegalConsent = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
+  assert.match(source, /manageBusinessMedia = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
+  assert.match(source, /requestAccountDeletion = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
+  assert.match(source, /cancelAccountDeletion = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
+  assert.match(source, /finalizeAccountDeletion = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
+  assert.match(source, /listAdminAccountDeletionRequests = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /moderateBusiness = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /listPublicBusinesses = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /assignBusinessSubscriptionPlan = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
@@ -37,7 +42,7 @@ test('only callable functions opt in to public Cloud Run invocation', async () =
   assert.match(source, /translateCreatedMessage = onDocumentCreated\(\s*\{\s*document: 'conversations\/\{conversationId\}\/messages\/\{messageId\}',\s*region: MESSAGE_TRANSLATION_REGION,\s*\}/s)
   assert.doesNotMatch(source, /translateCreatedMessage = onDocumentCreated\(\s*PUBLIC_CALLABLE_OPTIONS/s)
 
-  for (const callableName of ['updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'openBusinessConversation', 'getConversationBusinessContext', 'acceptLegalConsent', 'moderateBusiness', 'listPublicBusinesses', 'assignBusinessSubscriptionPlan', 'getPublicBusiness', 'getOwnerSubscriptionStatus']) {
+  for (const callableName of ['updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'openBusinessConversation', 'getConversationBusinessContext', 'acceptLegalConsent', 'manageBusinessMedia', 'requestAccountDeletion', 'cancelAccountDeletion', 'finalizeAccountDeletion', 'listAdminAccountDeletionRequests', 'moderateBusiness', 'listPublicBusinesses', 'assignBusinessSubscriptionPlan', 'getPublicBusiness', 'getOwnerSubscriptionStatus']) {
     assert.match(source, new RegExp(`${callableName} = onCall\\(\\s*PUBLIC_CALLABLE_OPTIONS,`, 's'))
   }
   assert.match(source, /recordBusinessInsight = onCall\(\s*BUSINESS_INSIGHT_CALLABLE_OPTIONS,/s)

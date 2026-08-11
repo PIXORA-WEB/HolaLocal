@@ -14,6 +14,7 @@ import useAuthentication from '../../hooks/useAuthentication.js'
 import {
   deleteBusinessGalleryImage,
   ensureBusinessProfile,
+  getBusinessById,
   uploadBusinessGalleryImages,
   uploadBusinessLogo,
   updateBusinessProfile,
@@ -190,9 +191,8 @@ function EditBusinessPage() {
     ...language,
     label: language.value === 'other' ? t('common.other', { defaultValue: 'Other' }) : language.label,
   }))
-  const galleryImages = businessProfile?.galleryImages?.length > 0
-    ? businessProfile.galleryImages
-    : (businessProfile?.galleryImageURLs ?? []).map((downloadUrl) => ({ downloadUrl }))
+  const galleryImages = businessProfile?.galleryEntries ?? []
+  const galleryLimit = Math.max(Number(businessProfile?.entitlements?.limits?.galleryImages) || 0, 0)
   const currentDraftSignature = useMemo(
     () => draftSignature(form, customSubcategory, customLanguage),
     [customLanguage, customSubcategory, form],
@@ -499,6 +499,9 @@ function EditBusinessPage() {
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
     } catch (uploadError) {
+      await getBusinessById(businessProfile.businessId)
+        .then((latestBusiness) => latestBusiness && setBusinessProfile(latestBusiness))
+        .catch(() => undefined)
       const classifiedError = classifyFrontendError(uploadError, {
         domain: 'media',
         fallbackType: 'MEDIA_UPLOAD_FAILED',
@@ -521,7 +524,7 @@ function EditBusinessPage() {
 
   async function uploadGalleryFiles(selectedFiles) {
     if (selectedFiles.length === 0 || !businessProfile?.businessId) return
-    const remainingSlots = Math.max(8 - galleryImages.length, 0)
+    const remainingSlots = Math.max(galleryLimit - galleryImages.length, 0)
     if (remainingSlots === 0) {
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
@@ -553,6 +556,9 @@ function EditBusinessPage() {
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
     } catch (uploadError) {
+      await getBusinessById(businessProfile.businessId)
+        .then((latestBusiness) => latestBusiness && setBusinessProfile(latestBusiness))
+        .catch(() => undefined)
       const classifiedError = classifyFrontendError(uploadError, {
         domain: 'media',
         fallbackType: 'MEDIA_UPLOAD_FAILED',
@@ -861,7 +867,7 @@ function EditBusinessPage() {
                   <span>{galleryUploading ? t('business.form.media.uploading') : t('business.form.media.addImages')}</span>
                   <input
                     accept="image/jpeg,image/png,image/webp"
-                    disabled={galleryUploading || galleryImages.length >= 8}
+                    disabled={galleryUploading || galleryImages.length >= galleryLimit}
                     multiple
                     onChange={handleGalleryUpload}
                     type="file"

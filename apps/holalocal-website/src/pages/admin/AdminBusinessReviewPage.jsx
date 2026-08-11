@@ -221,9 +221,7 @@ function AdminBusinessReviewPage() {
   }
 
   const { business, history, owner, privateModeration, subscription } = state.review
-  const gallery = business.galleryImages?.length
-    ? business.galleryImages
-    : (business.galleryImageURLs ?? []).map((downloadUrl) => ({ downloadUrl }))
+  const gallery = business.galleryEntries ?? []
   const pending = business.status === 'pending_review'
   const completion = getBusinessProfileCompletion(business)
   const completedRequirements = completion.items.filter((item) => item.complete).length
@@ -237,8 +235,8 @@ function AdminBusinessReviewPage() {
       <Link className="admin-back-link" to="/admin/businesses?status=pending_review">← {t('admin.review.back')}</Link>
       <header className="admin-review__header">
         <div className="admin-review__identity">
-          {business.profilePhoto?.downloadUrl
-            ? <img className="admin-review__logo" alt={t('admin.review.logoAlt', { name: business.name })} src={business.profilePhoto.downloadUrl} />
+          {business.logoUrl
+            ? <img className="admin-review__logo" alt={t('admin.review.logoAlt', { name: business.name })} src={business.logoUrl} />
             : <span aria-hidden="true" className="admin-review__logo-fallback">{business.name?.charAt(0) || '?'}</span>}
           <div>
             <p className="admin-eyebrow">{t('admin.review.eyebrow')}</p>
