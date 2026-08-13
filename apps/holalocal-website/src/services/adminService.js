@@ -15,6 +15,7 @@ import {
   getAdminBusinessReviewCallable,
   moderateBusinessCallable,
 } from '../firebase/functionsClient.js'
+import { resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
 
 export const ADMIN_BUSINESS_STATUSES = ['pending_review', 'active', 'rejected', 'suspended']
 export const ADMIN_QUEUE_PAGE_SIZE = 24
@@ -45,10 +46,10 @@ export async function getAdminBusinessesPage({
   constraints.push(limit(Math.min(Math.max(pageSize, 1), ADMIN_QUEUE_PAGE_SIZE)))
   const snapshot = await getDocs(query(collection(db, 'businesses'), ...constraints))
   return {
-    businesses: snapshot.docs.map((business) => ({
+    businesses: await Promise.all(snapshot.docs.map((business) => resolveBusinessMediaPresentation(business.id, {
       businessId: business.id,
       ...business.data(),
-    })),
+    }))),
     cursor: snapshot.docs.at(-1) ?? null,
     hasMore: snapshot.size === Math.min(Math.max(pageSize, 1), ADMIN_QUEUE_PAGE_SIZE),
   }
@@ -56,7 +57,10 @@ export async function getAdminBusinessesPage({
 
 export async function getAdminBusinessReview(businessId) {
   const result = await getAdminBusinessReviewCallable({ businessId })
-  return result.data
+  return {
+    ...result.data,
+    business: await resolveBusinessMediaPresentation(businessId, result.data?.business),
+  }
 }
 
 function createRequestId() {

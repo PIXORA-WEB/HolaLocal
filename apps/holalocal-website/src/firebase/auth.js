@@ -5,9 +5,11 @@ import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
   deleteUser,
+  EmailAuthProvider,
   getAuth,
   onAuthStateChanged,
   reload,
+  reauthenticateWithCredential,
   sendEmailVerification,
   sendPasswordResetEmail,
   setPersistence,
@@ -112,6 +114,13 @@ export async function reloadAuthenticationUser(user) {
   if (!user) return false
   await reload(user)
   return user.emailVerified === true
+}
+
+export async function reauthenticateUserWithPassword(user, password) {
+  if (!user?.email) throw new Error('A signed-in email account is required.')
+  if (typeof password !== 'string' || !password) throw new Error('Enter your password to continue.')
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password))
+  await user.getIdToken(true)
 }
 
 export function observeAuthentication(callback, errorCallback) {

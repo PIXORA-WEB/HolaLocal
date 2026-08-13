@@ -11,6 +11,8 @@ const storageUrl = new URL('../src/firebase/storageClient.js', import.meta.url)
 const profileUrl = new URL('../src/pages/customer/ProfilePage.jsx', import.meta.url)
 const businessEditorUrl = new URL('../src/pages/business/EditBusinessPage.jsx', import.meta.url)
 const businessServiceUrl = new URL('../src/services/businessService.js', import.meta.url)
+const businessWorkflowUrl = new URL('../src/services/businessMediaWorkflow.js', import.meta.url)
+const storageClientUrl = new URL('../src/firebase/storageClient.js', import.meta.url)
 const userServiceUrl = new URL('../src/services/userService.js', import.meta.url)
 
 test('media classifier maps validation, Firebase, and unknown failures safely', () => {
@@ -57,56 +59,64 @@ test('image validation retains formats and five-megabyte limit using stable reas
   assert.doesNotMatch(source, /Image must be smaller/)
 })
 
-test('profile-photo integration preserves the existing image and suppresses raw failures', async () => {
+test('profile-photo integration uses canonical private presentation and suppresses raw failures', async () => {
   const [page, service] = await Promise.all([
     readFile(profileUrl, 'utf8'),
     readFile(userServiceUrl, 'utf8'),
   ])
 
-  assert.match(page, /profilePhotoUrl = userProfile\?\.profilePhoto\?\.downloadUrl \|\| userProfile\?\.photoURL \|\| user\?\.photoURL/)
+  assert.match(page, /loadProfileMediaPresentation\(user\?\.uid, userProfile\)/)
   assert.match(page, /classifyFrontendError\(uploadError, \{\s*domain: 'media',\s*fallbackType: 'MEDIA_UPLOAD_FAILED'/s)
   assert.match(page, /await uploadUserProfilePhoto\(user\.uid, file\)/)
   assert.match(page, /setSuccess\(t\('profile\.imageUpdated'\)\)/)
   assert.doesNotMatch(page, /uploadError\.message/)
   assert.doesNotMatch(page, /setPhotoError\([^)]*\.message/)
-  assert.match(service, /uploadImageFile\(`users\/\$\{uid\}\/profile`, file\)/)
-  assert.match(service, /photoURL: uploadedPhoto\.downloadUrl/)
-  assert.match(service, /deleteImageFile\(uploadedPhoto\.storagePath\)\.catch\(\(\) => undefined\)/)
-  assert.match(service, /throw createApplicationError\('media-save-failed'\)/)
+  assert.match(service, /buildCanonicalProfileMediaPath\(uid\)/)
+  assert.match(service, /profilePhoto: \{ storagePath \}/)
+  assert.match(service, /photoURL: null/)
+  assert.doesNotMatch(service, /photoURL: uploadedPhoto\.downloadUrl/)
 })
 
-test('business media integration preserves paths, payloads, ordering, and failure state', async () => {
-  const [page, service] = await Promise.all([
+test('business media integration uses canonical uploads and callable-owned manifests', async () => {
+  const [page, service, workflow, storage] = await Promise.all([
     readFile(businessEditorUrl, 'utf8'),
     readFile(businessServiceUrl, 'utf8'),
+    readFile(businessWorkflowUrl, 'utf8'),
+    readFile(storageClientUrl, 'utf8'),
   ])
 
-  assert.match(service, /uploadImageFile\(`businesses\/\$\{businessId\}\/logos`, file\)/)
-  assert.match(service, /uploadImageFile\(`businesses\/\$\{businessId\}\/photos`, file\)/)
-  assert.match(service, /profilePhoto: \{ \.\.\.uploadedLogo, updatedAt:/)
-  assert.match(service, /galleryImageURLs: galleryImages\.map\(\(\{ downloadUrl \}\) => downloadUrl\)/)
-  assert.match(service, /for \(const file of files\)/)
-  assert.match(service, /uploadedImages\.push/)
-  assert.match(service, /slice\(0, 8\)/)
-  assert.match(service, /throw createApplicationError\('media-save-failed'\)/)
+  assert.match(workflow, /buildCanonicalBusinessLogoPath\(businessId\)/)
+  assert.match(workflow, /buildCanonicalBusinessGalleryPath\(businessId, slot\)/)
+  assert.match(workflow, /await finalize\('set-logo', businessId, storagePath\)/)
+  assert.match(workflow, /await finalize\('add-gallery', businessId, storagePath\)/)
+  assert.doesNotMatch(service, /uploadImageFile\(`businesses/)
+  assert.doesNotMatch(service, /profilePhoto: \{ \.\.\.uploadedLogo/)
+  assert.doesNotMatch(service, /galleryStoragePaths:/)
+  assert.match(service, /const payload = \{ action, businessId, storagePath \}/)
+  assert.match(service, /new Set\(\['set-logo', 'add-gallery', 'remove-gallery', 'clear-logo'\]\)/)
+  assert.match(storage, /uploadCanonicalImageFile\(storagePath, file\)/)
+  assert.match(storage, /uploadBytes\(reference, file, \{ contentType: file\.type \}\)/)
+  const canonicalStart = storage.indexOf('export async function uploadCanonicalImageFile')
+  const canonicalUpload = storage.slice(canonicalStart, storage.indexOf('export async function getStoragePresentationUrl'))
+  assert.doesNotMatch(canonicalUpload, /originalName|randomUUID|getDownloadURL\(snapshot/)
+  assert.match(workflow, /for \(const file of files\)/)
+  assert.match(workflow, /reservationsByBusiness/)
 
   const deleteStart = service.indexOf('export async function deleteBusinessGalleryImage')
   const deleteSection = service.slice(deleteStart, service.indexOf('export async function ensureBusinessProfile'))
-  assert.ok(deleteSection.indexOf('updateBusinessProfile') < deleteSection.indexOf('deleteImageFile'))
-  assert.match(deleteSection, /deleteImageFile\(image\.storagePath\)\.catch\(\(\) => undefined\)/)
+  assert.match(deleteSection, /finalize\('remove-gallery', businessId, image\.storagePath\)/)
+  assert.match(deleteSection, /parseLegacyFirebaseBusinessMediaUrl/)
 
   assert.ok((page.match(/classifyFrontendError\(/g) ?? []).length >= 3)
   assert.doesNotMatch(page, /(?:uploadError|deleteError)\.message/)
   assert.match(page, /setBusinessProfile\(await uploadBusinessLogo/)
   assert.match(page, /setBusinessProfile\(\s*await uploadBusinessGalleryImages/s)
   assert.match(page, /setBusinessProfile\(await deleteBusinessGalleryImage/)
-  assert.match(page, /remainingSlots = Math\.max\(8 - galleryImages\.length, 0\)/)
+  assert.match(page, /remainingSlots = Math\.max\(galleryLimit - galleryImages\.length, 0\)/)
+  assert.match(page, /businessProfile\?\.entitlements\?\.limits\?\.galleryImages/)
 
-  for (const catchName of ['uploadError', 'deleteError']) {
-    const catchIndex = page.indexOf(`catch (${catchName})`)
-    const finallyIndex = page.indexOf('} finally {', catchIndex)
-    assert.doesNotMatch(page.slice(catchIndex, finallyIndex), /setBusinessProfile/)
-  }
+  assert.match(page, /await getBusinessById\(businessProfile\.businessId\)[\s\S]*setBusinessProfile\(latestBusiness\)/)
+  assert.doesNotMatch(page, /setBusinessProfile\([^)]*uploaded/)
 })
 
 test('media error translations resolve for all seventeen locales', async () => {

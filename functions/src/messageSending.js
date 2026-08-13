@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { HttpsError } from 'firebase-functions/v2/https'
 import {
   CONVERSATION_STATUS_ACTIVE,
+  CONVERSATION_STATUS_PARTICIPANT_DELETED,
   MAX_MESSAGE_LENGTH,
   shouldAdvanceConversationPreview,
 } from '@holalocal/firebase-contract'
@@ -47,6 +48,9 @@ export function buildIdempotentMessageId(senderId, requestId) {
 function assertConversationAccess({ conversation, business, uid }) {
   if (!Array.isArray(conversation.participantIds) || !conversation.participantIds.includes(uid)) {
     throw new HttpsError('permission-denied', 'conversation-access-denied')
+  }
+  if (conversation.status === CONVERSATION_STATUS_PARTICIPANT_DELETED) {
+    throw new HttpsError('failed-precondition', 'conversation-participant-deleted')
   }
   if (conversation.status !== CONVERSATION_STATUS_ACTIVE) {
     throw new HttpsError('failed-precondition', 'conversation-not-active')

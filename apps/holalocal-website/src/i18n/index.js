@@ -8,6 +8,9 @@ import {
 } from './defaultTranslations.js'
 import { englishLegalPages } from './englishLegalPages.js'
 import { legalConsentEnglishTranslations } from './legalConsentEnglishTranslations.js'
+import { accountDeletionEnglishTranslations } from './accountDeletionEnglishTranslations.js'
+import { conversationTerminalTranslations } from './conversationTerminalTranslations.js'
+import { adminDeletionTranslations } from './adminDeletionTranslations.js'
 import en from './locales/en.json'
 import { mergeLocale } from './locales/mergeLocale.js'
 
@@ -43,6 +46,9 @@ const englishResource = mergeLocale(
   ownerEnglishRejectionTranslations,
   { legalPages: englishLegalPages },
   legalConsentEnglishTranslations,
+  accountDeletionEnglishTranslations,
+  conversationTerminalTranslations.en,
+  adminDeletionTranslations.en,
   { locations: { areas: serviceAreaLabels } },
 )
 const loadedLocales = new Set(['en'])
@@ -72,6 +78,7 @@ export async function loadLocale(languageCode) {
     import('./locales/legalContent.js'),
     import('./locales/universalOperationalTranslations.js'),
     import('./adminTranslations.js'),
+    import('./accountDeletionTranslations.js'),
   ]).then(([
     { default: baseLocale },
     { authenticatedTranslations },
@@ -80,6 +87,7 @@ export async function loadLocale(languageCode) {
     { legalPageContent },
     { universalOperationalTranslations },
     { ownerRejectionTranslations },
+    { accountDeletionTranslations },
   ]) => {
     const resource = mergeLocale(
       en,
@@ -90,6 +98,9 @@ export async function loadLocale(languageCode) {
       universalOperationalTranslations[code],
       adminEnglishTranslations,
       ownerRejectionTranslations[code],
+      accountDeletionTranslations[code],
+      conversationTerminalTranslations[code],
+      adminDeletionTranslations[code],
       { legalPages: legalPageContent[code] },
       { locations: { areas: serviceAreaLabels } },
     )

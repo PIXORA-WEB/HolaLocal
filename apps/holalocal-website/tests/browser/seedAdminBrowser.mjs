@@ -4,6 +4,10 @@ import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import {
   TEST_BUSINESS_ID,
+  TEST_LEGACY_GALLERY_PATH,
+  TEST_LEGACY_GALLERY_URL,
+  TEST_LEGACY_LOGO_PATH,
+  TEST_LEGACY_LOGO_URL,
   TEST_PASSWORD,
   TEST_PROJECT_ID,
   TEST_USERS,
@@ -83,18 +87,13 @@ const onePixelPng = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64',
 )
-const token = 'browser-smoke-download-token'
-const logoPath = `businesses/${TEST_BUSINESS_ID}/logos/logo.png`
-const galleryPath = `businesses/${TEST_BUSINESS_ID}/gallery/gallery.png`
+const logoPath = TEST_LEGACY_LOGO_PATH
+const galleryPath = TEST_LEGACY_GALLERY_PATH
 for (const path of [logoPath, galleryPath]) {
   await bucket.file(path).save(onePixelPng, {
     contentType: 'image/png',
-    metadata: { metadata: { firebaseStorageDownloadTokens: token } },
   })
 }
-const mediaUrl = (path) => (
-  `http://127.0.0.1:9199/v0/b/${storageBucket}/o/${encodeURIComponent(path)}?alt=media&token=${token}`
-)
 const submittedAt = Timestamp.fromDate(new Date('2026-07-01T12:00:00.000Z'))
 await db.doc(`businesses/${TEST_BUSINESS_ID}`).set({
   ownerId: TEST_USERS.owner.uid,
@@ -117,14 +116,14 @@ await db.doc(`businesses/${TEST_BUSINESS_ID}`).set({
   languages: ['en', 'es'],
   primaryLanguage: 'en',
   profilePhoto: {
-    storagePath: logoPath, downloadUrl: mediaUrl(logoPath), contentType: 'image/png',
+    storagePath: logoPath, downloadUrl: TEST_LEGACY_LOGO_URL, contentType: 'image/png',
     originalName: 'logo.png', size: onePixelPng.length,
   },
   galleryImages: [{
-    storagePath: galleryPath, downloadUrl: mediaUrl(galleryPath), contentType: 'image/png',
+    storagePath: galleryPath, downloadUrl: TEST_LEGACY_GALLERY_URL, contentType: 'image/png',
     originalName: 'gallery.png', size: onePixelPng.length,
   }],
-  galleryImageURLs: [mediaUrl(galleryPath)],
+  galleryImageURLs: [TEST_LEGACY_GALLERY_URL],
   galleryCount: 1,
   ratingAverage: 0,
   ratingCount: 0,

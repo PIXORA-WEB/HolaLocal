@@ -6,10 +6,15 @@ import { updateAccountRoleCallable } from '../firebase/functionsClient.js'
 import { createApplicationError } from '../utils/frontendErrors.js'
 import { hasCurrentLegalConsent } from '../utils/policies.js'
 import { toWebsiteUserProfile } from './firebaseCompatibility.js'
+import {
+  buildCanonicalProfileMediaPath,
+  isCanonicalProfileMediaPath,
+  parseLegacyFirebaseProfileMediaUrl,
+} from '@holalocal/firebase-contract'
 
-async function uploadImageFile(...args) {
+async function uploadCanonicalImageFile(...args) {
   const storage = await import('../firebase/storageClient.js')
-  return storage.uploadImageFile(...args)
+  return storage.uploadCanonicalImageFile(...args)
 }
 
 async function deleteImageFile(...args) {
@@ -22,13 +27,10 @@ const editableProfileFields = new Set([
   'displayNameNormalized',
   'firstName',
   'lastName',
-  'photoURL',
-  'profilePhoto',
   'preferredLocale',
   'city',
   'country',
   'profileCompleted',
-  'deletionRequestedAt',
 ])
 
 const consentFields = new Set([
@@ -159,28 +161,36 @@ export async function enableBusinessRole(uid) {
 
 export async function uploadUserProfilePhoto(uid, file) {
   const existingProfile = await getUserProfile(uid)
-  const uploadedPhoto = await uploadImageFile(`users/${uid}/profile`, file)
+  const storagePath = buildCanonicalProfileMediaPath(uid)
+  const wasCanonical = isCanonicalProfileMediaPath(
+    existingProfile?.profilePhoto?.storagePath,
+    uid,
+  )
+  const legacyProfilePath = !wasCanonical
+    ? parseLegacyFirebaseProfileMediaUrl(
+        existingProfile?.profilePhoto?.downloadUrl ?? existingProfile?.photoURL,
+        uid,
+      )?.storagePath ?? null
+    : null
+
+  await uploadCanonicalImageFile(storagePath, file)
+
+  if (wasCanonical) return existingProfile
 
   try {
-    const updatedProfile = await updateUserProfile(uid, {
-      photoURL: uploadedPhoto.downloadUrl,
-      profilePhoto: {
-        ...uploadedPhoto,
-        uploadedAt: new Date().toISOString(),
-      },
+    await updateDoc(userDocument(uid), {
+      photoURL: null,
+      profilePhoto: { storagePath },
+      updatedAt: serverTimestamp(),
     })
+    const updatedProfile = await getUserProfile(uid)
 
-    if (
-      existingProfile?.profilePhoto?.storagePath &&
-      existingProfile.profilePhoto.storagePath !== uploadedPhoto.storagePath
-    ) {
-      await deleteImageFile(existingProfile.profilePhoto.storagePath).catch(() => undefined)
-    }
+    if (legacyProfilePath) await deleteImageFile(legacyProfilePath).catch(() => undefined)
 
     return updatedProfile
-  } catch {
-    await deleteImageFile(uploadedPhoto.storagePath).catch(() => undefined)
-    throw createApplicationError('media-save-failed')
+  } catch (error) {
+    await deleteImageFile(storagePath).catch(() => undefined)
+    throw error
   }
 }
 

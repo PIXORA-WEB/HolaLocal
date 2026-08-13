@@ -3,6 +3,10 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { acceptLegalConsent as runAcceptLegalConsent } from './legalConsent.js'
+import { cancelAccountDeletion as runCancelAccountDeletion, requestAccountDeletion as runRequestAccountDeletion } from './accountDeletion.js'
+import { finalizeAccountDeletion as runFinalizeAccountDeletion } from './accountDeletionFinalizer.js'
+import { listAdminAccountDeletionRequests as runListAdminAccountDeletionRequests } from './adminAccountDeletion.js'
+import { manageBusinessMedia as runManageBusinessMedia } from './businessMedia.js'
 import { transitionAccountRole } from './accountRoleTransition.js'
 import { getAdminBusinessReview as runGetAdminBusinessReview } from './adminBusinessReview.js'
 import { assignBusinessSubscriptionPlan as runAssignBusinessSubscriptionPlan } from './subscriptionPlanAssignment.js'
@@ -74,6 +78,21 @@ export async function handleEnsureOwnerBusiness(request, db) {
   })
 }
 
+export async function handleListAdminAccountDeletionRequests(request, db) {
+  const data = request.data ?? {}
+  const allowedKeys = ['includeHistory']
+  if (!data || typeof data !== 'object' || Array.isArray(data)
+    || Object.keys(data).some((key) => !allowedKeys.includes(key))) {
+    throw new HttpsError('invalid-argument', 'invalid-account-deletion-query')
+  }
+  return runListAdminAccountDeletionRequests({
+    adminUid: requireCallableUid(request),
+    claims: request.auth?.token,
+    includeHistory: data.includeHistory ?? false,
+    db: db ?? getFirestore(),
+  })
+}
+
 export async function handleSendMessage(request, db) {
   const uid = requireCallableUid(request)
   return sendConversationMessage({
@@ -115,6 +134,46 @@ export async function handleAcceptLegalConsent(request, db) {
     acceptTerms: request.data.acceptTerms,
     acceptPrivacy: request.data.acceptPrivacy,
     db: db ?? getFirestore(),
+  })
+}
+
+export async function handleManageBusinessMedia(request, dependencies = {}) {
+  const uid = requireCallableUid(request)
+  requireExactInput(request.data, ['action', 'businessId', 'storagePath'])
+  return runManageBusinessMedia({
+    uid,
+    action: request.data.action,
+    businessId: request.data.businessId,
+    storagePath: request.data.storagePath,
+    db: dependencies.db ?? getFirestore(),
+    readObjectMetadata: dependencies.readObjectMetadata,
+    deleteObject: dependencies.deleteObject,
+  })
+}
+
+export async function handleRequestAccountDeletion(request, db) {
+  const uid = requireCallableUid(request)
+  requireExactInput(request.data, [])
+  return runRequestAccountDeletion({ uid, emailVerified: request.auth?.token?.email_verified === true, authTime: request.auth?.token?.auth_time, claims: request.auth?.token, db: db ?? getFirestore() })
+}
+
+export async function handleCancelAccountDeletion(request, db) {
+  const uid = requireCallableUid(request)
+  requireExactInput(request.data, [])
+  return runCancelAccountDeletion({ uid, db: db ?? getFirestore() })
+}
+
+export async function handleFinalizeAccountDeletion(request, dependencies = {}) {
+  const adminUid = requireCallableUid(request)
+  if (request.auth?.token?.admin !== true) throw new HttpsError('permission-denied', 'admin-required')
+  requireExactInput(request.data, ['uid', 'expectedRequestVersion'])
+  return runFinalizeAccountDeletion({
+    adminUid,
+    claims: request.auth.token,
+    uid: request.data.uid,
+    expectedRequestVersion: request.data.expectedRequestVersion,
+    db: dependencies.db ?? getFirestore(),
+    primitives: dependencies.primitives,
   })
 }
 
@@ -257,6 +316,16 @@ export const acceptLegalConsent = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleAcceptLegalConsent(request),
 )
+
+export const manageBusinessMedia = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleManageBusinessMedia(request),
+)
+
+export const requestAccountDeletion = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => handleRequestAccountDeletion(request))
+export const cancelAccountDeletion = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => handleCancelAccountDeletion(request))
+export const finalizeAccountDeletion = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => handleFinalizeAccountDeletion(request))
+export const listAdminAccountDeletionRequests = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => handleListAdminAccountDeletionRequests(request))
 
 export const moderateBusiness = onCall(
   PUBLIC_CALLABLE_OPTIONS,

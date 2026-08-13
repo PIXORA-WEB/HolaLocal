@@ -293,7 +293,7 @@ test('real transactions create one conversation for concurrent identical opens',
     .where('customerId', '==', customerId).where('businessId', '==', businessId).get()
   assert.equal(conversations.size, 1)
   assert.deepEqual(Object.keys(conversations.docs[0].data().businessSnapshot).sort(), [
-    'logoUrl', 'name', 'primaryLanguage',
+    'logoStoragePath', 'logoUrl', 'name', 'primaryLanguage',
   ])
   assert.equal('ownerId' in conversations.docs[0].data().businessSnapshot, false)
 })

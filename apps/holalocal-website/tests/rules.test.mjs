@@ -3,11 +3,11 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import {
-  collection, doc, documentId, FieldPath, getCountFromServer, getDoc, getDocs,
+  collection, deleteDoc, doc, documentId, FieldPath, getCountFromServer, getDoc, getDocs,
   limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where,
   writeBatch,
 } from 'firebase/firestore'
-import { deleteObject, getBytes, ref, uploadBytes } from 'firebase/storage'
+import { deleteObject, getBytes, listAll, ref, uploadBytes } from 'firebase/storage'
 import {
   buildConversationId,
   conversationInboxQueryFilters,
@@ -37,6 +37,9 @@ const users = {
   unrelated: user('unrelated', { roles: ['customer'] }),
   suspended: user('suspended', { roles: ['customer'], accountStatus: 'suspended' }),
   deleted: user('deleted', { roles: ['customer'], accountStatus: 'deleted' }),
+  'deletion-pending': user('deletion-pending', { deletionRequestedAt: serverTimestamp() }),
+  moderator: user('moderator'),
+  admin: user('admin'),
 }
 let environment
 
@@ -119,7 +122,15 @@ async function seed() {
   await environment.withSecurityRulesDisabled(async (context) => {
     const database = context.firestore()
     await Promise.all(Object.entries(users).map(([id, user]) => setDoc(doc(database, 'users', id), user)))
-    await setDoc(doc(database, 'businesses', 'active-business'), business())
+    await setDoc(doc(database, 'accountDeletionRequests', 'deletion-pending'), {
+      uid: 'deletion-pending', state: 'requested', requestedAt: serverTimestamp(),
+      requestedBy: 'deletion-pending', cancelledAt: null, updatedAt: serverTimestamp(),
+      requestVersion: 1,
+    })
+    await setDoc(doc(database, 'businesses', 'active-business'), business({
+      logoStoragePath: 'businesses/active-business/logos/logo',
+      galleryStoragePaths: ['businesses/active-business/photos/0'],
+    }))
     await setDoc(doc(database, 'businesses', 'draft-business'), business({
       managerIds: ['owner'],
       status: 'draft',
@@ -181,6 +192,34 @@ async function seed() {
       name: 'UID canonical business',
       publishedAt: null,
       submittedAt: null,
+    }))
+    for (const ownerId of ['suspended', 'deleted', 'deletion-pending']) {
+      await setDoc(doc(database, 'businesses', `${ownerId}-owner-business`), business({
+        ownerId,
+        managerIds: [ownerId],
+        status: 'draft',
+        name: `${ownerId} owner business`,
+        publishedAt: null,
+        submittedAt: null,
+      }))
+    }
+    await setDoc(doc(database, 'businesses', 'canonical-draft-business'), business({
+      managerIds: ['owner'],
+      status: 'draft',
+      name: 'Canonical media draft',
+      publishedAt: null,
+      submittedAt: null,
+      logoStoragePath: 'businesses/canonical-draft-business/logos/logo',
+      galleryStoragePaths: [
+        'businesses/canonical-draft-business/photos/7',
+        'businesses/canonical-draft-business/photos/0',
+        'businesses/canonical-draft-business/photos/6',
+        'businesses/canonical-draft-business/photos/1',
+        'businesses/canonical-draft-business/photos/5',
+        'businesses/canonical-draft-business/photos/2',
+        'businesses/canonical-draft-business/photos/4',
+        'businesses/canonical-draft-business/photos/3',
+      ],
     }))
     await setDoc(doc(database, 'businessPrivate', 'active-business'), {
       ownerId: 'owner', managerIds: ['owner', 'manager'],
@@ -301,6 +340,12 @@ async function seedMessageWithoutRules(conversationId, messageId, messageData = 
   })
 }
 
+async function seedStorageWithoutRules(path, data = new Uint8Array([137, 80, 78, 71]), metadata = { contentType: 'image/png' }) {
+  await environment.withSecurityRulesDisabled(async (context) => {
+    await uploadBytes(ref(context.storage(), path), data, metadata)
+  })
+}
+
 before(async () => {
   environment = await initializeTestEnvironment({
     projectId,
@@ -308,7 +353,10 @@ before(async () => {
     storage: { rules: await readFile('../../storage.rules', 'utf8') },
   })
 })
-beforeEach(async () => { await environment.clearFirestore(); await seed() })
+beforeEach(async () => {
+  await Promise.all([environment.clearFirestore(), environment.clearStorage()])
+  await seed()
+})
 after(async () => { await environment.cleanup() })
 
 describe('users and account lifecycle', () => {
@@ -383,6 +431,28 @@ describe('users and account lifecycle', () => {
       updatedAt: serverTimestamp(),
     }))
   })
+  test('deletion workflow is owner-readable and backend-write-only', async () => {
+    const own = environment.authenticatedContext('deletion-pending').firestore()
+    const other = environment.authenticatedContext('unrelated').firestore()
+    await assertSucceeds(getDoc(doc(own, 'accountDeletionRequests', 'deletion-pending')))
+    await assertFails(getDoc(doc(other, 'accountDeletionRequests', 'deletion-pending')))
+    await assertFails(getDocs(collection(own, 'accountDeletionRequests')))
+    await assertFails(setDoc(doc(other, 'accountDeletionRequests', 'unrelated'), {
+      uid: 'unrelated', state: 'requested', requestedAt: serverTimestamp(),
+    }))
+    await assertFails(updateDoc(doc(own, 'accountDeletionRequests', 'deletion-pending'), { state: 'cancelled' }))
+  })
+  test('generic profile writes cannot fabricate or clear deletion lifecycle state', async () => {
+    await assertFails(updateDoc(doc(environment.authenticatedContext('customer').firestore(), 'users', 'customer'), {
+      deletionRequestedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }))
+    await assertFails(updateDoc(doc(environment.authenticatedContext('customer').firestore(), 'users', 'customer'), {
+      accountStatus: 'deletion_pending', updatedAt: serverTimestamp(),
+    }))
+    await assertFails(updateDoc(doc(environment.authenticatedContext('deletion-pending').firestore(), 'users', 'deletion-pending'), {
+      deletionRequestedAt: null, updatedAt: serverTimestamp(),
+    }))
+  })
   test('valid customer profile update succeeds with validated completion', async () => {
     await assertSucceeds(updateDoc(doc(environment.authenticatedContext('customer').firestore(), 'users', 'customer'), {
       firstName: 'Casey',
@@ -395,6 +465,67 @@ describe('users and account lifecycle', () => {
       profileCompleted: true,
       updatedAt: serverTimestamp(),
     }))
+  })
+  test('owner can establish only the exact minimal canonical profile-media representation', async () => {
+    const reference = doc(environment.authenticatedContext('customer').firestore(), 'users', 'customer')
+    await assertSucceeds(updateDoc(reference, {
+      photoURL: null,
+      profilePhoto: { storagePath: 'users/customer/profile/avatar' },
+      updatedAt: serverTimestamp(),
+    }))
+    for (const profilePhoto of [
+      { storagePath: 'users/unrelated/profile/avatar' },
+      { storagePath: 'users/customer/profile/custom.png' },
+      { storagePath: 'https://example.invalid/avatar.png' },
+      { storagePath: 'users/customer/profile/avatar', originalName: 'avatar.png' },
+      { storagePath: 'users/customer/profile/avatar', downloadUrl: 'https://example.invalid/avatar.png' },
+    ]) {
+      await assertFails(updateDoc(reference, {
+        photoURL: null,
+        profilePhoto,
+        updatedAt: serverTimestamp(),
+      }))
+    }
+    await assertFails(updateDoc(reference, {
+      photoURL: 'https://example.invalid/avatar.png',
+      profilePhoto: null,
+      updatedAt: serverTimestamp(),
+    }))
+  })
+  test('profile media may remain unchanged, be cleared, and survives ordinary profile edits', async () => {
+    const legacy = {
+      contentType: 'image/png',
+      downloadUrl: 'https://firebasestorage.googleapis.com/legacy-token',
+      originalName: 'legacy.png',
+      size: 123,
+      storagePath: 'users/customer/profile/legacy.png',
+    }
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'users', 'customer'), {
+        photoURL: legacy.downloadUrl,
+        profilePhoto: legacy,
+      })
+    })
+    const reference = doc(environment.authenticatedContext('customer').firestore(), 'users', 'customer')
+    await assertSucceeds(updateDoc(reference, {
+      city: 'Estepona',
+      updatedAt: serverTimestamp(),
+    }))
+    let profile = (await getDoc(reference)).data()
+    assert.deepEqual(profile.profilePhoto, legacy)
+    assert.equal(profile.photoURL, legacy.downloadUrl)
+    await assertFails(updateDoc(reference, {
+      profilePhoto: { ...legacy, originalName: 'fabricated.png' },
+      updatedAt: serverTimestamp(),
+    }))
+    await assertSucceeds(updateDoc(reference, {
+      photoURL: null,
+      profilePhoto: null,
+      updatedAt: serverTimestamp(),
+    }))
+    profile = (await getDoc(reference)).data()
+    assert.equal(profile.profilePhoto, null)
+    assert.equal(profile.photoURL, null)
   })
   test('callable-created consent profile can complete normally without changing consent', async () => {
     const uid = 'consent-recovery'
@@ -439,8 +570,8 @@ describe('users and account lifecycle', () => {
       updatedAt: serverTimestamp(),
     }))
   })
-  test('blocked accounts cannot perform protected writes', async () => {
-    for (const id of ['suspended', 'deleted']) {
+  test('blocked and deletion-pending accounts cannot perform protected writes', async () => {
+    for (const id of ['suspended', 'deleted', 'deletion-pending']) {
       await assertFails(setDoc(doc(environment.authenticatedContext(id).firestore(), 'reports', `report-${id}`), { reporterId: id }))
     }
   })
@@ -553,6 +684,91 @@ describe('business documents', () => {
     await assertSucceeds(updateDoc(doc(environment.authenticatedContext('owner').firestore(), 'businesses', 'draft-business'), { tagline: 'Owner edit', updatedAt: serverTimestamp() }))
     await assertSucceeds(updateDoc(doc(environment.authenticatedContext('manager').firestore(), 'businesses', 'manager'), { tagline: 'Manager edit', updatedAt: serverTimestamp() }))
     await assertFails(updateDoc(doc(environment.authenticatedContext('unrelated').firestore(), 'businesses', 'active-business'), { tagline: 'No access', updatedAt: serverTimestamp() }))
+  })
+  test('valid server-established canonical media survives ordinary draft edits', async () => {
+    const reference = doc(
+      environment.authenticatedContext('owner').firestore(),
+      'businesses',
+      'canonical-draft-business',
+    )
+    await assertSucceeds(updateDoc(reference, {
+      tagline: 'Canonical manifest preserved',
+      updatedAt: serverTimestamp(),
+    }))
+    const updated = (await getDoc(reference)).data()
+    assert.equal(updated.logoStoragePath, 'businesses/canonical-draft-business/logos/logo')
+    assert.deepEqual(updated.galleryStoragePaths, [
+      'businesses/canonical-draft-business/photos/7',
+      'businesses/canonical-draft-business/photos/0',
+      'businesses/canonical-draft-business/photos/6',
+      'businesses/canonical-draft-business/photos/1',
+      'businesses/canonical-draft-business/photos/5',
+      'businesses/canonical-draft-business/photos/2',
+      'businesses/canonical-draft-business/photos/4',
+      'businesses/canonical-draft-business/photos/3',
+    ])
+  })
+  test('browser clients cannot establish or mutate canonical business media manifests', async () => {
+    const draft = doc(environment.authenticatedContext('owner').firestore(), 'businesses', 'draft-business')
+    for (const update of [
+      { logoStoragePath: 'businesses/draft-business/logos/logo' },
+      { logoStoragePath: 'businesses/other-business/logos/logo' },
+      { logoStoragePath: 'https://example.invalid/logo.png' },
+      { galleryStoragePaths: ['businesses/draft-business/photos/0'] },
+      { galleryStoragePaths: ['businesses/other-business/photos/0'] },
+      { galleryStoragePaths: ['businesses/draft-business/photos/8'] },
+      { galleryStoragePaths: ['businesses/draft-business/photos/0', 'businesses/draft-business/photos/0'] },
+      { galleryStoragePaths: ['businesses/draft-business/photos/../logos/logo'] },
+      { galleryStoragePaths: ['https://example.invalid/photo.png'] },
+    ]) {
+      await assertFails(updateDoc(draft, { ...update, updatedAt: serverTimestamp() }))
+    }
+  })
+  test('malformed server-established canonical media blocks subsequent owner writes', async () => {
+    const malformedCases = [
+      (businessId) => ({ logoStoragePath: 'businesses/wrong/logos/logo' }),
+      (businessId) => ({ logoStoragePath: `businesses/${businessId}/logos/custom.png` }),
+      (businessId) => ({ galleryStoragePaths: [`businesses/${businessId}/photos/8`] }),
+      (businessId) => ({ galleryStoragePaths: [
+        `businesses/${businessId}/photos/0`,
+        `businesses/${businessId}/photos/0`,
+      ] }),
+      (businessId) => ({ galleryStoragePaths: ['https://example.invalid/photo.png'] }),
+    ]
+    for (const [index, buildMedia] of malformedCases.entries()) {
+      const businessId = `malformed-media-business-${index}`
+      await environment.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'businesses', businessId), business({
+          managerIds: ['owner'],
+          status: 'draft',
+          name: 'Malformed canonical media',
+          publishedAt: null,
+          submittedAt: null,
+          ...buildMedia(businessId),
+        }))
+      })
+      await assertFails(updateDoc(
+        doc(environment.authenticatedContext('owner').firestore(), 'businesses', businessId),
+        { tagline: 'Must remain blocked', updatedAt: serverTimestamp() },
+      ))
+    }
+  })
+  test('legacy website media fields remain writable in editable states during transition', async () => {
+    const reference = doc(environment.authenticatedContext('owner').firestore(), 'businesses', 'draft-business')
+    const legacyLogo = {
+      contentType: 'image/png',
+      downloadUrl: 'https://firebasestorage.googleapis.com/legacy-logo',
+      originalName: 'legacy-logo.png',
+      size: 123,
+      storagePath: 'businesses/draft-business/logos/legacy-logo.png',
+    }
+    const legacyGallery = [{ ...legacyLogo, storagePath: 'businesses/draft-business/photos/legacy-photo.png' }]
+    await assertSucceeds(updateDoc(reference, {
+      profilePhoto: legacyLogo,
+      galleryImages: legacyGallery,
+      galleryImageURLs: [legacyGallery[0].downloadUrl],
+      updatedAt: serverTimestamp(),
+    }))
   })
   test('owners and managers cannot edit active suspended archived or deleted businesses', async () => {
     for (const businessId of ['active-business', 'suspended-business', 'archived-business', 'deleted-business']) {
@@ -846,6 +1062,73 @@ describe('business documents', () => {
 })
 
 describe('conversations and messages', () => {
+  test('surviving participant retains terminal history and only personal read state remains writable', async () => {
+    const conversationId = 'v2_deleted-participant-history'
+    await seedConversationWithoutRules(conversationId, conversation({
+      status: 'participant_deleted',
+      participantTombstones: {
+        customer: { type: 'deleted_user', deletedAt: Timestamp.now() },
+      },
+    }))
+    await seedMessageWithoutRules(conversationId, 'historic-message')
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore()
+      await setDoc(doc(database, 'users', 'same-email-new-uid'), user('same-email-new-uid', {
+        email: users.customer.email,
+      }))
+      await deleteDoc(doc(database, 'users', 'customer'))
+    })
+
+    const owner = environment.authenticatedContext('owner').firestore()
+    const unrelated = environment.authenticatedContext('unrelated').firestore()
+    const replacement = environment.authenticatedContext('same-email-new-uid').firestore()
+    const anonymous = environment.unauthenticatedContext().firestore()
+    const reference = doc(owner, 'conversations', conversationId)
+
+    await assertSucceeds(getDoc(reference))
+    await assertSucceeds(getDoc(doc(owner, `conversations/${conversationId}/messages`, 'historic-message')))
+    const inbox = await assertSucceeds(getDocs(inboxQuery(owner, 'owner')))
+    assert.deepEqual(inbox.docs.map(({ id }) => id), [conversationId])
+    await assertFails(getDoc(doc(unrelated, 'conversations', conversationId)))
+    await assertFails(getDoc(doc(replacement, 'conversations', conversationId)))
+    await assertFails(getDoc(doc(anonymous, 'conversations', conversationId)))
+    await assertFails(getDoc(doc(unrelated, `conversations/${conversationId}/messages`, 'historic-message')))
+    await assertFails(getDoc(doc(replacement, `conversations/${conversationId}/messages`, 'historic-message')))
+
+    await assertSucceeds(updateDoc(
+      reference,
+      new FieldPath('participantState', 'owner', 'lastReadAt'), serverTimestamp(),
+      'updatedAt', serverTimestamp(),
+    ))
+    await assertFails(updateDoc(reference, { status: 'active', updatedAt: serverTimestamp() }))
+    await assertFails(updateDoc(reference, { participantIds: ['owner', 'unrelated'], updatedAt: serverTimestamp() }))
+    await assertFails(updateDoc(reference, { customerId: 'unrelated', updatedAt: serverTimestamp() }))
+    await assertFails(updateDoc(reference, { participantTombstones: {}, updatedAt: serverTimestamp() }))
+    await assertFails(updateDoc(reference, {
+      participantTombstones: {
+        customer: { type: 'deleted_user', deletedAt: Timestamp.now(), name: 'forged' },
+      },
+      updatedAt: serverTimestamp(),
+    }))
+
+    await assertFails(setDoc(doc(owner, `conversations/${conversationId}/messages`, 'new-message'), message({
+      senderId: 'owner', text: 'Must remain terminal',
+    })))
+  })
+
+  test('clients cannot fabricate participant deletion or tombstones on active conversations', async () => {
+    const conversationId = canonicalConversationId()
+    await createConversation(conversationId)
+    const owner = environment.authenticatedContext('owner').firestore()
+    await assertFails(updateDoc(doc(owner, 'conversations', conversationId), {
+      status: 'participant_deleted',
+      participantTombstones: {
+        customer: { type: 'deleted_user', deletedAt: serverTimestamp() },
+      },
+      updatedAt: serverTimestamp(),
+    }))
+  })
+
   test('server-created v2 conversations with snapshots preserve participant-only access', async () => {
     const conversationId = 'v2_rules-safe-conversation'
     const payload = conversation({
@@ -1383,35 +1666,223 @@ describe('business insights aggregates', () => {
 
 describe('storage', () => {
   const image = new Uint8Array([137, 80, 78, 71])
-  test('manager image upload succeeds and unrelated upload fails', async () => {
-    await assertSucceeds(uploadBytes(ref(environment.authenticatedContext('manager').storage(), 'businesses/active-business/photos/valid.png'), image, { contentType: 'image/png' }))
-    await assertFails(uploadBytes(ref(environment.authenticatedContext('unrelated').storage(), 'businesses/active-business/photos/invalid.png'), image, { contentType: 'image/png' }))
-  })
-  test('invalid type and oversized images fail', async () => {
-    const storage = environment.authenticatedContext('owner').storage()
-    await assertFails(uploadBytes(ref(storage, 'businesses/active-business/photos/file.txt'), image, { contentType: 'text/plain' }))
-    await assertFails(uploadBytes(ref(storage, 'businesses/active-business/photos/large.png'), new Uint8Array(5 * 1024 * 1024), { contentType: 'image/png' }))
-  })
-  test('suspended accounts cannot upload files', async () => {
-    await assertFails(uploadBytes(ref(environment.authenticatedContext('suspended').storage(), 'users/suspended/profile/photo.png'), image, { contentType: 'image/png' }))
-  })
-  test('unrelated users cannot delete business media', async () => {
-    const path = 'businesses/active-business/photos/delete.png'
-    await assertSucceeds(uploadBytes(ref(environment.authenticatedContext('owner').storage(), path), image, { contentType: 'image/png' }))
-    await assertFails(deleteObject(ref(environment.authenticatedContext('unrelated').storage(), path)))
-  })
-  test('moderators can read pending review media only from established media folders', async () => {
+  test('canonical profile media is private to its owner and cannot be listed', async () => {
+    const path = 'users/owner/profile/avatar'
     const ownerStorage = environment.authenticatedContext('owner').storage()
-    const logoPath = 'businesses/pending_review-business/logos/review.png'
-    const privateFolderPath = 'businesses/pending_review-business/internal/review.png'
-    await assertSucceeds(uploadBytes(ref(ownerStorage, logoPath), image, { contentType: 'image/png' }))
-    await environment.withSecurityRulesDisabled(async (context) => {
-      await uploadBytes(ref(context.storage(), privateFolderPath), image, { contentType: 'image/png' })
-    })
+    await assertSucceeds(uploadBytes(ref(ownerStorage, path), image, { contentType: 'image/png' }))
+    await assertSucceeds(getBytes(ref(ownerStorage, path)))
+    await assertFails(getBytes(ref(environment.authenticatedContext('unrelated').storage(), path)))
+    await assertFails(getBytes(ref(environment.unauthenticatedContext().storage(), path)))
+    await assertFails(getBytes(ref(environment.authenticatedContext('moderator', { moderator: true }).storage(), path)))
+    await assertFails(getBytes(ref(environment.authenticatedContext('admin', { admin: true }).storage(), path)))
+    await assertFails(listAll(ref(ownerStorage, 'users/owner/profile')))
+  })
+  test('profile writes accept only the exact canonical slot and valid active owner', async () => {
+    await assertSucceeds(uploadBytes(
+      ref(environment.authenticatedContext('customer').storage(), 'users/customer/profile/avatar'),
+      image,
+      { contentType: 'image/webp' },
+    ))
+    await assertFails(uploadBytes(
+      ref(environment.authenticatedContext('customer').storage(), 'users/customer/profile/photo.png'),
+      image,
+      { contentType: 'image/png' },
+    ))
+    await assertFails(uploadBytes(
+      ref(environment.authenticatedContext('unrelated').storage(), 'users/customer/profile/avatar'),
+      image,
+      { contentType: 'image/png' },
+    ))
+    for (const uid of ['suspended', 'deleted', 'deletion-pending']) {
+      await assertFails(uploadBytes(
+        ref(environment.authenticatedContext(uid).storage(), `users/${uid}/profile/avatar`),
+        image,
+        { contentType: 'image/png' },
+      ))
+      await seedStorageWithoutRules(`users/${uid}/profile/avatar`)
+      await assertFails(deleteObject(
+        ref(environment.authenticatedContext(uid).storage(), `users/${uid}/profile/avatar`),
+      ))
+    }
+  })
+  test('legacy profile objects are owner-readable/deletable but immutable and private', async () => {
+    const path = 'users/owner/profile/legacy-uuid.png'
+    await seedStorageWithoutRules(path)
+    const ownerStorage = environment.authenticatedContext('owner').storage()
+    await assertSucceeds(getBytes(ref(ownerStorage, path)))
+    await assertFails(getBytes(ref(environment.authenticatedContext('unrelated').storage(), path)))
+    await assertFails(getBytes(ref(environment.authenticatedContext('moderator', { moderator: true }).storage(), path)))
+    await assertFails(uploadBytes(ref(ownerStorage, path), image, { contentType: 'image/png' }))
+    await assertSucceeds(deleteObject(ref(ownerStorage, path)))
+    await assertFails(uploadBytes(
+      ref(ownerStorage, 'users/owner/profile/new-legacy.png'),
+      image,
+      { contentType: 'image/png' },
+    ))
+  })
+  test('owner and manager can upload exact canonical business slots only while editable', async () => {
+    await assertSucceeds(uploadBytes(
+      ref(environment.authenticatedContext('owner').storage(), 'businesses/draft-business/logos/logo'),
+      image,
+      { contentType: 'image/jpeg' },
+    ))
+    await assertSucceeds(uploadBytes(
+      ref(environment.authenticatedContext('manager').storage(), 'businesses/manager/photos/0'),
+      image,
+      { contentType: 'image/png' },
+    ))
+    await assertSucceeds(uploadBytes(
+      ref(environment.authenticatedContext('manager').storage(), 'businesses/manager/photos/7'),
+      image,
+      { contentType: 'image/webp' },
+    ))
+    await assertFails(uploadBytes(
+      ref(environment.authenticatedContext('unrelated').storage(), 'businesses/draft-business/photos/0'),
+      image,
+      { contentType: 'image/png' },
+    ))
+    for (const path of [
+      'businesses/draft-business/photos/8',
+      'businesses/draft-business/photos/-1',
+      'businesses/draft-business/photos/custom.png',
+      'businesses/draft-business/logos/custom.png',
+      'businesses/draft-business/covers/logo',
+      'businesses/draft-business/private/0',
+    ]) {
+      await assertFails(uploadBytes(
+        ref(environment.authenticatedContext('owner').storage(), path),
+        image,
+        { contentType: 'image/png' },
+      ))
+    }
+  })
+  test('inactive accounts and non-editable businesses cannot mutate canonical media', async () => {
+    for (const uid of ['suspended', 'deleted', 'deletion-pending']) {
+      await assertFails(uploadBytes(
+        ref(environment.authenticatedContext(uid).storage(), `businesses/${uid}-owner-business/logos/logo`),
+        image,
+        { contentType: 'image/png' },
+      ))
+    }
+    for (const businessId of [
+      'active-business', 'pending_review-business', 'suspended-business',
+      'archived-business', 'deleted-business', 'active-with-deletedAt-business',
+      'active-with-deletion-request-business',
+    ]) {
+      await assertFails(uploadBytes(
+        ref(environment.authenticatedContext('owner').storage(), `businesses/${businessId}/logos/logo`),
+        image,
+        { contentType: 'image/png' },
+      ))
+    }
+  })
+  test('canonical uploads enforce MIME, strict size and empty custom metadata', async () => {
+    const storage = environment.authenticatedContext('owner').storage()
+    await assertFails(uploadBytes(
+      ref(storage, 'businesses/draft-business/photos/0'),
+      image,
+      { contentType: 'text/plain' },
+    ))
+    await assertFails(uploadBytes(
+      ref(storage, 'businesses/draft-business/photos/1'),
+      new Uint8Array(5 * 1024 * 1024),
+      { contentType: 'image/png' },
+    ))
+    await assertFails(uploadBytes(
+      ref(storage, 'businesses/draft-business/photos/2'),
+      new Uint8Array((5 * 1024 * 1024) + 1),
+      { contentType: 'image/png' },
+    ))
+    await assertFails(uploadBytes(
+      ref(storage, 'businesses/draft-business/photos/3'),
+      image,
+      { contentType: 'image/png', customMetadata: { originalName: 'private-name.png' } },
+    ))
+    await assertFails(uploadBytes(
+      ref(storage, 'businesses/draft-business/photos/4'),
+      image,
+      { contentType: 'image/png', customMetadata: { arbitrary: 'value' } },
+    ))
+  })
+  test('canonical and legacy business folders cannot be listed', async () => {
+    const storage = environment.authenticatedContext('owner').storage()
+    await assertFails(listAll(ref(storage, 'businesses/draft-business/logos')))
+    await assertFails(listAll(ref(storage, 'businesses/draft-business/photos')))
+    await assertFails(listAll(ref(storage, 'businesses/draft-business')))
+  })
+  test('legacy business media remains minimally readable/deletable but cannot be created or updated', async () => {
+    const logoPath = 'businesses/draft-business/logos/legacy-uuid.png'
+    const photoPath = 'businesses/draft-business/photos/legacy-uuid.webp'
+    await seedStorageWithoutRules(logoPath)
+    await seedStorageWithoutRules(photoPath)
+    const ownerStorage = environment.authenticatedContext('owner').storage()
     const moderatorStorage = environment.authenticatedContext('moderator', { moderator: true }).storage()
-    await assertSucceeds(getBytes(ref(moderatorStorage, logoPath)))
-    await assertFails(getBytes(ref(moderatorStorage, privateFolderPath)))
+    await assertSucceeds(getBytes(ref(ownerStorage, logoPath)))
+    await assertSucceeds(getBytes(ref(moderatorStorage, photoPath)))
     await assertFails(getBytes(ref(environment.authenticatedContext('unrelated').storage(), logoPath)))
+    await assertFails(getBytes(ref(environment.unauthenticatedContext().storage(), logoPath)))
+    await assertFails(uploadBytes(ref(ownerStorage, logoPath), image, { contentType: 'image/png' }))
+    await assertFails(uploadBytes(
+      ref(ownerStorage, 'businesses/draft-business/photos/new-legacy.png'),
+      image,
+      { contentType: 'image/png' },
+    ))
+    await assertSucceeds(deleteObject(ref(ownerStorage, logoPath)))
+    await assertSucceeds(deleteObject(ref(ownerStorage, photoPath)))
+  })
+  test('browser deletion is restricted to legitimate media folders and editable businesses', async () => {
+    const internalPath = 'businesses/draft-business/internal/private.bin'
+    const activeLegacyPath = 'businesses/active-business/photos/legacy-active.png'
+    await seedStorageWithoutRules(internalPath)
+    await seedStorageWithoutRules(activeLegacyPath)
+    const ownerStorage = environment.authenticatedContext('owner').storage()
+    await assertFails(deleteObject(ref(ownerStorage, internalPath)))
+    await assertFails(deleteObject(ref(ownerStorage, activeLegacyPath)))
+    await assertFails(deleteObject(ref(environment.authenticatedContext('unrelated').storage(), activeLegacyPath)))
+  })
+  test('public canonical reads require full eligibility and an exact manifest reference', async () => {
+    const publicStorage = environment.unauthenticatedContext().storage()
+    const referencedLogo = 'businesses/active-business/logos/logo'
+    const referencedPhoto = 'businesses/active-business/photos/0'
+    const unreferencedPhoto = 'businesses/active-business/photos/1'
+    await seedStorageWithoutRules(referencedLogo)
+    await seedStorageWithoutRules(referencedPhoto)
+    await seedStorageWithoutRules(unreferencedPhoto)
+    await assertSucceeds(getBytes(ref(publicStorage, referencedLogo)))
+    await assertSucceeds(getBytes(ref(publicStorage, referencedPhoto)))
+    await assertFails(getBytes(ref(publicStorage, unreferencedPhoto)))
+  })
+  test('public canonical reads fail for every non-public lifecycle and deletion state', async () => {
+    const businessIds = [
+      'draft-business', 'pending_review-business', 'rejected-business', 'suspended-business',
+      'archived-business', 'deleted-business', 'active-with-deletedAt-business',
+      'active-with-deletion-request-business', 'incomplete-active-business',
+      'active-without-publishedAt-business', 'unsafe-active-business',
+      'unsafe-website-business',
+    ]
+    await environment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore()
+      for (const businessId of businessIds) {
+        await updateDoc(doc(database, 'businesses', businessId), {
+          logoStoragePath: `businesses/${businessId}/logos/logo`,
+          galleryStoragePaths: [`businesses/${businessId}/photos/0`],
+        })
+        await uploadBytes(
+          ref(context.storage(), `businesses/${businessId}/logos/logo`),
+          image,
+          { contentType: 'image/png' },
+        )
+      }
+    })
+    const publicStorage = environment.unauthenticatedContext().storage()
+    for (const businessId of businessIds) {
+      await assertFails(getBytes(ref(publicStorage, `businesses/${businessId}/logos/logo`)))
+    }
+  })
+  test('legacy unreferenced media is never anonymously rule-readable', async () => {
+    const path = 'businesses/active-business/photos/legacy-public-token-object.png'
+    await seedStorageWithoutRules(path)
+    await assertFails(getBytes(ref(environment.unauthenticatedContext().storage(), path)))
   })
 })
 

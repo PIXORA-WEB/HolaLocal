@@ -9,6 +9,7 @@ import {
   locationDisplayLabel, resolveLaunchLocation, searchLaunchLocations, validateBusinessLocation,
   foundBusiness, getConversationActivityTime, hasOwnerOnlyConversationParticipants, invalidMapping,
   hasCompleteUserProfile, isConversationHiddenForUser, isConversationUnreadForUser, isCustomIdentifier,
+  deletedUserTombstoneFor, isConversationSendable, isParticipantDeletedConversation,
   isPublicBusinessEligible, normalizeLanguage, normalizeLanguages,
   normalizePrimaryLanguage, normalizeServiceAreas, ownerMismatch, projectPublicContact,
   MESSAGE_TRANSLATION_REASONS, MESSAGE_TRANSLATION_STATUSES, normalizeMessageTranslation,
@@ -101,7 +102,7 @@ test('messaging helpers build deterministic customer and business conversation I
 test('messaging query filters require the trusted active conversation schema', () => {
   assert.deepEqual(conversationInboxQueryFilters('customer-1'), [
     ['participantIds', 'array-contains', 'customer-1'],
-    ['status', '==', 'active'],
+    ['status', 'in', ['active', 'participant_deleted']],
     ['schemaVersion', '==', CONVERSATION_SCHEMA_VERSION],
   ])
   assert.deepEqual(existingConversationQueryFilters('customer-1', 'business-1'), [
@@ -167,6 +168,33 @@ test('messaging helpers derive unread state from participant read timestamps', (
     participantState: { customer: { lastReadAt: 1000, deletedAt: 1500 } },
   }, 'customer'), false)
   assert.equal(getConversationActivityTime(conversation), 2000)
+})
+
+test('deleted-participant messaging contract validates a minimal trusted terminal tombstone', () => {
+  const deletedAt = {
+    seconds: 1700000000,
+    nanoseconds: 123000000,
+    toMillis: () => 1700000000123,
+  }
+  const conversation = {
+    customerId: 'customer',
+    participantIds: ['customer', 'owner'],
+    status: 'participant_deleted',
+    participantTombstones: { customer: { type: 'deleted_user', deletedAt } },
+  }
+  assert.equal(isParticipantDeletedConversation(conversation), true)
+  assert.equal(deletedUserTombstoneFor(conversation, 'customer')?.type, 'deleted_user')
+  assert.equal(isConversationSendable(conversation), false)
+  assert.deepEqual(conversationInboxQueryFilters('owner')[1], [
+    'status', 'in', ['active', 'participant_deleted'],
+  ])
+
+  for (const malformed of [
+    { ...conversation, participantTombstones: { customer: { type: 'deleted_user', deletedAt: new Date() } } },
+    { ...conversation, participantTombstones: { customer: { type: 'deleted_user', deletedAt, name: 'stale' } } },
+    { ...conversation, participantTombstones: { other: { type: 'deleted_user', deletedAt } } },
+    { ...conversation, participantTombstones: { customer: { type: 'other', deletedAt } } },
+  ]) assert.equal(isParticipantDeletedConversation(malformed), false)
 })
 
 test('messaging helpers require exactly customer and business owner participants', () => {

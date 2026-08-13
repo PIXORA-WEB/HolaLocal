@@ -133,7 +133,7 @@ test('admin routes compose shared account safety with existing claim authorizati
   for (const accountStatus of ['suspended', 'deletion_pending', 'deleted']) {
     assert.equal(decision(profile({ accountStatus }), { allowIncompleteOnboarding: true, allowIncompleteProfile: true }), 'blocked')
   }
-  assert.equal(decision(profile({ deletionRequestedAt: timestamp }), { allowIncompleteOnboarding: true, allowIncompleteProfile: true }), 'blocked')
+  assert.equal(decision(profile({ deletionRequestedAt: timestamp }), { allowIncompleteOnboarding: true, allowIncompleteProfile: true }), 'account_deletion')
   assert.equal(decision(profile(), { allowIncompleteOnboarding: true, allowIncompleteProfile: true }), 'allow')
 })
 

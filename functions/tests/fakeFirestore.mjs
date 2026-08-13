@@ -32,6 +32,12 @@ class FakeDocRef {
     this.database.store.set(this.path, { ...current, ...update })
     return Promise.resolve()
   }
+
+  delete() {
+    this.database.store.delete(this.path)
+    this.database.writePaths.push(this.path)
+    return Promise.resolve()
+  }
 }
 
 class FakeCollectionRef {
@@ -112,6 +118,7 @@ class FakeTransaction {
   }
 
   async get(reference) {
+    if (reference instanceof FakeCollectionRef) return reference.get()
     this.database.readPaths.push(reference.path)
     return this.database.snapshot(reference.path)
   }
@@ -124,10 +131,19 @@ class FakeTransaction {
     this.operations.push({ type: 'update', reference, data: update })
   }
 
+  delete(reference) {
+    this.operations.push({ type: 'delete', reference })
+  }
+
   commit() {
     for (const operation of this.operations) {
       const { path } = operation.reference
       const current = this.database.store.get(path)
+      if (operation.type === 'delete') {
+        this.database.store.delete(path)
+        this.database.writePaths.push(path)
+        continue
+      }
       if (operation.type === 'update' && !current) throw new Error(`Missing document: ${path}`)
       const next = operation.type === 'update' || (operation.options?.merge && current)
         ? { ...current, ...operation.data }
@@ -143,6 +159,7 @@ export class FakeFirestore {
     this.store = new Map(Object.entries(seed).map(([path, data]) => [path, structuredClone(data)]))
     this.readPaths = []
     this.writePaths = []
+    this.transactionTail = Promise.resolve()
   }
 
   doc(path) {
@@ -163,10 +180,18 @@ export class FakeFirestore {
   }
 
   async runTransaction(callback) {
-    const transaction = new FakeTransaction(this)
-    const result = await callback(transaction)
-    transaction.commit()
-    return result
+    const previous = this.transactionTail
+    let release
+    this.transactionTail = new Promise((resolve) => { release = resolve })
+    await previous
+    try {
+      const transaction = new FakeTransaction(this)
+      const result = await callback(transaction)
+      transaction.commit()
+      return result
+    } finally {
+      release()
+    }
   }
 
   data(path) {

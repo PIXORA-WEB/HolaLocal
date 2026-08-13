@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import SelectField from '../../components/common/SelectField.jsx'
@@ -6,9 +6,11 @@ import AccessibleDialog from '../../components/common/AccessibleDialog.jsx'
 import { EditableImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
 import FormFieldError from '../../components/common/FormFieldError.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
-import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
+import { getAuthenticationErrorMessage, reauthenticateUserWithPassword } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { uploadUserProfilePhoto } from '../../services/userService.js'
+import { accountDeletionErrorReason, requestAccountDeletion } from '../../services/accountDeletionService.js'
+import { loadProfileMediaPresentation } from '../../services/profileMediaPresentation.js'
 import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
@@ -46,14 +48,43 @@ function ProfilePage() {
   const [submitting, setSubmitting] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState(null)
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState(null)
+  const [profilePhotoRevision, setProfilePhotoRevision] = useState(0)
   const [businessUpgradeError, setBusinessUpgradeError] = useState(null)
   const [businessUpgradeSubmitting, setBusinessUpgradeSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [deletionDialogOpen, setDeletionDialogOpen] = useState(false)
+  const [deletionConfirmed, setDeletionConfirmed] = useState(false)
+  const [deletionPassword, setDeletionPassword] = useState('')
+  const [deletionSubmitting, setDeletionSubmitting] = useState(false)
+  const [deletionError, setDeletionError] = useState('')
   const photoRetryRef = useRef(null)
   const hasBusinessAccess = userProfile?.roles?.includes('business') === true
   const displayName = userProfile?.displayName || t('profile.title')
   const profileIsComplete = userProfile?.profileCompleted === true
-  const profilePhotoUrl = userProfile?.profilePhoto?.downloadUrl || userProfile?.photoURL || user?.photoURL
+
+  useEffect(() => {
+    let cancelled = false
+    let revoke = null
+
+    void loadProfileMediaPresentation(user?.uid, userProfile)
+      .then((presentation) => {
+        if (cancelled) {
+          presentation?.revoke?.()
+          return
+        }
+        revoke = presentation?.revoke ?? null
+        setProfilePhotoUrl(presentation?.url ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setProfilePhotoUrl(null)
+      })
+
+    return () => {
+      cancelled = true
+      revoke?.()
+    }
+  }, [profilePhotoRevision, user?.uid, userProfile])
 
   function resetForm() {
     setFirstName(userProfile?.firstName ?? '')
@@ -84,6 +115,7 @@ function ProfilePage() {
 
     try {
       await uploadUserProfilePhoto(user.uid, file)
+      setProfilePhotoRevision((revision) => revision + 1)
       photoRetryRef.current = null
       setSuccess(t('profile.imageUpdated'))
       await refreshUserProfile(user).catch(() => undefined)
@@ -124,6 +156,35 @@ function ProfilePage() {
       setError(getAuthenticationErrorMessage(logoutError, t))
       setErrorOperation('logout')
       setSubmitting(false)
+    }
+  }
+
+  async function handleDeletionRequest(event) {
+    event.preventDefault()
+    if (!deletionConfirmed || !deletionPassword) {
+      setDeletionError(t('accountDeletion.request.confirmationRequired'))
+      return
+    }
+    setDeletionError('')
+    setDeletionSubmitting(true)
+    try {
+      await reauthenticateUserWithPassword(user, deletionPassword)
+      const result = await requestAccountDeletion()
+      if (result?.blocked && result.reason === 'owned-businesses') {
+        setDeletionError(t('accountDeletion.request.ownedBusinessBlock', { count: result.ownedBusinessCount }))
+        return
+      }
+      await refreshUserProfile(user)
+      navigate('/account-deletion', { replace: true })
+    } catch (requestError) {
+      const reason = accountDeletionErrorReason(requestError)
+      setDeletionError(t(reason === 'recent-authentication-required'
+        ? 'accountDeletion.errors.recentAuth'
+        : reason === 'business-ownership-integrity-conflict'
+          ? 'accountDeletion.errors.ownershipConflict'
+          : 'accountDeletion.errors.request'))
+    } finally {
+      setDeletionSubmitting(false)
     }
   }
 
@@ -384,7 +445,50 @@ function ProfilePage() {
             </div>
           </section>
         )}
+
+        <section className="account-card profile-dashboard__card" aria-labelledby="account-deletion-section-title">
+          <header className="account-card__header">
+            <p className="account-card__eyebrow">{t('accountDeletion.request.eyebrow')}</p>
+            <h2 id="account-deletion-section-title">{t('accountDeletion.request.title')}</h2>
+          </header>
+          <p>{t('accountDeletion.request.description')}</p>
+          <button className="button button--secondary" onClick={() => setDeletionDialogOpen(true)} type="button">
+            {t('accountDeletion.request.open')}
+          </button>
+        </section>
       </div>
+
+      <AccessibleDialog
+        ariaLabelledBy="account-deletion-dialog-title"
+        closeDisabled={deletionSubmitting}
+        onClose={() => setDeletionDialogOpen(false)}
+        open={deletionDialogOpen}
+      >
+        <div className="profile-edit-dialog__panel">
+          <header className="profile-edit-dialog__header">
+            <h2 id="account-deletion-dialog-title">{t('accountDeletion.request.dialogTitle')}</h2>
+            <button aria-label={t('common.close')} disabled={deletionSubmitting} onClick={() => setDeletionDialogOpen(false)} type="button">×</button>
+          </header>
+          <form className="auth-form" onSubmit={handleDeletionRequest}>
+            <p>{t('accountDeletion.request.warning')}</p>
+            <p>
+              {t('accountDeletion.request.retainedRecords')}{' '}
+              <Link to="/privacy">{t('footer.privacy')}</Link>.
+            </p>
+            <label htmlFor="account-deletion-password">{t('accountDeletion.request.password')}</label>
+            <input autoComplete="current-password" id="account-deletion-password" onChange={(event) => setDeletionPassword(event.target.value)} required type="password" value={deletionPassword} />
+            <label className="checkbox-label" htmlFor="account-deletion-confirmation">
+              <input checked={deletionConfirmed} id="account-deletion-confirmation" onChange={(event) => setDeletionConfirmed(event.target.checked)} type="checkbox" />
+              <span>{t('accountDeletion.request.confirm')}</span>
+            </label>
+            {deletionError && <p className="form-message form-message--error" role="alert">{deletionError}</p>}
+            <div className="auth-actions">
+              <button className="button button--primary" disabled={deletionSubmitting || !deletionConfirmed || !deletionPassword} type="submit">{deletionSubmitting ? t('accountDeletion.request.submitting') : t('accountDeletion.request.submit')}</button>
+              <button className="button button--secondary" disabled={deletionSubmitting} onClick={() => setDeletionDialogOpen(false)} type="button">{t('common.cancel')}</button>
+            </div>
+          </form>
+        </div>
+      </AccessibleDialog>
 
       <AccessibleDialog
         ariaLabelledBy="profile-edit-title"

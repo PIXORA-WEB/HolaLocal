@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import AccessibleDialog from '../common/AccessibleDialog.jsx'
@@ -8,22 +8,24 @@ import useAuthentication from '../../hooks/useAuthentication.js'
 const navigationItems = [
   { key: 'overview', to: '/admin', end: true, icon: 'grid' },
   { key: 'businesses', to: '/admin/businesses', end: false, icon: 'briefcase' },
+  { key: 'deletions', to: '/admin/account-deletions', end: false, icon: 'trash' },
 ]
 
 function AdminNavigationIcon({ name }) {
   const paths = {
     grid: <><rect height="7" rx="1" width="7" x="3" y="3" /><rect height="7" rx="1" width="7" x="14" y="3" /><rect height="7" rx="1" width="7" x="3" y="14" /><rect height="7" rx="1" width="7" x="14" y="14" /></>,
     briefcase: <><rect height="13" rx="2" width="18" x="3" y="7" /><path d="M9 7V5h6v2M3 12h18" /></>,
+    trash: <><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6" /></>,
   }
   return <svg aria-hidden="true" viewBox="0 0 24 24">{paths[name]}</svg>
 }
 
-function AdminNavigation({ onNavigate }) {
+function AdminNavigation({ adminOnly, onNavigate }) {
   const { t } = useTranslation()
   return (
     <nav aria-label={t('admin.navigation.label')} className="admin-navigation">
       <p className="admin-navigation__label">{t('admin.navigation.workspace')}</p>
-      {navigationItems.map((item) => (
+      {navigationItems.filter((item) => item.key !== 'deletions' || adminOnly).map((item) => (
         <NavLink end={item.end} key={item.key} onClick={onNavigate} to={item.to}>
           <AdminNavigationIcon name={item.icon} />
           <span>{t(`admin.navigation.${item.key}`)}</span>
@@ -66,8 +68,15 @@ function AdminBrand() {
 
 function AdminLayout() {
   const { t } = useTranslation()
-  const { signOutUser } = useAuthentication()
+  const { signOutUser, user } = useAuthentication()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [adminOnly, setAdminOnly] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    user?.getIdTokenResult().then((token) => active && setAdminOnly(token.claims?.admin === true)).catch(() => {})
+    return () => { active = false }
+  }, [user])
 
   async function handleSignOut() {
     setMenuOpen(false)
@@ -80,7 +89,7 @@ function AdminLayout() {
 
       <aside className="admin-sidebar">
         <AdminBrand />
-        <AdminNavigation />
+        <AdminNavigation adminOnly={adminOnly} />
         <div className="admin-sidebar__footer">
           <Link className="admin-return-link" to="/">← {t('admin.navigation.returnWebsite')}</Link>
           <AdminAccount onSignOut={() => void handleSignOut()} />
@@ -114,7 +123,7 @@ function AdminLayout() {
             <h2 id="admin-mobile-menu-title">{t('admin.navigation.menu')}</h2>
             <button autoFocus aria-label={t('admin.navigation.closeMenu')} onClick={() => setMenuOpen(false)} type="button">×</button>
           </div>
-          <AdminNavigation onNavigate={() => setMenuOpen(false)} />
+          <AdminNavigation adminOnly={adminOnly} onNavigate={() => setMenuOpen(false)} />
           <div className="admin-mobile-drawer__footer">
             <Link className="admin-return-link" onClick={() => setMenuOpen(false)} to="/">← {t('admin.navigation.returnWebsite')}</Link>
             <AdminAccount onSignOut={() => void handleSignOut()} />

@@ -100,7 +100,9 @@ function AuthenticationProvider({ children }) {
           if (user) {
             const { ensureUserProfile, getUserProfile, updateLastActive } = await loadUserService()
             const existingProfile = await getUserProfile(user.uid)
-            const profile = user.emailVerified && existingProfile?.accountStatus === 'active'
+            const profile = user.emailVerified
+              && existingProfile?.accountStatus === 'active'
+              && existingProfile?.deletionRequestedAt == null
               ? await ensureUserProfile(user)
               : existingProfile
             if (active && requestId === profileRequestIdRef.current) {

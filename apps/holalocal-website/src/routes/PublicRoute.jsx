@@ -35,6 +35,9 @@ function PublicRoute() {
     if (decision === 'blocked') {
       return <BlockedAccountScreen accountStatus={userProfile.accountStatus} />
     }
+    if (decision === 'account_deletion') {
+      return <Navigate replace to="/account-deletion" />
+    }
     if (decision === 'verify_email') {
       return <Navigate replace state={{ from: location.state?.from }} to="/verify-email" />
     }

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   isConversationUnreadForUser,
+  isParticipantDeletedConversation,
   normalizeMessageTranslation,
   selectMessageDisplayText,
   shouldShowTranslatedMessage,
@@ -22,6 +23,7 @@ import {
   subscribeToConversationsForUser,
   subscribeToMessages,
 } from '../services/conversationService.js'
+import { conversationParticipantPresentation } from '../utils/conversationPresentation.js'
 import { classifyFrontendError } from '../utils/frontendErrors.js'
 import {
   conversationViewReducer,
@@ -245,7 +247,7 @@ function MessagesPage() {
   async function handleSend(event) {
     event.preventDefault()
     const normalizedText = messageText.trim()
-    if (!conversationId || !normalizedText) return
+    if (!conversationId || !normalizedText || isParticipantDeletedConversation(conversation)) return
     if (activeSendOperationsRef.current.has(conversationId)) return
 
     operationSequenceRef.current += 1
@@ -329,9 +331,13 @@ function MessagesPage() {
   const customerLanguage = userProfile?.preferredLocale ?? t('messages.preferredLanguageFallback')
   const businessLanguage = business?.primaryLanguage ?? business?.languages?.[0] ?? t('messages.businessLanguageFallback')
   const isBusinessParticipant = Boolean(conversation && conversation.customerId !== user.uid)
+  const participantDeleted = isParticipantDeletedConversation(conversation)
+  const participantPresentation = conversationParticipantPresentation(conversation, user.uid, {
+    deletedUser: t('messages.deletedUser'),
+  })
   const activeLanguage = isBusinessParticipant ? businessLanguage : customerLanguage
   const otherParticipantName = isBusinessParticipant
-    ? t('messages.customerFallback')
+    ? participantPresentation.deleted ? participantPresentation.label : t('messages.customerFallback')
     : business?.name ?? t('messages.businessFallback')
   const errorAction = error?.recovery === 'edit'
     ? undefined
@@ -394,7 +400,12 @@ function MessagesPage() {
               {conversations.map((item) => (
                 (() => {
                   const isUnread = isConversationUnreadForUser(item, user.uid)
-                  const businessName = item.business?.name || t('messages.localBusiness')
+                  const itemParticipant = conversationParticipantPresentation(item, user.uid, {
+                    deletedUser: t('messages.deletedUser'),
+                  })
+                  const businessName = itemParticipant.deleted
+                    ? itemParticipant.label
+                    : item.business?.name || t('messages.localBusiness')
                   return (
                     <Link
                       aria-label={isUnread ? t('messages.unreadConversation', { name: businessName }) : undefined}
@@ -407,8 +418,8 @@ function MessagesPage() {
                     >
                       <ImageAvatar
                         className="image-avatar--conversation"
-                        name={item.business?.name || t('messages.businessFallback')}
-                        src={item.business?.logoUrl}
+                        name={businessName}
+                        src={itemParticipant.deleted ? null : item.business?.logoUrl}
                       />
                       <span>
                         <strong>{businessName}</strong>
@@ -455,13 +466,15 @@ function MessagesPage() {
                 <button className="conversation-view__back" aria-label={t('messages.back')} onClick={() => navigate('/messages')} type="button">←</button>
                 <ImageAvatar
                   className="image-avatar--conversation-header"
-                  name={business.name}
-                  src={business.logoUrl}
+                  name={participantPresentation.deleted ? participantPresentation.label : business.name}
+                  src={participantPresentation.deleted ? null : business.logoUrl}
                 />
                 <div>
-                  <h2>{business.name}</h2>
+                  <h2>{participantPresentation.deleted ? participantPresentation.label : business.name}</h2>
                   <p>
-                    {business.profileAvailable
+                    {participantDeleted
+                      ? t('messages.participantDeletedNotice')
+                      : business.profileAvailable
                       ? t('messages.activeProfile')
                       : t('messages.profileUnavailable')}
                   </p>
@@ -541,7 +554,7 @@ function MessagesPage() {
               {!business.profileAvailable && (
                 <p className="form-message" role="status">{t('messages.profileUnavailableDescription')}</p>
               )}
-              {business.canSendMessages ? (
+              {business.canSendMessages && !participantDeleted ? (
               <form className="message-composer" onSubmit={handleSend}>
                 <label className="visually-hidden" htmlFor="message-text">{t('messages.messageLabel')}</label>
                 <textarea
@@ -569,7 +582,9 @@ function MessagesPage() {
                 </button>
               </form>
               ) : (
-                <p className="form-message" role="status">{t('messages.messagingClosed')}</p>
+                <p className="form-message" role="status">
+                  {participantDeleted ? t('messages.participantDeletedNotice') : t('messages.messagingClosed')}
+                </p>
               )}
             </>
           ) : null}

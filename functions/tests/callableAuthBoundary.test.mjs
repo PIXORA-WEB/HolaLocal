@@ -8,9 +8,14 @@ import {
   handleGetPublicBusiness,
   handleGetConversationBusinessContext,
   handleModerateBusiness,
+  handleManageBusinessMedia,
   handleSendMessage,
   handleOpenBusinessConversation,
   handleUpdateAccountRole,
+  handleRequestAccountDeletion,
+  handleCancelAccountDeletion,
+  handleFinalizeAccountDeletion,
+  handleListAdminAccountDeletionRequests,
 } from '../src/index.js'
 
 function codeFrom(error) {
@@ -35,6 +40,13 @@ test('unauthenticated callable handlers reject before Firestore access', async (
   const db = forbiddenDb()
   const cases = [
     () => handleAcceptLegalConsent({ data: { acceptTerms: true, acceptPrivacy: true } }, db),
+    () => handleRequestAccountDeletion({ data: {} }, db),
+    () => handleCancelAccountDeletion({ data: {} }, db),
+    () => handleFinalizeAccountDeletion({ data: { uid: 'target', expectedRequestVersion: 1 } }, { db }),
+    () => handleListAdminAccountDeletionRequests({ data: {} }, db),
+    () => handleManageBusinessMedia({
+      data: { action: 'set-logo', businessId: 'business-1', storagePath: 'businesses/business-1/logos/logo' },
+    }, { db }),
     () => handleUpdateAccountRole({ data: { accountType: 'customer' } }, db),
     () => handleEnsureOwnerBusiness({ data: {} }, db),
     () => handleSendMessage({
@@ -50,6 +62,74 @@ test('unauthenticated callable handlers reject before Firestore access', async (
 
   for (const run of cases) {
     await assert.rejects(run, (error) => codeFrom(error) === 'unauthenticated')
+  }
+})
+
+test('account deletion finalizer requires an authoritative admin claim before Firestore access', async () => {
+  for (const token of [{}, { moderator: true }, { admin: false }, { admin: 'true' }]) {
+    await assert.rejects(
+      () => handleFinalizeAccountDeletion({
+        auth: { uid: 'caller', token }, data: { uid: 'target', expectedRequestVersion: 1 },
+      }, { db: forbiddenDb() }),
+      (error) => error.code === 'permission-denied' && error.message === 'admin-required',
+    )
+  }
+})
+
+test('admin deletion queue requires admin and strictly allowlists its filter', async () => {
+  for (const token of [{}, { moderator: true }]) {
+    await assert.rejects(
+      () => handleListAdminAccountDeletionRequests({ auth: { uid: 'caller', token }, data: {} }, forbiddenDb()),
+      (error) => error.code === 'permission-denied',
+    )
+  }
+  await assert.rejects(
+    () => handleListAdminAccountDeletionRequests({ auth: { uid: 'admin', token: { admin: true } }, data: { uid: 'target' } }, forbiddenDb()),
+    (error) => error.code === 'invalid-argument',
+  )
+})
+
+test('account deletion finalizer accepts only UID and expected request version', async () => {
+  for (const data of [
+    {}, { uid: 'target' }, { expectedRequestVersion: 1 },
+    { uid: 'target', expectedRequestVersion: 1, role: 'admin' },
+    { uid: 'target', expectedRequestVersion: 1, storagePath: 'users/target/profile/' },
+    { uid: 'target', expectedRequestVersion: 1, businessId: 'business' },
+  ]) {
+    await assert.rejects(
+      () => handleFinalizeAccountDeletion({ auth: { uid: 'admin', token: { admin: true } }, data }, { db: forbiddenDb() }),
+      (error) => error.code === 'invalid-argument',
+    )
+  }
+})
+
+test('account deletion handlers reject every client-controlled workflow field', async () => {
+  for (const handler of [handleRequestAccountDeletion, handleCancelAccountDeletion]) {
+    for (const data of [{ uid: 'other' }, { state: 'requested' }, { deletionRequestedAt: 1 }, { businessId: 'business-1' }, { email: 'private@example.test' }]) {
+      await assert.rejects(
+        () => handler({ auth: { uid: 'user-1', token: { email_verified: true, auth_time: 1 } }, data }, forbiddenDb()),
+        (error) => error.code === 'invalid-argument' && error.message === 'unexpected-request-field',
+      )
+    }
+  }
+})
+
+test('business media handler rejects client-controlled authority entitlement and metadata fields', async () => {
+  for (const unexpected of [
+    { uid: 'another-user' }, { ownerId: 'another-user' }, { planId: 'pro' },
+    { galleryLimit: 8 }, { downloadUrl: 'https://evil.example' },
+    { contentType: 'image/webp' }, { originalName: 'private.jpg' },
+  ]) {
+    await assert.rejects(
+      () => handleManageBusinessMedia({
+        auth: { uid: 'owner' },
+        data: {
+          action: 'set-logo', businessId: 'business-1',
+          storagePath: 'businesses/business-1/logos/logo', ...unexpected,
+        },
+      }, { db: forbiddenDb() }),
+      (error) => error.code === 'invalid-argument' && error.message === 'unexpected-request-field',
+    )
   }
 })
 

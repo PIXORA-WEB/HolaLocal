@@ -22,8 +22,27 @@ export {
   parseBusinessInsightDate, recentUtcDateKeys, utcDateKey,
 } from './insights.js'
 export {
-  BUSINESS_CONTRACT, BUSINESS_OWNER_CONTRACT, BUSINESS_PRIVATE_CONTRACT, USER_CONTRACT,
+  ACCOUNT_DELETION_REQUEST_CONTRACT, BUSINESS_CONTRACT, BUSINESS_OWNER_CONTRACT,
+  BUSINESS_PRIVATE_CONTRACT, USER_CONTRACT,
 } from './contracts.js'
+export {
+  ACCOUNT_DELETION_RECENT_AUTH_MAX_AGE_SECONDS,
+  ACCOUNT_DELETION_FAILURE_CODES,
+  ACCOUNT_DELETION_FINALIZATION_CHECKPOINTS,
+  ACCOUNT_DELETION_FINALIZER_LEASE_SECONDS,
+  ACCOUNT_DELETION_REQUEST_STATES,
+  ACCOUNT_DELETION_REVERSIBLE_STATES,
+  canTransitionAccountDeletionState,
+  hasOnlyAccountDeletionWorkflowFields,
+  hasReachedAccountDeletionCheckpoint,
+  isAccountDeletionFailureCode,
+  isAccountDeletionFinalizationCheckpoint,
+  isAccountDeletionRequestState,
+  isSanitizedAccountDeletionCleanupCounts,
+  isCancellableAccountDeletionRequest,
+  nextAccountDeletionCheckpoint,
+  projectAccountDeletionRequest,
+} from './deletion.js'
 export { ISSUE_CODES, ISSUE_CODE_DESCRIPTIONS, ISSUE_CODE_METADATA } from './issues.js'
 export {
   ambiguousBusinesses, businessNotFound, foundBusiness, invalidMapping, ownerMismatch,
@@ -33,12 +52,33 @@ export {
   buildConversationId, buildLegacyConversationId, conversationInboxQueryFilters,
   conversationMatchesPair, existingConversationQueryFilters,
   CONVERSATION_ID_SEPARATOR, CONVERSATION_SCHEMA_VERSION, CONVERSATION_STATUS_ACTIVE,
+  CONVERSATION_STATUS_PARTICIPANT_DELETED, CONVERSATION_TOMBSTONE_TYPE_DELETED_USER,
+  deletedUserTombstoneFor,
   hasOwnerOnlyConversationParticipants, isConversationHiddenForUser, isConversationIdFor,
-  isConversationUnreadForUser, isSupportedTranslationLanguage, isTerminalTranslationStatus,
+  isConversationSendable, isConversationUnreadForUser, isParticipantDeletedConversation,
+  isSupportedTranslationLanguage, isTerminalTranslationStatus,
   MAX_MESSAGE_LENGTH, MESSAGE_TRANSLATION_REASONS, MESSAGE_TRANSLATION_STATUSES,
   MESSAGE_TRANSLATION_TERMINAL_STATUSES, normalizeMessageTranslation,
   selectMessageDisplayText, shouldAdvanceConversationPreview, shouldShowTranslatedMessage,
 } from './messaging.js'
+export {
+  buildCanonicalBusinessGalleryPath,
+  buildCanonicalBusinessLogoPath,
+  buildCanonicalProfileMediaPath,
+  CANONICAL_BUSINESS_GALLERY_SLOTS,
+  HOLALOCAL_FIREBASE_STORAGE_BUCKET,
+  isCanonicalProfileMediaPath,
+  isCanonicalBusinessGalleryPath,
+  isCanonicalBusinessGallerySlot,
+  isCanonicalBusinessLogoPath,
+  isLegacyFirebaseBusinessMediaUrl,
+  isLegacyFirebaseProfileMediaUrl,
+  MAX_CANONICAL_BUSINESS_GALLERY_SLOTS,
+  parseCanonicalMediaPath,
+  parseLegacyFirebaseBusinessMediaUrl,
+  parseLegacyFirebaseProfileMediaUrl,
+  validateCanonicalBusinessMedia,
+} from './media.js'
 export {
   LAUNCH_LOCATION_CATALOGUE,
   locationDisplayLabel,

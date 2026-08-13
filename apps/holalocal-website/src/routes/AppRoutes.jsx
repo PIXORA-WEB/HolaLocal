@@ -10,6 +10,7 @@ import BusinessRoute from './BusinessRoute.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import PublicRoute from './PublicRoute.jsx'
 import AdminRoute from './AdminRoute.jsx'
+import AdminOnlyRoute from './AdminOnlyRoute.jsx'
 import ScrollToTopOnNavigation from './ScrollToTopOnNavigation.jsx'
 
 const CompleteProfilePage = lazy(() => import('../pages/auth/CompleteProfilePage.jsx'))
@@ -25,6 +26,7 @@ const SubscriptionPage = lazy(() => import('../pages/business/SubscriptionPage.j
 const ContactPage = lazy(() => import('../pages/ContactPage.jsx'))
 const HomePage = lazy(() => import('../pages/HomePage.jsx'))
 const ProfilePage = lazy(() => import('../pages/customer/ProfilePage.jsx'))
+const AccountDeletionPage = lazy(() => import('../pages/customer/AccountDeletionPage.jsx'))
 const MessagesPage = lazy(() => import('../pages/MessagesPage.jsx'))
 const PrivacyPage = lazy(() => import('../pages/PrivacyPage.jsx'))
 const ServicesPage = lazy(() => import('../pages/ServicesPage.jsx'))
@@ -32,6 +34,7 @@ const TermsPage = lazy(() => import('../pages/TermsPage.jsx'))
 const AdminOverviewPage = lazy(() => import('../pages/admin/AdminOverviewPage.jsx'))
 const AdminBusinessesPage = lazy(() => import('../pages/admin/AdminBusinessesPage.jsx'))
 const AdminBusinessReviewPage = lazy(() => import('../pages/admin/AdminBusinessReviewPage.jsx'))
+const AdminAccountDeletionsPage = lazy(() => import('../pages/admin/AdminAccountDeletionsPage.jsx'))
 
 function RouteLoadingFallback() {
   const { t } = useTranslation()
@@ -116,6 +119,10 @@ function AppRoutes() {
           </Route>
         </Route>
 
+        <Route element={<ProtectedRoute allowDeletionPending allowIncompleteOnboarding allowIncompleteProfile allowMissingConsent allowUnverified />}>
+          <Route path="account-deletion" element={<AccountDeletionPage />} />
+        </Route>
+
         <Route element={<ProtectedRoute allowIncompleteOnboarding />}>
           <Route element={<AuthLayout />}>
             <Route path="onboarding" element={<OnboardingPage />} />
@@ -128,6 +135,9 @@ function AppRoutes() {
               <Route index element={<AdminOverviewPage />} />
               <Route path="businesses" element={<AdminBusinessesPage />} />
               <Route path="businesses/:businessId" element={<AdminBusinessReviewPage />} />
+              <Route element={<AdminOnlyRoute />}>
+                <Route path="account-deletions" element={<AdminAccountDeletionsPage />} />
+              </Route>
             </Route>
           </Route>
         </Route>

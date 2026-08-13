@@ -6080,6 +6080,19 @@
 .admin-navigation a:hover { color: var(--brand-blue); background: var(--surface-soft); }
 .admin-navigation a[aria-current="page"] { color: #ffffff; background: var(--brand-navy); box-shadow: 0 0.45rem 1rem rgb(7 29 53 / 16%); }
 
+.admin-deletion-list { display: grid; gap: 0.8rem; }
+.admin-deletion-card { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 0.8rem; color: inherit; cursor: pointer; display: grid; gap: 0.75rem; grid-template-columns: minmax(10rem, 1fr) minmax(12rem, 2fr) auto; padding: 1rem; text-align: left; width: 100%; }
+.admin-deletion-card:hover, .admin-deletion-card:focus-visible { border-color: var(--brand-blue); }
+.admin-deletion-card span:first-child { display: grid; gap: 0.2rem; }
+.admin-deletion-card code { overflow-wrap: anywhere; }
+.admin-action-dialog { border: 0; border-radius: 1rem; max-width: 38rem; padding: 0; width: calc(100% - 2rem); }
+.admin-action-dialog::backdrop { background: rgb(7 29 53 / 55%); }
+.admin-action-dialog__panel { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1.5rem; }
+.admin-action-dialog__panel h2, .admin-action-dialog__panel p, .admin-action-dialog__panel dl { flex-basis: 100%; }
+.admin-action-dialog__panel dl { display: grid; gap: 0.5rem 1rem; grid-template-columns: minmax(8rem, auto) 1fr; margin: 0; }
+.admin-action-dialog__panel dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 42rem) { .admin-deletion-card { grid-template-columns: 1fr; } .admin-action-dialog__panel dl { grid-template-columns: 1fr; } }
+
 .admin-sidebar__footer { display: grid; gap: 1.1rem; margin-top: auto; padding: 2rem 0.15rem 0; }
 .admin-return-link { color: #536176; font-size: 0.8rem; font-weight: 750; text-decoration: none; }
 .admin-return-link:hover { color: var(--brand-blue); }

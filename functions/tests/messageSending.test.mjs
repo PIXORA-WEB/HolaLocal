@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { Timestamp } from 'firebase-admin/firestore'
 import { FakeFirestore } from './fakeFirestore.mjs'
 import { buildIdempotentMessageId, sendConversationMessage } from '../src/messageSending.js'
 
@@ -104,6 +105,30 @@ test('sendMessage rejects inactive accounts before writing and restored active b
     text: 'Welcome back', db: restored,
   })
   assert.equal(result.ok, true)
+})
+
+test('sendMessage rejects participant-deleted conversations for new and cached idempotency requests', async () => {
+  const deletedAt = Timestamp.fromMillis(1700000000000)
+  const db = dbWithConversation()
+  Object.assign(db.store.get('conversations/customer__business-1'), {
+    status: 'participant_deleted',
+    participantTombstones: { customer: { type: 'deleted_user', deletedAt } },
+  })
+  db.store.set('conversations/customer__business-1/messages/owner_cached-123', {
+    senderId: 'owner', requestId: 'cached-123', type: 'text', text: 'Cached request',
+    attachment: null, moderationStatus: 'visible', editedAt: null, deletedAt: null,
+    createdAt: new Date('2026-07-14T10:00:00.000Z'),
+  })
+
+  for (const requestId of ['new-send-123', 'cached-123']) {
+    await assert.rejects(() => sendConversationMessage({
+      uid: 'owner', conversationId: 'customer__business-1', requestId,
+      text: requestId === 'cached-123' ? 'Cached request' : 'Must not send', db,
+    }), (error) => error.code === 'failed-precondition'
+      && error.message === 'conversation-participant-deleted')
+  }
+  assert.equal(db.data('conversations/customer__business-1/messages/owner_new-send-123'), undefined)
+  assert.deepEqual(db.writePaths, [])
 })
 
 test('sendMessage rejects request ID reuse with different content', async () => {

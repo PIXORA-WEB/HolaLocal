@@ -5,9 +5,14 @@ import {
   buildConversationId,
   CONVERSATION_SCHEMA_VERSION,
   CONVERSATION_STATUS_ACTIVE,
+  CONVERSATION_STATUS_PARTICIPANT_DELETED,
   hasOwnerOnlyConversationParticipants,
+  isParticipantDeletedConversation,
+  isCanonicalBusinessLogoPath,
   isPublicBusinessEligible,
+  parseLegacyFirebaseBusinessMediaUrl,
 } from '@holalocal/firebase-contract'
+import { projectSafeBusinessMedia } from './businessMediaProjection.js'
 
 const MAX_ID_LENGTH = 128
 const GENERIC_BUSINESS_NAME = 'Business unavailable'
@@ -47,20 +52,27 @@ function displayText(value) {
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
-function snapshotFromBusiness(business) {
+function snapshotFromBusiness(businessId, business) {
+  const media = projectSafeBusinessMedia(businessId, business)
   return {
     name: displayText(business?.name) ?? GENERIC_BUSINESS_NAME,
-    logoUrl: displayText(business?.profilePhoto?.downloadUrl),
+    logoUrl: media.logoUrl,
+    logoStoragePath: media.logoStoragePath,
     primaryLanguage: displayText(business?.primaryLanguage),
   }
 }
 
-function safeStoredSnapshot(conversation) {
+function safeStoredSnapshot(conversation, businessId) {
   const snapshot = conversation?.businessSnapshot
   if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return null
   return {
     name: displayText(snapshot.name) ?? GENERIC_BUSINESS_NAME,
-    logoUrl: displayText(snapshot.logoUrl),
+    logoUrl: parseLegacyFirebaseBusinessMediaUrl(snapshot.logoUrl, businessId)?.kind === 'logo'
+      ? snapshot.logoUrl
+      : null,
+    logoStoragePath: isCanonicalBusinessLogoPath(snapshot.logoStoragePath, businessId)
+      ? snapshot.logoStoragePath
+      : null,
     primaryLanguage: displayText(snapshot.primaryLanguage),
   }
 }
@@ -101,9 +113,11 @@ export function buildCollisionSafeConversationId(customerId, businessId) {
 function assertParticipantConversation(conversation, uid) {
   const ownerId = participantBusinessOwnerId(conversation)
   if (
-    conversation?.status !== CONVERSATION_STATUS_ACTIVE
+    ![CONVERSATION_STATUS_ACTIVE, CONVERSATION_STATUS_PARTICIPANT_DELETED].includes(conversation?.status)
     || !ownerId
     || !conversation.participantIds.includes(uid)
+    || (conversation.status === CONVERSATION_STATUS_PARTICIPANT_DELETED
+      && !isParticipantDeletedConversation(conversation))
   ) {
     throw new HttpsError('failed-precondition', 'conversation-participant-integrity-error')
   }
@@ -111,19 +125,22 @@ function assertParticipantConversation(conversation, uid) {
 }
 
 export function projectConversationBusinessContext({ businessId, business, conversation }) {
-  const storedSnapshot = safeStoredSnapshot(conversation)
-  const display = business ? snapshotFromBusiness(business) : storedSnapshot ?? {
+  const storedSnapshot = safeStoredSnapshot(conversation, businessId)
+  const display = business ? snapshotFromBusiness(businessId, business) : storedSnapshot ?? {
     name: GENERIC_BUSINESS_NAME,
     logoUrl: null,
+    logoStoragePath: null,
     primaryLanguage: null,
   }
   const canSendMessages = business?.status === CONVERSATION_STATUS_ACTIVE
+    && conversation?.status !== CONVERSATION_STATUS_PARTICIPANT_DELETED
   const profileAvailable = Boolean(business && isPublicBusinessEligible(business))
 
   return {
     businessId,
     name: display.name,
     logoUrl: display.logoUrl,
+    logoStoragePath: display.logoStoragePath,
     primaryLanguage: display.primaryLanguage,
     profileAvailable,
     canSendMessages,
@@ -146,7 +163,7 @@ function buildConversation({ businessId, business, customerId, now }) {
   const participantIds = [customerId, business.ownerId]
   return {
     businessId,
-    businessSnapshot: snapshotFromBusiness(business),
+    businessSnapshot: snapshotFromBusiness(businessId, business),
     customerId,
     participantIds,
     participantState: Object.fromEntries(participantIds.map((uid) => [uid, participantState()])),
@@ -212,6 +229,9 @@ export async function openBusinessConversation({ uid, businessId, db, now = () =
 
     if (conversationSnapshot) {
       const conversation = conversationSnapshot.data()
+      if (isParticipantDeletedConversation(conversation)) {
+        throw new HttpsError('failed-precondition', 'conversation-participant-deleted')
+      }
       if (!hasOwnerOnlyConversationParticipants(conversation, ownerId)
         || conversation.customerId !== safeUid
         || conversation.businessId !== safeBusinessId

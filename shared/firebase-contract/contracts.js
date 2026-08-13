@@ -132,3 +132,26 @@ export const BUSINESS_OWNER_CONTRACT = Object.freeze({
     updatedAt: field('Timestamp', 'trusted_only', 'private_internal', 'required'),
   }),
 })
+
+export const ACCOUNT_DELETION_REQUEST_CONTRACT = Object.freeze({
+  path: 'accountDeletionRequests/{uid}', documentId: 'firebase_auth_uid',
+  fields: Object.freeze({
+    uid: field('string', 'trusted_only', 'private_internal', 'required'),
+    state: field('account_deletion_request_state', 'trusted_only', 'private_internal', 'required'),
+    requestedAt: field('Timestamp', 'trusted_only', 'private_internal', 'required'),
+    requestedBy: field('string', 'trusted_only', 'private_internal', 'required'),
+    cancelledAt: field('Timestamp|null', 'trusted_only', 'private_internal'),
+    finalizationStartedAt: field('Timestamp|null', 'trusted_only', 'private_internal'),
+    finalizedBy: field('string|null', 'trusted_only', 'private_internal'),
+    completedAt: field('Timestamp|null', 'trusted_only', 'private_internal'),
+    lastCompletedStep: field('account_deletion_checkpoint|null', 'trusted_only', 'private_internal'),
+    failureCode: field('account_deletion_failure_code|null', 'trusted_only', 'private_internal'),
+    retryCount: field('number', 'trusted_only', 'private_internal'),
+    leaseId: field('string|null', 'trusted_only', 'private_internal'),
+    leaseExpiresAt: field('Timestamp|null', 'trusted_only', 'private_internal'),
+    cleanupCounts: field('sanitized_count_map|null', 'trusted_only', 'private_internal'),
+    retainedConsentEvidence: field('minimal_consent_evidence|null', 'trusted_only', 'private_internal'),
+    updatedAt: field('Timestamp', 'trusted_only', 'private_internal', 'required'),
+    requestVersion: field('number', 'trusted_only', 'private_internal', 'required'),
+  }),
+})
