@@ -30,7 +30,7 @@ import {
   toManagedBusinessView,
 } from './firebaseCompatibility.js'
 import { isOwnerEditableBusinessStatus } from '../utils/business.js'
-import { resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
+import { clearBusinessMediaPresentationCache, resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
 import {
   runBusinessGalleryUploads,
   runBusinessLogoUpload,
@@ -47,12 +47,15 @@ async function uploadCanonicalImageFile(...args) {
   return storage.uploadCanonicalImageFile(...args)
 }
 
-const BUSINESS_MEDIA_ACTIONS = new Set(['set-logo', 'add-gallery', 'remove-gallery', 'clear-logo'])
+const BUSINESS_MEDIA_ACTIONS = new Set([
+  'prepare-logo', 'finalize-logo', 'prepare-gallery', 'finalize-gallery',
+  'remove-gallery', 'clear-logo',
+])
 export { selectAvailableCanonicalGallerySlot }
 
-export async function finalizeBusinessMedia(action, businessId, storagePath, callable = manageBusinessMediaCallable) {
+export async function finalizeBusinessMedia(action, businessId, storagePath, options = {}, callable = manageBusinessMediaCallable) {
   if (!BUSINESS_MEDIA_ACTIONS.has(action)) throw createApplicationError('media-save-failed')
-  const payload = { action, businessId, storagePath }
+  const payload = { action, businessId, storagePath, ...options }
   const result = await callable(payload)
   return result.data
 }
@@ -370,16 +373,22 @@ export async function submitBusinessForReview(businessId) {
 export async function uploadBusinessLogo(businessId, file, dependencies = {}) {
   const getBusiness = dependencies.getBusiness ?? getBusinessById
   const upload = dependencies.upload ?? uploadCanonicalImageFile
+  const prepare = dependencies.prepare ?? finalizeBusinessMedia
   const finalize = dependencies.finalize ?? finalizeBusinessMedia
   const remove = dependencies.remove ?? deleteImageFile
-  return runBusinessLogoUpload(businessId, file, { getBusiness, upload, finalize, remove })
+  const result = await runBusinessLogoUpload(businessId, file, { getBusiness, upload, prepare, finalize, remove })
+  clearBusinessMediaPresentationCache()
+  return result
 }
 
 export async function uploadBusinessGalleryImages(businessId, files, dependencies = {}) {
   const getBusiness = dependencies.getBusiness ?? getBusinessById
   const upload = dependencies.upload ?? uploadCanonicalImageFile
+  const prepare = dependencies.prepare ?? finalizeBusinessMedia
   const finalize = dependencies.finalize ?? finalizeBusinessMedia
-  return runBusinessGalleryUploads(businessId, files, { getBusiness, upload, finalize })
+  const result = await runBusinessGalleryUploads(businessId, files, { getBusiness, upload, prepare, finalize })
+  clearBusinessMediaPresentationCache()
+  return result
 }
 
 export async function deleteBusinessGalleryImage(businessId, image, dependencies = {}) {

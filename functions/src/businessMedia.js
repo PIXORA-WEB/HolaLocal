@@ -3,21 +3,43 @@ import { HttpsError } from 'firebase-functions/v2/https'
 import {
   isCanonicalBusinessGalleryPath,
   isCanonicalBusinessLogoPath,
+  buildCanonicalBusinessGallerySlotPath,
+  buildCanonicalBusinessLogoSlotPath,
+  inactiveCanonicalMediaSlot,
+  parseCanonicalMediaPath,
   MAX_CANONICAL_BUSINESS_GALLERY_SLOTS,
   parseLegacyFirebaseBusinessMediaUrl,
   PLAN_DEFINITIONS,
   PLAN_IDS,
   resolveAuthoritativeBusinessEntitlements,
+  buildStagingBusinessGalleryPath,
+  buildStagingBusinessLogoPath,
 } from '@holalocal/firebase-contract'
+import {
+  cleanStagingGeneration,
+  clearPromotionContext,
+  deleteExactGeneration,
+  promoteCleanGeneration,
+  verifyCanonicalImageMetadata,
+  uploadSessionMarker,
+} from './canonicalMediaStorage.js'
+import {
+  assertFinalizableSession, businessSessionId, MEDIA_SESSION_COLLECTION,
+  prepareBoundedMediaSession, recordFinalizedStagingGeneration,
+} from './mediaUploadSessions.js'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
-const ALLOWED_STORAGE_METADATA_KEYS = new Set(['firebaseStorageDownloadTokens'])
+const ALLOWED_STORAGE_METADATA_KEYS = new Set()
 const EDITABLE_BUSINESS_STATUSES = new Set(['draft', 'rejected'])
 
 export const BUSINESS_MEDIA_ACTIONS = Object.freeze({
   SET_LOGO: 'set-logo',
   ADD_GALLERY: 'add-gallery',
+  PREPARE_LOGO: 'prepare-logo',
+  FINALIZE_LOGO: 'finalize-logo',
+  PREPARE_GALLERY: 'prepare-gallery',
+  FINALIZE_GALLERY: 'finalize-gallery',
   REMOVE_GALLERY: 'remove-gallery',
   CLEAR_LOGO: 'clear-logo',
 })
@@ -48,11 +70,22 @@ function requireAction(value) {
 }
 
 function requireCanonicalPath(action, businessId, storagePath) {
-  const valid = action === BUSINESS_MEDIA_ACTIONS.SET_LOGO || action === BUSINESS_MEDIA_ACTIONS.CLEAR_LOGO
+  const valid = action === BUSINESS_MEDIA_ACTIONS.SET_LOGO || action === BUSINESS_MEDIA_ACTIONS.PREPARE_LOGO
+    || action === BUSINESS_MEDIA_ACTIONS.FINALIZE_LOGO || action === BUSINESS_MEDIA_ACTIONS.CLEAR_LOGO
     ? isCanonicalBusinessLogoPath(storagePath, businessId)
     : isCanonicalBusinessGalleryPath(storagePath, businessId)
   if (!valid) throw new HttpsError('invalid-argument', 'invalid-canonical-business-media-path')
   return storagePath
+}
+
+async function objectGeneration(storagePath, bucket) {
+  try {
+    const [metadata] = await bucket.file(storagePath).getMetadata()
+    return String(metadata.generation)
+  } catch (error) {
+    if (Number(error?.code) === 404) return '0'
+    throw error
+  }
 }
 
 function assertActiveAccount(snapshot) {
@@ -124,7 +157,10 @@ function authoritativeGalleryLimit(privateSubscriptionSnapshot, business) {
 }
 
 function assertGalleryAdditionAllowed({ businessId, business, gallery, storagePath, subscription }) {
-  if (gallery.includes(storagePath)) return
+  const proposed = parseCanonicalMediaPath(storagePath)
+  if (gallery.includes(storagePath)
+    || (proposed?.kind === 'gallery'
+      && gallery.some((path) => parseCanonicalMediaPath(path)?.slot === proposed.slot))) return
   const legacyCount = validatedLegacyGalleryPaths(businessId, business).size
   const referencedCount = legacyCount + gallery.length
   const limit = authoritativeGalleryLimit(subscription, business)
@@ -159,6 +195,20 @@ export function validateCanonicalStorageObjectMetadata(metadata) {
   }
 }
 
+function validateLegacyProtocolObjectMetadata(metadata) {
+  if (!metadata || !ALLOWED_IMAGE_TYPES.has(metadata.contentType)) {
+    throw new HttpsError('failed-precondition', 'business-media-invalid-content-type')
+  }
+  const size = Number(metadata.size)
+  if (!Number.isInteger(size) || size < 0 || size >= MAX_IMAGE_BYTES) {
+    throw new HttpsError('failed-precondition', 'business-media-invalid-size')
+  }
+  const keys = customMetadataKeys(metadata)
+  if (!keys || keys.some((key) => key !== 'firebaseStorageDownloadTokens')) {
+    throw new HttpsError('failed-precondition', 'business-media-forbidden-metadata')
+  }
+}
+
 function storageNotFound(error) {
   return error?.code === 404
     || error?.code === '404'
@@ -166,21 +216,10 @@ function storageNotFound(error) {
     || error?.code === 'not-found'
 }
 
-async function defaultReadObjectMetadata(storagePath) {
+async function defaultDeleteObject(storagePath, generation, bucket = getStorage().bucket()) {
   try {
-    const [metadata] = await getStorage().bucket().file(storagePath).getMetadata()
-    return metadata
-  } catch (error) {
-    if (storageNotFound(error)) {
-      throw new HttpsError('failed-precondition', 'business-media-object-missing')
-    }
-    throw error
-  }
-}
-
-async function defaultDeleteObject(storagePath) {
-  try {
-    await getStorage().bucket().file(storagePath).delete()
+    if (String(generation) === '0') return 'not-found'
+    await deleteExactGeneration({ path: storagePath, generation, bucket })
     return 'deleted'
   } catch (error) {
     if (storageNotFound(error)) return 'not-found'
@@ -192,21 +231,70 @@ function publicResult({ action, storagePath, idempotent, objectDeletion = 'not-r
   return { ok: true, action, storagePath, idempotent, objectDeletion }
 }
 
+async function finishBusinessMediaCleanup({
+  db, sessionRef, session, requestId, bucket, removeExact, now,
+}) {
+  const targets = [
+    { path: session.stagingPath, generation: session.stagingGeneration },
+    ...(session.cleanupOldPath && session.cleanupOldGeneration
+      ? [{ path: session.cleanupOldPath, generation: session.cleanupOldGeneration }]
+      : []),
+  ]
+  let cleanupError = null
+  for (const target of targets) {
+    try {
+      await removeExact({ ...target, bucket })
+    } catch (error) {
+      cleanupError ??= error
+    }
+  }
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(sessionRef)
+    if (!snapshot.exists || snapshot.data()?.requestId !== requestId
+      || snapshot.data()?.state !== 'completed') return
+    transaction.update(sessionRef, cleanupError ? {
+      cleanupPending: true,
+      cleanupFailure: Number(cleanupError?.code) === 412 ? 'generation-mismatch' : 'transient',
+      updatedAt: now,
+    } : {
+      cleanupPending: false,
+      cleanupFailure: null,
+      updatedAt: now,
+    })
+  })
+  return cleanupError == null
+}
+
 export async function manageBusinessMedia({
   uid,
   action,
   businessId,
   storagePath,
   db,
-  readObjectMetadata = defaultReadObjectMetadata,
   deleteObject = defaultDeleteObject,
+  requestId,
+  stagingGeneration,
+  bucket = getStorage().bucket(),
+  now = new Date(),
+  clean = cleanStagingGeneration,
+  clearContext = clearPromotionContext,
+  promote = promoteCleanGeneration,
+  removeExact = deleteExactGeneration,
+  afterAuthorityCommit = async () => undefined,
+  readObjectMetadata = async (path) => (await bucket.file(path).getMetadata())[0],
 }) {
   const safeUid = requireUid(uid)
   const safeAction = requireAction(action)
   const safeBusinessId = requireId(businessId, 'invalid-business-id')
   const safeStoragePath = requireCanonicalPath(safeAction, safeBusinessId, storagePath)
-  const adding = safeAction === BUSINESS_MEDIA_ACTIONS.SET_LOGO
+  const preparing = safeAction === BUSINESS_MEDIA_ACTIONS.PREPARE_LOGO
+    || safeAction === BUSINESS_MEDIA_ACTIONS.PREPARE_GALLERY
+  const finalizing = safeAction === BUSINESS_MEDIA_ACTIONS.FINALIZE_LOGO
+    || safeAction === BUSINESS_MEDIA_ACTIONS.FINALIZE_GALLERY
+  const adding = preparing || finalizing
+  const legacyAdding = safeAction === BUSINESS_MEDIA_ACTIONS.SET_LOGO
     || safeAction === BUSINESS_MEDIA_ACTIONS.ADD_GALLERY
+  const legacyProtocol = legacyAdding
 
   const userRef = db.doc(`users/${safeUid}`)
   const businessRef = db.doc(`businesses/${safeBusinessId}`)
@@ -216,50 +304,201 @@ export async function manageBusinessMedia({
   if (!initialBusiness.exists) throw new HttpsError('not-found', 'business-not-found')
   assertBusinessAuthority(initialBusiness.data(), safeUid)
 
-  if (adding) {
-    let metadata
-    try {
-      metadata = await readObjectMetadata(safeStoragePath)
-    } catch (error) {
-      if (error instanceof HttpsError) throw error
-      if (storageNotFound(error)) {
-        throw new HttpsError('failed-precondition', 'business-media-object-missing')
+  const parsedInput = parseCanonicalMediaPath(safeStoragePath)
+  if ((preparing || finalizing || legacyProtocol) && parsedInput?.mediaSlot != null) {
+    throw new HttpsError('invalid-argument', 'canonical-slot-is-backend-only')
+  }
+
+  if (legacyAdding) {
+    validateLegacyProtocolObjectMetadata(await readObjectMetadata(safeStoragePath))
+    let idempotent = false
+    await db.runTransaction(async (transaction) => {
+      const [userSnapshot, businessSnapshot, subscriptionSnapshot] = await Promise.all([
+        transaction.get(userRef), transaction.get(businessRef), transaction.get(subscriptionRef),
+      ])
+      assertActiveAccount(userSnapshot)
+      if (!businessSnapshot.exists) throw new HttpsError('not-found', 'business-not-found')
+      const business = businessSnapshot.data()
+      assertBusinessAuthority(business, safeUid)
+      const { logo, gallery } = assertCanonicalManifest(safeBusinessId, business)
+      if (safeAction === BUSINESS_MEDIA_ACTIONS.SET_LOGO) {
+        idempotent = logo === safeStoragePath
+        if (!idempotent) transaction.update(businessRef, { logoStoragePath: safeStoragePath })
+      } else {
+        idempotent = gallery.includes(safeStoragePath)
+        assertGalleryAdditionAllowed({ businessId: safeBusinessId, business, gallery,
+          storagePath: safeStoragePath, subscription: subscriptionSnapshot })
+        const logicalSlot = parseCanonicalMediaPath(safeStoragePath)?.slot
+        const existing = gallery.find((path) => parseCanonicalMediaPath(path)?.slot === logicalSlot)
+        if (!idempotent) transaction.update(businessRef, {
+          galleryStoragePaths: existing
+            ? gallery.map((path) => path === existing ? safeStoragePath : path)
+            : [...gallery, safeStoragePath],
+        })
       }
-      throw new HttpsError('internal', 'business-media-object-verification-failed')
+    })
+    return publicResult({ action: safeAction, storagePath: safeStoragePath, idempotent })
+  }
+
+  const parsedSlot = safeAction.includes('gallery') ? Number(safeStoragePath.split('/').at(-1)) : null
+  const stagingPath = parsedSlot == null
+    ? buildStagingBusinessLogoPath(safeBusinessId)
+    : buildStagingBusinessGalleryPath(safeBusinessId, parsedSlot)
+  const sessionId = businessSessionId(safeBusinessId, parsedSlot == null ? 'logo' : 'gallery', parsedSlot)
+
+  if (preparing) {
+    const business = initialBusiness.data()
+    const { logo, gallery } = assertCanonicalManifest(safeBusinessId, business)
+    if (parsedSlot != null) {
+      const subscription = await subscriptionRef.get()
+      assertGalleryAdditionAllowed({
+        businessId: safeBusinessId, business, gallery, storagePath: safeStoragePath, subscription,
+      })
     }
-    validateCanonicalStorageObjectMetadata(metadata)
+    const authorityPath = parsedSlot == null ? logo
+      : (gallery.find((path) => parseCanonicalMediaPath(path)?.slot === parsedSlot) ?? null)
+    const mediaSlot = inactiveCanonicalMediaSlot(authorityPath, (parsed) => (
+      parsed.businessId === safeBusinessId && parsed.kind === (parsedSlot == null ? 'logo' : 'gallery')
+      && (parsedSlot == null || parsed.slot === parsedSlot)
+    ))
+    const canonicalPath = parsedSlot == null
+      ? buildCanonicalBusinessLogoSlotPath(safeBusinessId, mediaSlot)
+      : buildCanonicalBusinessGallerySlotPath(safeBusinessId, parsedSlot, mediaSlot)
+    return prepareBoundedMediaSession({
+      db, sessionId, principalUid: safeUid, businessId: safeBusinessId,
+      kind: parsedSlot == null ? 'logo' : 'gallery', slot: parsedSlot,
+      stagingPath, canonicalPath,
+      expectedCanonicalGeneration: await objectGeneration(canonicalPath, bucket),
+      expectedAuthorityPath: authorityPath,
+      expectedAuthorityGeneration: authorityPath ? await objectGeneration(authorityPath, bucket) : null,
+      now,
+    })
+  }
+
+  let promotedGeneration = null
+  let finalizedSession = null
+  let finalizingSessionRef = null
+  const removalGeneration = adding ? null : await objectGeneration(safeStoragePath, bucket)
+  if (finalizing) {
+    const sessionRef = db.doc(`${MEDIA_SESSION_COLLECTION}/${sessionId}`)
+    finalizingSessionRef = sessionRef
+    const sessionSnapshot = await sessionRef.get()
+    let session = sessionSnapshot.data()
+    if (session && !session.stagingGeneration) {
+      const [metadata] = await bucket.file(session.stagingPath, { generation: stagingGeneration }).getMetadata()
+      await recordFinalizedStagingGeneration({ db,
+        parsedPath: parsedSlot == null
+          ? { kind: 'logo', businessId: safeBusinessId }
+          : { kind: 'gallery', businessId: safeBusinessId, slot: parsedSlot },
+        path: session.stagingPath, generation: stagingGeneration,
+        uploadSessionId: uploadSessionMarker(metadata), now })
+      session = (await sessionRef.get()).data()
+    }
+    finalizedSession = session
+    const state = assertFinalizableSession(session, {
+      requestId, principalUid: safeUid, stagingGeneration, now: now.getTime(),
+    })
+    if (session.stagingPath !== stagingPath
+      || !((parsedSlot == null && isCanonicalBusinessLogoPath(session.canonicalPath, safeBusinessId))
+        || (parsedSlot != null && isCanonicalBusinessGalleryPath(session.canonicalPath, safeBusinessId)))) {
+      throw new HttpsError('failed-precondition', 'media-session-path-mismatch')
+    }
+    if (state === 'completed') {
+      await finishBusinessMediaCleanup({
+        db, sessionRef, session, requestId, bucket, removeExact, now,
+      })
+      return publicResult({
+        action: safeAction, storagePath: session.canonicalPath, idempotent: true,
+      })
+    }
+    if (session.promotedGeneration) {
+      promotedGeneration = String(session.promotedGeneration)
+      const [metadata] = await bucket.file(session.canonicalPath, { generation: promotedGeneration }).getMetadata()
+      verifyCanonicalImageMetadata(metadata, {
+        path: session.canonicalPath, generation: promotedGeneration, requireTokenFree: true,
+      })
+    } else {
+      const cleaned = await clean({ path: stagingPath, generation: stagingGeneration, bucket })
+      await sessionRef.update({ stagingGeneration: String(stagingGeneration), state: 'promoting', updatedAt: now })
+      const promoted = await promote({
+        stagingPath, stagingGeneration, stagingMetageneration: String(cleaned.metageneration),
+        canonicalPath: session.canonicalPath,
+        expectedCanonicalGeneration: session.expectedCanonicalGeneration, bucket,
+        promotionId: requestId,
+      })
+      promotedGeneration = promoted.generation
+      await sessionRef.update({ promotedGeneration, state: 'promoted', updatedAt: now })
+    }
+    await clearContext({ path: session.canonicalPath, generation: promotedGeneration, bucket })
   }
 
   let idempotent = false
 
-  await db.runTransaction(async (transaction) => {
-    const [userSnapshot, businessSnapshot, subscriptionSnapshot] = await Promise.all([
+  try {
+    await db.runTransaction(async (transaction) => {
+    const [userSnapshot, businessSnapshot, subscriptionSnapshot, sessionSnapshot] = await Promise.all([
       transaction.get(userRef),
       transaction.get(businessRef),
       transaction.get(subscriptionRef),
+      finalizing ? transaction.get(finalizingSessionRef) : Promise.resolve(null),
     ])
     assertActiveAccount(userSnapshot)
     if (!businessSnapshot.exists) throw new HttpsError('not-found', 'business-not-found')
     const business = businessSnapshot.data()
     assertBusinessAuthority(business, safeUid)
     const { logo, gallery } = assertCanonicalManifest(safeBusinessId, business)
+    if (finalizing) {
+      const currentSession = sessionSnapshot.data()
+      if (!sessionSnapshot.exists
+        || currentSession.requestId !== requestId
+        || currentSession.principalUid !== safeUid
+        || currentSession.canonicalPath !== finalizedSession.canonicalPath
+        || String(currentSession.stagingGeneration) !== String(stagingGeneration)
+        || String(currentSession.promotedGeneration) !== String(promotedGeneration)
+        || currentSession.state !== 'promoted') {
+        throw new HttpsError('aborted', 'media-session-stale')
+      }
+    }
 
-    if (safeAction === BUSINESS_MEDIA_ACTIONS.SET_LOGO) {
-      idempotent = logo === safeStoragePath
-      if (!idempotent) transaction.update(businessRef, { logoStoragePath: safeStoragePath })
+    if (safeAction === BUSINESS_MEDIA_ACTIONS.FINALIZE_LOGO) {
+      if (logo !== finalizedSession.expectedAuthorityPath) throw new HttpsError('aborted', 'media-authority-changed')
+      idempotent = logo === finalizedSession.canonicalPath
+      if (!idempotent) transaction.update(businessRef, { logoStoragePath: finalizedSession.canonicalPath })
+      transaction.update(finalizingSessionRef, {
+        state: 'completed', promotedGeneration,
+        cleanupPending: true,
+        cleanupOldPath: finalizedSession.expectedAuthorityPath?.endsWith('/a')
+          || finalizedSession.expectedAuthorityPath?.endsWith('/b')
+          ? finalizedSession.expectedAuthorityPath : null,
+        cleanupOldGeneration: finalizedSession.expectedAuthorityGeneration ?? null,
+        updatedAt: now,
+      })
       return
     }
-    if (safeAction === BUSINESS_MEDIA_ACTIONS.ADD_GALLERY) {
-      idempotent = gallery.includes(safeStoragePath)
+    if (safeAction === BUSINESS_MEDIA_ACTIONS.FINALIZE_GALLERY) {
+      const existingForSlot = gallery.find((path) => parseCanonicalMediaPath(path)?.slot === parsedSlot) ?? null
+      if (existingForSlot !== finalizedSession.expectedAuthorityPath) throw new HttpsError('aborted', 'media-authority-changed')
+      idempotent = gallery.includes(finalizedSession.canonicalPath)
       assertGalleryAdditionAllowed({
         businessId: safeBusinessId,
         business,
         gallery,
-        storagePath: safeStoragePath,
+        storagePath: finalizedSession.canonicalPath,
         subscription: subscriptionSnapshot,
       })
       if (!idempotent) transaction.update(businessRef, {
-        galleryStoragePaths: [...gallery, safeStoragePath],
+        galleryStoragePaths: finalizedSession.expectedAuthorityPath
+          ? gallery.map((path) => path === finalizedSession.expectedAuthorityPath ? finalizedSession.canonicalPath : path)
+          : [...gallery, finalizedSession.canonicalPath],
+      })
+      transaction.update(finalizingSessionRef, {
+        state: 'completed', promotedGeneration,
+        cleanupPending: true,
+        cleanupOldPath: finalizedSession.expectedAuthorityPath?.endsWith('/a')
+          || finalizedSession.expectedAuthorityPath?.endsWith('/b')
+          ? finalizedSession.expectedAuthorityPath : null,
+        cleanupOldGeneration: finalizedSession.expectedAuthorityGeneration ?? null,
+        updatedAt: now,
       })
       return
     }
@@ -273,12 +512,28 @@ export async function manageBusinessMedia({
 
     idempotent = logo !== safeStoragePath
     if (!idempotent) transaction.update(businessRef, { logoStoragePath: null })
-  })
+    })
+  } catch (error) {
+    if (finalizedSession && error instanceof HttpsError
+      && ['failed-precondition', 'aborted', 'permission-denied'].includes(error.code)) {
+      await db.doc(`${MEDIA_SESSION_COLLECTION}/${sessionId}`)
+        .update({ state: 'failed', updatedAt: now }).catch(() => undefined)
+    }
+    throw error
+  }
 
-  if (adding) return publicResult({ action: safeAction, storagePath: safeStoragePath, idempotent })
+  if (adding) {
+    await afterAuthorityCommit()
+    const completedSession = (await finalizingSessionRef.get()).data()
+    await finishBusinessMediaCleanup({
+      db, sessionRef: finalizingSessionRef, session: completedSession,
+      requestId, bucket, removeExact, now,
+    })
+    return publicResult({ action: safeAction, storagePath: finalizedSession.canonicalPath, idempotent })
+  }
   let objectDeletion
   try {
-    objectDeletion = await deleteObject(safeStoragePath)
+    objectDeletion = await deleteObject(safeStoragePath, removalGeneration, bucket)
   } catch {
     objectDeletion = 'failed'
   }

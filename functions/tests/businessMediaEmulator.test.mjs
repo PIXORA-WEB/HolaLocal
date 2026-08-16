@@ -3,6 +3,7 @@ import { before, test } from 'node:test'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { BUSINESS_MEDIA_ACTIONS, manageBusinessMedia } from '../src/businessMedia.js'
+import { recordFinalizedStagingGeneration } from '../src/mediaUploadSessions.js'
 
 const enabled = process.env.HOLALOCAL_CALLABLE_BOUNDARY === '1'
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT
@@ -38,27 +39,41 @@ test('real concurrent media transactions preserve different gallery additions', 
       },
       privateField: 'preserved',
     }),
+    db.doc(`businessSubscriptions/${businessId}`).set({
+      schemaVersion: 1, planId: 'growth', planRevision: 1,
+      accessStatus: 'active', assignmentSource: 'system',
+    }),
   ])
-  const invoke = (slot) => manageBusinessMedia({
-    uid,
-    action: BUSINESS_MEDIA_ACTIONS.ADD_GALLERY,
-    businessId,
-    storagePath: `businesses/${businessId}/photos/${slot}`,
-    db,
-    readObjectMetadata: async () => ({ contentType: 'image/webp', size: '1024', metadata: {} }),
+  const bucket = { file: () => ({ getMetadata: async () => { const error = new Error('missing'); error.code = 404; throw error } }) }
+  const prepare = (slot) => manageBusinessMedia({
+    uid, action: BUSINESS_MEDIA_ACTIONS.PREPARE_GALLERY, businessId,
+    storagePath: `businesses/${businessId}/photos/${slot}`, db, bucket,
   })
-  await Promise.all([invoke(2), invoke(5)])
+  const prepared = await Promise.all([prepare(2), prepare(5)])
+  await Promise.all(prepared.map((session, index) => recordFinalizedStagingGeneration({
+    db,
+    parsedPath: { kind: 'gallery', businessId, slot: index === 0 ? 2 : 5 },
+    path: session.stagingPath,
+    generation: String((index === 0 ? 2 : 5) + 10),
+    uploadSessionId: session.requestId,
+  })))
+  const finalize = (slot, requestId) => manageBusinessMedia({
+    uid, action: BUSINESS_MEDIA_ACTIONS.FINALIZE_GALLERY, businessId,
+    storagePath: `businesses/${businessId}/photos/${slot}`, requestId,
+    stagingGeneration: String(slot + 10), db, bucket,
+    clean: async () => ({ metageneration: '2' }),
+    promote: async () => ({ generation: String(slot + 20) }),
+    clearContext: async () => undefined,
+    removeExact: async () => undefined,
+  })
+  await Promise.all([finalize(2, prepared[0].requestId), finalize(5, prepared[1].requestId)])
   const stored = (await db.doc(`businesses/${businessId}`).get()).data()
   assert.equal(stored.galleryStoragePaths.length, 2)
   assert.deepEqual(new Set(stored.galleryStoragePaths), new Set([
-    `businesses/${businessId}/photos/2`,
-    `businesses/${businessId}/photos/5`,
+    `businesses/${businessId}/photos/2/a`,
+    `businesses/${businessId}/photos/5/a`,
   ]))
   const establishedOrder = [...stored.galleryStoragePaths]
-  await invoke(2)
-  assert.deepEqual(
-    (await db.doc(`businesses/${businessId}`).get()).data().galleryStoragePaths,
-    establishedOrder,
-  )
+  assert.deepEqual((await db.doc(`businesses/${businessId}`).get()).data().galleryStoragePaths, establishedOrder)
   assert.equal(stored.privateField, 'preserved')
 })

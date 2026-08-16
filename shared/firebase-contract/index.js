@@ -63,8 +63,14 @@ export {
 } from './messaging.js'
 export {
   buildCanonicalBusinessGalleryPath,
+  buildCanonicalBusinessGallerySlotPath,
   buildCanonicalBusinessLogoPath,
+  buildCanonicalBusinessLogoSlotPath,
   buildCanonicalProfileMediaPath,
+  buildCanonicalProfileMediaSlotPath,
+  buildStagingProfileMediaPath,
+  buildStagingBusinessLogoPath,
+  buildStagingBusinessGalleryPath,
   CANONICAL_BUSINESS_GALLERY_SLOTS,
   HOLALOCAL_FIREBASE_STORAGE_BUCKET,
   isCanonicalProfileMediaPath,
@@ -75,6 +81,8 @@ export {
   isLegacyFirebaseProfileMediaUrl,
   MAX_CANONICAL_BUSINESS_GALLERY_SLOTS,
   parseCanonicalMediaPath,
+  parseStagingMediaPath,
+  inactiveCanonicalMediaSlot,
   parseLegacyFirebaseBusinessMediaUrl,
   parseLegacyFirebaseProfileMediaUrl,
   validateCanonicalBusinessMedia,

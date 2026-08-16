@@ -24,6 +24,15 @@ export function buildCanonicalProfileMediaPath(uid) {
   return `users/${requireMediaId(uid, 'uid')}/profile/avatar`
 }
 
+export function buildCanonicalProfileMediaSlotPath(uid, slot) {
+  if (!['a', 'b'].includes(slot)) throw new RangeError('profile media slot must be a or b')
+  return `${buildCanonicalProfileMediaPath(uid)}/${slot}`
+}
+
+export function buildStagingProfileMediaPath(uid) {
+  return `users/${requireMediaId(uid, 'uid')}/staging/profile/avatar`
+}
+
 export function isCanonicalProfileMediaPath(storagePath, expectedUid) {
   if (!MEDIA_ID_PATTERN.test(expectedUid ?? '')) return false
   const parsed = parseCanonicalMediaPath(storagePath)
@@ -34,6 +43,15 @@ export function buildCanonicalBusinessLogoPath(businessId) {
   return `businesses/${requireMediaId(businessId, 'businessId')}/logos/logo`
 }
 
+export function buildCanonicalBusinessLogoSlotPath(businessId, slot) {
+  if (!['a', 'b'].includes(slot)) throw new RangeError('business logo slot must be a or b')
+  return `${buildCanonicalBusinessLogoPath(businessId)}/${slot}`
+}
+
+export function buildStagingBusinessLogoPath(businessId) {
+  return `businesses/${requireMediaId(businessId, 'businessId')}/staging/logos/logo`
+}
+
 export function buildCanonicalBusinessGalleryPath(businessId, slot) {
   requireMediaId(businessId, 'businessId')
   if (!isCanonicalBusinessGallerySlot(slot)) {
@@ -42,12 +60,45 @@ export function buildCanonicalBusinessGalleryPath(businessId, slot) {
   return `businesses/${businessId}/photos/${slot}`
 }
 
+export function buildCanonicalBusinessGallerySlotPath(businessId, slot, mediaSlot) {
+  if (!['a', 'b'].includes(mediaSlot)) throw new RangeError('business gallery media slot must be a or b')
+  return `${buildCanonicalBusinessGalleryPath(businessId, slot)}/${mediaSlot}`
+}
+
+export function buildStagingBusinessGalleryPath(businessId, slot) {
+  requireMediaId(businessId, 'businessId')
+  if (!isCanonicalBusinessGallerySlot(slot)) {
+    throw new RangeError(`gallery slot must be an integer from 0 to ${MAX_CANONICAL_BUSINESS_GALLERY_SLOTS - 1}`)
+  }
+  return `businesses/${businessId}/staging/photos/${slot}`
+}
+
+export function parseStagingMediaPath(storagePath) {
+  if (typeof storagePath !== 'string' || storagePath.includes('%') || storagePath.includes('\\')) return null
+  const segments = storagePath.split('/')
+  if (segments.some((segment) => !segment || segment === '.' || segment === '..')) return null
+  if (segments.length === 5 && segments[0] === 'users' && MEDIA_ID_PATTERN.test(segments[1])
+    && segments.slice(2).join('/') === 'staging/profile/avatar') {
+    return Object.freeze({ kind: 'profile', uid: segments[1], storagePath })
+  }
+  if (segments.length !== 5 || segments[0] !== 'businesses' || !MEDIA_ID_PATTERN.test(segments[1])
+    || segments[2] !== 'staging') return null
+  if (segments[3] === 'logos' && segments[4] === 'logo') {
+    return Object.freeze({ businessId: segments[1], kind: 'logo', storagePath })
+  }
+  if (segments[3] === 'photos' && /^[0-7]$/.test(segments[4])) {
+    return Object.freeze({ businessId: segments[1], kind: 'gallery', slot: Number(segments[4]), storagePath })
+  }
+  return null
+}
+
 export function parseCanonicalMediaPath(storagePath) {
   if (typeof storagePath !== 'string' || storagePath.includes('%') || storagePath.includes('\\')) {
     return null
   }
   const segments = storagePath.split('/')
-  if (segments.length !== 4 || segments.some((segment) => !segment || segment === '.' || segment === '..')) {
+  if (![4, 5].includes(segments.length)
+    || segments.some((segment) => !segment || segment === '.' || segment === '..')) {
     return null
   }
 
@@ -56,23 +107,35 @@ export function parseCanonicalMediaPath(storagePath) {
     && MEDIA_ID_PATTERN.test(segments[1])
     && segments[2] === 'profile'
     && segments[3] === 'avatar'
+    && (segments.length === 4 || ['a', 'b'].includes(segments[4]))
   ) {
-    return Object.freeze({ kind: 'profile', uid: segments[1], storagePath })
+    return Object.freeze({ kind: 'profile', uid: segments[1],
+      ...(segments[4] ? { mediaSlot: segments[4] } : {}), storagePath })
   }
 
   if (segments[0] !== 'businesses' || !MEDIA_ID_PATTERN.test(segments[1])) return null
-  if (segments[2] === 'logos' && segments[3] === 'logo') {
-    return Object.freeze({ businessId: segments[1], kind: 'logo', storagePath })
+  if (segments[2] === 'logos' && segments[3] === 'logo'
+    && (segments.length === 4 || ['a', 'b'].includes(segments[4]))) {
+    return Object.freeze({ businessId: segments[1], kind: 'logo',
+      ...(segments[4] ? { mediaSlot: segments[4] } : {}), storagePath })
   }
-  if (segments[2] === 'photos' && /^[0-7]$/.test(segments[3])) {
+  if (segments[2] === 'photos' && /^[0-7]$/.test(segments[3])
+    && (segments.length === 4 || ['a', 'b'].includes(segments[4]))) {
     return Object.freeze({
       businessId: segments[1],
       kind: 'gallery',
+      ...(segments[4] ? { mediaSlot: segments[4] } : {}),
       slot: Number(segments[3]),
       storagePath,
     })
   }
   return null
+}
+
+export function inactiveCanonicalMediaSlot(currentStoragePath, expected) {
+  const parsed = parseCanonicalMediaPath(currentStoragePath)
+  if (!parsed || (expected && !expected(parsed))) return 'a'
+  return parsed.mediaSlot === 'a' ? 'b' : 'a'
 }
 
 export function isCanonicalBusinessLogoPath(storagePath, expectedBusinessId) {

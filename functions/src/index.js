@@ -2,11 +2,17 @@ import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
+import { onObjectFinalized } from 'firebase-functions/v2/storage'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 import { acceptLegalConsent as runAcceptLegalConsent } from './legalConsent.js'
 import { cancelAccountDeletion as runCancelAccountDeletion, requestAccountDeletion as runRequestAccountDeletion } from './accountDeletion.js'
 import { finalizeAccountDeletion as runFinalizeAccountDeletion } from './accountDeletionFinalizer.js'
 import { listAdminAccountDeletionRequests as runListAdminAccountDeletionRequests } from './adminAccountDeletion.js'
 import { manageBusinessMedia as runManageBusinessMedia } from './businessMedia.js'
+import { prepareProfileMediaUpload as runPrepareProfileMediaUpload, finalizeProfileMedia as runFinalizeProfileMedia } from './profileMedia.js'
+import { cleanFinalizedStagingObject, sweepExpiredMediaSessions } from './stagingMediaMaintenance.js'
+import { MEDIA_SWEEPER_SCHEDULE } from './mediaUploadSessions.js'
+import { HOLALOCAL_FIREBASE_STORAGE_BUCKET } from '@holalocal/firebase-contract'
 import { transitionAccountRole } from './accountRoleTransition.js'
 import { getAdminBusinessReview as runGetAdminBusinessReview } from './adminBusinessReview.js'
 import { assignBusinessSubscriptionPlan as runAssignBusinessSubscriptionPlan } from './subscriptionPlanAssignment.js'
@@ -139,15 +145,37 @@ export async function handleAcceptLegalConsent(request, db) {
 
 export async function handleManageBusinessMedia(request, dependencies = {}) {
   const uid = requireCallableUid(request)
-  requireExactInput(request.data, ['action', 'businessId', 'storagePath'])
+  requireExactInput(request.data, ['action', 'businessId', 'storagePath', 'requestId', 'stagingGeneration'])
   return runManageBusinessMedia({
     uid,
     action: request.data.action,
     businessId: request.data.businessId,
     storagePath: request.data.storagePath,
     db: dependencies.db ?? getFirestore(),
-    readObjectMetadata: dependencies.readObjectMetadata,
     deleteObject: dependencies.deleteObject,
+    requestId: request.data.requestId,
+    stagingGeneration: request.data.stagingGeneration,
+    bucket: dependencies.bucket,
+    clean: dependencies.clean,
+    promote: dependencies.promote,
+    removeExact: dependencies.removeExact,
+  })
+}
+
+export async function handlePrepareProfileMediaUpload(request, dependencies = {}) {
+  requireExactInput(request.data, [])
+  return runPrepareProfileMediaUpload({
+    uid: requireCallableUid(request), db: dependencies.db ?? getFirestore(), bucket: dependencies.bucket,
+  })
+}
+
+export async function handleFinalizeProfileMedia(request, dependencies = {}) {
+  requireExactInput(request.data, ['requestId', 'stagingGeneration'])
+  return runFinalizeProfileMedia({
+    uid: requireCallableUid(request), requestId: request.data.requestId,
+    stagingGeneration: request.data.stagingGeneration,
+    db: dependencies.db ?? getFirestore(), bucket: dependencies.bucket,
+    clean: dependencies.clean, promote: dependencies.promote, remove: dependencies.remove,
   })
 }
 
@@ -320,6 +348,26 @@ export const acceptLegalConsent = onCall(
 export const manageBusinessMedia = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleManageBusinessMedia(request),
+)
+
+export const prepareProfileMediaUpload = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handlePrepareProfileMediaUpload(request),
+)
+
+export const finalizeProfileMedia = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleFinalizeProfileMedia(request),
+)
+
+export const cleanStagingMediaObject = onObjectFinalized(
+  { bucket: HOLALOCAL_FIREBASE_STORAGE_BUCKET, region: MESSAGE_TRANSLATION_REGION, maxInstances: 5, concurrency: 10 },
+  async (event) => cleanFinalizedStagingObject({ object: event.data, db: getFirestore() }),
+)
+
+export const sweepStagingMedia = onSchedule(
+  { region: MESSAGE_TRANSLATION_REGION, schedule: MEDIA_SWEEPER_SCHEDULE, maxInstances: 1 },
+  async () => sweepExpiredMediaSessions({ db: getFirestore() }),
 )
 
 export const requestAccountDeletion = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => handleRequestAccountDeletion(request))

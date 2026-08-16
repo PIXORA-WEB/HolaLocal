@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import AuthLayout from '../components/layout/AuthLayout.jsx'
@@ -12,6 +12,7 @@ import PublicRoute from './PublicRoute.jsx'
 import AdminRoute from './AdminRoute.jsx'
 import AdminOnlyRoute from './AdminOnlyRoute.jsx'
 import ScrollToTopOnNavigation from './ScrollToTopOnNavigation.jsx'
+import { clearBusinessMediaPresentationCache } from '../services/businessMediaPresentation.js'
 
 const CompleteProfilePage = lazy(() => import('../pages/auth/CompleteProfilePage.jsx'))
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage.jsx'))
@@ -46,6 +47,12 @@ function RouteLoadingFallback() {
   )
 }
 
+function BusinessMediaPresentationCleanup() {
+  const { pathname } = useLocation()
+  useEffect(() => () => clearBusinessMediaPresentationCache(), [pathname])
+  return null
+}
+
 function SignInRedirect() {
   const location = useLocation()
   return <Navigate replace state={location.state} to={`/login${location.search}`} />
@@ -65,6 +72,7 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <ScrollToTopOnNavigation />
+      <BusinessMediaPresentationCleanup />
       <MetadataManager />
       <Suspense fallback={<RouteLoadingFallback />}>
       <Routes>
