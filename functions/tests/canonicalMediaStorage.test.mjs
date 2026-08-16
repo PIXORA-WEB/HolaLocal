@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  cleanStagingGeneration, deleteExactGeneration, promoteCleanGeneration,
+  cleanStagingGeneration, clearPromotionContext, deleteExactGeneration, promoteCleanGeneration,
 } from '../src/canonicalMediaStorage.js'
 
 function fakeBucket(seed) {
@@ -22,7 +22,12 @@ function fakeBucket(seed) {
         async setMetadata(update) {
           calls.push(['metadata', path, options, update])
           const value = objects.get(path)
-          objects.set(path, { ...value, metadata: update.metadata, metageneration: String(Number(value.metageneration) + 1) })
+          objects.set(path, {
+            ...value,
+            ...(Object.hasOwn(update, 'metadata') ? { metadata: update.metadata } : {}),
+            ...(Object.hasOwn(update, 'contexts') ? { contexts: update.contexts } : {}),
+            metageneration: String(Number(value.metageneration) + 1),
+          })
         },
         async delete(deleteOptions) { calls.push(['delete', path, options, deleteOptions]) },
       }
@@ -65,8 +70,9 @@ test('promotion sends exact source conditions, destination condition, and empty 
   const request = bucket.calls.find(([kind]) => kind === 'rewrite')[1]
   assert.deepEqual(request.qs, {
     sourceGeneration: '10', ifSourceGenerationMatch: '10',
-    ifSourceMetagenerationMatch: '2', ifGenerationMatch: '7', dropContextGroups: 'custom',
+    ifSourceMetagenerationMatch: '2', ifGenerationMatch: '7',
   })
+  assert.equal(Object.hasOwn(request.qs, 'dropContextGroups'), false)
   assert.deepEqual(request.json, {
     contentType: 'image/png', metadata: {},
     contexts: { custom: { 'holalocal-media-request': { value: '12345678-1234-1234-1234-123456789012' } } },
@@ -81,6 +87,31 @@ test('first creation uses destination generation zero and conditional deletion c
   assert.equal(bucket.calls[0][1].qs.ifGenerationMatch, '0')
   await deleteExactGeneration({ path: 'staging', generation: '10', bucket })
   assert.deepEqual(bucket.calls.at(-1)[2].preconditionOpts, { ifGenerationMatch: '10' })
+})
+
+test('promotion overrides source contexts and clears its retry context before authority', async () => {
+  const cleaned = {
+    ...staging, metadata: {}, metageneration: '2',
+    contexts: { custom: { inherited: { value: 'must-not-copy' } } },
+  }
+  const canonical = { ...cleaned, name: 'canonical', generation: '20', metageneration: '1' }
+  const bucket = fakeBucket({ staging: cleaned, canonical })
+  await promoteCleanGeneration({
+    stagingPath: 'staging', stagingGeneration: '10', stagingMetageneration: '2',
+    canonicalPath: 'canonical', expectedCanonicalGeneration: 0,
+    promotionId: '12345678-1234-1234-1234-123456789012', bucket,
+  })
+  assert.deepEqual(bucket.objects.get('canonical').contexts, {
+    custom: { 'holalocal-media-request': { value: '12345678-1234-1234-1234-123456789012' } },
+  })
+  await clearPromotionContext({ path: 'canonical', generation: '20', bucket })
+  assert.deepEqual(bucket.objects.get('canonical').contexts, { custom: null })
+  const contextUpdate = bucket.calls.find(([kind, path, , update]) => (
+    kind === 'metadata' && path === 'canonical' && Object.hasOwn(update, 'contexts')
+  ))
+  assert.deepEqual(contextUpdate[2].preconditionOpts, {
+    ifGenerationMatch: '20', ifMetagenerationMatch: '1',
+  })
 })
 
 test('unexpected custom metadata and stale generations fail closed', async () => {

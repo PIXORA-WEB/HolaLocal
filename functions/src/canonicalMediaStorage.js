@@ -139,7 +139,6 @@ export async function promoteCleanGeneration({
         ifSourceGenerationMatch: sourceGeneration,
         ifSourceMetagenerationMatch: sourceMetageneration,
         ifGenerationMatch: destinationGeneration,
-        dropContextGroups: 'custom',
       },
       {
         contentType: source.contentType,
