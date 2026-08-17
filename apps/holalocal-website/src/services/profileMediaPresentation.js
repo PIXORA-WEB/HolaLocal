@@ -2,8 +2,9 @@ import {
   isCanonicalProfileMediaPath,
   parseLegacyFirebaseProfileMediaUrl,
 } from '@holalocal/firebase-contract'
+import { CANONICAL_MEDIA_MAX_DOWNLOAD_BYTES, loadCanonicalBlobPresentation } from './canonicalMediaPresentation.js'
 
-export const PRIVATE_PROFILE_MEDIA_MAX_BYTES = 5 * 1024 * 1024
+export const PRIVATE_PROFILE_MEDIA_MAX_BYTES = CANONICAL_MEDIA_MAX_DOWNLOAD_BYTES
 
 export function resolveProfileMediaReference(uid, userProfile) {
   if (!uid || !userProfile) return null
@@ -27,17 +28,10 @@ export async function loadProfileMediaPresentation(uid, userProfile, dependencie
   if (!media) return null
   if (media.kind === 'legacy') return Object.freeze({ kind: 'legacy', revoke: null, url: media.url })
 
-  const getBlob = dependencies.getBlob ?? (async (storagePath, maxBytes) => {
-    const storage = await import('../firebase/storageClient.js')
-    return storage.getPrivateImageBlob(storagePath, maxBytes)
-  })
-  const createObjectURL = dependencies.createObjectURL ?? ((blob) => URL.createObjectURL(blob))
-  const revokeObjectURL = dependencies.revokeObjectURL ?? ((url) => URL.revokeObjectURL(url))
-  const blob = await getBlob(media.storagePath, PRIVATE_PROFILE_MEDIA_MAX_BYTES)
-  const url = createObjectURL(blob)
+  const presentation = await loadCanonicalBlobPresentation(media.storagePath, dependencies)
   return Object.freeze({
     kind: 'canonical',
-    revoke: () => revokeObjectURL(url),
-    url,
+    revoke: presentation.revoke,
+    url: presentation.url,
   })
 }

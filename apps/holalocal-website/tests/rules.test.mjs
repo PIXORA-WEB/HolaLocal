@@ -359,6 +359,60 @@ beforeEach(async () => {
 })
 after(async () => { await environment.cleanup() })
 
+test('reviewed transitional variant has one explicit mechanical release switch', async () => {
+  const strictRules = await readFile('../../storage.rules', 'utf8')
+  const transitionalRules = strictRules.replace(
+    /function allowTransitionalCanonicalWrites\(\) \{\s*return false;\s*\}/,
+    'function allowTransitionalCanonicalWrites() { return true; }',
+  )
+  assert.notEqual(transitionalRules, strictRules)
+  assert.equal((strictRules.match(/allowTransitionalCanonicalWrites\(\)/g) ?? []).length, 7)
+  assert.match(transitionalRules, /function allowTransitionalCanonicalWrites\(\) \{ return true; \}/)
+  assert.match(transitionalRules, /match \/users\/\{userId\}\/staging\/profile\/avatar/)
+  assert.match(transitionalRules, /match \/businesses\/\{businessId\}\/staging\/photos\/\{slot\}/)
+  const transitional = await initializeTestEnvironment({
+    projectId: `${projectId}-transitional`,
+    firestore: { rules: await readFile('../../firestore.rules', 'utf8') },
+    storage: { rules: transitionalRules },
+  })
+  try {
+    // The emulator runs in single-project mode, so Storage Rules cross-service
+    // Firestore lookups resolve against the configured project even while the
+    // alternate project carries the transitional Storage ruleset.
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users', 'transition-owner'), user('transition-owner', {
+        roles: ['business'], accountType: 'business', profileCompleted: true,
+      }))
+      await setDoc(doc(context.firestore(), 'businesses', 'transition-business'), business({
+        ownerId: 'transition-owner', managerIds: ['transition-owner'], status: 'draft',
+      }))
+    })
+    await transitional.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users', 'transition-owner'), user('transition-owner', {
+        roles: ['business'], accountType: 'business', profileCompleted: true,
+      }))
+      await setDoc(doc(context.firestore(), 'businesses', 'transition-business'), business({
+        ownerId: 'transition-owner', managerIds: ['transition-owner'], status: 'draft',
+      }))
+    })
+    const storage = transitional.authenticatedContext('transition-owner').storage()
+    await assertSucceeds(uploadBytes(ref(storage, 'businesses/transition-business/logos/logo'),
+      new Uint8Array([1]), { contentType: 'image/png' }))
+    await assertSucceeds(uploadBytes(ref(storage, 'businesses/transition-business/staging/logos/logo'),
+      new Uint8Array([1]), { contentType: 'image/png',
+        customMetadata: { holalocalUploadSession: 'request-12345678' } }))
+    await assertFails(uploadBytes(ref(storage, 'businesses/transition-business/logos/logo/a'),
+      new Uint8Array([1]), { contentType: 'image/png' }))
+  } finally {
+    await transitional.cleanup()
+    const restoredStrict = await initializeTestEnvironment({
+      projectId,
+      storage: { rules: strictRules },
+    })
+    await restoredStrict.cleanup()
+  }
+})
+
 describe('users and account lifecycle', () => {
   function mobilePayload(uid, overrides = {}) {
     return {
@@ -1666,10 +1720,13 @@ describe('business insights aggregates', () => {
 
 describe('storage', () => {
   const image = new Uint8Array([137, 80, 78, 71])
+  const stagingMetadata = (contentType = 'image/png') => ({
+    contentType, customMetadata: { holalocalUploadSession: 'request-12345678' },
+  })
   test('canonical profile media is private to its owner and cannot be listed', async () => {
     const path = 'users/owner/profile/avatar'
     const ownerStorage = environment.authenticatedContext('owner').storage()
-    await assertSucceeds(uploadBytes(ref(ownerStorage, path), image, { contentType: 'image/png' }))
+    await seedStorageWithoutRules(path)
     await assertSucceeds(getBytes(ref(ownerStorage, path)))
     await assertFails(getBytes(ref(environment.authenticatedContext('unrelated').storage(), path)))
     await assertFails(getBytes(ref(environment.unauthenticatedContext().storage(), path)))
@@ -1677,25 +1734,25 @@ describe('storage', () => {
     await assertFails(getBytes(ref(environment.authenticatedContext('admin', { admin: true }).storage(), path)))
     await assertFails(listAll(ref(ownerStorage, 'users/owner/profile')))
   })
-  test('profile writes accept only the exact canonical slot and valid active owner', async () => {
+  test('profile staging writes accept only the exact bounded slot and strict canonical writes are denied', async () => {
     await assertSucceeds(uploadBytes(
-      ref(environment.authenticatedContext('customer').storage(), 'users/customer/profile/avatar'),
+      ref(environment.authenticatedContext('customer').storage(), 'users/customer/staging/profile/avatar'),
       image,
-      { contentType: 'image/webp' },
+      stagingMetadata('image/webp'),
     ))
     await assertFails(uploadBytes(
-      ref(environment.authenticatedContext('customer').storage(), 'users/customer/profile/photo.png'),
+      ref(environment.authenticatedContext('customer').storage(), 'users/customer/staging/profile/photo.png'),
       image,
       { contentType: 'image/png' },
     ))
     await assertFails(uploadBytes(
-      ref(environment.authenticatedContext('unrelated').storage(), 'users/customer/profile/avatar'),
+      ref(environment.authenticatedContext('unrelated').storage(), 'users/customer/staging/profile/avatar'),
       image,
       { contentType: 'image/png' },
     ))
     for (const uid of ['suspended', 'deleted', 'deletion-pending']) {
       await assertFails(uploadBytes(
-        ref(environment.authenticatedContext(uid).storage(), `users/${uid}/profile/avatar`),
+        ref(environment.authenticatedContext(uid).storage(), `users/${uid}/staging/profile/avatar`),
         image,
         { contentType: 'image/png' },
       ))
@@ -1704,6 +1761,16 @@ describe('storage', () => {
         ref(environment.authenticatedContext(uid).storage(), `users/${uid}/profile/avatar`),
       ))
     }
+    await assertFails(uploadBytes(
+      ref(environment.authenticatedContext('customer').storage(), 'users/customer/profile/avatar'),
+      image, { contentType: 'image/png' },
+    ))
+    await assertFails(getBytes(ref(
+      environment.authenticatedContext('customer').storage(), 'users/customer/staging/profile/avatar',
+    )))
+    await assertFails(deleteObject(ref(
+      environment.authenticatedContext('customer').storage(), 'users/customer/staging/profile/avatar',
+    )))
   })
   test('legacy profile objects are owner-readable/deletable but immutable and private', async () => {
     const path = 'users/owner/profile/legacy-uuid.png'
@@ -1720,32 +1787,32 @@ describe('storage', () => {
       { contentType: 'image/png' },
     ))
   })
-  test('owner and manager can upload exact canonical business slots only while editable', async () => {
+  test('owner and manager can upload exact bounded staging slots only while editable', async () => {
     await assertSucceeds(uploadBytes(
-      ref(environment.authenticatedContext('owner').storage(), 'businesses/draft-business/logos/logo'),
+      ref(environment.authenticatedContext('owner').storage(), 'businesses/draft-business/staging/logos/logo'),
       image,
-      { contentType: 'image/jpeg' },
+      stagingMetadata('image/jpeg'),
     ))
     await assertSucceeds(uploadBytes(
-      ref(environment.authenticatedContext('manager').storage(), 'businesses/manager/photos/0'),
+      ref(environment.authenticatedContext('manager').storage(), 'businesses/manager/staging/photos/0'),
       image,
-      { contentType: 'image/png' },
+      stagingMetadata('image/png'),
     ))
     await assertSucceeds(uploadBytes(
-      ref(environment.authenticatedContext('manager').storage(), 'businesses/manager/photos/7'),
+      ref(environment.authenticatedContext('manager').storage(), 'businesses/manager/staging/photos/7'),
       image,
-      { contentType: 'image/webp' },
+      stagingMetadata('image/webp'),
     ))
     await assertFails(uploadBytes(
-      ref(environment.authenticatedContext('unrelated').storage(), 'businesses/draft-business/photos/0'),
+      ref(environment.authenticatedContext('unrelated').storage(), 'businesses/draft-business/staging/photos/0'),
       image,
       { contentType: 'image/png' },
     ))
     for (const path of [
-      'businesses/draft-business/photos/8',
-      'businesses/draft-business/photos/-1',
-      'businesses/draft-business/photos/custom.png',
-      'businesses/draft-business/logos/custom.png',
+      'businesses/draft-business/staging/photos/8',
+      'businesses/draft-business/staging/photos/-1',
+      'businesses/draft-business/staging/photos/custom.png',
+      'businesses/draft-business/staging/logos/custom.png',
       'businesses/draft-business/covers/logo',
       'businesses/draft-business/private/0',
     ]) {
@@ -1755,11 +1822,15 @@ describe('storage', () => {
         { contentType: 'image/png' },
       ))
     }
+    await assertFails(uploadBytes(
+      ref(environment.authenticatedContext('owner').storage(), 'businesses/draft-business/logos/logo'),
+      image, { contentType: 'image/png' },
+    ))
   })
   test('inactive accounts and non-editable businesses cannot mutate canonical media', async () => {
     for (const uid of ['suspended', 'deleted', 'deletion-pending']) {
       await assertFails(uploadBytes(
-        ref(environment.authenticatedContext(uid).storage(), `businesses/${uid}-owner-business/logos/logo`),
+        ref(environment.authenticatedContext(uid).storage(), `businesses/${uid}-owner-business/staging/logos/logo`),
         image,
         { contentType: 'image/png' },
       ))
@@ -1770,39 +1841,54 @@ describe('storage', () => {
       'active-with-deletion-request-business',
     ]) {
       await assertFails(uploadBytes(
-        ref(environment.authenticatedContext('owner').storage(), `businesses/${businessId}/logos/logo`),
+        ref(environment.authenticatedContext('owner').storage(), `businesses/${businessId}/staging/logos/logo`),
         image,
         { contentType: 'image/png' },
       ))
     }
   })
-  test('canonical uploads enforce MIME, strict size and empty custom metadata', async () => {
+  test('staging uploads enforce MIME, strict size and exactly one session marker', async () => {
     const storage = environment.authenticatedContext('owner').storage()
     await assertFails(uploadBytes(
-      ref(storage, 'businesses/draft-business/photos/0'),
+      ref(storage, 'businesses/draft-business/staging/photos/0'),
       image,
-      { contentType: 'text/plain' },
+      stagingMetadata('text/plain'),
     ))
     await assertFails(uploadBytes(
-      ref(storage, 'businesses/draft-business/photos/1'),
+      ref(storage, 'businesses/draft-business/staging/photos/1'),
       new Uint8Array(5 * 1024 * 1024),
-      { contentType: 'image/png' },
+      stagingMetadata('image/png'),
     ))
     await assertFails(uploadBytes(
-      ref(storage, 'businesses/draft-business/photos/2'),
+      ref(storage, 'businesses/draft-business/staging/photos/2'),
       new Uint8Array((5 * 1024 * 1024) + 1),
-      { contentType: 'image/png' },
+      stagingMetadata('image/png'),
     ))
     await assertFails(uploadBytes(
-      ref(storage, 'businesses/draft-business/photos/3'),
+      ref(storage, 'businesses/draft-business/staging/photos/3'),
       image,
       { contentType: 'image/png', customMetadata: { originalName: 'private-name.png' } },
     ))
     await assertFails(uploadBytes(
-      ref(storage, 'businesses/draft-business/photos/4'),
+      ref(storage, 'businesses/draft-business/staging/photos/4'),
       image,
       { contentType: 'image/png', customMetadata: { arbitrary: 'value' } },
     ))
+    await assertFails(uploadBytes(
+      ref(storage, 'businesses/draft-business/staging/photos/5'), image,
+      { contentType: 'image/png' },
+    ))
+    await assertFails(uploadBytes(
+      ref(storage, 'businesses/draft-business/staging/photos/6'), image,
+      { contentType: 'image/png', customMetadata: {
+        holalocalUploadSession: 'request-12345678', extra: 'forbidden',
+      } },
+    ))
+    for (const path of [
+      'businesses/draft-business/logos/logo/a',
+      'businesses/draft-business/photos/0/b',
+      'users/owner/profile/avatar/a',
+    ]) await assertFails(uploadBytes(ref(storage, path), image, { contentType: 'image/png' }))
   })
   test('canonical and legacy business folders cannot be listed', async () => {
     const storage = environment.authenticatedContext('owner').storage()
@@ -1851,6 +1937,26 @@ describe('storage', () => {
     await assertSucceeds(getBytes(ref(publicStorage, referencedLogo)))
     await assertSucceeds(getBytes(ref(publicStorage, referencedPhoto)))
     await assertFails(getBytes(ref(publicStorage, unreferencedPhoto)))
+  })
+  test('public A/B reads allow only the exact active manifest slot', async () => {
+    const businessId = 'active-business'
+    const activeLogo = `businesses/${businessId}/logos/logo/a`
+    const inactiveLogo = `businesses/${businessId}/logos/logo/b`
+    const activePhoto = `businesses/${businessId}/photos/0/b`
+    const inactivePhoto = `businesses/${businessId}/photos/0/a`
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'businesses', businessId), {
+        logoStoragePath: activeLogo, galleryStoragePaths: [activePhoto],
+      })
+      for (const path of [activeLogo, inactiveLogo, activePhoto, inactivePhoto]) {
+        await uploadBytes(ref(context.storage(), path), image, { contentType: 'image/png' })
+      }
+    })
+    const storage = environment.unauthenticatedContext().storage()
+    await assertSucceeds(getBytes(ref(storage, activeLogo)))
+    await assertSucceeds(getBytes(ref(storage, activePhoto)))
+    await assertFails(getBytes(ref(storage, inactiveLogo)))
+    await assertFails(getBytes(ref(storage, inactivePhoto)))
   })
   test('public canonical reads fail for every non-public lifecycle and deletion state', async () => {
     const businessIds = [

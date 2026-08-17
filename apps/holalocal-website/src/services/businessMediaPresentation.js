@@ -3,12 +3,12 @@ import {
   isCanonicalBusinessLogoPath,
   parseLegacyFirebaseBusinessMediaUrl,
 } from '@holalocal/firebase-contract'
+import { loadCanonicalBlobPresentation } from './canonicalMediaPresentation.js'
 
 const canonicalUrlCache = new Map()
 
 async function defaultCanonicalUrlResolver(storagePath) {
-  const { getStoragePresentationUrl } = await import('../firebase/storageClient.js')
-  return getStoragePresentationUrl(storagePath)
+  return loadCanonicalBlobPresentation(storagePath)
 }
 
 async function resolveCanonicalUrl(storagePath, resolver) {
@@ -53,7 +53,7 @@ export async function resolveBusinessMediaPresentation(
   const canonicalGallery = (await Promise.all(galleryStoragePaths.map(async (storagePath) => {
     try {
       return Object.freeze({
-        downloadUrl: await resolveCanonicalUrl(storagePath, resolver),
+        downloadUrl: (await resolveCanonicalUrl(storagePath, resolver)).url,
         kind: 'canonical',
         storagePath,
       })
@@ -65,7 +65,7 @@ export async function resolveBusinessMediaPresentation(
   if (logoStoragePath) {
     try {
       canonicalLogo = Object.freeze({
-        downloadUrl: await resolveCanonicalUrl(logoStoragePath, resolver),
+        downloadUrl: (await resolveCanonicalUrl(logoStoragePath, resolver)).url,
         kind: 'canonical',
         storagePath: logoStoragePath,
       })
@@ -100,5 +100,8 @@ export async function resolveBusinessMediaPresentation(
 }
 
 export function clearBusinessMediaPresentationCache() {
+  for (const entry of canonicalUrlCache.values()) {
+    Promise.resolve(entry).then((presentation) => presentation?.revoke?.()).catch(() => undefined)
+  }
   canonicalUrlCache.clear()
 }

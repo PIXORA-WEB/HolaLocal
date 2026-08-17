@@ -50,6 +50,23 @@ service firebase.storage {
         && request.resource.metadata.size() == 0;
     }
 
+    function validStagingImageUpload() {
+      return request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)')
+        && request.resource.metadata.keys().hasOnly(['holalocalUploadSession'])
+        && request.resource.metadata.holalocalUploadSession is string
+        && request.resource.metadata.holalocalUploadSession.size() >= 16
+        && request.resource.metadata.holalocalUploadSession.size() <= 80;
+    }
+
+    // Release switch: strict is the reviewed final state. During the short website
+    // rollout window only, deploy an explicitly reviewed copy with this returning
+    // true so the previous frontend can still upload canonical media.
+    function allowTransitionalCanonicalWrites() {
+      return false;
+    }
+
     function safePublicContact(contact) {
       return contact is map
         && contact.keys().hasOnly([
@@ -133,10 +150,24 @@ service firebase.storage {
     match /users/{userId}/profile/avatar {
       allow get: if signedIn() && request.auth.uid == userId;
       allow list: if false;
-      allow create, update: if hasActiveAccount()
+      allow create, update: if allowTransitionalCanonicalWrites()
+        && hasActiveAccount()
         && request.auth.uid == userId
         && validCanonicalImageUpload();
-      allow delete: if hasActiveAccount() && request.auth.uid == userId;
+      allow delete: if allowTransitionalCanonicalWrites()
+        && hasActiveAccount() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/staging/profile/avatar {
+      allow get, list, delete: if false;
+      allow create, update: if hasActiveAccount()
+        && request.auth.uid == userId
+        && validStagingImageUpload();
+    }
+
+    match /users/{userId}/profile/avatar/{mediaSlot} {
+      allow get: if mediaSlot in ['a', 'b'] && signedIn() && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
     }
 
     match /users/{userId}/profile/{legacyFileName} {
@@ -151,8 +182,24 @@ service firebase.storage {
         || managesBusiness(businessId)
         || isModerator();
       allow list: if false;
-      allow create, update: if managesEditableBusiness(businessId) && validCanonicalImageUpload();
-      allow delete: if managesEditableBusiness(businessId);
+      allow create, update: if allowTransitionalCanonicalWrites()
+        && managesEditableBusiness(businessId) && validCanonicalImageUpload();
+      allow delete: if allowTransitionalCanonicalWrites() && managesEditableBusiness(businessId);
+    }
+
+    match /businesses/{businessId}/staging/logos/logo {
+      allow get, list, delete: if false;
+      allow create, update: if managesEditableBusiness(businessId) && validStagingImageUpload();
+    }
+
+    match /businesses/{businessId}/logos/logo/{mediaSlot} {
+      allow get: if mediaSlot in ['a', 'b']
+        && ((isPublicBusinessEligible(businessId)
+            && businessData(businessId).logoStoragePath
+              == 'businesses/' + businessId + '/logos/logo/' + mediaSlot)
+          || managesBusiness(businessId)
+          || isModerator());
+      allow list, create, update, delete: if false;
     }
 
     match /businesses/{businessId}/photos/{slot} {
@@ -161,11 +208,31 @@ service firebase.storage {
           || managesBusiness(businessId)
           || isModerator());
       allow list: if false;
-      allow create, update: if slot in ['0', '1', '2', '3', '4', '5', '6', '7']
+      allow create, update: if allowTransitionalCanonicalWrites()
+        && slot in ['0', '1', '2', '3', '4', '5', '6', '7']
         && managesEditableBusiness(businessId)
         && validCanonicalImageUpload();
-      allow delete: if slot in ['0', '1', '2', '3', '4', '5', '6', '7']
+      allow delete: if allowTransitionalCanonicalWrites()
+        && slot in ['0', '1', '2', '3', '4', '5', '6', '7']
         && managesEditableBusiness(businessId);
+    }
+
+    match /businesses/{businessId}/staging/photos/{slot} {
+      allow get, list, delete: if false;
+      allow create, update: if slot in ['0', '1', '2', '3', '4', '5', '6', '7']
+        && managesEditableBusiness(businessId)
+        && validStagingImageUpload();
+    }
+
+    match /businesses/{businessId}/photos/{slot}/{mediaSlot} {
+      allow get: if slot in ['0', '1', '2', '3', '4', '5', '6', '7']
+        && mediaSlot in ['a', 'b']
+        && ((isPublicBusinessEligible(businessId)
+            && 'businesses/' + businessId + '/photos/' + slot + '/' + mediaSlot
+              in businessData(businessId).galleryStoragePaths)
+          || managesBusiness(businessId)
+          || isModerator());
+      allow list, create, update, delete: if false;
     }
 
     match /businesses/{businessId}/logos/{legacyFileName} {

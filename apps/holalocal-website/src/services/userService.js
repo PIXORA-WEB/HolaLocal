@@ -2,24 +2,14 @@
 // Authentication credentials remain the responsibility of Firebase Auth.
 import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase/firestoreClient.js'
-import { updateAccountRoleCallable } from '../firebase/functionsClient.js'
+import { finalizeProfileMediaCallable, prepareProfileMediaUploadCallable, updateAccountRoleCallable } from '../firebase/functionsClient.js'
 import { createApplicationError } from '../utils/frontendErrors.js'
 import { hasCurrentLegalConsent } from '../utils/policies.js'
 import { toWebsiteUserProfile } from './firebaseCompatibility.js'
-import {
-  buildCanonicalProfileMediaPath,
-  isCanonicalProfileMediaPath,
-  parseLegacyFirebaseProfileMediaUrl,
-} from '@holalocal/firebase-contract'
 
 async function uploadCanonicalImageFile(...args) {
   const storage = await import('../firebase/storageClient.js')
   return storage.uploadCanonicalImageFile(...args)
-}
-
-async function deleteImageFile(...args) {
-  const storage = await import('../firebase/storageClient.js')
-  return storage.deleteImageFile(...args)
 }
 
 const editableProfileFields = new Set([
@@ -160,38 +150,11 @@ export async function enableBusinessRole(uid) {
 }
 
 export async function uploadUserProfilePhoto(uid, file) {
-  const existingProfile = await getUserProfile(uid)
-  const storagePath = buildCanonicalProfileMediaPath(uid)
-  const wasCanonical = isCanonicalProfileMediaPath(
-    existingProfile?.profilePhoto?.storagePath,
-    uid,
-  )
-  const legacyProfilePath = !wasCanonical
-    ? parseLegacyFirebaseProfileMediaUrl(
-        existingProfile?.profilePhoto?.downloadUrl ?? existingProfile?.photoURL,
-        uid,
-      )?.storagePath ?? null
-    : null
-
-  await uploadCanonicalImageFile(storagePath, file)
-
-  if (wasCanonical) return existingProfile
-
-  try {
-    await updateDoc(userDocument(uid), {
-      photoURL: null,
-      profilePhoto: { storagePath },
-      updatedAt: serverTimestamp(),
-    })
-    const updatedProfile = await getUserProfile(uid)
-
-    if (legacyProfilePath) await deleteImageFile(legacyProfilePath).catch(() => undefined)
-
-    return updatedProfile
-  } catch (error) {
-    await deleteImageFile(storagePath).catch(() => undefined)
-    throw error
-  }
+  const prepared = await prepareProfileMediaUploadCallable({})
+  const { requestId, stagingPath } = prepared.data
+  const uploaded = await uploadCanonicalImageFile(stagingPath, file, requestId)
+  await finalizeProfileMediaCallable({ requestId, stagingGeneration: uploaded.generation })
+  return getUserProfile(uid)
 }
 
 export async function ensureUserProfile(firebaseUser) {

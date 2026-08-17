@@ -12,21 +12,19 @@ const reservationsByBusiness = new Map()
 export function selectAvailableCanonicalGallerySlot(businessId, galleryStoragePaths = [], reservedSlots = []) {
   const occupied = new Set(galleryStoragePaths
     .filter((path) => isCanonicalBusinessGalleryPath(path, businessId))
-    .map((path) => Number(path.split('/').at(-1))))
+    .map((path) => Number(path.split('/')[3])))
   for (const slot of reservedSlots) occupied.add(slot)
   return CANONICAL_BUSINESS_GALLERY_SLOTS.find((slot) => !occupied.has(slot)) ?? null
 }
 
-export async function runBusinessLogoUpload(businessId, file, { getBusiness, upload, finalize, remove }) {
+export async function runBusinessLogoUpload(businessId, file, { getBusiness, upload, prepare, finalize, remove }) {
   const before = await getBusiness(businessId)
   const storagePath = buildCanonicalBusinessLogoPath(businessId)
-  await upload(storagePath, file)
-  try {
-    await finalize('set-logo', businessId, storagePath)
-  } catch (error) {
-    if (before?.logoStoragePath !== storagePath) await remove(storagePath).catch(() => undefined)
-    throw error
-  }
+  const session = await prepare('prepare-logo', businessId, storagePath)
+  const uploaded = await upload(session.stagingPath, file, session.requestId)
+  await finalize('finalize-logo', businessId, storagePath, {
+    requestId: session.requestId, stagingGeneration: uploaded.generation,
+  })
   const legacyLogo = parseLegacyFirebaseBusinessMediaUrl(
     before?.profilePhoto?.downloadUrl ?? before?.legacyMedia?.logoURL,
     businessId,
@@ -36,7 +34,7 @@ export async function runBusinessLogoUpload(businessId, file, { getBusiness, upl
 }
 
 export async function runBusinessGalleryUploads(
-  businessId, files, { getBusiness, upload, finalize },
+  businessId, files, { getBusiness, upload, prepare, finalize },
 ) {
   const reservations = reservationsByBusiness.get(businessId) ?? new Set()
   reservationsByBusiness.set(businessId, reservations)
@@ -48,13 +46,11 @@ export async function runBusinessGalleryUploads(
       reservations.add(slot)
       const storagePath = buildCanonicalBusinessGalleryPath(businessId, slot)
       try {
-        await upload(storagePath, file)
-        // Canonical gallery slots are shared deterministic objects. If finalization
-        // fails, a different browser may still have finalized this path after
-        // overwriting it, so the browser must preserve the object instead of risking
-        // deletion of authoritative media. Any residual is bounded to eight private
-        // canonical slots and can be reconciled by a future trusted cleanup process.
-        await finalize('add-gallery', businessId, storagePath)
+        const session = await prepare('prepare-gallery', businessId, storagePath)
+        const uploaded = await upload(session.stagingPath, file, session.requestId)
+        await finalize('finalize-gallery', businessId, storagePath, {
+          requestId: session.requestId, stagingGeneration: uploaded.generation,
+        })
         latest = await getBusiness(businessId)
       } finally {
         reservations.delete(slot)

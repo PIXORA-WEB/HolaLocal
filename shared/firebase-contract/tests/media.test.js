@@ -2,8 +2,15 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   buildCanonicalBusinessGalleryPath,
+  buildCanonicalBusinessGallerySlotPath,
   buildCanonicalBusinessLogoPath,
+  buildCanonicalBusinessLogoSlotPath,
   buildCanonicalProfileMediaPath,
+  buildCanonicalProfileMediaSlotPath,
+  buildStagingProfileMediaPath,
+  buildStagingBusinessLogoPath,
+  buildStagingBusinessGalleryPath,
+  parseStagingMediaPath,
   CANONICAL_BUSINESS_GALLERY_SLOTS,
   HOLALOCAL_FIREBASE_STORAGE_BUCKET,
   isCanonicalProfileMediaPath,
@@ -33,9 +40,19 @@ test('canonical media builders produce deterministic bounded paths', () => {
   assert.equal(MAX_CANONICAL_BUSINESS_GALLERY_SLOTS, 8)
   assert.deepEqual(CANONICAL_BUSINESS_GALLERY_SLOTS, [0, 1, 2, 3, 4, 5, 6, 7])
   assert.equal(buildCanonicalProfileMediaPath('user_123'), 'users/user_123/profile/avatar')
+  assert.equal(buildCanonicalProfileMediaSlotPath('user_123', 'a'), 'users/user_123/profile/avatar/a')
+  assert.equal(buildStagingProfileMediaPath('user_123'), 'users/user_123/staging/profile/avatar')
+  assert.equal(buildStagingBusinessLogoPath(BUSINESS_ID), `businesses/${BUSINESS_ID}/staging/logos/logo`)
+  assert.equal(buildStagingBusinessGalleryPath(BUSINESS_ID, 7), `businesses/${BUSINESS_ID}/staging/photos/7`)
+  assert.deepEqual(parseStagingMediaPath(`businesses/${BUSINESS_ID}/staging/photos/7`), {
+    businessId: BUSINESS_ID, kind: 'gallery', slot: 7,
+    storagePath: `businesses/${BUSINESS_ID}/staging/photos/7`,
+  })
   assert.equal(buildCanonicalBusinessLogoPath(BUSINESS_ID), `businesses/${BUSINESS_ID}/logos/logo`)
+  assert.equal(buildCanonicalBusinessLogoSlotPath(BUSINESS_ID, 'b'), `businesses/${BUSINESS_ID}/logos/logo/b`)
   assert.equal(buildCanonicalBusinessGalleryPath(BUSINESS_ID, 0), `businesses/${BUSINESS_ID}/photos/0`)
   assert.equal(buildCanonicalBusinessGalleryPath(BUSINESS_ID, 7), `businesses/${BUSINESS_ID}/photos/7`)
+  assert.equal(buildCanonicalBusinessGallerySlotPath(BUSINESS_ID, 7, 'a'), `businesses/${BUSINESS_ID}/photos/7/a`)
   assert.equal(isCanonicalBusinessGallerySlot(0), true)
   assert.equal(isCanonicalBusinessGallerySlot(7), true)
 })
@@ -55,10 +72,13 @@ test('canonical parser accepts only exact fixed slots and filenames', () => {
     kind: 'profile', uid: 'user_123', storagePath: 'users/user_123/profile/avatar',
   })
   assert.equal(isCanonicalProfileMediaPath('users/user_123/profile/avatar', 'user_123'), true)
+  assert.equal(isCanonicalProfileMediaPath('users/user_123/profile/avatar/a', 'user_123'), true)
   assert.equal(isCanonicalProfileMediaPath('users/other/profile/avatar', 'user_123'), false)
   assert.equal(isCanonicalProfileMediaPath('users/user_123/profile/custom.png', 'user_123'), false)
   assert.equal(isCanonicalBusinessLogoPath(`businesses/${BUSINESS_ID}/logos/logo`, BUSINESS_ID), true)
+  assert.equal(isCanonicalBusinessLogoPath(`businesses/${BUSINESS_ID}/logos/logo/b`, BUSINESS_ID), true)
   assert.equal(isCanonicalBusinessGalleryPath(`businesses/${BUSINESS_ID}/photos/7`, BUSINESS_ID), true)
+  assert.equal(isCanonicalBusinessGalleryPath(`businesses/${BUSINESS_ID}/photos/7/a`, BUSINESS_ID), true)
 
   assert.equal(isCanonicalBusinessLogoPath(
     `businesses/${OTHER_BUSINESS_ID}/logos/logo`,

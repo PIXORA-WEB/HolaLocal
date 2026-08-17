@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 import {
   clearBusinessMediaPresentationCache,
@@ -24,136 +25,40 @@ test('canonical slot selection skips occupied paths but ignores legacy image cou
     Array.from({ length: 8 }, (_, slot) => `businesses/${businessId}/photos/${slot}`)), null)
 })
 
-test('logo upload finalizes after upload, refreshes, and never client-writes a URL', async () => {
+test('logo upload prepares a bounded slot, captures generation, and finalizes trusted promotion', async () => {
   const calls = []
   const result = await runBusinessLogoUpload(businessId, { type: 'image/webp' }, {
     getBusiness: async () => ({ businessId }),
-    upload: async (path) => calls.push(['upload', path]),
+    prepare: async (...args) => {
+      calls.push(['prepare', ...args])
+      return { requestId: 'request-1', stagingPath: `businesses/${businessId}/staging/logos/logo` }
+    },
+    upload: async (path) => { calls.push(['upload', path]); return { generation: '42' } },
     finalize: async (...args) => calls.push(['finalize', ...args]),
     remove: async (path) => calls.push(['remove', path]),
   })
   assert.deepEqual(calls, [
-    ['upload', `businesses/${businessId}/logos/logo`],
-    ['finalize', 'set-logo', businessId, `businesses/${businessId}/logos/logo`],
+    ['prepare', 'prepare-logo', businessId, `businesses/${businessId}/logos/logo`],
+    ['upload', `businesses/${businessId}/staging/logos/logo`],
+    ['finalize', 'finalize-logo', businessId, `businesses/${businessId}/logos/logo`, {
+      requestId: 'request-1', stagingGeneration: '42',
+    }],
   ])
   assert.equal(result.businessId, businessId)
   assert.equal('downloadUrl' in result, false)
 })
 
-test('failed gallery finalization preserves the bounded slot and original error', async () => {
+test('failed gallery finalization never performs client cleanup against canonical media', async () => {
   const failure = new Error('finalizer-failed')
   const removed = []
   await assert.rejects(runBusinessGalleryUploads(businessId, [{}], {
     getBusiness: async () => ({ businessId, galleryStoragePaths: [] }),
-    upload: async () => undefined,
+    prepare: async () => ({ requestId: 'request-2', stagingPath: `businesses/${businessId}/staging/photos/0` }),
+    upload: async () => ({ generation: '43' }),
     finalize: async () => { throw failure },
     remove: async (path) => { removed.push(path); throw new Error('cleanup-failed') },
   }), (error) => error === failure)
   assert.deepEqual(removed, [])
-})
-
-test('a failed independent session never deletes a slot another session finalized', async () => {
-  const [{ runBusinessGalleryUploads: runSessionA }, { runBusinessGalleryUploads: runSessionB }] = await Promise.all([
-    import('../src/services/businessMediaWorkflow.js?gallery-session=a'),
-    import('../src/services/businessMediaWorkflow.js?gallery-session=b'),
-  ])
-  const storagePath = `businesses/${businessId}/photos/0`
-  const manifest = []
-  const liveObjects = new Set()
-  const removals = []
-  let bothUploaded
-  let uploads = 0
-  const uploadsReady = new Promise((resolve) => { bothUploaded = resolve })
-  const upload = async (path) => {
-    assert.equal(path, storagePath)
-    liveObjects.add(path)
-    uploads += 1
-    if (uploads === 2) bothUploaded()
-    await uploadsReady
-  }
-  const getBusiness = async () => ({ businessId, galleryStoragePaths: [...manifest] })
-  const remove = async (path) => { removals.push(path); liveObjects.delete(path) }
-  const failure = new Error('session-b-finalizer-failed')
-
-  const sessionA = runSessionA(businessId, [{}], {
-    getBusiness,
-    upload,
-    finalize: async (_action, _businessId, path) => { manifest.push(path) },
-    remove,
-  })
-  const sessionB = runSessionB(businessId, [{}], {
-    getBusiness,
-    upload,
-    finalize: async () => { throw failure },
-    remove,
-  })
-
-  await sessionA
-  await assert.rejects(sessionB, (error) => error === failure)
-  assert.deepEqual(manifest, [storagePath])
-  assert.equal(liveObjects.has(storagePath), true)
-  assert.deepEqual(removals, [])
-})
-
-test('a failure before another session finalizes leaves the slot available to become authoritative', async () => {
-  const [{ runBusinessGalleryUploads: runSessionA }, { runBusinessGalleryUploads: runSessionB }] = await Promise.all([
-    import('../src/services/businessMediaWorkflow.js?gallery-session=c'),
-    import('../src/services/businessMediaWorkflow.js?gallery-session=d'),
-  ])
-  const storagePath = `businesses/${businessId}/photos/0`
-  const manifest = []
-  const liveObjects = new Set()
-  const removals = []
-  let bothUploaded
-  let uploads = 0
-  const uploadsReady = new Promise((resolve) => { bothUploaded = resolve })
-  let allowSuccessfulFinalize
-  const successfulFinalizeReady = new Promise((resolve) => { allowSuccessfulFinalize = resolve })
-  const dependencies = {
-    getBusiness: async () => ({ businessId, galleryStoragePaths: [...manifest] }),
-    upload: async (path) => {
-      liveObjects.add(path)
-      uploads += 1
-      if (uploads === 2) bothUploaded()
-      await uploadsReady
-    },
-    remove: async (path) => { removals.push(path); liveObjects.delete(path) },
-  }
-  const failure = new Error('failed-before-other-finalize')
-  const sessionA = runSessionA(businessId, [{}], {
-    ...dependencies,
-    finalize: async (_action, _businessId, path) => {
-      await successfulFinalizeReady
-      manifest.push(path)
-    },
-  })
-  const sessionB = runSessionB(businessId, [{}], {
-    ...dependencies,
-    finalize: async () => { throw failure },
-  })
-
-  await assert.rejects(sessionB, (error) => error === failure)
-  assert.equal(liveObjects.has(storagePath), true)
-  assert.deepEqual(removals, [])
-  allowSuccessfulFinalize()
-  await sessionA
-  assert.deepEqual(manifest, [storagePath])
-  assert.equal(liveObjects.has(storagePath), true)
-})
-
-test('failed cleanup cannot delete an existing referenced slot or unrelated media', async () => {
-  const referencedPath = `businesses/${businessId}/photos/0`
-  const failedPath = `businesses/${businessId}/photos/1`
-  const removals = []
-  const failure = new Error('finalizer-failed-after-reference')
-  await assert.rejects(runBusinessGalleryUploads(businessId, [{}], {
-    getBusiness: async () => ({ businessId, galleryStoragePaths: [referencedPath] }),
-    upload: async (path) => assert.equal(path, failedPath),
-    finalize: async () => { throw failure },
-    remove: async (path) => removals.push(path),
-  }), (error) => error === failure)
-  assert.deepEqual(removals, [])
-  assert.equal(referencedPath, `businesses/${businessId}/photos/0`)
 })
 
 test('local concurrent gallery additions reserve different canonical slots', async () => {
@@ -162,7 +67,10 @@ test('local concurrent gallery additions reserve different canonical slots', asy
   const firstUpload = new Promise((resolve) => { releaseFirst = resolve })
   const dependencies = {
     getBusiness: async () => ({ businessId, galleryStoragePaths: [] }),
-    upload: async (path) => { uploaded.push(path); if (uploaded.length === 1) await firstUpload },
+    prepare: async (_action, _businessId, canonicalPath) => ({
+      requestId: canonicalPath, stagingPath: canonicalPath.replace('/photos/', '/staging/photos/'),
+    }),
+    upload: async (path) => { uploaded.push(path); if (uploaded.length === 1) await firstUpload; return { generation: String(uploaded.length) } },
     finalize: async () => undefined,
     remove: async () => undefined,
   }
@@ -173,7 +81,7 @@ test('local concurrent gallery additions reserve different canonical slots', asy
   releaseFirst()
   await Promise.all([first, second])
   assert.deepEqual(new Set(uploaded), new Set([
-    `businesses/${businessId}/photos/0`, `businesses/${businessId}/photos/1`,
+    `businesses/${businessId}/staging/photos/0`, `businesses/${businessId}/staging/photos/1`,
   ]))
 })
 
@@ -192,7 +100,7 @@ test('presentation resolves canonical first, preserves order, and accepts only s
       legacy('photos', 'wrong.jpg', 'other-business'),
       legacy('photos', 'wrong-bucket.jpg', businessId, 'other.firebasestorage.app'),
     ],
-  }, { resolveCanonicalUrl: async (path) => `blob:presentation/${path}` })
+  }, { resolveCanonicalUrl: async (path) => ({ url: `blob:presentation/${path}`, revoke() {} }) })
 
   assert.equal(resolved.logoUrl, `blob:presentation/businesses/${businessId}/logos/logo`)
   assert.deepEqual(resolved.galleryEntries.map(({ kind, storagePath }) => [kind, storagePath]), [
@@ -214,4 +122,9 @@ test('wrong-business canonical media and malformed legacy media never reach pres
   }, { resolveCanonicalUrl: async () => { throw new Error('must not resolve') } })
   assert.equal(resolved.logoUrl, null)
   assert.deepEqual(resolved.galleryUrls, [])
+})
+
+test('route replacement and application unmount revoke cached canonical business object URLs', async () => {
+  const routes = await readFile(new URL('../src/routes/AppRoutes.jsx', import.meta.url), 'utf8')
+  assert.match(routes, /useEffect\(\(\) => \(\) => clearBusinessMediaPresentationCache\(\), \[pathname\]\)/)
 })

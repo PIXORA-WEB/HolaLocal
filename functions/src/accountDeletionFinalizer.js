@@ -158,7 +158,7 @@ export async function finalizeAccountDeletion({
     await deps.tombstoneConversations({ uid: safeUid, db })
     await checkpoint('conversations_tombstoned')
 
-    const mediaResult = await deps.cleanupMedia({ uid: safeUid })
+    const mediaResult = await deps.cleanupMedia({ uid: safeUid, db })
     if (!mediaResult?.ok || mediaResult.counts?.failed > 0) {
       return fail('profile_media_cleanup_failed', mediaResult?.counts ?? {
         attempted: 0, deleted: 0, alreadyMissing: 0, failed: 1,

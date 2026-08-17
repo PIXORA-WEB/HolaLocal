@@ -157,13 +157,16 @@ export async function tombstoneDeletedUserConversations({ uid, db }) {
 }
 
 const storageMissing = (error) => ['404', 404, 'storage/object-not-found', 'not-found'].includes(error?.code)
-export async function cleanupUserMedia({ uid, bucket = getStorage().bucket() }) {
+export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db = null }) {
   const safeUid = requireTrustedUid(uid); const counts = { attempted: 0, deleted: 0, alreadyMissing: 0, failed: 0 }; let files
-  try { ;[files] = await bucket.getFiles({ prefix: `users/${safeUid}/profile/` }) } catch { return { ok: false, retryable: true, counts: { ...counts, failed: 1 } } }
+  try {
+    ;[files] = await bucket.getFiles({ prefix: `users/${safeUid}/` })
+  } catch { return { ok: false, retryable: true, counts: { ...counts, failed: 1 } } }
   for (const file of files) {
     counts.attempted += 1
     try { await file.delete(); counts.deleted += 1 } catch (error) { if (storageMissing(error)) counts.alreadyMissing += 1; else counts.failed += 1 }
   }
+  if (db) await db.doc(`mediaUploadSessions/profile_${safeUid}`).delete().catch(() => undefined)
   return { ok: counts.failed === 0, retryable: counts.failed > 0, counts }
 }
 

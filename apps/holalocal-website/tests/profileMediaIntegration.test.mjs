@@ -73,19 +73,17 @@ test('private blob failures propagate without producing a presentation URL', asy
   }), /blocked/)
 })
 
-test('profile upload source uses canonical minimal persistence and safe failure cleanup', async () => {
+test('profile upload uses bounded staging generation and delegates descriptor authority to trusted finalization', async () => {
   const source = await readFile(new URL('../src/services/userService.js', import.meta.url), 'utf8')
   const upload = source.slice(source.indexOf('export async function uploadUserProfilePhoto'), source.indexOf('export async function ensureUserProfile'))
-  assert.match(upload, /buildCanonicalProfileMediaPath\(uid\)/)
-  assert.match(upload, /uploadCanonicalImageFile\(storagePath, file\)/)
-  assert.match(upload, /photoURL: null/)
-  assert.match(upload, /profilePhoto: \{ storagePath \}/)
+  assert.match(upload, /prepareProfileMediaUploadCallable\(\{\}\)/)
+  assert.match(upload, /uploadCanonicalImageFile\(stagingPath, file, requestId\)/)
+  assert.match(upload, /stagingGeneration: uploaded\.generation/)
+  assert.match(upload, /finalizeProfileMediaCallable/)
+  assert.doesNotMatch(upload, /photoURL: null/)
+  assert.doesNotMatch(upload, /profilePhoto: \{ storagePath \}/)
   assert.doesNotMatch(upload, /randomUUID|originalName|getDownloadURL|uploadedAt/)
-  const persistence = upload.slice(upload.indexOf('await updateDoc'), upload.indexOf('const updatedProfile'))
-  assert.doesNotMatch(persistence, /downloadUrl|contentType|size/)
-  assert.match(upload, /await deleteImageFile\(storagePath\)\.catch/)
-  assert.match(upload, /if \(wasCanonical\) return existingProfile/)
-  assert.match(upload, /if \(legacyProfilePath\) await deleteImageFile\(legacyProfilePath\)/)
+  assert.doesNotMatch(upload, /updateDoc|deleteImageFile|getDownloadURL/)
 
   const editable = source.match(/const editableProfileFields = new Set\(\[([\s\S]*?)\]\)/)?.[1]
   assert.ok(editable)

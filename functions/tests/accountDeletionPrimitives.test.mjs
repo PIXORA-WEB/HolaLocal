@@ -129,7 +129,7 @@ test('profile media cleanup scopes to exact UID prefix and sanitizes partial fai
   ]
   const bucket = { getFiles: async (query) => { prefixes.push(query.prefix); return [files] } }
   const result = await cleanupUserMedia({ uid: 'u1', bucket })
-  assert.deepEqual(prefixes, ['users/u1/profile/'])
+  assert.deepEqual(prefixes, ['users/u1/'])
   assert.deepEqual(result, { ok: false, retryable: true, counts: { attempted: 3, deleted: 1, alreadyMissing: 1, failed: 1 } })
   assert.equal(JSON.stringify(result).includes('path'), false)
   assert.deepEqual(await cleanupUserMedia({ uid: 'u1', bucket: { getFiles: async () => [[]] } }), { ok: true, retryable: false, counts: { attempted: 0, deleted: 0, alreadyMissing: 0, failed: 0 } })
