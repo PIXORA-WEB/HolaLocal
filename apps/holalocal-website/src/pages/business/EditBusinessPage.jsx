@@ -33,6 +33,7 @@ import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
+import { createMediaSubmissionGuard } from '../../utils/mediaSubmissionGuard.js'
 import {
   getServiceAreaGroupLabel,
   locationDisplayLabel,
@@ -153,6 +154,8 @@ function EditBusinessPage() {
   const [pendingNavigation, setPendingNavigation] = useState(null)
   const [mediaRetryAvailable, setMediaRetryAvailable] = useState(false)
   const mediaRetryRef = useRef(null)
+  const [logoSubmissionGuard] = useState(createMediaSubmissionGuard)
+  const [gallerySubmissionGuard] = useState(createMediaSubmissionGuard)
   const [initialDraftSignature, setInitialDraftSignature] = useState(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const attemptedProfileRefreshBusinessIdRef = useRef(null)
@@ -491,11 +494,19 @@ function EditBusinessPage() {
 
   async function uploadLogoFile(file) {
     if (!businessProfile?.businessId) return
+    const submission = logoSubmissionGuard
+    if (!submission.tryAcquire()) return
+    mediaRetryRef.current = null
+    setMediaRetryAvailable(false)
     setMediaError(null)
     setLogoUploading(true)
 
     try {
-      setBusinessProfile(await uploadBusinessLogo(businessProfile.businessId, file))
+      const [pendingFile] = await submission.pendingFiles([file])
+      if (!pendingFile) return
+      setBusinessProfile(await uploadBusinessLogo(businessProfile.businessId, pendingFile, {
+        onCommitted: () => submission.markSuccessful(pendingFile),
+      }))
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
     } catch (uploadError) {
@@ -512,6 +523,7 @@ function EditBusinessPage() {
       setMediaRetryAvailable(classifiedError.recovery === 'retry')
       setMediaError(classifiedError)
     } finally {
+      submission.release()
       setLogoUploading(false)
     }
   }
@@ -524,33 +536,40 @@ function EditBusinessPage() {
 
   async function uploadGalleryFiles(selectedFiles) {
     if (selectedFiles.length === 0 || !businessProfile?.businessId) return
-    const remainingSlots = Math.max(galleryLimit - galleryImages.length, 0)
-    if (remainingSlots === 0) {
-      mediaRetryRef.current = null
-      setMediaRetryAvailable(false)
-      setMediaError({
-        translationKey: 'business.form.errors.galleryLimit',
-        recovery: 'choose-file',
-      })
-      return
-    }
-
+    const submission = gallerySubmissionGuard
+    if (!submission.tryAcquire()) return
     mediaRetryRef.current = null
     setMediaRetryAvailable(false)
-    setMediaError(selectedFiles.length > remainingSlots
-      ? {
-          translationKey: 'business.form.errors.galleryRemaining',
-          interpolation: { count: remainingSlots },
-          recovery: 'choose-file',
-        }
-      : null)
     setGalleryUploading(true)
 
     try {
+      const pendingFiles = await submission.pendingFiles(selectedFiles)
+      if (pendingFiles.length === 0) return
+      const remainingSlots = Math.max(galleryLimit - galleryImages.length, 0)
+      if (remainingSlots === 0) {
+        mediaRetryRef.current = null
+        setMediaRetryAvailable(false)
+        setMediaError({
+          translationKey: 'business.form.errors.galleryLimit',
+          recovery: 'choose-file',
+        })
+        return
+      }
+
+      mediaRetryRef.current = null
+      setMediaRetryAvailable(false)
+      setMediaError(pendingFiles.length > remainingSlots
+        ? {
+            translationKey: 'business.form.errors.galleryRemaining',
+            interpolation: { count: remainingSlots },
+            recovery: 'choose-file',
+          }
+        : null)
       setBusinessProfile(
         await uploadBusinessGalleryImages(
           businessProfile.businessId,
-          selectedFiles.slice(0, remainingSlots),
+          pendingFiles.slice(0, remainingSlots),
+          { onCommitted: (file) => submission.markSuccessful(file) },
         ),
       )
       mediaRetryRef.current = null
@@ -569,6 +588,7 @@ function EditBusinessPage() {
       setMediaRetryAvailable(classifiedError.recovery === 'retry')
       setMediaError(classifiedError)
     } finally {
+      submission.release()
       setGalleryUploading(false)
     }
   }
@@ -830,6 +850,7 @@ function EditBusinessPage() {
 
         {mediaError && (
           <RecoveryMessage
+            actionPending={logoUploading || galleryUploading || Boolean(deletingImage)}
             actionLabel={mediaError.recovery === 'sign-in' ? t('account.signIn') : undefined}
             message={mediaErrorMessage}
             onRetry={mediaErrorAction}

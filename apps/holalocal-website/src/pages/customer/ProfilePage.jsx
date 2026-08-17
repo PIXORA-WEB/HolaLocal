@@ -17,6 +17,7 @@ import {
 } from '../../utils/frontendErrors.js'
 import { supportedUILanguages } from '../../utils/languages.js'
 import { getDisplayName } from '../../utils/profile.js'
+import { createMediaSubmissionGuard } from '../../utils/mediaSubmissionGuard.js'
 
 const preferredLocaleOptions = supportedUILanguages.map(({ code, name }) => ({
   label: name,
@@ -59,6 +60,7 @@ function ProfilePage() {
   const [deletionSubmitting, setDeletionSubmitting] = useState(false)
   const [deletionError, setDeletionError] = useState('')
   const photoRetryRef = useRef(null)
+  const [photoSubmissionGuard] = useState(createMediaSubmissionGuard)
   const hasBusinessAccess = userProfile?.roles?.includes('business') === true
   const displayName = userProfile?.displayName || t('profile.title')
   const profileIsComplete = userProfile?.profileCompleted === true
@@ -110,11 +112,18 @@ function ProfilePage() {
   }
 
   async function uploadProfilePhoto(file) {
+    const submission = photoSubmissionGuard
+    if (!submission.tryAcquire()) return
+    photoRetryRef.current = null
     setPhotoError(null)
     setPhotoUploading(true)
 
     try {
-      await uploadUserProfilePhoto(user.uid, file)
+      const [pendingFile] = await submission.pendingFiles([file])
+      if (!pendingFile) return
+      await uploadUserProfilePhoto(user.uid, pendingFile, {
+        onCommitted: () => submission.markSuccessful(pendingFile),
+      })
       setProfilePhotoRevision((revision) => revision + 1)
       photoRetryRef.current = null
       setSuccess(t('profile.imageUpdated'))
@@ -129,6 +138,7 @@ function ProfilePage() {
         : null
       setPhotoError(classifiedError)
     } finally {
+      submission.release()
       setPhotoUploading(false)
     }
   }
@@ -287,6 +297,7 @@ function ProfilePage() {
           />
           {photoError && (
             <RecoveryMessage
+              actionPending={photoUploading}
               actionLabel={photoError.recovery === 'sign-in' ? t('account.signIn') : undefined}
               message={t(photoError.translationKey)}
               onRetry={photoErrorAction}
