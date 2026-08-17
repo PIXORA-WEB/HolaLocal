@@ -25,7 +25,7 @@ import {
 } from './canonicalMediaStorage.js'
 import {
   assertFinalizableSession, businessSessionId, MEDIA_SESSION_COLLECTION,
-  prepareBoundedMediaSession, recordFinalizedStagingGeneration,
+  markStagingGenerationClean, prepareBoundedMediaSession, recordFinalizedStagingGeneration,
 } from './mediaUploadSessions.js'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -394,6 +394,19 @@ export async function manageBusinessMedia({
         uploadSessionId: uploadSessionMarker(metadata), now })
       session = (await sessionRef.get()).data()
     }
+    let cleanedStaging = null
+    if (session?.state === 'cleanup_pending'
+      && String(session.stagingGeneration) === String(stagingGeneration)) {
+      const parsedPath = parsedSlot == null
+        ? { kind: 'logo', businessId: safeBusinessId }
+        : { kind: 'gallery', businessId: safeBusinessId, slot: parsedSlot }
+      cleanedStaging = await clean({ path: session.stagingPath, generation: stagingGeneration, bucket })
+      await markStagingGenerationClean({
+        db, parsedPath, path: session.stagingPath, generation: stagingGeneration,
+        uploadSessionId: requestId, now,
+      })
+      session = (await sessionRef.get()).data()
+    }
     finalizedSession = session
     const state = assertFinalizableSession(session, {
       requestId, principalUid: safeUid, stagingGeneration, now: now.getTime(),
@@ -418,7 +431,8 @@ export async function manageBusinessMedia({
         path: session.canonicalPath, generation: promotedGeneration, requireTokenFree: true,
       })
     } else {
-      const cleaned = await clean({ path: stagingPath, generation: stagingGeneration, bucket })
+      const cleaned = cleanedStaging
+        ?? await clean({ path: stagingPath, generation: stagingGeneration, bucket })
       await sessionRef.update({ stagingGeneration: String(stagingGeneration), state: 'promoting', updatedAt: now })
       const promoted = await promote({
         stagingPath, stagingGeneration, stagingMetageneration: String(cleaned.metageneration),

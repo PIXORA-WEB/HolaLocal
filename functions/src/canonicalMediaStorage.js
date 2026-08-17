@@ -81,7 +81,7 @@ export async function cleanStagingGeneration({
         ifGenerationMatch: expectedGeneration,
         ifMetagenerationMatch: String(before.metageneration),
       },
-    }).setMetadata({ metadata: cleaned })
+    }).setMetadata({ metadata: { ...cleaned, [TOKEN_KEY]: null } })
   }
   const after = verifyCanonicalImageMetadata(
     await readMetadata(bucket, path, expectedGeneration),
@@ -200,6 +200,20 @@ export async function deleteExactGeneration({ path, generation, bucket = default
     generation: expectedGeneration,
     preconditionOpts: { ifGenerationMatch: expectedGeneration },
   }).delete({ ignoreNotFound: true })
+}
+
+export async function exactGenerationExists({ path, generation, bucket = defaultBucket() }) {
+  const expectedGeneration = exactInteger(generation, 'invalid-media-generation')
+  try {
+    const metadata = await readExact(bucket, path, expectedGeneration)
+    if (metadata?.name !== path || String(metadata?.generation) !== expectedGeneration) {
+      throw new HttpsError('failed-precondition', 'media-generation-mismatch')
+    }
+    return true
+  } catch (error) {
+    if (Number(error?.code) === 404) return false
+    throw error
+  }
 }
 
 export const CANONICAL_MEDIA_TOKEN_KEY = TOKEN_KEY

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { FakeFirestore } from './fakeFirestore.mjs'
 import { finalizeProfileMedia, prepareProfileMediaUpload } from '../src/profileMedia.js'
+import { checkpointStagingCleanupResponsibility } from '../src/mediaUploadSessions.js'
 
 function user(overrides = {}) { return { accountStatus: 'active', deletionRequestedAt: null, profilePhoto: null, photoURL: null, ...overrides } }
 function missingCanonicalBucket() {
@@ -133,5 +134,27 @@ test('finalizer safely binds its exact marked generation when the Storage trigge
     db, bucket, now: new Date(2000), clean: async () => ({ metageneration: '2' }),
     promote: async () => ({ generation: '13' }), clearContext: async () => undefined,
     remove: async () => undefined })
+  assert.deepEqual(db.data('users/u1').profilePhoto, { storagePath: 'users/u1/profile/avatar/a' })
+})
+
+test('different finalized generation cannot alter promoted profile association or authority', async () => {
+  const path = 'users/u1/staging/profile/avatar'
+  const db = new FakeFirestore({
+    'users/u1': user({ profilePhoto: { storagePath: 'users/u1/profile/avatar/a' } }),
+    'mediaUploadSessions/profile_u1': {
+      requestId: 'request', principalUid: 'u1', kind: 'profile', state: 'promoted',
+      stagingPath: path, stagingGeneration: '12', promotedGeneration: '13',
+      canonicalPath: 'users/u1/profile/avatar/b', expiresAt: new Date(9000),
+    },
+  })
+  const result = await checkpointStagingCleanupResponsibility({
+    db, parsedPath: { kind: 'profile', uid: 'u1' }, path,
+    generation: '14', uploadSessionId: 'request', now: new Date(2000),
+  })
+  assert.equal(result.status, 'conflict')
+  const session = db.data('mediaUploadSessions/profile_u1')
+  assert.equal(session.state, 'promoted')
+  assert.equal(session.stagingGeneration, '12')
+  assert.equal(session.promotedGeneration, '13')
   assert.deepEqual(db.data('users/u1').profilePhoto, { storagePath: 'users/u1/profile/avatar/a' })
 })
