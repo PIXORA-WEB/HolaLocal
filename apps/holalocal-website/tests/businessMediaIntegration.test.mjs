@@ -48,6 +48,75 @@ test('logo upload prepares a bounded slot, captures generation, and finalizes tr
   assert.equal('downloadUrl' in result, false)
 })
 
+test('logo finalization remains successful when the post-mutation business refresh fails', async () => {
+  const calls = []
+  const file = { name: 'logo.png' }
+  const before = { businessId, logoStoragePath: 'businesses/business-1/logos/logo/a' }
+  const result = await runBusinessLogoUpload(businessId, file, {
+    getBusiness: async () => {
+      calls.push('get')
+      if (calls.filter((call) => call === 'get').length > 1) throw new Error('refresh-failed')
+      return before
+    },
+    prepare: async () => ({ requestId: 'request', stagingPath: 'staging/logo' }),
+    upload: async () => ({ generation: '44' }),
+    finalize: async () => calls.push('finalize'),
+    onCommitted: async (committed) => calls.push(`committed:${committed.name}`),
+    remove: async () => undefined,
+  })
+  assert.equal(result, before)
+  assert.deepEqual(calls, ['get', 'finalize', 'committed:logo.png', 'get'])
+})
+
+test('gallery finalization remains successful and stops safely when its business refresh fails', async () => {
+  const calls = []
+  const before = { businessId, galleryStoragePaths: [] }
+  const result = await runBusinessGalleryUploads(businessId, [
+    { name: 'a.png' },
+    { name: 'b.png' },
+  ], {
+    getBusiness: async () => {
+      calls.push('get')
+      if (calls.filter((call) => call === 'get').length > 1) throw new Error('refresh-failed')
+      return before
+    },
+    prepare: async (action, id, path) => {
+      calls.push(`prepare:${path}`)
+      return { requestId: 'request', stagingPath: 'staging/gallery' }
+    },
+    upload: async () => {
+      calls.push('upload')
+      return { generation: '45' }
+    },
+    finalize: async () => calls.push('finalize'),
+    onCommitted: async (committed) => calls.push(`committed:${committed.name}`),
+  })
+  assert.equal(result, before)
+  assert.deepEqual(calls, [
+    'get',
+    'prepare:businesses/business-1/photos/0',
+    'upload',
+    'finalize',
+    'committed:a.png',
+    'get',
+  ])
+})
+
+test('business editor guards logo and gallery before state updates and disables shared Retry', async () => {
+  const source = await readFile(new URL('../src/pages/business/EditBusinessPage.jsx', import.meta.url), 'utf8')
+  const logo = source.slice(source.indexOf('async function uploadLogoFile'), source.indexOf('function handleLogoUpload'))
+  const gallery = source.slice(source.indexOf('async function uploadGalleryFiles'), source.indexOf('function handleGalleryUpload'))
+  for (const upload of [logo, gallery]) {
+    assert.match(upload, /if \(!submission\.tryAcquire\(\)\) return/)
+    assert.ok(upload.indexOf('tryAcquire()') < upload.indexOf('setMediaRetryAvailable(false)'))
+    assert.match(upload, /mediaRetryRef\.current = null/)
+    assert.match(upload, /submission\.pendingFiles/)
+    assert.match(upload, /submission\.markSuccessful/)
+    assert.match(upload, /submission\.release\(\)/)
+  }
+  assert.match(source, /actionPending=\{logoUploading \|\| galleryUploading \|\| Boolean\(deletingImage\)\}/)
+})
+
 test('failed gallery finalization never performs client cleanup against canonical media', async () => {
   const failure = new Error('finalizer-failed')
   const removed = []

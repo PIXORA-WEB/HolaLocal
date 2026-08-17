@@ -17,7 +17,9 @@ export function selectAvailableCanonicalGallerySlot(businessId, galleryStoragePa
   return CANONICAL_BUSINESS_GALLERY_SLOTS.find((slot) => !occupied.has(slot)) ?? null
 }
 
-export async function runBusinessLogoUpload(businessId, file, { getBusiness, upload, prepare, finalize, remove }) {
+export async function runBusinessLogoUpload(
+  businessId, file, { getBusiness, upload, prepare, finalize, remove, onCommitted },
+) {
   const before = await getBusiness(businessId)
   const storagePath = buildCanonicalBusinessLogoPath(businessId)
   const session = await prepare('prepare-logo', businessId, storagePath)
@@ -25,16 +27,17 @@ export async function runBusinessLogoUpload(businessId, file, { getBusiness, upl
   await finalize('finalize-logo', businessId, storagePath, {
     requestId: session.requestId, stagingGeneration: uploaded.generation,
   })
+  await onCommitted?.(file)
   const legacyLogo = parseLegacyFirebaseBusinessMediaUrl(
     before?.profilePhoto?.downloadUrl ?? before?.legacyMedia?.logoURL,
     businessId,
   )
   if (legacyLogo?.kind === 'logo') await remove(legacyLogo.storagePath).catch(() => undefined)
-  return getBusiness(businessId)
+  return getBusiness(businessId).catch(() => before)
 }
 
 export async function runBusinessGalleryUploads(
-  businessId, files, { getBusiness, upload, prepare, finalize },
+  businessId, files, { getBusiness, upload, prepare, finalize, onCommitted },
 ) {
   const reservations = reservationsByBusiness.get(businessId) ?? new Set()
   reservationsByBusiness.set(businessId, reservations)
@@ -51,7 +54,12 @@ export async function runBusinessGalleryUploads(
         await finalize('finalize-gallery', businessId, storagePath, {
           requestId: session.requestId, stagingGeneration: uploaded.generation,
         })
-        latest = await getBusiness(businessId)
+        await onCommitted?.(file)
+        try {
+          latest = await getBusiness(businessId)
+        } catch {
+          return latest
+        }
       } finally {
         reservations.delete(slot)
       }

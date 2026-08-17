@@ -67,7 +67,8 @@ test('profile-photo integration uses canonical private presentation and suppress
 
   assert.match(page, /loadProfileMediaPresentation\(user\?\.uid, userProfile\)/)
   assert.match(page, /classifyFrontendError\(uploadError, \{\s*domain: 'media',\s*fallbackType: 'MEDIA_UPLOAD_FAILED'/s)
-  assert.match(page, /await uploadUserProfilePhoto\(user\.uid, file\)/)
+  assert.match(page, /await uploadUserProfilePhoto\(user\.uid, pendingFile, \{/)
+  assert.match(page, /onCommitted: \(\) => submission\.markSuccessful\(pendingFile\)/)
   assert.match(page, /setSuccess\(t\('profile\.imageUpdated'\)\)/)
   assert.doesNotMatch(page, /uploadError\.message/)
   assert.doesNotMatch(page, /setPhotoError\([^)]*\.message/)

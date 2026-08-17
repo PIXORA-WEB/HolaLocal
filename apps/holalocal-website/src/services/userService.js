@@ -149,12 +149,13 @@ export async function enableBusinessRole(uid) {
   return getUserProfile(uid)
 }
 
-export async function uploadUserProfilePhoto(uid, file) {
+export async function uploadUserProfilePhoto(uid, file, { onCommitted } = {}) {
   const prepared = await prepareProfileMediaUploadCallable({})
   const { requestId, stagingPath } = prepared.data
   const uploaded = await uploadCanonicalImageFile(stagingPath, file, requestId)
   await finalizeProfileMediaCallable({ requestId, stagingGeneration: uploaded.generation })
-  return getUserProfile(uid)
+  await onCommitted?.(file)
+  return getUserProfile(uid).catch(() => null)
 }
 
 export async function ensureUserProfile(firebaseUser) {
