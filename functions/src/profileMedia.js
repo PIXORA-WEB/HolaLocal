@@ -19,6 +19,7 @@ import {
 import {
   assertFinalizableSession,
   MEDIA_SESSION_COLLECTION,
+  markStagingGenerationClean,
   prepareBoundedMediaSession,
   profileSessionId,
   recordFinalizedStagingGeneration,
@@ -84,6 +85,16 @@ export async function finalizeProfileMedia({
       uploadSessionId: uploadSessionMarker(metadata), now })
     session = (await sessionRef.get()).data()
   }
+  let cleanedStaging = null
+  if (session?.state === 'cleanup_pending'
+    && String(session.stagingGeneration) === String(stagingGeneration)) {
+    cleanedStaging = await clean({ path: session.stagingPath, generation: stagingGeneration, bucket })
+    await markStagingGenerationClean({
+      db, parsedPath: { kind: 'profile', uid }, path: session.stagingPath,
+      generation: stagingGeneration, uploadSessionId: requestId, now,
+    })
+    session = (await sessionRef.get()).data()
+  }
   const status = assertFinalizableSession(session, {
     requestId, principalUid: uid, stagingGeneration, now: now.getTime(),
   })
@@ -97,7 +108,8 @@ export async function finalizeProfileMedia({
 
   let promotedGeneration = session.promotedGeneration
   if (!promotedGeneration) {
-    const cleaned = await clean({ path: session.stagingPath, generation: stagingGeneration, bucket })
+    const cleaned = cleanedStaging
+      ?? await clean({ path: session.stagingPath, generation: stagingGeneration, bucket })
     await sessionRef.update({
       stagingGeneration: String(stagingGeneration),
       state: 'promoting',

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { BUSINESS_MEDIA_ACTIONS, manageBusinessMedia, validateCanonicalStorageObjectMetadata } from '../src/businessMedia.js'
 import { projectSafeBusinessMedia } from '../src/businessMediaProjection.js'
 import { FakeFirestore } from './fakeFirestore.mjs'
+import { checkpointStagingCleanupResponsibility } from '../src/mediaUploadSessions.js'
 
 const BUSINESS_ID = 'business-1'
 const LOGO = `businesses/${BUSINESS_ID}/logos/logo`
@@ -53,6 +54,25 @@ test('one bounded logical slot rejects a concurrent active prepare', async () =>
   const db = dbWith()
   await manageBusinessMedia(prepareArgs({ db }))
   await assert.rejects(manageBusinessMedia(prepareArgs({ db, now: new Date(2000) })), /media-upload-already-active/)
+})
+
+test('different finalized generation cannot alter promoted business association or manifest', async () => {
+  const db = dbWith({ logoStoragePath: `${LOGO}/a` })
+  db.store.set(`mediaUploadSessions/business_${BUSINESS_ID}_logo`, {
+    requestId: 'request', principalUid: 'owner', businessId: BUSINESS_ID, kind: 'logo',
+    state: 'promoted', stagingPath: STAGING_LOGO, stagingGeneration: '9',
+    promotedGeneration: '10', canonicalPath: `${LOGO}/b`, expiresAt: new Date(9000),
+  })
+  const result = await checkpointStagingCleanupResponsibility({
+    db, parsedPath: { kind: 'logo', businessId: BUSINESS_ID }, path: STAGING_LOGO,
+    generation: '11', uploadSessionId: 'request', now: new Date(2000),
+  })
+  assert.equal(result.status, 'conflict')
+  const session = db.data(`mediaUploadSessions/business_${BUSINESS_ID}_logo`)
+  assert.equal(session.state, 'promoted')
+  assert.equal(session.stagingGeneration, '9')
+  assert.equal(session.promotedGeneration, '10')
+  assert.equal(db.data(`businesses/${BUSINESS_ID}`).logoStoragePath, `${LOGO}/a`)
 })
 
 test('finalize promotes exact cleaned generation before manifest update and then conditionally cleans staging', async () => {
