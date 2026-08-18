@@ -61,6 +61,51 @@ test('cleanup removes only the token with generation and metageneration precondi
   assert.equal(JSON.stringify(bucket.calls).includes('never-report-this'), false)
 })
 
+test('cleanup recovers when another cleaner wins the metageneration race', async () => {
+  const before = {
+    ...staging,
+    metadata: {
+      firebaseStorageDownloadTokens: 'never-report-this',
+      holalocalUploadSession: 'request-12345678',
+    },
+  }
+  const after = {
+    ...before,
+    metageneration: '2',
+    metadata: {
+      holalocalUploadSession: 'request-12345678',
+    },
+  }
+
+  let reads = 0
+
+  const bucket = {
+    file() {
+      return {
+        async setMetadata() {
+          throw Object.assign(new Error('precondition failed'), { code: 412 })
+        },
+      }
+    },
+  }
+
+  const result = await cleanStagingGeneration({
+    path: 'staging',
+    generation: '10',
+    bucket,
+    readMetadata: async () => {
+      reads += 1
+      return structuredClone(reads === 1 ? before : after)
+    },
+  })
+
+  assert.deepEqual(result.metadata, {
+    holalocalUploadSession: 'request-12345678',
+  })
+  assert.equal(result.metageneration, '2')
+  assert.equal(reads, 3)
+})
+
 test('staging cleanup preserves only the trusted session marker while removing the bearer token', async () => {
   const bucket = fakeBucket({ staging: { ...staging, metadata: {
     firebaseStorageDownloadTokens: 'never-report-this', holalocalUploadSession: 'request-12345678',

@@ -75,13 +75,27 @@ export async function cleanStagingGeneration({
   const metadata = customMetadata(before)
   if (Object.hasOwn(metadata, TOKEN_KEY)) {
     const cleaned = Object.fromEntries(Object.entries(metadata).filter(([key]) => key !== TOKEN_KEY))
-    await bucket.file(path, {
-      generation: expectedGeneration,
-      preconditionOpts: {
-        ifGenerationMatch: expectedGeneration,
-        ifMetagenerationMatch: String(before.metageneration),
-      },
-    }).setMetadata({ metadata: { ...cleaned, [TOKEN_KEY]: null } })
+    try {
+      await bucket.file(path, {
+        generation: expectedGeneration,
+        preconditionOpts: {
+          ifGenerationMatch: expectedGeneration,
+          ifMetagenerationMatch: String(before.metageneration),
+        },
+      }).setMetadata({ metadata: { ...cleaned, [TOKEN_KEY]: null } })
+    } catch (error) {
+      if (Number(error?.code) !== 412) throw error
+
+      verifyCanonicalImageMetadata(
+        await readMetadata(bucket, path, expectedGeneration),
+        {
+          path,
+          generation: expectedGeneration,
+          requireTokenFree: true,
+          allowUploadSession: true,
+        },
+      )
+    }
   }
   const after = verifyCanonicalImageMetadata(
     await readMetadata(bucket, path, expectedGeneration),
