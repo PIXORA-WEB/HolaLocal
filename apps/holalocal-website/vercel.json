@@ -1,9 +1,38 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/services", "destination": "/index.html" },
+    { "source": "/services/:businessId", "destination": "/index.html" },
+
+    { "source": "/businesses", "destination": "/index.html" },
+    { "source": "/businesses/:businessId", "destination": "/index.html" },
+
+    { "source": "/contact", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" },
+    { "source": "/terms", "destination": "/index.html" },
+
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/sign-in", "destination": "/index.html" },
+    { "source": "/register", "destination": "/index.html" },
+    { "source": "/forgot-password", "destination": "/index.html" },
+    { "source": "/complete-profile", "destination": "/index.html" },
+    { "source": "/legal-consent", "destination": "/index.html" },
+    { "source": "/verify-email", "destination": "/index.html" },
+    { "source": "/account-deletion", "destination": "/index.html" },
+    { "source": "/onboarding", "destination": "/index.html" },
+
+    { "source": "/profile", "destination": "/index.html" },
+    { "source": "/messages", "destination": "/index.html" },
+    { "source": "/messages/:conversationId", "destination": "/index.html" },
+
+    { "source": "/business", "destination": "/index.html" },
+    { "source": "/business/dashboard", "destination": "/index.html" },
+    { "source": "/business/edit", "destination": "/index.html" },
+    { "source": "/business/subscription", "destination": "/index.html" },
+
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/admin/businesses", "destination": "/index.html" },
+    { "source": "/admin/businesses/:businessId", "destination": "/index.html" },
+    { "source": "/admin/account-deletions", "destination": "/index.html" }
   ]
 }

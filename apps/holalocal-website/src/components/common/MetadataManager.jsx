@@ -33,7 +33,7 @@ function MetadataManager() {
       ? t('metadata.pageTitle', { page: t(routeTitleKey) })
       : t('metadata.title')
     const description = t('metadata.description')
-    const siteUrl = (import.meta.env.VITE_SITE_URL || 'https://holalocal.es').replace(/\/$/, '')
+    const siteUrl = (import.meta.env.VITE_SITE_URL || 'https://www.holalocal.es').replace(/\/$/, '')
     const canonicalUrl = `${siteUrl}${location.pathname === '/' ? '/' : location.pathname}`
 
     document.documentElement.lang = language
