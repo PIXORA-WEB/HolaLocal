@@ -71,18 +71,15 @@ test('canonical URL defaults use the Production www hostname', async () => {
   }
 })
 
-test('Vercel rewrites only known SPA routes and has no catch-all rewrite', async () => {
+test('Vercel routing keeps known SPA routes and permanent legacy redirects', async () => {
   const config = JSON.parse(await readWebsiteFile('vercel.json'))
-  const sources = config.rewrites.map((rewrite) => rewrite.source)
+  const rewriteSources = config.rewrites.map((rewrite) => rewrite.source)
 
-  assert.doesNotContain?.(sources, '/(.*)')
-  assert.equal(sources.includes('/(.*)'), false)
+  assert.equal(rewriteSources.includes('/(.*)'), false)
 
   for (const route of [
     '/services',
     '/services/:businessId',
-    '/businesses',
-    '/businesses/:businessId',
     '/contact',
     '/privacy',
     '/terms',
@@ -96,12 +93,31 @@ test('Vercel rewrites only known SPA routes and has no catch-all rewrite', async
     '/admin/businesses',
     '/admin/businesses/:businessId',
   ]) {
-    assert.equal(sources.includes(route), true, `Missing rewrite for ${route}`)
+    assert.equal(
+      rewriteSources.includes(route),
+      true,
+      `Missing rewrite for ${route}`,
+    )
   }
 
-  assert.equal(sources.includes('/robots.txt'), false)
-  assert.equal(sources.includes('/sitemap.xml'), false)
-  assert.equal(sources.includes('/404.html'), false)
+  assert.equal(rewriteSources.includes('/businesses'), false)
+  assert.equal(rewriteSources.includes('/businesses/:businessId'), false)
+  assert.equal(rewriteSources.includes('/robots.txt'), false)
+  assert.equal(rewriteSources.includes('/sitemap.xml'), false)
+  assert.equal(rewriteSources.includes('/404.html'), false)
+
+  assert.deepEqual(config.redirects, [
+    {
+      source: '/businesses',
+      destination: '/services',
+      permanent: true,
+    },
+    {
+      source: '/businesses/:businessId',
+      destination: '/services/:businessId',
+      permanent: true,
+    },
+  ])
 })
 
 test('static 404 page is not indexable', async () => {

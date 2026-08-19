@@ -1,11 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/businesses", "destination": "/services", "permanent": true },
+    { "source": "/businesses/:businessId", "destination": "/services/:businessId", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/services", "destination": "/index.html" },
     { "source": "/services/:businessId", "destination": "/index.html" },
-
-    { "source": "/businesses", "destination": "/index.html" },
-    { "source": "/businesses/:businessId", "destination": "/index.html" },
 
     { "source": "/contact", "destination": "/index.html" },
     { "source": "/privacy", "destination": "/index.html" },
