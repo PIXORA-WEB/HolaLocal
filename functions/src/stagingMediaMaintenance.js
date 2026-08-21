@@ -1,4 +1,5 @@
 import { getStorage } from 'firebase-admin/storage'
+import { HttpsError } from 'firebase-functions/v2/https'
 import { parseStagingMediaPath } from '@holalocal/firebase-contract'
 import {
   cleanStagingGeneration, deleteExactGeneration, exactGenerationExists,
@@ -33,17 +34,24 @@ export async function cleanFinalizedStagingObject({
   const generation = object?.generation
   const parsedPath = parseStagingMediaPath(path)
   if (!parsedPath || !generation) return { status: 'ignored' }
-  const [authoritative] = await bucket.file(path, { generation }).getMetadata()
-  const marker = uploadSessionMarker(authoritative)
+  const marker = uploadSessionMarker(object)
   const checkpointResult = db
     ? await checkpoint({ db, parsedPath, path, generation, uploadSessionId: marker, now })
     : { status: 'ignored' }
   if (['already-clean', 'already-retry'].includes(checkpointResult.status)) {
     return { status: checkpointResult.status }
   }
+  const [authoritative] = await bucket.file(path, { generation }).getMetadata()
+  const requireMatchingAuthoritativeMarker = () => {
+    if (checkpointResult.status !== 'ignored'
+      && uploadSessionMarker(authoritative) !== marker) {
+      throw new HttpsError('failed-precondition', 'media-upload-session-mismatch')
+    }
+  }
   if (checkpointResult.status === 'conflict') {
     let cleanupError = null
     try {
+      requireMatchingAuthoritativeMarker()
       verifyCanonicalImageMetadata(authoritative, { path, generation, allowUploadSession: true })
       await clean({ path, generation, bucket })
     } catch (error) {
@@ -72,6 +80,7 @@ export async function cleanFinalizedStagingObject({
     throw cleanupError ?? deletionError
   }
   try {
+    requireMatchingAuthoritativeMarker()
     verifyCanonicalImageMetadata(authoritative, { path, generation, allowUploadSession: true })
     await clean({ path, generation, bucket })
     if (db && ['checkpointed', 'already-pending'].includes(checkpointResult.status)) {

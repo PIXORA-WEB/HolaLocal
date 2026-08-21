@@ -3,7 +3,8 @@ import { test } from 'node:test'
 import { FakeFirestore } from './fakeFirestore.mjs'
 import { cleanFinalizedStagingObject, sweepExpiredMediaSessions } from '../src/stagingMediaMaintenance.js'
 import {
-  assertFinalizableSession, CONFLICTING_STAGING_CLEANUP_COLLECTION,
+  assertFinalizableSession, checkpointStagingCleanupResponsibility,
+  CONFLICTING_STAGING_CLEANUP_COLLECTION,
 } from '../src/mediaUploadSessions.js'
 
 function bucketWithMetadata(path, generation, marker, extraMetadata = {}) {
@@ -11,6 +12,14 @@ function bucketWithMetadata(path, generation, marker, extraMetadata = {}) {
     name: requestPath, generation, metageneration: '1', size: '100', contentType: 'image/png',
     metadata: { ...(marker == null ? {} : { holalocalUploadSession: marker }), ...extraMetadata },
   }] } } } }
+}
+
+function finalizedObject(path, generation, marker, extraMetadata = {}) {
+  return {
+    name: path,
+    generation,
+    metadata: { ...(marker == null ? {} : { holalocalUploadSession: marker }), ...extraMetadata },
+  }
 }
 
 function conflictDb(path, { withObligation = false } = {}) {
@@ -34,9 +43,112 @@ test('finalize trigger touches staging exact generation only and ignores canonic
   const calls = []
   const clean = async (input) => calls.push(['clean', input.path, input.generation])
   const path = 'users/u1/staging/profile/avatar'
-  assert.deepEqual(await cleanFinalizedStagingObject({ object: { name: path, generation: '7' }, bucket: bucketWithMetadata(path, '7', 'request-12345678'), clean }), { status: 'cleaned' })
+  assert.deepEqual(await cleanFinalizedStagingObject({ object: finalizedObject(path, '7', 'request-12345678'), bucket: bucketWithMetadata(path, '7', 'request-12345678'), clean }), { status: 'cleaned' })
   assert.deepEqual(await cleanFinalizedStagingObject({ object: { name: 'users/u1/profile/avatar', generation: '8' }, bucket: {}, clean }), { status: 'ignored' })
   assert.deepEqual(calls, [['clean', 'users/u1/staging/profile/avatar', '7']])
+})
+
+test('valid event checkpoints exact cleanup responsibility before authoritative metadata read failure', async () => {
+  const path = 'users/u1/staging/profile/avatar'
+  const db = new FakeFirestore({ 'mediaUploadSessions/profile_u1': {
+    requestId: 'request-12345678', principalUid: 'u1', kind: 'profile', state: 'prepared',
+    stagingPath: path, expiresAt: new Date(3000),
+  } })
+  const operations = []
+  const bucket = { file(requestPath, { generation }) { return {
+    async getMetadata() {
+      operations.push(['metadata', requestPath, generation])
+      throw Object.assign(new Error('storage-unavailable'), { code: 503 })
+    },
+  } } }
+
+  await assert.rejects(cleanFinalizedStagingObject({
+    object: finalizedObject(path, '7', 'request-12345678'), db, bucket,
+    checkpoint: async (input) => {
+      operations.push(['checkpoint', input.path, input.generation])
+      return checkpointStagingCleanupResponsibility(input)
+    },
+    now: new Date(2000),
+  }), /storage-unavailable/)
+
+  assert.deepEqual(operations, [
+    ['checkpoint', path, '7'],
+    ['metadata', path, '7'],
+  ])
+  const pending = db.data('mediaUploadSessions/profile_u1')
+  assert.equal(pending.state, 'cleanup_pending')
+  assert.equal(pending.cleanupPending, true)
+  assert.equal(pending.stagingPath, path)
+  assert.equal(pending.stagingGeneration, '7')
+  assert.throws(() => assertFinalizableSession(pending, {
+    requestId: 'request-12345678', principalUid: 'u1', stagingGeneration: '7', now: 2000,
+  }), /media-staging-not-clean/)
+
+  const removals = []
+  assert.deepEqual(await sweepExpiredMediaSessions({
+    db, bucket: {}, now: new Date(4000),
+    remove: async ({ path: targetPath, generation }) => removals.push({ path: targetPath, generation }),
+  }), { expired: 1 })
+  assert.deepEqual(removals, [{ path, generation: '7' }])
+  assert.equal(db.data('mediaUploadSessions/profile_u1'), undefined)
+})
+
+test('conflicting generation obligation is durable before authoritative metadata read failure', async () => {
+  const path = 'users/u1/staging/profile/avatar'
+  const db = conflictDb(path)
+  const bucket = { file() { return {
+    async getMetadata() {
+      throw Object.assign(new Error('storage-unavailable'), { code: 503 })
+    },
+  } } }
+
+  await assert.rejects(cleanFinalizedStagingObject({
+    object: finalizedObject(path, '8', 'request'), db, bucket, now: new Date(2000),
+  }), /storage-unavailable/)
+
+  const obligationPath = `${CONFLICTING_STAGING_CLEANUP_COLLECTION}/request_8`
+  const obligation = db.data(obligationPath)
+  assert.equal(obligation.state, 'cleanup_pending')
+  assert.equal(obligation.stagingPath, path)
+  assert.equal(obligation.stagingGeneration, '8')
+  assert.equal(db.data('mediaUploadSessions/profile_u1').stagingGeneration, '7')
+
+  const removals = []
+  await sweepExpiredMediaSessions({
+    db, bucket: {}, now: new Date(3000),
+    remove: async ({ kind, path: targetPath, generation }) => {
+      if (kind === 'conflicting-staging') removals.push({ path: targetPath, generation })
+    },
+  })
+  assert.deepEqual(removals, [{ path, generation: '8' }])
+  assert.equal(db.data(obligationPath), undefined)
+  assert.equal(db.data('mediaUploadSessions/profile_u1').stagingGeneration, '7')
+})
+
+test('authoritative marker mismatch fails closed through exact-generation cleanup', async () => {
+  const path = 'users/u1/staging/profile/avatar'
+  const db = new FakeFirestore({ 'mediaUploadSessions/profile_u1': {
+    requestId: 'request-12345678', principalUid: 'u1', kind: 'profile', state: 'prepared',
+    stagingPath: path, expiresAt: new Date(9000),
+  } })
+  const removals = []
+  let markedClean = false
+
+  await assert.rejects(cleanFinalizedStagingObject({
+    object: finalizedObject(path, '7', 'request-12345678'), db,
+    bucket: bucketWithMetadata(path, '7', 'different-request'),
+    clean: async () => { throw new Error('clean-must-not-run') },
+    markClean: async () => { markedClean = true },
+    remove: async ({ path: targetPath, generation }) => removals.push({ path: targetPath, generation }),
+    now: new Date(2000),
+  }), /media-upload-session-mismatch/)
+
+  assert.equal(markedClean, false)
+  assert.deepEqual(removals, [{ path, generation: '7' }])
+  const failed = db.data('mediaUploadSessions/profile_u1')
+  assert.equal(failed.state, 'failed')
+  assert.equal(failed.stagingGeneration, '7')
+  assert.notEqual(failed.state, 'uploaded')
 })
 
 test('finalize trigger records the newest generation for abandoned-upload sweeping', async () => {
@@ -47,7 +159,7 @@ test('finalize trigger records the newest generation for abandoned-upload sweepi
     },
   })
   await cleanFinalizedStagingObject({
-    object: { name: 'users/u1/staging/profile/avatar', generation: '7' },
+    object: finalizedObject('users/u1/staging/profile/avatar', '7', 'request'),
     db, bucket: bucketWithMetadata('users/u1/staging/profile/avatar', '7', 'request'),
     clean: async () => undefined, now: new Date(2000),
   })
@@ -62,7 +174,7 @@ test('delayed, missing, and forged markers never bind a generation to a newer se
       requestId: 'new-request', principalUid: 'u1', kind: 'profile', state: 'prepared',
       stagingPath: path, expiresAt: new Date(9000),
     } })
-    await cleanFinalizedStagingObject({ object: { name: path, generation: '7' }, db,
+    await cleanFinalizedStagingObject({ object: finalizedObject(path, '7', marker), db,
       bucket: bucketWithMetadata(path, '7', marker), clean: async () => undefined,
       now: new Date(2000) })
     assert.equal(db.data('mediaUploadSessions/profile_u1').stagingGeneration, undefined)
@@ -78,7 +190,7 @@ test('first valid exact generation binding is immutable for a request', async ()
   const cleaned = []
   const removed = []
   for (const generation of ['7', '8', '7']) {
-    await cleanFinalizedStagingObject({ object: { name: path, generation }, db,
+    await cleanFinalizedStagingObject({ object: finalizedObject(path, generation, 'request'), db,
       bucket: bucketWithMetadata(path, generation, 'request'),
       clean: async () => cleaned.push(generation),
       remove: async ({ generation: removedGeneration }) => removed.push(removedGeneration),
@@ -97,7 +209,7 @@ test('same-generation duplicate completes pending cleanup without regressing cle
     cleanupPending: true, stagingPath: path, stagingGeneration: '7', expiresAt: new Date(9000),
   } })
   assert.deepEqual(await cleanFinalizedStagingObject({
-    object: { name: path, generation: '7' }, db,
+    object: finalizedObject(path, '7', 'request'), db,
     bucket: bucketWithMetadata(path, '7', 'request'), clean: async () => undefined,
     now: new Date(2000),
   }), { status: 'cleaned' })
@@ -107,7 +219,7 @@ test('same-generation duplicate completes pending cleanup without regressing cle
   for (const state of ['uploaded', 'promoting', 'promoted', 'completed']) {
     db.data('mediaUploadSessions/profile_u1').state = state
     const result = await cleanFinalizedStagingObject({
-      object: { name: path, generation: '7' }, db,
+      object: finalizedObject(path, '7', 'request'), db,
       bucket: bucketWithMetadata(path, '7', 'request'),
       clean: async () => { throw new Error('must-not-reclean') }, now: new Date(2000),
     })
@@ -126,7 +238,7 @@ test('different generation never regresses uploaded or promotion states', async 
     } })
     const removed = []
     await cleanFinalizedStagingObject({
-      object: { name: path, generation: '8' }, db,
+      object: finalizedObject(path, '8', 'request'), db,
       bucket: bucketWithMetadata(path, '8', 'request'), clean: async () => undefined,
       remove: async ({ generation }) => removed.push(generation),
       now: new Date(2000),
@@ -149,7 +261,7 @@ test('conflicting generation cleanup and delete failure creates durable non-prom
     },
   })
   await assert.rejects(cleanFinalizedStagingObject({
-    object: { name: path, generation: '8' }, db,
+    object: finalizedObject(path, '8', 'request'), db,
     bucket: bucketWithMetadata(path, '8', 'request', {
       firebaseStorageDownloadTokens: 'inert-fixture',
     }),
@@ -188,7 +300,7 @@ test('conflicting generation immediate delete and 404 reconcile the obligation',
     const path = 'users/u1/staging/profile/avatar'
     const db = conflictDb(path)
     const result = await cleanFinalizedStagingObject({
-      object: { name: path, generation: '8' }, db,
+      object: finalizedObject(path, '8', 'request'), db,
       bucket: bucketWithMetadata(path, '8', 'request'),
       clean: async () => undefined,
       remove: async () => {
@@ -212,7 +324,7 @@ test('conflicting cleanup obligation handles transient and exact-generation 412 
   ]) {
     const db = conflictDb(path)
     const operation = cleanFinalizedStagingObject({
-      object: { name: path, generation: '8' }, db,
+      object: finalizedObject(path, '8', 'request'), db,
       bucket: bucketWithMetadata(path, '8', 'request'), clean: async () => undefined,
       remove: async () => { throw Object.assign(new Error('delete-failed'), { code: scenario.code }) },
       exactExists: scenario.exactExists, now: new Date(2000),
@@ -231,7 +343,7 @@ test('duplicate and multiple conflicting generations retain independent cleanup 
   const db = conflictDb(path)
   for (const generation of ['8', '8', '9']) {
     await assert.rejects(cleanFinalizedStagingObject({
-      object: { name: path, generation }, db,
+      object: finalizedObject(path, generation, 'request'), db,
       bucket: bucketWithMetadata(path, generation, 'request'),
       clean: async () => { throw new Error('metadata-cleanup') },
       remove: async () => { throw Object.assign(new Error('storage-unavailable'), { code: 503 }) },
@@ -293,7 +405,7 @@ test('cleanup plus immediate-delete failure retains exact non-promotable respons
     },
   })
   await assert.rejects(cleanFinalizedStagingObject({
-    object: { name: path, generation: '9' }, db,
+    object: finalizedObject(path, '9', 'request-12345678'), db,
     bucket: bucketWithMetadata(path, '9', 'request-12345678', {
       firebaseStorageDownloadTokens: 'inert-fixture',
     }),
@@ -332,7 +444,7 @@ test('verified cleanup followed by uploaded-state persistence failure remains re
     },
   })
   await assert.rejects(cleanFinalizedStagingObject({
-    object: { name: path, generation: '9' }, db,
+    object: finalizedObject(path, '9', 'request'), db,
     bucket: bucketWithMetadata(path, '9', 'request'), clean: async () => undefined,
     markClean: async () => { throw new Error('firestore-unavailable') },
     remove: async () => { throw Object.assign(new Error('storage-unavailable'), { code: 503 }) },
@@ -355,7 +467,7 @@ test('successful fallback deletion reconciles failed cleanup without leaving pro
     stagingPath: path, expiresAt: new Date(9000),
   } })
   await assert.rejects(cleanFinalizedStagingObject({
-    object: { name: path, generation: '9' }, db,
+    object: finalizedObject(path, '9', 'request-12345678'), db,
     bucket: bucketWithMetadata(path, '9', 'request-12345678'),
     clean: async () => { throw new Error('metadata-cleanup') },
     remove: async () => undefined, now: new Date(2000),
@@ -376,7 +488,7 @@ test('not-found fallback deletion safely reconciles failed cleanup', async () =>
     stagingPath: path, expiresAt: new Date(9000),
   } })
   await assert.rejects(cleanFinalizedStagingObject({
-    object: { name: path, generation: '9' }, db,
+    object: finalizedObject(path, '9', 'request-12345678'), db,
     bucket: bucketWithMetadata(path, '9', 'request-12345678'),
     clean: async () => { throw new Error('metadata-cleanup') },
     remove: async () => { throw Object.assign(new Error('not-found'), { code: 404 }) },
@@ -460,7 +572,7 @@ test('trigger and sweeper race cannot clear a changed session checkpoint', async
     db, bucket: {}, now: new Date(5000),
     remove: async () => {
       await cleanFinalizedStagingObject({
-        object: { name: path, generation: '7' }, db,
+        object: finalizedObject(path, '7', 'request'), db,
         bucket: bucketWithMetadata(path, '7', 'request'), clean: async () => undefined,
         now: new Date(5000),
       })
