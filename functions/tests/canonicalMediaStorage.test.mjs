@@ -197,7 +197,14 @@ test('Production canary lifecycle cleans the injected token and binds the stagin
     stagingPath: path, expiresAt: new Date(9000),
   } })
   const result = await cleanFinalizedStagingObject({
-    object: { name: path, generation: '10' }, db, bucket, now: new Date(2000),
+    object: {
+      name: path,
+      generation: '10',
+      metadata: { holalocalUploadSession: marker },
+    },
+    db,
+    bucket,
+    now: new Date(2000),
   })
   assert.deepEqual(result, { status: 'cleaned' })
   assert.deepEqual(bucket.objects.get(path).metadata, { holalocalUploadSession: marker })
