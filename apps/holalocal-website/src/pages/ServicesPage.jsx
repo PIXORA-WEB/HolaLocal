@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  getServiceTaxonomyService,
+  SERVICE_TAXONOMY_GROUPS,
+  SERVICE_TAXONOMY_SERVICES,
+} from '@holalocal/firebase-contract'
 import BusinessDetailPanel from '../components/common/BusinessDetailPanel.jsx'
 import AccessibleDialog from '../components/common/AccessibleDialog.jsx'
 import BusinessReportDialog from '../components/common/BusinessReportDialog.jsx'
@@ -12,21 +17,18 @@ import { createBusinessReport } from '../services/reportService.js'
 import { getLanguageNameFromCode } from '../utils/languages.js'
 import SelectField from '../components/common/SelectField.jsx'
 import { recordPublicContactAction, recordPublicProfileView } from '../services/businessInsightsService.js'
+import {
+  filterPublicBusinesses,
+  getPublicBusinessPrimaryServiceLabel,
+  parseServiceDiscoveryQuery,
+  SERVICE_DISCOVERY_QUERY_TYPES,
+} from '../utils/serviceDiscovery.js'
 
-const popularCategories = [
-  { key: 'cleaning', value: 'Cleaning' },
-  { key: 'plumbing', value: 'Plumbing' },
-  { key: 'gardening', value: 'Gardening' },
-  { key: 'handyman', value: 'Handyman' },
-  { key: 'airConditioning', value: 'Air Conditioning' },
-  { key: 'petServices', value: 'Pet Services' },
-]
+const POPULAR_SERVICE_IDS = Object.freeze([
+  'cleaner', 'plumber', 'gardener', 'handyman', 'air-conditioning', 'dog-walker',
+])
 
 let resultsScrollPosition = null
-
-function normalize(value) {
-  return String(value ?? '').trim().toLocaleLowerCase()
-}
 
 function ServicesPage() {
   const { t } = useTranslation()
@@ -48,8 +50,16 @@ function ServicesPage() {
   const [reportSuccess, setReportSuccess] = useState(false)
   const searchTerm = searchParams.get('q') ?? ''
   const locationFilter = searchParams.get('area') ?? ''
-  const category = searchParams.get('category') ?? ''
+  const service = searchParams.get('service') ?? ''
   const language = searchParams.get('language') ?? ''
+  const serviceQuery = useMemo(
+    () => parseServiceDiscoveryQuery(searchParams),
+    [searchParams],
+  )
+  const taxonomyLabel = useCallback(
+    (definition) => t(definition.translationKey, { defaultValue: definition.defaultLabel }),
+    [t],
+  )
 
   useEffect(() => {
     let isCurrent = true
@@ -77,35 +87,31 @@ function ServicesPage() {
     setLoadAttempt((attempt) => attempt + 1)
   }
 
-  const categoryOptions = useMemo(
-    () => [...new Set(businesses.map((business) => business.category).filter(Boolean))].sort(),
-    [businesses],
-  )
+  const categoryOptions = useMemo(() => {
+    const groupLabels = new Map(SERVICE_TAXONOMY_GROUPS.map((group) => [group.id, taxonomyLabel(group)]))
+    return SERVICE_TAXONOMY_SERVICES.map((definition) => ({
+      label: `${groupLabels.get(definition.groupId)} — ${taxonomyLabel(definition)}`,
+      value: definition.id,
+    }))
+  }, [taxonomyLabel])
   const languageOptions = useMemo(
     () => [...new Set(businesses.flatMap((business) => business.languages))].sort(),
     [businesses],
   )
-  const filteredBusinesses = useMemo(() => {
-    const normalizedSearch = normalize(searchTerm)
-    const normalizedLocation = normalize(locationFilter)
-
-    return businesses.filter((business) => {
-      const matchesSearch = !normalizedSearch ||
-        normalize(business.name).includes(normalizedSearch) ||
-        normalize(business.category).includes(normalizedSearch)
-      const matchesLocation = !normalizedLocation ||
-        normalize(business.serviceArea).includes(normalizedLocation)
-      const matchesCategory = !category || normalize(business.category) === normalize(category)
-      const matchesLanguage = !language || business.languages.some(
-        (businessLanguage) => normalize(businessLanguage) === normalize(language),
-      )
-
-      return matchesSearch && matchesLocation && matchesCategory && matchesLanguage
-    })
-  }, [businesses, category, language, locationFilter, searchTerm])
-  const selectedBusiness = businesses.find(
-    (business) => business.businessId === businessId,
-  ) ?? null
+  const filteredBusinesses = useMemo(() => filterPublicBusinesses(businesses, {
+    area: locationFilter,
+    labelResolver: taxonomyLabel,
+    language,
+    query: serviceQuery,
+    searchTerm,
+  }), [businesses, language, locationFilter, searchTerm, serviceQuery, taxonomyLabel])
+  const selectedBusiness = useMemo(() => {
+    const business = businesses.find((candidate) => candidate.businessId === businessId)
+    return business ? {
+      ...business,
+      category: getPublicBusinessPrimaryServiceLabel(business, taxonomyLabel),
+    } : null
+  }, [businessId, businesses, taxonomyLabel])
 
   useEffect(() => {
     if (selectedBusiness?.businessId) recordPublicProfileView(selectedBusiness.businessId)
@@ -140,6 +146,16 @@ function ServicesPage() {
       const nextParams = new URLSearchParams(currentParams)
       if (value) nextParams.set(name, value)
       else nextParams.delete(name)
+      return nextParams
+    }, { replace: true })
+  }
+
+  function updateServiceFilter(serviceId) {
+    setSearchParams((currentParams) => {
+      const nextParams = new URLSearchParams(currentParams)
+      nextParams.delete('category')
+      if (serviceId) nextParams.set('service', serviceId)
+      else nextParams.delete('service')
       return nextParams
     }, { replace: true })
   }
@@ -340,9 +356,9 @@ function ServicesPage() {
           <SelectField
             ariaLabel={t('services.categoryLabel')}
             className="select-field--form"
-            onChange={(value) => updateFilter('category', value)}
-            options={[{ label: t('services.allCategories'), value: '' }, ...categoryOptions.map((option) => ({ label: option, value: option }))]}
-            value={category}
+            onChange={updateServiceFilter}
+            options={[{ label: t('services.allCategories'), value: '' }, ...categoryOptions]}
+            value={serviceQuery.type === SERVICE_DISCOVERY_QUERY_TYPES.SERVICE ? serviceQuery.serviceId : ''}
           />
         </div>
         <div className="services-filters__select">
@@ -363,16 +379,19 @@ function ServicesPage() {
           <p>{t('services.popularDescription')}</p>
         </div>
         <div className="popular-categories__list">
-          {popularCategories.map((option) => (
-            <button
-              className={category === option.value ? 'is-active' : ''}
-              key={option.key}
-              onClick={() => updateFilter('category', category === option.value ? '' : option.value)}
-              type="button"
-            >
-              {t(`services.categories.${option.key}`)}
-            </button>
-          ))}
+          {POPULAR_SERVICE_IDS.map((serviceId) => {
+            const definition = getServiceTaxonomyService(serviceId)
+            return (
+              <button
+                className={service === serviceId ? 'is-active' : ''}
+                key={serviceId}
+                onClick={() => updateServiceFilter(service === serviceId ? '' : serviceId)}
+                type="button"
+              >
+                {taxonomyLabel(definition)}
+              </button>
+            )
+          })}
         </div>
       </section>
 
@@ -384,7 +403,12 @@ function ServicesPage() {
               <p>{t('services.resultCount', { count: filteredBusinesses.length })}</p>
             )}
           </div>
-          {(searchTerm || locationFilter || category || language) && (
+          {(
+            searchTerm
+            || locationFilter
+            || language
+            || serviceQuery.type !== SERVICE_DISCOVERY_QUERY_TYPES.NONE
+          ) && (
             <button onClick={clearFilters} type="button">{t('services.clearFilters')}</button>
           )}
         </div>
@@ -426,7 +450,10 @@ function ServicesPage() {
           <div className="services-results__grid">
             {filteredBusinesses.map((business) => (
               <PublicBusinessCard
-                business={business}
+                business={{
+                  ...business,
+                  category: getPublicBusinessPrimaryServiceLabel(business, taxonomyLabel),
+                }}
                 key={business.businessId}
                 linkState={{ fromServices: true }}
                 onSelect={selectBusiness}
