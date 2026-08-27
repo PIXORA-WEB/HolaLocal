@@ -13,6 +13,7 @@ import {
 } from '../../../shared/firebase-contract/index.js'
 import { serviceTaxonomyTranslations } from '../src/i18n/locales/serviceTaxonomyTranslations.js'
 import { businessTaxonomyEditorTranslations } from '../src/i18n/locales/businessTaxonomyEditorTranslations.js'
+import { serviceBrowseTranslations } from '../src/i18n/locales/serviceBrowseTranslations.js'
 
 const root = fileURLToPath(new URL('../src/i18n/locales/', import.meta.url))
 const sourceRoot = fileURLToPath(new URL('../src/', import.meta.url))
@@ -107,7 +108,7 @@ async function countAwareTranslationKeys() {
 }
 
 const english = await readJsonLocale('en')
-const englishResource = mergeLocale(english, authenticatedTranslations.en, serviceTaxonomyTranslations.en, businessTaxonomyEditorTranslations.en, { legalPages: legalPageContent.en }, {
+const englishResource = mergeLocale(english, authenticatedTranslations.en, serviceTaxonomyTranslations.en, businessTaxonomyEditorTranslations.en, serviceBrowseTranslations.en, { legalPages: legalPageContent.en }, {
   locations: { areas: serviceAreaLabels },
 })
 const referenceRoot = englishResource
@@ -124,7 +125,7 @@ for (const { code } of supportedUILanguages) {
   }
 
   const authenticatedIssues = compare(authenticatedTranslations.en, authenticated, code)
-  const resource = mergeLocale(english, base, authenticated, fallbackLocaleCompletionTranslations[code], universalOperationalTranslations[code], serviceTaxonomyTranslations[code], businessTaxonomyEditorTranslations[code], {
+  const resource = mergeLocale(english, base, authenticated, fallbackLocaleCompletionTranslations[code], universalOperationalTranslations[code], serviceTaxonomyTranslations[code], businessTaxonomyEditorTranslations[code], serviceBrowseTranslations[code], {
     legalPages: legalPageContent[code],
     locations: { areas: serviceAreaLabels },
   })

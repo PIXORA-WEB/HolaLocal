@@ -3694,13 +3694,18 @@
   outline: 3px solid rgb(8 125 242 / 12%);
 }
 
-.popular-categories {
+.service-browser {
   display: grid;
-  gap: 1rem;
+  gap: 1.15rem;
   margin-top: 3rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
 }
 
-.popular-categories h2,
+.service-browser h2,
 .services-results h2 {
   margin: 0;
   color: var(--brand-navy);
@@ -3708,22 +3713,65 @@
   letter-spacing: -0.035em;
 }
 
-.popular-categories p,
+.service-browser p,
 .services-results__heading p {
   margin: 0.4rem 0 0;
   color: #64748b;
   line-height: 1.6;
 }
 
-.popular-categories__list {
+.service-browser__heading {
   display: flex;
   flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.service-browser__select {
+  display: grid;
+  width: min(100%, 24rem);
+  min-width: 0;
+  gap: 0.35rem;
+}
+
+.service-browser__select > span {
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.service-browser__groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
-.popular-categories__list button,
+.service-browser__groups button {
+  min-height: 3.25rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  color: var(--brand-navy);
+  background: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.service-browser__services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.service-browser__services button,
 .services-results__heading > button {
   flex: 0 0 auto;
+  min-height: 2.75rem;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -3734,10 +3782,32 @@
   cursor: pointer;
 }
 
-.popular-categories__list button.is-active {
+.service-browser__groups button:hover,
+.service-browser__groups button:focus-visible,
+.service-browser__services button:hover,
+.service-browser__services button:focus-visible {
+  border-color: var(--brand-blue);
+  outline: 3px solid rgb(8 125 242 / 12%);
+}
+
+.service-browser__groups button.is-active,
+.service-browser__services button.is-active {
   color: #ffffff;
   border-color: var(--brand-blue);
   background: var(--brand-blue);
+  box-shadow: inset 0 0 0 2px #ffffff, 0 0 0 2px var(--brand-navy);
+  font-weight: 900;
+}
+
+.services-results__heading .services-results__active-service {
+  display: inline-flex;
+  margin-top: 0.55rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  color: #075eac;
+  background: rgb(8 125 242 / 10%);
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .services-results {
@@ -5353,13 +5423,12 @@
     grid-column: 1 / -1;
   }
 
-  .popular-categories {
-    grid-template-columns: minmax(14rem, 0.45fr) minmax(0, 1fr);
-    align-items: end;
+  .service-browser__groups {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .popular-categories__list {
-    justify-content: flex-end;
+  .service-browser__services {
+    justify-content: flex-start;
   }
 
   .services-results__grid {
@@ -5666,7 +5735,7 @@
   }
 
   .services-filters {
-    grid-template-columns: minmax(16rem, 1.5fr) repeat(3, minmax(10rem, 1fr));
+    grid-template-columns: minmax(16rem, 1.5fr) repeat(2, minmax(10rem, 1fr));
   }
 
   .services-filters__search {
@@ -5675,6 +5744,10 @@
 
   .services-results__grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .service-browser__groups {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .trust-card-grid {
@@ -5823,7 +5896,6 @@
   .language-section,
   .marketing-cta,
   .services-page__header,
-  .popular-categories,
   .services-results__heading,
   .placeholder {
     text-align: center;
@@ -5841,7 +5913,6 @@
   }
 
   .marketing-actions,
-  .popular-categories__list,
   .services-results__heading {
     justify-content: center;
   }

@@ -15,6 +15,7 @@ import en from './locales/en.json'
 import { mergeLocale } from './locales/mergeLocale.js'
 import { serviceTaxonomyTranslations } from './locales/serviceTaxonomyTranslations.js'
 import { businessTaxonomyEditorTranslations } from './locales/businessTaxonomyEditorTranslations.js'
+import { serviceBrowseTranslations } from './locales/serviceBrowseTranslations.js'
 
 export const LANGUAGE_STORAGE_KEY = 'holalocal.uiLanguage'
 
@@ -53,6 +54,7 @@ const englishResource = mergeLocale(
   adminDeletionTranslations.en,
   serviceTaxonomyTranslations.en,
   businessTaxonomyEditorTranslations.en,
+  serviceBrowseTranslations.en,
   { locations: { areas: serviceAreaLabels } },
 )
 const loadedLocales = new Set(['en'])
@@ -107,6 +109,7 @@ export async function loadLocale(languageCode) {
       adminDeletionTranslations[code],
       serviceTaxonomyTranslations[code],
       businessTaxonomyEditorTranslations[code],
+      serviceBrowseTranslations[code],
       { legalPages: legalPageContent[code] },
       { locations: { areas: serviceAreaLabels } },
     )

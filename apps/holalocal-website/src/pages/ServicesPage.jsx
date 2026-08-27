@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
+  getServiceIdsForGroup,
   getServiceTaxonomyService,
   SERVICE_TAXONOMY_GROUPS,
   SERVICE_TAXONOMY_SERVICES,
@@ -23,10 +24,10 @@ import {
   parseServiceDiscoveryQuery,
   SERVICE_DISCOVERY_QUERY_TYPES,
 } from '../utils/serviceDiscovery.js'
-
-const POPULAR_SERVICE_IDS = Object.freeze([
-  'cleaner', 'plumber', 'gardener', 'handyman', 'air-conditioning', 'dog-walker',
-])
+import {
+  buildServiceSelectionSearchParams,
+  deriveServiceBrowseSelection,
+} from '../utils/serviceBrowse.js'
 
 let resultsScrollPosition = null
 
@@ -48,18 +49,45 @@ function ServicesPage() {
   const [reporting, setReporting] = useState(false)
   const [reportError, setReportError] = useState('')
   const [reportSuccess, setReportSuccess] = useState(false)
+  const [browseGroupOverride, setBrowseGroupOverride] = useState({ groupId: null, taxonomyStateToken: null })
   const searchTerm = searchParams.get('q') ?? ''
   const locationFilter = searchParams.get('area') ?? ''
-  const service = searchParams.get('service') ?? ''
   const language = searchParams.get('language') ?? ''
+  const searchParamsKey = searchParams.toString()
+  const taxonomyQueryKey = [
+    searchParams.has('service'), searchParams.get('service'),
+    searchParams.has('category'), searchParams.get('category'),
+  ].join('|')
+  const taxonomyStateToken = useMemo(() => ({ taxonomyQueryKey }), [taxonomyQueryKey])
   const serviceQuery = useMemo(
-    () => parseServiceDiscoveryQuery(searchParams),
-    [searchParams],
+    () => parseServiceDiscoveryQuery(searchParamsKey),
+    [searchParamsKey],
   )
   const taxonomyLabel = useCallback(
     (definition) => t(definition.translationKey, { defaultValue: definition.defaultLabel }),
     [t],
   )
+  const derivedBrowseSelection = useMemo(
+    () => deriveServiceBrowseSelection(serviceQuery),
+    [serviceQuery],
+  )
+  const activeBrowseGroupOverride = browseGroupOverride.taxonomyStateToken === taxonomyStateToken
+    ? browseGroupOverride.groupId
+    : null
+  const selectedGroupId = activeBrowseGroupOverride || derivedBrowseSelection.groupId
+  const visibleServiceIds = useMemo(
+    () => getServiceIdsForGroup(selectedGroupId),
+    [selectedGroupId],
+  )
+  const activeTaxonomyDefinition = useMemo(() => {
+    if (derivedBrowseSelection.serviceId) {
+      return getServiceTaxonomyService(derivedBrowseSelection.serviceId)
+    }
+    if (serviceQuery.type === SERVICE_DISCOVERY_QUERY_TYPES.GROUP_COMPATIBILITY) {
+      return SERVICE_TAXONOMY_GROUPS.find(({ id }) => id === serviceQuery.groupId) ?? null
+    }
+    return null
+  }, [derivedBrowseSelection.serviceId, serviceQuery])
 
   useEffect(() => {
     let isCurrent = true
@@ -152,11 +180,7 @@ function ServicesPage() {
 
   function updateServiceFilter(serviceId) {
     setSearchParams((currentParams) => {
-      const nextParams = new URLSearchParams(currentParams)
-      nextParams.delete('category')
-      if (serviceId) nextParams.set('service', serviceId)
-      else nextParams.delete('service')
-      return nextParams
+      return buildServiceSelectionSearchParams(currentParams, serviceId)
     }, { replace: true })
   }
 
@@ -352,16 +376,6 @@ function ServicesPage() {
           />
         </label>
         <div className="services-filters__select">
-          <span>{t('services.categoryLabel')}</span>
-          <SelectField
-            ariaLabel={t('services.categoryLabel')}
-            className="select-field--form"
-            onChange={updateServiceFilter}
-            options={[{ label: t('services.allCategories'), value: '' }, ...categoryOptions]}
-            value={serviceQuery.type === SERVICE_DISCOVERY_QUERY_TYPES.SERVICE ? serviceQuery.serviceId : ''}
-          />
-        </div>
-        <div className="services-filters__select">
           <span>{t('services.languageLabel')}</span>
           <SelectField
             ariaLabel={t('services.languageLabel')}
@@ -373,32 +387,66 @@ function ServicesPage() {
         </div>
       </section>
 
-      <section className="popular-categories" aria-labelledby="popular-categories-title">
-        <div>
-          <h2 id="popular-categories-title">{t('services.popularCategories')}</h2>
-          <p>{t('services.popularDescription')}</p>
+      <section className="service-browser" aria-labelledby="service-browser-title">
+        <div className="service-browser__heading">
+          <div>
+            <h2 id="service-browser-title">{t('services.browseTitle')}</h2>
+            <p>{t('services.browseDescription')}</p>
+          </div>
+          <div className="service-browser__select">
+            <span>{t('services.categoryLabel')}</span>
+            <SelectField
+              ariaLabel={t('services.categoryLabel')}
+              className="select-field--form"
+              onChange={updateServiceFilter}
+              options={[{ label: t('services.allCategories'), value: '' }, ...categoryOptions]}
+              value={derivedBrowseSelection.serviceId}
+            />
+          </div>
         </div>
-        <div className="popular-categories__list">
-          {POPULAR_SERVICE_IDS.map((serviceId) => {
-            const definition = getServiceTaxonomyService(serviceId)
-            return (
-              <button
-                className={service === serviceId ? 'is-active' : ''}
-                key={serviceId}
-                onClick={() => updateServiceFilter(service === serviceId ? '' : serviceId)}
-                type="button"
-              >
-                {taxonomyLabel(definition)}
-              </button>
-            )
-          })}
+
+        <div className="service-browser__groups">
+          {SERVICE_TAXONOMY_GROUPS.map((group) => (
+            <button
+              aria-pressed={selectedGroupId === group.id}
+              className={selectedGroupId === group.id ? 'is-active' : ''}
+              key={group.id}
+              onClick={() => setBrowseGroupOverride({ groupId: group.id, taxonomyStateToken })}
+              type="button"
+            >
+              {taxonomyLabel(group)}
+            </button>
+          ))}
         </div>
+
+        {selectedGroupId && (
+          <div className="service-browser__services" aria-live="polite">
+            {visibleServiceIds.map((serviceId) => {
+              const definition = getServiceTaxonomyService(serviceId)
+              const selected = derivedBrowseSelection.serviceId === serviceId
+              return (
+                <button
+                  aria-pressed={selected}
+                  className={selected ? 'is-active' : ''}
+                  key={serviceId}
+                  onClick={() => updateServiceFilter(selected ? '' : serviceId)}
+                  type="button"
+                >
+                  {taxonomyLabel(definition)}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       <section className="services-results" aria-labelledby="services-results-title">
         <div className="services-results__heading">
           <div>
             <h2 id="services-results-title">{t('services.results')}</h2>
+            {activeTaxonomyDefinition && (
+              <p className="services-results__active-service">{taxonomyLabel(activeTaxonomyDefinition)}</p>
+            )}
             {!loading && !error && businesses.length > 0 && (
               <p>{t('services.resultCount', { count: filteredBusinesses.length })}</p>
             )}
