@@ -340,15 +340,18 @@ test('homepage card sections use compact content-driven vertical rhythm', async 
   assert.doesNotMatch(journeyCardBlock, /\n\s{2}height:\s*\d/)
 })
 
-test('homepage hero remains compact and content-led across breakpoints', async () => {
+test('homepage hero fills the viewport below the responsive header without clipping content', async () => {
   const styles = await readFile(globalStylesPath, 'utf8')
 
   const mediumBreakpoint = styles.match(/@media \(min-width: 48rem\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  const wideHeaderBreakpoint = styles.match(/@media \(min-width: 64rem\) \{[\s\S]*?\.messages-layout/)?.[0] ?? ''
   const desktopBreakpoint = styles.match(/@media \(min-width: 72rem\) \{[\s\S]*?\.service-browser__groups/)?.[0] ?? ''
   const stackedBreakpoint = styles.match(/@media \(max-width: 71\.999rem\) \{[\s\S]*?\n\}/)?.[0] ?? ''
 
   assert.doesNotMatch(mediumBreakpoint, /grid-template-columns:[^;]*marketing-hero|\.marketing-hero\s*\{[\s\S]*?grid-template-columns/)
-  assert.match(desktopBreakpoint, /\.marketing-hero\s*\{[\s\S]*?min-height: min\(34rem, calc\(100dvh - 5\.75rem\)\)/)
+  assert.match(styles, /\.marketing-hero\s*\{[\s\S]*?--homepage-header-height: calc\(4\.75rem \+ 1px\);[\s\S]*?min-height: calc\(100vh - var\(--homepage-header-height\) - 1rem\);[\s\S]*?min-height: calc\(100svh - var\(--homepage-header-height\) - 1rem\);[\s\S]*?min-height: calc\(100dvh - var\(--homepage-header-height\) - 1rem\);/)
+  assert.match(wideHeaderBreakpoint, /\.marketing-hero\s*\{[\s\S]*?--homepage-header-height: calc\(6rem \+ 1px\);/)
+  assert.doesNotMatch(desktopBreakpoint, /min-height: min\(34rem/)
   assert.doesNotMatch(desktopBreakpoint, /grid-template-columns:[^;]*24rem/)
   assert.match(stackedBreakpoint, /\.marketing-hero__content\s*\{[\s\S]*?text-align: center;/)
   assert.match(styles, /\.marketing-hero h1\s*\{[\s\S]*?font-size: clamp\(3rem, 8vw, 6\.5rem\);/)
