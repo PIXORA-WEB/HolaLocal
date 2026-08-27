@@ -4,6 +4,10 @@
   --brand-green: #25bd49;
   --brand-orange: #ff7a1a;
   --brand-purple: #6b38e8;
+  --product-global: var(--brand-navy);
+  --product-services: var(--brand-orange);
+  --product-events: var(--brand-purple);
+  --product-community: var(--brand-green);
   --ink: #102033;
   --muted: #657386;
   --canvas: #f8fafc;

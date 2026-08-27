@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import logoIcon from '../../assets/logos/logo-icon-display.png'
+import BrandLockup from '../../components/common/BrandLockup.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import {
@@ -87,7 +87,7 @@ function OnboardingPage() {
   return (
     <section className="auth-card onboarding-card" aria-labelledby="onboarding-title">
       <div className="onboarding-card__heading">
-        <img className="onboarding-card__logo" decoding="async" height="200" src={logoIcon} alt={t('onboarding.logoAlt')} width="184" />
+        <BrandLockup className="onboarding-card__logo" label={t('onboarding.logoAlt')} linked={false} variant="icon" />
         <p className="auth-card__eyebrow">{t('onboarding.eyebrow')}</p>
         <h1 id="onboarding-title">{t('onboarding.title')}</h1>
         <p>{t('onboarding.description')}</p>

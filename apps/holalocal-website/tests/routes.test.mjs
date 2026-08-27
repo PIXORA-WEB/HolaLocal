@@ -12,6 +12,7 @@ const scrollNavigationPath = path.resolve(
 )
 const headerPath = path.resolve(__dirname, '../src/components/layout/SiteHeader.jsx')
 const footerPath = path.resolve(__dirname, '../src/components/layout/SiteFooter.jsx')
+const brandLockupPath = path.resolve(__dirname, '../src/components/common/BrandLockup.jsx')
 const homePath = path.resolve(__dirname, '../src/pages/HomePage.jsx')
 const globalStylesPath = path.resolve(__dirname, '../src/styles/global.css')
 const servicesPath = path.resolve(__dirname, '../src/pages/ServicesPage.jsx')
@@ -448,6 +449,7 @@ test('account onboarding uses the trusted callable instead of direct role writes
     protectedRoute,
     routePolicy,
     profilePage,
+    brandLockup,
   ] = await Promise.all([
     readFile(userServicePath, 'utf8'),
     readFile(functionsClientPath, 'utf8'),
@@ -461,6 +463,7 @@ test('account onboarding uses the trusted callable instead of direct role writes
     readFile(protectedRoutePath, 'utf8'),
     readFile(path.resolve(__dirname, '../src/routes/accountRoutePolicy.js'), 'utf8'),
     readFile(profilePagePath, 'utf8'),
+    readFile(brandLockupPath, 'utf8'),
   ])
 
   assert.match(functionsClient, /httpsCallable\(functions, 'updateAccountRole'\)/)
@@ -469,8 +472,11 @@ test('account onboarding uses the trusted callable instead of direct role writes
   assert.doesNotMatch(userService, /businessProfileRequired: roles\.includes/)
   assert.match(onboarding, /const fallback = requiresBusinessProfile \? '\/business\/dashboard' : '\/profile'/)
   assert.match(onboarding, /navigate\(internalPathFromLocation\(location\.state\?\.from, fallback\)/)
-  assert.match(onboarding, /alt=\{t\('onboarding\.logoAlt'\)\}/)
+  assert.match(onboarding, /<BrandLockup className="onboarding-card__logo" label=\{t\('onboarding\.logoAlt'\)\} linked=\{false\} variant="icon" \/>/)
+  assert.doesNotMatch(onboarding, /logo-icon-display\.png/)
   assert.doesNotMatch(onboarding, /`\$\{brand\.name\} logo`/)
+  assert.match(brandLockup, /if \(!linked\) \{[\s\S]*?<span className=\{classes\} role="img" aria-label=\{accessibleLabel\}>\{content\}<\/span>/)
+  assert.match(brandLockup, /return <Link className=\{classes\} to=\{to\} aria-label=\{accessibleLabel\}>\{content\}<\/Link>/)
   assert.match(businessRoute, /userProfile\?\.roles\?\.includes\('business'\)/)
   assert.match(functionsClient, /httpsCallable\(functions, 'ensureOwnerBusiness'\)/)
   assert.match(businessService, /if \(userProfile\.businessId\)/)

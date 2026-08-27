@@ -62,7 +62,7 @@
 
 .brand-lockup__text {
   display: block;
-  width: clamp(12rem, 25vw, 16rem);
+  width: clamp(9rem, 18vw, 11rem);
   min-width: 0;
   max-width: 100%;
   height: auto;
@@ -966,10 +966,16 @@
 }
 
 .onboarding-card__logo {
-  display: block;
+  display: flex;
   width: 5rem;
   height: 5rem;
+  justify-content: center;
   margin: 0 auto 1rem;
+}
+
+.onboarding-card__logo .brand-lockup__icon {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 

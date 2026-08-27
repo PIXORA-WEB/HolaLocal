@@ -121,10 +121,8 @@ async function encodePng(path, image) {
 }
 
 const tasks = [
-  ['src/assets/images/Favicon.png', 'src/assets/images/favicon-32.png', 32, 32],
-  ['src/assets/images/Favicon.png', 'src/assets/images/favicon-192.png', 192, 192],
-  ['src/assets/logos/logo-icon.png', 'src/assets/logos/logo-icon-display.png', 184, 200],
-  ['src/assets/logos/logo-text.png', 'src/assets/logos/logo-text-display.png', 300, 72],
+  ['src/assets/logos/logo-icon.png', 'src/assets/images/favicon-32.png', 32, 32],
+  ['src/assets/logos/logo-icon.png', 'src/assets/images/favicon-192.png', 192, 192],
 ]
 
 for (const [sourcePath, outputPath, width, height] of tasks) {
