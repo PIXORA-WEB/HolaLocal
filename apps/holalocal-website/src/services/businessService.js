@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -94,6 +95,7 @@ const editableBusinessFields = new Set([
   'description',
   'primaryCategoryId',
   'categoryIds',
+  'customServiceDescription',
   'contact',
   'location',
   'serviceAreas',
@@ -164,6 +166,10 @@ function sanitizeBusinessData(businessData) {
     safeData.name = safeData.name.trim()
   }
   if (safeData.categoryIds) safeData.categoryIds = getStringList(safeData.categoryIds)
+  if (safeData.customServiceDescription === null) safeData.customServiceDescription = deleteField()
+  else if (typeof safeData.customServiceDescription === 'string') {
+    safeData.customServiceDescription = safeData.customServiceDescription.trim()
+  }
   if (safeData.serviceAreas) safeData.serviceAreas = getStringList(safeData.serviceAreas)
   if (safeData.languages) safeData.languages = getStringList(safeData.languages)
   if (safeData.languages?.length) {

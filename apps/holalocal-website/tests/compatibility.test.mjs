@@ -1301,7 +1301,7 @@ test('all supported locales resolve home card and footer translation keys', asyn
   }
 })
 
-test('shared navigation, homepage carousel, and footer keep their responsive width contracts', async () => {
+test('shared navigation, services-first homepage, and footer keep their responsive width contracts', async () => {
   const [baseStyles, globalStyles, homePage] = await Promise.all([
     readFile(new URL('../src/styles/base.css', import.meta.url), 'utf8'),
     readFile(new URL('../src/styles/global.css', import.meta.url), 'utf8'),
@@ -1310,11 +1310,11 @@ test('shared navigation, homepage carousel, and footer keep their responsive wid
   const mobileNavigation = globalStyles.match(
     /\.mobile-navigation > nav \{[\s\S]*?\n\}/,
   )?.[0] ?? ''
-  const heroViewport = globalStyles.match(
-    /\.marketing-hero__viewport \{[\s\S]*?\n\}/,
+  const hero = globalStyles.match(
+    /\.marketing-hero \{[\s\S]*?\n\}/,
   )?.[0] ?? ''
-  const heroTrack = globalStyles.match(
-    /\.marketing-hero__track \{[\s\S]*?\n\}/,
+  const serviceGroups = globalStyles.match(
+    /\.homepage-service-groups \{[\s\S]*?\n\}/,
   )?.[0] ?? ''
   const footerInner = globalStyles.match(
     /\.site-footer__inner \{[\s\S]*?\n\}/,
@@ -1329,24 +1329,14 @@ test('shared navigation, homepage carousel, and footer keep their responsive wid
   assert.match(mobileNavigation, /position: fixed/)
   assert.match(mobileNavigation, /width: min\(17rem, calc\(100% - 1\.5rem\)\)/)
   assert.doesNotMatch(mobileNavigation, /100vw/)
-  const viewportMarkupIndex = homePage.indexOf('className="marketing-hero__viewport"')
-  const trackMarkupIndex = homePage.indexOf('className="marketing-hero__track"')
-  const controlsMarkupIndex = homePage.indexOf('className="marketing-hero__carousel-controls"')
-  assert.ok(viewportMarkupIndex >= 0)
-  assert.ok(trackMarkupIndex > viewportMarkupIndex)
-  assert.ok(controlsMarkupIndex > trackMarkupIndex)
-  assert.match(homePage, /businesses\.map\(\(business\) => \([\s\S]*?<PublicBusinessCard/)
-  assert.match(heroViewport, /width: 100%/)
-  assert.match(heroViewport, /max-width: 100%/)
-  assert.match(heroViewport, /min-width: 0/)
-  assert.match(heroViewport, /overflow: hidden/)
-  assert.match(heroViewport, /contain: layout paint/)
-  assert.match(heroTrack, /overflow-x: auto/)
-  assert.match(globalStyles, /\.public-business-card--hero \{[\s\S]*?flex: 0 0 100%/)
-  assert.doesNotMatch(
-    globalStyles,
-    /\.marketing-hero__viewport\s*\{[^}]*(?:overflow|overflow-x):\s*visible/s,
-  )
+  assert.match(homePage, /<section className="marketing-hero">/)
+  assert.match(homePage, /SERVICE_TAXONOMY_GROUPS\.map\(\(group\) => \(/)
+  assert.match(homePage, /className="homepage-service-groups"/)
+  assert.match(homePage, /featuredBusinesses\.map\(\(business\) => \([\s\S]*?<PublicBusinessCard/)
+  assert.match(hero, /min-width: 0/)
+  assert.match(hero, /box-sizing: border-box/)
+  assert.match(serviceGroups, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(globalStyles, /@media \(min-width: 72rem\) \{[\s\S]*?\.homepage-service-groups \{[\s\S]*?grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/)
   assert.doesNotMatch(
     `${baseStyles}\n${globalStyles}`,
     /(?:html|body|#root)[^{]*\{[^}]*overflow-x:\s*hidden/s,

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  ACCOUNT_STATUSES, BUSINESS_STATUSES, CONTACT_METHODS, ISSUE_CODES, SUBSCRIPTION_STATUSES,
+  ACCOUNT_STATUSES, BUSINESS_CONTRACT, BUSINESS_STATUSES, CONTACT_METHODS, ISSUE_CODES, SUBSCRIPTION_STATUSES,
   SUPPORTED_LANGUAGE_CODES, USER_ROLES, VERIFICATION_STATUSES, adaptBusinessDocument,
   adaptUserDocument, ambiguousBusinesses, buildConversationId, buildLegacyConversationId,
   businessNotFound, conversationMatchesPair, detectUnsafePublicContact,
@@ -251,6 +251,20 @@ test('public business eligibility requires publication, complete canonical field
     ...business,
     contact: { ...contact, email: 'hidden@example.invalid', emailVisible: false },
   }), false)
+})
+
+test('business contract and adapter preserve the optional public custom service description', () => {
+  assert.deepEqual(BUSINESS_CONTRACT.fields.customServiceDescription, {
+    type: 'string', access: 'owner_writable_validated', visibility: 'public',
+    requirement: 'optional', lifecycle: 'canonical',
+  })
+  const adapted = adaptBusinessDocument('business-1', {
+    ownerId: 'owner-1', managerIds: ['owner-1'], name: 'Specialist',
+    primaryCategoryId: 'other-local-service', categoryIds: ['other-local-service'],
+    customServiceDescription: 'Solar panel cleaning', serviceAreas: ['marbella'],
+    languages: ['en'], primaryLanguage: 'en', status: 'draft', verificationStatus: 'unverified',
+  })
+  assert.equal(adapted.business.customServiceDescription, 'Solar panel cleaning')
 })
 
 test('all codes, locale variants, labels, case and whitespace normalize', () => {

@@ -8,7 +8,7 @@ import {
   ownerMismatch,
   resolveBusinessEntitlements,
 } from '@holalocal/firebase-contract'
-import { CANONICAL_BUSINESS_CATEGORIES, computeBusinessProfileCompleted } from './businessPayloads.js'
+import { computeBusinessProfileCompleted } from './businessPayloads.js'
 
 const SOURCE_PRIORITY = ['user_business_id', 'owner_uid_document', 'owner_id_query']
 const BUSINESS_STATUSES = new Set(['draft', 'pending_review', 'rejected', 'active', 'suspended', 'archived', 'deleted'])
@@ -42,10 +42,7 @@ function hasUnsupportedCustomValues(values) {
 }
 
 function hasSupportedEditableTaxonomy(business) {
-  return CANONICAL_BUSINESS_CATEGORIES.includes(business.primaryCategoryId)
-    && business.categoryIds.length > 0
-    && business.categoryIds.every((category) => CANONICAL_BUSINESS_CATEGORIES.includes(category))
-    && business.languages.length > 0
+  return business.languages.length > 0
     && business.primaryLanguage
     && business.languages.includes(business.primaryLanguage)
     && !hasUnsupportedCustomValues(business.languageValues)

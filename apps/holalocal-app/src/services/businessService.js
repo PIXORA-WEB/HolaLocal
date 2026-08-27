@@ -1,6 +1,6 @@
 import {
   collection, doc, getDoc, getDocs, limit as firestoreLimit,
-  query, serverTimestamp, updateDoc, where,
+  deleteField, query, serverTimestamp, updateDoc, where,
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { db, functions } from '../firebase/config.js'
@@ -107,7 +107,7 @@ export async function getBusinessByOwnerId(ownerId, userBusinessId = null) {
   throw error
 }
 
-export async function updateBusinessProfile(businessId, form) {
+export async function updateBusinessProfile(businessId, form, taxonomyOptions = {}) {
   const current = await getManagedBusinessById(businessId)
   if (!current) throw Object.assign(new Error('Business profile not found.'), { code: 'business/not-found' })
   if (!current.editSupport.supported) {
@@ -115,14 +115,16 @@ export async function updateBusinessProfile(businessId, form) {
       code: 'business/unsupported-legacy',
     })
   }
-  const built = buildCanonicalBusinessUpdate(form)
+  const built = buildCanonicalBusinessUpdate(form, taxonomyOptions)
   if (!built.valid) {
     throw Object.assign(new Error('Business edit contains unsupported values.'), {
       code: 'business/invalid-edit', issues: built.issues,
     })
   }
+  const payload = { ...built.payload }
+  if (payload.customServiceDescription === null) payload.customServiceDescription = deleteField()
   await updateDoc(businessDocument(businessId), {
-    ...built.payload,
+    ...payload,
     updatedAt: serverTimestamp(),
   })
   return getManagedBusinessById(businessId)

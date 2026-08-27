@@ -62,6 +62,7 @@ export const BUSINESS_CONTRACT = Object.freeze({
     description: field('string', 'owner_writable', 'public'),
     primaryCategoryId: field('string', 'owner_writable_validated', 'public'),
     categoryIds: field('string[]', 'owner_writable_validated', 'public', 'required'),
+    customServiceDescription: field('string', 'owner_writable_validated', 'public'),
     serviceAreas: field('identifier[]', 'owner_writable_validated', 'public', 'required'),
     customServiceAreas: field('custom_value_map', 'owner_writable_validated', 'public'),
     serviceRadiusKm: field('number', 'owner_writable_validated', 'public'),

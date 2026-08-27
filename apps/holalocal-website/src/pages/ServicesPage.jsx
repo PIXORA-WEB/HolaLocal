@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  getServiceIdsForGroup,
+  getServiceTaxonomyService,
+  SERVICE_TAXONOMY_GROUPS,
+  SERVICE_TAXONOMY_SERVICES,
+} from '@holalocal/firebase-contract'
 import BusinessDetailPanel from '../components/common/BusinessDetailPanel.jsx'
 import AccessibleDialog from '../components/common/AccessibleDialog.jsx'
 import BusinessReportDialog from '../components/common/BusinessReportDialog.jsx'
@@ -12,21 +18,18 @@ import { createBusinessReport } from '../services/reportService.js'
 import { getLanguageNameFromCode } from '../utils/languages.js'
 import SelectField from '../components/common/SelectField.jsx'
 import { recordPublicContactAction, recordPublicProfileView } from '../services/businessInsightsService.js'
-
-const popularCategories = [
-  { key: 'cleaning', value: 'Cleaning' },
-  { key: 'plumbing', value: 'Plumbing' },
-  { key: 'gardening', value: 'Gardening' },
-  { key: 'handyman', value: 'Handyman' },
-  { key: 'airConditioning', value: 'Air Conditioning' },
-  { key: 'petServices', value: 'Pet Services' },
-]
+import {
+  filterPublicBusinesses,
+  getPublicBusinessPrimaryServiceLabel,
+  parseServiceDiscoveryQuery,
+  SERVICE_DISCOVERY_QUERY_TYPES,
+} from '../utils/serviceDiscovery.js'
+import {
+  buildServiceSelectionSearchParams,
+  deriveServiceBrowseSelection,
+} from '../utils/serviceBrowse.js'
 
 let resultsScrollPosition = null
-
-function normalize(value) {
-  return String(value ?? '').trim().toLocaleLowerCase()
-}
 
 function ServicesPage() {
   const { t } = useTranslation()
@@ -46,10 +49,45 @@ function ServicesPage() {
   const [reporting, setReporting] = useState(false)
   const [reportError, setReportError] = useState('')
   const [reportSuccess, setReportSuccess] = useState(false)
+  const [browseGroupOverride, setBrowseGroupOverride] = useState({ groupId: null, taxonomyStateToken: null })
   const searchTerm = searchParams.get('q') ?? ''
   const locationFilter = searchParams.get('area') ?? ''
-  const category = searchParams.get('category') ?? ''
   const language = searchParams.get('language') ?? ''
+  const searchParamsKey = searchParams.toString()
+  const taxonomyQueryKey = [
+    searchParams.has('service'), searchParams.get('service'),
+    searchParams.has('category'), searchParams.get('category'),
+  ].join('|')
+  const taxonomyStateToken = useMemo(() => ({ taxonomyQueryKey }), [taxonomyQueryKey])
+  const serviceQuery = useMemo(
+    () => parseServiceDiscoveryQuery(searchParamsKey),
+    [searchParamsKey],
+  )
+  const taxonomyLabel = useCallback(
+    (definition) => t(definition.translationKey, { defaultValue: definition.defaultLabel }),
+    [t],
+  )
+  const derivedBrowseSelection = useMemo(
+    () => deriveServiceBrowseSelection(serviceQuery),
+    [serviceQuery],
+  )
+  const activeBrowseGroupOverride = browseGroupOverride.taxonomyStateToken === taxonomyStateToken
+    ? browseGroupOverride.groupId
+    : null
+  const selectedGroupId = activeBrowseGroupOverride || derivedBrowseSelection.groupId
+  const visibleServiceIds = useMemo(
+    () => getServiceIdsForGroup(selectedGroupId),
+    [selectedGroupId],
+  )
+  const activeTaxonomyDefinition = useMemo(() => {
+    if (derivedBrowseSelection.serviceId) {
+      return getServiceTaxonomyService(derivedBrowseSelection.serviceId)
+    }
+    if (serviceQuery.type === SERVICE_DISCOVERY_QUERY_TYPES.GROUP_COMPATIBILITY) {
+      return SERVICE_TAXONOMY_GROUPS.find(({ id }) => id === serviceQuery.groupId) ?? null
+    }
+    return null
+  }, [derivedBrowseSelection.serviceId, serviceQuery])
 
   useEffect(() => {
     let isCurrent = true
@@ -77,35 +115,31 @@ function ServicesPage() {
     setLoadAttempt((attempt) => attempt + 1)
   }
 
-  const categoryOptions = useMemo(
-    () => [...new Set(businesses.map((business) => business.category).filter(Boolean))].sort(),
-    [businesses],
-  )
+  const categoryOptions = useMemo(() => {
+    const groupLabels = new Map(SERVICE_TAXONOMY_GROUPS.map((group) => [group.id, taxonomyLabel(group)]))
+    return SERVICE_TAXONOMY_SERVICES.map((definition) => ({
+      label: `${groupLabels.get(definition.groupId)} — ${taxonomyLabel(definition)}`,
+      value: definition.id,
+    }))
+  }, [taxonomyLabel])
   const languageOptions = useMemo(
     () => [...new Set(businesses.flatMap((business) => business.languages))].sort(),
     [businesses],
   )
-  const filteredBusinesses = useMemo(() => {
-    const normalizedSearch = normalize(searchTerm)
-    const normalizedLocation = normalize(locationFilter)
-
-    return businesses.filter((business) => {
-      const matchesSearch = !normalizedSearch ||
-        normalize(business.name).includes(normalizedSearch) ||
-        normalize(business.category).includes(normalizedSearch)
-      const matchesLocation = !normalizedLocation ||
-        normalize(business.serviceArea).includes(normalizedLocation)
-      const matchesCategory = !category || normalize(business.category) === normalize(category)
-      const matchesLanguage = !language || business.languages.some(
-        (businessLanguage) => normalize(businessLanguage) === normalize(language),
-      )
-
-      return matchesSearch && matchesLocation && matchesCategory && matchesLanguage
-    })
-  }, [businesses, category, language, locationFilter, searchTerm])
-  const selectedBusiness = businesses.find(
-    (business) => business.businessId === businessId,
-  ) ?? null
+  const filteredBusinesses = useMemo(() => filterPublicBusinesses(businesses, {
+    area: locationFilter,
+    labelResolver: taxonomyLabel,
+    language,
+    query: serviceQuery,
+    searchTerm,
+  }), [businesses, language, locationFilter, searchTerm, serviceQuery, taxonomyLabel])
+  const selectedBusiness = useMemo(() => {
+    const business = businesses.find((candidate) => candidate.businessId === businessId)
+    return business ? {
+      ...business,
+      category: getPublicBusinessPrimaryServiceLabel(business, taxonomyLabel),
+    } : null
+  }, [businessId, businesses, taxonomyLabel])
 
   useEffect(() => {
     if (selectedBusiness?.businessId) recordPublicProfileView(selectedBusiness.businessId)
@@ -141,6 +175,12 @@ function ServicesPage() {
       if (value) nextParams.set(name, value)
       else nextParams.delete(name)
       return nextParams
+    }, { replace: true })
+  }
+
+  function updateServiceFilter(serviceId) {
+    setSearchParams((currentParams) => {
+      return buildServiceSelectionSearchParams(currentParams, serviceId)
     }, { replace: true })
   }
 
@@ -336,16 +376,6 @@ function ServicesPage() {
           />
         </label>
         <div className="services-filters__select">
-          <span>{t('services.categoryLabel')}</span>
-          <SelectField
-            ariaLabel={t('services.categoryLabel')}
-            className="select-field--form"
-            onChange={(value) => updateFilter('category', value)}
-            options={[{ label: t('services.allCategories'), value: '' }, ...categoryOptions.map((option) => ({ label: option, value: option }))]}
-            value={category}
-          />
-        </div>
-        <div className="services-filters__select">
           <span>{t('services.languageLabel')}</span>
           <SelectField
             ariaLabel={t('services.languageLabel')}
@@ -357,34 +387,76 @@ function ServicesPage() {
         </div>
       </section>
 
-      <section className="popular-categories" aria-labelledby="popular-categories-title">
-        <div>
-          <h2 id="popular-categories-title">{t('services.popularCategories')}</h2>
-          <p>{t('services.popularDescription')}</p>
+      <section className="service-browser" aria-labelledby="service-browser-title">
+        <div className="service-browser__heading">
+          <div>
+            <h2 id="service-browser-title">{t('services.browseTitle')}</h2>
+            <p>{t('services.browseDescription')}</p>
+          </div>
+          <div className="service-browser__select">
+            <span>{t('services.categoryLabel')}</span>
+            <SelectField
+              ariaLabel={t('services.categoryLabel')}
+              className="select-field--form"
+              onChange={updateServiceFilter}
+              options={[{ label: t('services.allCategories'), value: '' }, ...categoryOptions]}
+              value={derivedBrowseSelection.serviceId}
+            />
+          </div>
         </div>
-        <div className="popular-categories__list">
-          {popularCategories.map((option) => (
+
+        <div className="service-browser__groups">
+          {SERVICE_TAXONOMY_GROUPS.map((group) => (
             <button
-              className={category === option.value ? 'is-active' : ''}
-              key={option.key}
-              onClick={() => updateFilter('category', category === option.value ? '' : option.value)}
+              aria-pressed={selectedGroupId === group.id}
+              className={selectedGroupId === group.id ? 'is-active' : ''}
+              key={group.id}
+              onClick={() => setBrowseGroupOverride({ groupId: group.id, taxonomyStateToken })}
               type="button"
             >
-              {t(`services.categories.${option.key}`)}
+              {taxonomyLabel(group)}
             </button>
           ))}
         </div>
+
+        {selectedGroupId && (
+          <div className="service-browser__services" aria-live="polite">
+            {visibleServiceIds.map((serviceId) => {
+              const definition = getServiceTaxonomyService(serviceId)
+              const selected = derivedBrowseSelection.serviceId === serviceId
+              return (
+                <button
+                  aria-pressed={selected}
+                  className={selected ? 'is-active' : ''}
+                  key={serviceId}
+                  onClick={() => updateServiceFilter(selected ? '' : serviceId)}
+                  type="button"
+                >
+                  {taxonomyLabel(definition)}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       <section className="services-results" aria-labelledby="services-results-title">
         <div className="services-results__heading">
           <div>
             <h2 id="services-results-title">{t('services.results')}</h2>
+            {activeTaxonomyDefinition && (
+              <p className="services-results__active-service">{taxonomyLabel(activeTaxonomyDefinition)}</p>
+            )}
             {!loading && !error && businesses.length > 0 && (
               <p>{t('services.resultCount', { count: filteredBusinesses.length })}</p>
             )}
           </div>
-          {(searchTerm || locationFilter || category || language) && (
+          {(
+            searchTerm
+            || locationFilter
+            || language
+            || serviceQuery.type !== SERVICE_DISCOVERY_QUERY_TYPES.NONE
+          ) && (
             <button onClick={clearFilters} type="button">{t('services.clearFilters')}</button>
           )}
         </div>
@@ -426,7 +498,10 @@ function ServicesPage() {
           <div className="services-results__grid">
             {filteredBusinesses.map((business) => (
               <PublicBusinessCard
-                business={business}
+                business={{
+                  ...business,
+                  category: getPublicBusinessPrimaryServiceLabel(business, taxonomyLabel),
+                }}
                 key={business.businessId}
                 linkState={{ fromServices: true }}
                 onSelect={selectBusiness}

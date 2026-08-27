@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  getServiceIdsForGroup,
+  getServiceTaxonomyService,
+  MAX_BUSINESS_SERVICE_SELECTIONS,
+  MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH,
+  SERVICE_TAXONOMY_GROUPS,
+  SERVICE_TAXONOMY_SERVICES,
+} from '@holalocal/firebase-contract'
 import SelectField from '../../components/common/SelectField.jsx'
 import LocationCombobox from '../../components/business/LocationCombobox.jsx'
 import ServiceAreaSelector from '../../components/business/ServiceAreaSelector.jsx'
@@ -20,9 +28,7 @@ import {
   updateBusinessProfile,
 } from '../../services/businessService.js'
 import {
-  businessCategoryOptions,
   businessLanguageOptions,
-  getBusinessCategoryLabel,
   isOwnerEditableBusinessStatus,
   normalizeCustomValues,
   serviceAreaOptions,
@@ -46,13 +52,19 @@ import {
   toggleServiceAreaSelection,
   validateBusinessLocation,
 } from '../../utils/locations.js'
+import {
+  beginCanonicalTaxonomyEdit,
+  deriveBusinessTaxonomyForm,
+  prepareBusinessTaxonomyUpdate,
+  selectPrimaryService,
+  selectTaxonomyGroup,
+  toggleAdditionalService,
+} from '../../utils/businessTaxonomyForm.js'
 
 const emptyForm = {
   name: '',
   tagline: '',
   description: '',
-  primaryCategoryId: '',
-  categoryIds: [],
   phone: '',
   phoneVisible: false,
   whatsappNumber: '',
@@ -83,11 +95,11 @@ function prepareCustomSelection(values = [], options) {
   return { customValue, selectedValues }
 }
 
-function draftSignature(form, customSubcategory, customLanguage) {
-  return JSON.stringify({ form, customSubcategory, customLanguage })
+function draftSignature(form, customLanguage, taxonomy, taxonomyDirty) {
+  return JSON.stringify({ form, customLanguage, taxonomy, taxonomyDirty })
 }
 
-function CheckboxGroup({ error, id, legend, name, options, selectedValues, onToggle }) {
+function CheckboxGroup({ error, id, isOptionDisabled, legend, name, options, selectedValues, onToggle }) {
   const groups = options.reduce((result, option) => {
     const group = typeof option === 'string' ? '' : option.group ?? ''
     if (!result.has(group)) result.set(group, [])
@@ -115,6 +127,7 @@ function CheckboxGroup({ error, id, legend, name, options, selectedValues, onTog
                 <label key={optionValue}>
                   <input
                     checked={selectedValues.includes(optionValue)}
+                    disabled={isOptionDisabled?.(optionValue) === true}
                     name={name}
                     onChange={() => onToggle(optionValue)}
                     type="checkbox"
@@ -142,7 +155,8 @@ function EditBusinessPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [workflowError, setWorkflowError] = useState(null)
-  const [customSubcategory, setCustomSubcategory] = useState('')
+  const [taxonomy, setTaxonomy] = useState(() => deriveBusinessTaxonomyForm())
+  const [taxonomyDirty, setTaxonomyDirty] = useState(false)
   const [customLanguage, setCustomLanguage] = useState('')
   const [mediaError, setMediaError] = useState(null)
   const [logoUploading, setLogoUploading] = useState(false)
@@ -172,17 +186,30 @@ function EditBusinessPage() {
   const userEmail = userProfile?.email ?? ''
   const userCity = userProfile?.city ?? ''
   const userPreferredLocale = userProfile?.preferredLocale ?? 'en'
-  const categoryListboxOptions = [
-    { label: t('business.form.selectCategory'), value: '' },
-    ...businessCategoryOptions.map((category) => ({
-      label: getBusinessCategoryLabel(category.value, t),
-      value: category.value,
+  const serviceGroupOptions = [
+    { label: t('business.form.services.chooseGroup'), value: '' },
+    ...SERVICE_TAXONOMY_GROUPS.map((group) => ({
+      label: t(group.translationKey, { defaultValue: group.defaultLabel }), value: group.id,
     })),
   ]
-  const localizedCategoryOptions = businessCategoryOptions.map((category) => ({
-    ...category,
-    label: getBusinessCategoryLabel(category.value, t),
-  }))
+  const mainServiceOptions = [
+    { label: t('business.form.services.chooseMain'), value: '' },
+    ...getServiceIdsForGroup(taxonomy.groupId).map((serviceId) => {
+      const service = getServiceTaxonomyService(serviceId)
+      return { label: t(service.translationKey, { defaultValue: service.defaultLabel }), value: service.id }
+    }),
+  ]
+  const additionalServiceOptions = SERVICE_TAXONOMY_SERVICES
+    .filter(({ id }) => id !== taxonomy.primaryServiceId)
+    .map((service) => {
+      const group = SERVICE_TAXONOMY_GROUPS.find(({ id }) => id === service.groupId)
+      return {
+        value: service.id,
+        label: t(service.translationKey, { defaultValue: service.defaultLabel }),
+        group: service.groupId,
+        groupLabel: t(group.translationKey, { defaultValue: group.defaultLabel }),
+      }
+    })
   const localizedServiceAreaOptions = serviceAreaOptions.map((area) => {
     return {
       ...area,
@@ -197,8 +224,8 @@ function EditBusinessPage() {
   const galleryImages = businessProfile?.galleryEntries ?? []
   const galleryLimit = Math.max(Number(businessProfile?.entitlements?.limits?.galleryImages) || 0, 0)
   const currentDraftSignature = useMemo(
-    () => draftSignature(form, customSubcategory, customLanguage),
-    [customLanguage, customSubcategory, form],
+    () => draftSignature(form, customLanguage, taxonomy, taxonomyDirty),
+    [customLanguage, form, taxonomy, taxonomyDirty],
   )
   const isDirty = initialDraftSignature !== null && initialDraftSignature !== currentDraftSignature
   const contactMethodOptions = [
@@ -210,6 +237,10 @@ function EditBusinessPage() {
   const completionBusiness = {
     ...businessProfile,
     ...form,
+    primaryCategoryId: taxonomy.primaryServiceId || businessProfile?.primaryCategoryId,
+    categoryIds: taxonomy.primaryServiceId
+      ? [taxonomy.primaryServiceId, ...taxonomy.additionalServiceIds]
+      : businessProfile?.categoryIds,
     contact: { ...(businessProfile?.contact ?? {}), preferredContactMethod: form.preferredContactMethod },
     galleryImages: businessProfile?.galleryImages,
     galleryImageURLs: businessProfile?.galleryImageURLs,
@@ -242,10 +273,7 @@ function EditBusinessPage() {
 
         const loadedLanguages = (profile?.languages ?? [userPreferredLocale])
           .map(normalizeLanguageCode)
-        const preparedSubcategories = prepareCustomSelection(
-          profile?.categoryIds ?? [],
-          businessCategoryOptions,
-        )
+        const loadedTaxonomy = deriveBusinessTaxonomyForm(profile)
         const preparedServiceAreas = [...new Set(
           (profile?.serviceAreas ?? []).map(normalizeServiceAreaId),
         )]
@@ -277,19 +305,20 @@ function EditBusinessPage() {
             ?? normalizeCountryCode(profile?.location?.countryCode ?? 'ES'),
           primaryLanguage: profile?.primaryLanguage ?? loadedLanguages[0] ?? 'en',
           ...(profile ?? {}),
-          categoryIds: preparedSubcategories.selectedValues,
           serviceAreas: preparedServiceAreas,
           languages: preparedLanguages.selectedValues,
         }
 
         setBusinessProfile(profile)
-        setCustomSubcategory(preparedSubcategories.customValue)
+        setTaxonomy(loadedTaxonomy)
+        setTaxonomyDirty(false)
         setCustomLanguage(preparedLanguages.customValue)
         setForm(nextForm)
         setInitialDraftSignature(draftSignature(
           nextForm,
-          preparedSubcategories.customValue,
           preparedLanguages.customValue,
+          loadedTaxonomy,
+          false,
         ))
         if (
           profile?.businessId
@@ -492,6 +521,14 @@ function EditBusinessPage() {
     })
   }
 
+  function editTaxonomy(update) {
+    setTaxonomyDirty(true)
+    setTaxonomy((current) => update(current))
+    setFieldErrors((current) => ({
+      ...current, primaryCategoryId: '', categoryIds: '', customServiceDescription: '',
+    }))
+  }
+
   async function uploadLogoFile(file) {
     if (!businessProfile?.businessId) return
     const submission = logoSubmissionGuard
@@ -631,19 +668,33 @@ function EditBusinessPage() {
 
     const name = form.name.trim()
     const description = form.description.trim()
-    const primaryCategoryId = form.primaryCategoryId.trim()
     const city = form.city.trim()
-    const usesCustomSubcategory = form.categoryIds.includes('Other')
     const usesCustomLanguage = form.languages.includes('other')
 
-    const categoryIds = normalizeCustomValues(form.categoryIds, customSubcategory)
     const serviceAreas = form.serviceAreas
     const languages = normalizeCustomValues(form.languages, customLanguage)
+    const existingTaxonomyIsEmpty = !businessProfile?.primaryCategoryId
+      && (!Array.isArray(businessProfile?.categoryIds) || businessProfile.categoryIds.length === 0)
+    const taxonomyUpdate = prepareBusinessTaxonomyUpdate(
+      taxonomy,
+      taxonomyDirty || existingTaxonomyIsEmpty,
+    )
 
     const nextErrors = {}
     if (!name) nextErrors.name = t('validation.businessName')
     if (!description) nextErrors.description = t('validation.businessDescription')
-    if (!primaryCategoryId) nextErrors.primaryCategoryId = t('validation.category')
+    if (!taxonomyUpdate.valid) {
+      for (const validationIssue of taxonomyUpdate.issues) {
+        const field = validationIssue.field
+        if (field === 'customServiceDescription') {
+          nextErrors.customServiceDescription = t('business.form.services.customDescriptionError')
+        } else if (field === 'categoryIds') {
+          nextErrors.categoryIds = t('business.form.services.selectionError')
+        } else {
+          nextErrors.primaryCategoryId = t('business.form.services.mainServiceError')
+        }
+      }
+    }
     const locationValidation = validateBusinessLocation({
       location: {
         locality: city,
@@ -659,7 +710,6 @@ function EditBusinessPage() {
         ? t('business.form.location.chooseOnePrimary')
         : t('business.form.location.selectPrimary')
     }
-    if (usesCustomSubcategory && !customSubcategory.trim()) nextErrors.customSubcategory = t('validation.customSubcategory')
     if (!locationValidation.serviceAreasValid) {
       nextErrors.serviceAreas = locationValidation.unresolvedServiceAreas.length > 0
         ? t('business.form.location.resolveServiceAreas')
@@ -672,7 +722,8 @@ function EditBusinessPage() {
     setFieldErrors(nextErrors)
     const fieldIds = {
       name: 'business-name', description: 'business-description', primaryCategoryId: 'business-main-category',
-      city: 'business-primary-location', customSubcategory: 'custom-subcategory',
+      categoryIds: 'business-additional-services', customServiceDescription: 'custom-service-description',
+      city: 'business-primary-location',
       serviceAreas: 'business-service-areas',
       customLanguage: 'custom-language', languages: 'business-languages-group', email: 'business-email',
       website: 'business-website',
@@ -694,8 +745,7 @@ function EditBusinessPage() {
       name,
       tagline: form.tagline.trim(),
       description,
-      primaryCategoryId,
-      categoryIds,
+      ...(taxonomyUpdate.updates ?? {}),
       contact: {
         phone: form.phone.trim(),
         phoneVisible: form.phoneVisible,
@@ -727,7 +777,10 @@ function EditBusinessPage() {
       const savedBusiness = await updateBusinessProfile(editableBusiness.businessId, businessData)
 
       setBusinessProfile(savedBusiness)
-      setInitialDraftSignature(currentDraftSignature)
+      const savedTaxonomy = deriveBusinessTaxonomyForm(savedBusiness)
+      setTaxonomy(savedTaxonomy)
+      setTaxonomyDirty(false)
+      setInitialDraftSignature(draftSignature(form, customLanguage, savedTaxonomy, false))
       setSaveSuccess(true)
     } catch (saveError) {
       const classifiedError = classifyFrontendError(saveError, {
@@ -986,43 +1039,95 @@ function EditBusinessPage() {
             <p>{t('business.form.services.description')}</p>
           </header>
 
-          <label htmlFor="business-main-category">{t('business.form.services.mainCategory')} *</label>
+          {taxonomy.hasLegacyValues && (
+            <div className="business-taxonomy-legacy" role="status">
+              <strong>{t('business.form.services.legacyTitle')}</strong>
+              <p>{t('business.form.services.legacyDescription')}</p>
+              {taxonomy.unresolvedValues.length > 0 && (
+                <p>{t('business.form.services.currentLegacyValues')}: {taxonomy.unresolvedValues.join(', ')}</p>
+              )}
+              {!taxonomy.editing && (
+                <button
+                  className="button button--secondary"
+                  onClick={() => editTaxonomy(beginCanonicalTaxonomyEdit)}
+                  type="button"
+                >
+                  {t('business.form.services.updateServices')}
+                </button>
+              )}
+            </div>
+          )}
+
+          <label htmlFor="business-service-group">{t('business.form.services.serviceGroup')} *</label>
+          <SelectField
+            ariaLabel={t('business.form.services.serviceGroup')}
+            className="select-field--form"
+            id="business-service-group"
+            onChange={(value) => editTaxonomy((current) => selectTaxonomyGroup(current, value))}
+            options={serviceGroupOptions}
+            showLeadingIcon={false}
+            value={taxonomy.groupId}
+            disabled={!taxonomy.editing}
+          />
+
+          <label htmlFor="business-main-category">{t('business.form.services.mainService')} *</label>
           <SelectField
             ariaDescribedBy={fieldErrors.primaryCategoryId ? 'business-main-category-error' : undefined}
             ariaInvalid={Boolean(fieldErrors.primaryCategoryId)}
-            ariaLabel={t('business.form.services.mainCategory')}
+            ariaLabel={t('business.form.services.mainService')}
             className="select-field--form"
             id="business-main-category"
-            onChange={(value) => setField('primaryCategoryId', value)}
-            options={categoryListboxOptions}
+            onChange={(value) => editTaxonomy((current) => selectPrimaryService(current, value))}
+            options={mainServiceOptions}
             showLeadingIcon={false}
-            value={form.primaryCategoryId}
+            value={taxonomy.primaryServiceId}
+            disabled={!taxonomy.editing || !taxonomy.groupId}
           />
           <FormFieldError id="business-main-category-error" message={fieldErrors.primaryCategoryId} />
 
           <CheckboxGroup
-            id="business-subcategories-group"
-            legend={t('business.form.services.subcategories')}
-            name="categoryIds"
-            onToggle={(value) => toggleArrayValue('categoryIds', value)}
-            options={localizedCategoryOptions}
-            selectedValues={form.categoryIds}
+            error={fieldErrors.categoryIds}
+            id="business-additional-services"
+            isOptionDisabled={(serviceId) => !taxonomy.editing || (
+              taxonomy.additionalServiceIds.length >= MAX_BUSINESS_SERVICE_SELECTIONS - 1
+              && !taxonomy.additionalServiceIds.includes(serviceId)
+            )}
+            legend={t('business.form.services.additionalServices')}
+            name="additionalServiceIds"
+            onToggle={(value) => editTaxonomy((current) => toggleAdditionalService(current, value))}
+            options={additionalServiceOptions}
+            selectedValues={taxonomy.additionalServiceIds}
           />
+          <p className="business-taxonomy-limit">
+            {t('business.form.services.additionalLimit', {
+              count: MAX_BUSINESS_SERVICE_SELECTIONS - 1,
+              selected: taxonomy.additionalServiceIds.length,
+            })}
+          </p>
 
-          {form.categoryIds.includes('Other') && (
+          {(
+            taxonomy.primaryServiceId === 'other-local-service'
+            || taxonomy.additionalServiceIds.includes('other-local-service')
+          ) && (
             <div className="custom-option-field">
-              <label htmlFor="custom-subcategory">{t('business.form.services.customSubcategory')}</label>
+              <label htmlFor="custom-service-description">{t('business.form.services.customDescription')} *</label>
               <input
-                aria-describedby={fieldErrors.customSubcategory ? 'custom-subcategory-error' : undefined}
-                aria-invalid={Boolean(fieldErrors.customSubcategory)}
-                id="custom-subcategory"
-                maxLength={100}
-                onChange={(event) => setCustomSubcategory(event.target.value)}
+                aria-describedby={`custom-service-description-help${fieldErrors.customServiceDescription ? ' custom-service-description-error' : ''}`}
+                aria-invalid={Boolean(fieldErrors.customServiceDescription)}
+                disabled={!taxonomy.editing}
+                id="custom-service-description"
+                maxLength={MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH}
+                onChange={(event) => editTaxonomy((current) => ({
+                  ...current, customServiceDescription: event.target.value,
+                }))}
                 required
                 type="text"
-                value={customSubcategory}
+                value={taxonomy.customServiceDescription}
               />
-              <FormFieldError id="custom-subcategory-error" message={fieldErrors.customSubcategory} />
+              <small id="custom-service-description-help">
+                {t('business.form.services.customDescriptionLimit', { count: MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH })}
+              </small>
+              <FormFieldError id="custom-service-description-error" message={fieldErrors.customServiceDescription} />
             </div>
           )}
         </section>

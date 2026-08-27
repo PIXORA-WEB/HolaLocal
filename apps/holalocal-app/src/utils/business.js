@@ -1,21 +1,5 @@
 import { spokenLanguageOptions } from './languages.js'
 
-export const businessCategoryOptions = [
-  'Cleaning',
-  'Plumbing',
-  'Electrical',
-  'Gardening',
-  'Painting & Decorating',
-  'Building & Renovation',
-  'Handyman',
-  'Air Conditioning',
-  'Locksmith',
-  'Pest Control',
-  'Pool Maintenance',
-  'Pet Services',
-  'Other',
-]
-
 export const businessLanguageOptions = spokenLanguageOptions
 
 export const provinceOptions = ['Málaga', 'Cádiz', 'Gibraltar', 'Other']

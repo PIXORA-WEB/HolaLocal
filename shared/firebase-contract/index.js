@@ -101,8 +101,18 @@ export {
 } from './normalization.js'
 export { hasCompletePublicBusinessProfile, isPublicBusinessEligible } from './publication.js'
 export {
+  getServiceGroupId, getServiceIdsForGroup, getServiceTaxonomyGroup,
+  getServiceTaxonomyService, isCanonicalServiceId, LEGACY_SERVICE_ALIAS_CONFIDENCES,
+  LEGACY_SERVICE_VALUES, MAX_BUSINESS_SERVICE_SELECTIONS,
+  MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH, projectBusinessTaxonomy, resolveServiceValue,
+  SERVICE_TAXONOMY_GROUP_IDS, SERVICE_TAXONOMY_GROUPS, SERVICE_TAXONOMY_SERVICE_IDS,
+  SERVICE_TAXONOMY_SERVICES, SERVICE_TAXONOMY_VERSION, SERVICE_VALUE_RESOLUTIONS,
+  serviceSupportsCustomDescription,
+} from './taxonomy.js'
+export {
   validateAccountStatus, validateBoundedArray, validateBusinessOwnerMapping,
-  validateBusinessStatus, validateLanguageIdentifier, validateManagerIds, validateOwnerId,
+  validateBusinessStatus, validateCanonicalBusinessTaxonomy, validateLanguageIdentifier,
+  validateManagerIds, validateOwnerId,
   validateOwnerWritablePayload, validatePrimaryLanguage, validatePrivateContact,
   validatePublicContact, validateRoles, validateSubscriptionStatus, validateVerificationStatus,
 } from './validators.js'

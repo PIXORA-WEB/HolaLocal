@@ -160,97 +160,54 @@ test('homepage CTAs use production public routes', async () => {
 
   assert.match(source, /to: '\/services'/)
   assert.match(source, /to: '\/register\?intent=business'/)
-  assert.match(source, /to="\/register\?intent=customer"/)
   assert.match(source, /to="\/services"/)
+  assert.match(source, /marketing\.homepage\.hero\.customerAction/)
+  assert.match(source, /marketing\.homepage\.hero\.businessAction/)
   assert.doesNotMatch(source, /to="\/business\/dashboard"/)
+  assert.doesNotMatch(source, /to="\/(events|community)"/)
   assert.doesNotMatch(source, /href="#|to="#/)
 })
 
-test('homepage example cards are generic, translated, labelled, and non-clickable', async () => {
-  const [home, card] = await Promise.all([
-    readFile(homePath, 'utf8'),
-    readFile(path.resolve(__dirname, '../src/components/common/PublicBusinessCard.jsx'), 'utf8'),
-  ])
+test('homepage preview uses only real directory businesses and canonical display labels', async () => {
+  const home = await readFile(homePath, 'utf8')
 
-  assert.match(home, /nameKey: 'marketing\.hero\.exampleCleaningName'/)
-  assert.match(home, /nameKey: 'marketing\.hero\.exampleGardenName'/)
-  assert.match(home, /nameKey: 'marketing\.hero\.exampleRepairsName'/)
-  assert.match(home, /name: t\(business\.nameKey\)/)
-  assert.doesNotMatch(home, /Costa Clean Marbella|Sol Garden Care|Gibraltar Home Fix/)
-  assert.match(home, /category: 'Cleaning'/)
-  assert.match(home, /category: 'Gardening'/)
-  assert.match(home, /category: 'Handyman'/)
-  assert.match(home, /languages: \['en', 'es'\]/)
-  assert.match(home, /to=\{business\.isDemo \? undefined : `\/services\/\$\{business\.businessId\}`\}/)
-  assert.match(card, /getBusinessCategoryLabel\(business\.category, t\)/)
-  assert.match(card, /formatLanguageList\(languages, i18n\.resolvedLanguage \?\? i18n\.language\)/)
-  assert.match(card, /t\('services\.noReviews'\)/)
-  assert.match(card, /t\(business\.isDemo \? 'marketing\.hero\.exampleProfile' : 'marketing\.hero\.activeProfile'\)/)
-  assert.doesNotMatch(card, /marketing\.hero\.verifiedProfile/)
-  assert.doesNotMatch(card, /isHero && isVerified && <span aria-hidden="true">✓<\/span>/)
-  assert.doesNotMatch(await readFile(globalStylesPath, 'utf8'), /\.public-business-card--hero \.public-business-card__heading > span\.is-verified/)
+  assert.match(home, /getFeaturedActiveBusinesses\(60\)/)
+  assert.match(home, /setFeaturedBusinesses\(businesses\.slice\(0, 3\)\)/)
+  assert.match(home, /featuredBusinesses\.map\(\(business\) =>/)
+  assert.match(home, /getPublicBusinessPrimaryServiceLabel\(business, taxonomyLabel\)/)
+  assert.match(home, /to=\{`\/services\/\$\{business\.businessId\}`\}/)
+  assert.doesNotMatch(home, /fallbackBusinessExamples|isDemo|exampleCleaningName|exampleGardenName|exampleRepairsName/)
 })
 
-test('homepage keeps the example preview visible across directory states', async () => {
-  const [home, preview] = await Promise.all([
-    readFile(homePath, 'utf8'),
-    readFile(path.resolve(__dirname, '../src/utils/homepagePreview.js'), 'utf8'),
-  ])
+test('homepage keeps real directory preview failure recoverable without fake data', async () => {
+  const home = await readFile(homePath, 'utf8')
 
   assert.match(home, /setDirectoryStatus\('success'\)/)
   assert.match(home, /setDirectoryStatus\('error'\)/)
-  assert.match(home, /buildHomepagePreviewBusinesses\(/)
-  assert.match(preview, /directoryStatus === 'success' \? liveBusinesses\.slice\(0, limit\) : \[\]/)
-  assert.match(preview, /exampleBusinesses\.slice\(0, Math\.max\(0, limit - live\.length\)\)/)
-  assert.match(preview, /export const HOMEPAGE_PREVIEW_LIMIT = 3/)
-  assert.match(home, /<div className="marketing-hero__viewport">[\s\S]*?businesses\.map/)
-  assert.match(home, /directoryStatus === 'error' && \(/)
+  assert.match(home, /featuredBusinesses\.length > 0 \|\| directoryStatus === 'error'/)
   assert.match(home, /t\('marketing\.hero\.loadFailure'\)/)
-  assert.match(home, /className="marketing-hero__load-error" role="alert"/)
+  assert.match(home, /className="homepage-business-preview__error" role="alert"/)
   assert.match(home, /onClick=\{retryDirectoryLoad\}/)
   assert.match(home, /t\('common\.retry'\)/)
   assert.match(home, /setFeaturedBusinesses\(\[\]\)[\s\S]*?setDirectoryStatus\('loading'\)/)
-  assert.doesNotMatch(home, /\.catch\(\(\) => \{\s*if \(isCurrent\) setFeaturedBusinesses\(\[\]\)/)
-  assert.doesNotMatch(`${home}\n${preview}`, /localStorage|sessionStorage|minInstances|billing/)
+  assert.doesNotMatch(home, /localStorage|sessionStorage|minInstances|billing|fallbackBusinessExamples/)
 })
 
-test('homepage hero preview uses accessible native carousel controls on mobile', async () => {
+test('homepage service and platform controls use semantic links without dead routes', async () => {
   const [home, styles] = await Promise.all([
     readFile(homePath, 'utf8'),
     readFile(globalStylesPath, 'utf8'),
   ])
-  const tabletBreakpoint = styles.match(/@media \(min-width: 48rem\) \{[\s\S]*?\n\}\n\n@media \(min-width: 64rem\)/)?.[0] ?? ''
 
-  assert.match(home, /useRef\(null\)/)
-  assert.match(home, /const HERO_DESKTOP_MEDIA_QUERY = '\(min-width: 72rem\)'/)
-  assert.match(home, /function getScrollBehavior\(\)/)
-  assert.match(home, /function getCardScrollLeft\(track, card\)/)
-  assert.match(home, /prefers-reduced-motion: reduce/)
-  assert.match(home, /className="marketing-hero__track"/)
-  assert.match(home, /onScroll=\{updateCurrentHeroIndex\}/)
-  assert.match(home, /ref=\{heroTrackRef\}/)
-  assert.match(home, /className="marketing-hero__carousel-controls"/)
-  assert.match(home, /aria-label=\{t\('marketing\.hero\.previousBusiness'\)\}/)
-  assert.match(home, /aria-label=\{t\('marketing\.hero\.nextBusiness'\)\}/)
-  assert.match(home, /id="marketing-hero-preview-position" aria-live="polite"/)
-  assert.match(home, /t\('marketing\.hero\.businessPosition'/)
-  assert.match(home, /const displayedHeroIndex = boundCarouselIndex\(currentHeroIndex, businesses\.length\)/)
-  assert.match(home, /disabled=\{displayedHeroIndex === 0\}/)
-  assert.match(home, /disabled=\{displayedHeroIndex >= businesses\.length - 1\}/)
-  assert.match(home, /track\.scrollTo\(\{ left: getCardScrollLeft\(track, card\), behavior \}\)/)
-  assert.match(home, /window\.matchMedia\(HERO_DESKTOP_MEDIA_QUERY\)/)
-  assert.match(home, /mediaQuery\.addEventListener\('change', handleHeroModeChange\)/)
-  assert.match(home, /mediaQuery\.removeEventListener\('change', handleHeroModeChange\)/)
-  assert.match(home, /track\.scrollTo\(\{ left: 0, behavior: 'auto' \}\)/)
-  assert.match(home, /new ResizeObserver\(\(\) => \{/)
-  assert.match(home, /observer\.disconnect\(\)/)
-  assert.doesNotMatch(home, /card\.scrollIntoView/)
-  assert.doesNotMatch(home, /window\.addEventListener\('resize'/)
-  assert.doesNotMatch(home, /setInterval|setTimeout|autoplay|autoPlay/)
-  assert.match(styles, /\.marketing-hero__track\s*\{[\s\S]*?display: flex;[\s\S]*?overflow-x: auto;[\s\S]*?scroll-snap-type: x mandatory;/)
-  assert.match(styles, /\.marketing-hero__carousel-controls button\s*\{[\s\S]*?width: 2\.35rem;[\s\S]*?height: 2\.35rem;/)
-  assert.doesNotMatch(tabletBreakpoint, /\.marketing-hero__carousel-controls\s*\{[\s\S]*?display: none;/)
-  assert.match(styles, /@media \(min-width: 72rem\)[\s\S]*?\.marketing-hero__carousel-controls\s*\{[\s\S]*?display: none;/)
+  assert.match(home, /<nav className="homepage-service-groups"/)
+  assert.match(home, /SERVICE_TAXONOMY_GROUPS\.map/)
+  assert.match(home, /<Link key=\{group\.id\} to="\/services">/)
+  assert.match(home, /getHomepageServiceHref\(serviceId\)/)
+  assert.match(home, /\{ key: 'events', live: false \}/)
+  assert.match(home, /\{ key: 'community', live: false \}/)
+  assert.doesNotMatch(home, /to="\/(events|community)"|\?group=|\?category=/)
+  assert.match(styles, /\.homepage-service-groups a\s*\{[\s\S]*?min-height: 3\.75rem;/)
+  assert.match(styles, /\.homepage-service-groups a:focus-visible/)
 })
 
 test('homepage hero preview metadata remains row-grouped and screen-reader friendly', async () => {
@@ -330,21 +287,13 @@ test('public business unavailable and action errors use translated labels', asyn
   assert.doesNotMatch(services, /Unable to submit this report\./)
 })
 
-test('homepage trust card presents business verification as coming soon', async () => {
-  const [home, styles] = await Promise.all([
-    readFile(homePath, 'utf8'),
-    readFile(globalStylesPath, 'utf8'),
-  ])
+test('homepage makes only supported present-day trust claims', async () => {
+  const home = await readFile(homePath, 'utf8')
 
-  assert.match(home, /\{ key: 'verified', icon: 'shield', statusKey: 'comingSoon' \}/)
-  assert.match(home, /shield: <><path d="M12 3\.5 19 6v5\.6c0 4\.2-2\.6 7\.4-7 8\.9-4\.4-1\.5-7-4\.7-7-8\.9V6l7-2\.5Z" \/><path d="M9 12h6" \/><\/>/)
-  assert.match(home, /<div className="trust-card__heading">/)
-  assert.match(home, /\{statusKey && <span>\{t\(`marketing\.trust\.\$\{key\}\.\$\{statusKey\}`\)\}<\/span>\}/)
-  assert.doesNotMatch(home, /\{ key: 'verified', icon: 'verified' \}/)
-  assert.doesNotMatch(home, /m8\.4 12\.1 2\.3 2\.3 4\.9-5/)
-  assert.match(styles, /\.trust-card__heading\s*\{[\s\S]*?flex-wrap: wrap;[\s\S]*?align-items: center;/)
-  assert.match(styles, /\.trust-card__heading span\s*\{[\s\S]*?color: #475569;[\s\S]*?background: #eef2f7;[\s\S]*?overflow-wrap: anywhere;/)
-  assert.doesNotMatch(styles, /\.trust-card__heading span[\s\S]*?background:[^;]*var\(--brand-green\)/)
+  assert.match(home, /\{ key: 'local', icon: 'identity' \}/)
+  assert.match(home, /\{ key: 'multilingual', icon: 'language' \}/)
+  assert.match(home, /\{ key: 'real', icon: 'briefcase' \}/)
+  assert.doesNotMatch(home, /verified|background check|testimonial|ratingCount|customerCount/i)
 })
 
 test('footer layout uses a single aligned responsive grid', async () => {
@@ -360,85 +309,63 @@ test('footer layout uses a single aligned responsive grid', async () => {
   assert.doesNotMatch(styles, /\.site-footer__links\s*\{[\s\S]*?align-items: flex-end;/)
 })
 
-test('homepage benefits strip centers grouped labels without forcing no-wrap text', async () => {
+test('homepage service groups use a compact responsive grid', async () => {
   const [home, styles] = await Promise.all([
     readFile(homePath, 'utf8'),
     readFile(globalStylesPath, 'utf8'),
   ])
 
-  assert.match(home, /<section className="trust-strip"/)
-  assert.match(home, /<p key=\{item\}><span>✓<\/span>\{t\(`marketing\.trustStrip\.\$\{item\}`\)\}<\/p>/)
-  assert.match(styles, /\.trust-strip p\s*\{[\s\S]*?align-items: center;[\s\S]*?justify-content: center;[\s\S]*?min-width: 0;[\s\S]*?text-align: center;[\s\S]*?overflow-wrap: anywhere;/)
-  assert.match(styles, /\.trust-strip span\s*\{[\s\S]*?flex: 0 0 auto;/)
-  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.trust-strip\s*\{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/)
-  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.trust-strip p\s*\{[\s\S]*?border-right: 1px solid var\(--line\);[\s\S]*?border-bottom: 0;/)
-  assert.doesNotMatch(styles, /\.trust-strip[\s\S]*?white-space:\s*nowrap/)
+  assert.match(home, /SERVICE_TAXONOMY_GROUPS\.map/)
+  assert.match(styles, /\.homepage-service-groups\s*\{[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.homepage-service-groups,[\s\S]*?repeat\(3, minmax\(0, 1fr\)\)/)
+  assert.match(styles, /@media \(min-width: 72rem\)[\s\S]*?\.homepage-service-groups\s*\{[\s\S]*?repeat\(6, minmax\(0, 1fr\)\)/)
+  assert.doesNotMatch(styles, /\.homepage-service-groups[\s\S]*?white-space:\s*nowrap/)
 })
 
 test('homepage card sections use compact content-driven vertical rhythm', async () => {
   const styles = await readFile(globalStylesPath, 'utf8')
   const marketingCardBlock = readCssBlock(styles, '.marketing-card')
-  const journeyTrustCardBlock = readCssBlock(styles, '.journey-card,\n.trust-card')
+  const journeyCardBlock = readCssBlock(styles, '.journey-card')
 
   assert.match(styles, /\.marketing-section\s*\{[\s\S]*?padding-block: 4rem;/)
-  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.marketing-section\s*\{[\s\S]*?padding-block: 4\.75rem;/)
+  assert.match(styles, /\.marketing-home \.marketing-section\s*\{[\s\S]*?padding-block: clamp\(2\.75rem, 6vw, 4\.25rem\);/)
   assert.match(styles, /\.marketing-card-grid\s*\{[\s\S]*?margin-top: 1\.6rem;/)
-  assert.match(styles, /\.journey-grid,\n\.trust-card-grid\s*\{[\s\S]*?margin-top: 1\.6rem;/)
+  assert.match(styles, /\.journey-grid\s*\{[\s\S]*?margin-top: 1\.6rem;/)
   assert.match(styles, /\.marketing-card\s*\{[\s\S]*?display: grid;[\s\S]*?min-width: 0;[\s\S]*?align-content: start;[\s\S]*?padding: 1\.35rem;/)
-  assert.match(styles, /\.journey-card,\n\.trust-card\s*\{[\s\S]*?display: flex;[\s\S]*?min-width: 0;[\s\S]*?flex-direction: column;[\s\S]*?padding: 1\.35rem;/)
+  assert.match(styles, /\.journey-card\s*\{[\s\S]*?display: flex;[\s\S]*?min-width: 0;[\s\S]*?flex-direction: column;[\s\S]*?padding: 1\.35rem;/)
   assert.match(styles, /\.journey-card > a\s*\{[\s\S]*?margin-top: auto;[\s\S]*?padding-top: 1\.1rem;/)
   assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.marketing-card\s*\{[\s\S]*?padding: 2rem;/)
-  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.journey-card,\n  \.trust-card\s*\{[\s\S]*?padding: 2rem;/)
+  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.journey-card\s*\{[\s\S]*?padding: 2rem;/)
   assert.doesNotMatch(marketingCardBlock, /\n\s{2}height:\s*\d/)
-  assert.doesNotMatch(journeyTrustCardBlock, /\n\s{2}height:\s*\d/)
+  assert.doesNotMatch(journeyCardBlock, /\n\s{2}height:\s*\d/)
 })
 
-test('homepage hero stacks before intermediate-width column collision', async () => {
+test('homepage hero fills the viewport below the responsive header without clipping content', async () => {
   const styles = await readFile(globalStylesPath, 'utf8')
 
   const mediumBreakpoint = styles.match(/@media \(min-width: 48rem\) \{[\s\S]*?\n\}/)?.[0] ?? ''
-  const desktopBreakpoint = styles.match(/@media \(min-width: 72rem\) \{[\s\S]*?\.trust-card-grid/)?.[0] ?? ''
+  const wideHeaderBreakpoint = styles.match(/@media \(min-width: 64rem\) \{[\s\S]*?\.messages-layout/)?.[0] ?? ''
+  const desktopBreakpoint = styles.match(/@media \(min-width: 72rem\) \{[\s\S]*?\.service-browser__groups/)?.[0] ?? ''
   const stackedBreakpoint = styles.match(/@media \(max-width: 71\.999rem\) \{[\s\S]*?\n\}/)?.[0] ?? ''
 
   assert.doesNotMatch(mediumBreakpoint, /grid-template-columns:[^;]*marketing-hero|\.marketing-hero\s*\{[\s\S]*?grid-template-columns/)
-  assert.match(desktopBreakpoint, /\.marketing-hero\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1\.05fr\) minmax\(24rem, 0\.95fr\)/)
+  assert.match(styles, /\.marketing-hero\s*\{[\s\S]*?--homepage-header-height: calc\(4\.75rem \+ 1px\);[\s\S]*?min-height: calc\(100vh - var\(--homepage-header-height\) - 1rem\);[\s\S]*?min-height: calc\(100svh - var\(--homepage-header-height\) - 1rem\);[\s\S]*?min-height: calc\(100dvh - var\(--homepage-header-height\) - 1rem\);/)
+  assert.match(wideHeaderBreakpoint, /\.marketing-hero\s*\{[\s\S]*?--homepage-header-height: calc\(6rem \+ 1px\);/)
+  assert.doesNotMatch(desktopBreakpoint, /min-height: min\(34rem/)
+  assert.doesNotMatch(desktopBreakpoint, /grid-template-columns:[^;]*24rem/)
   assert.match(stackedBreakpoint, /\.marketing-hero__content\s*\{[\s\S]*?text-align: center;/)
-  assert.match(styles, /\.marketing-hero__visual\s*\{[\s\S]*?width: min\(100%, 39rem\);/)
   assert.match(styles, /\.marketing-hero h1\s*\{[\s\S]*?font-size: clamp\(3rem, 8vw, 6\.5rem\);/)
+  assert.doesNotMatch(styles, /marketing-hero__(visual|viewport|track|carousel-controls|load-error)|\.trust-strip|\.trust-card/)
 })
 
-test('homepage hero preview cards stay compact and content-driven', async () => {
+test('homepage real business preview stays compact and responsive', async () => {
   const styles = await readFile(globalStylesPath, 'utf8')
-  const previewPanelBlock = readCssBlock(styles, '.marketing-hero__visual')
-  const trackBlock = readCssBlock(styles, '.marketing-hero__track')
-  const heroCardBlock = readCssBlock(styles, '.public-business-card--hero')
-  const heroHeadingBlock = readCssBlock(styles, '.public-business-card--hero .public-business-card__heading')
-  const heroBodyBlock = readCssBlock(styles, '.public-business-card__hero-body')
-  const desktopBreakpoint = styles.match(/@media \(min-width: 72rem\) \{[\s\S]*?\.trust-card-grid/)?.[0] ?? ''
+  const previewGrid = readCssBlock(styles, '.homepage-platform__grid,\n.homepage-why__grid,\n.homepage-business-preview__grid')
 
-  assert.match(previewPanelBlock, /gap: 0\.75rem;/)
-  assert.match(previewPanelBlock, /padding: 0\.85rem;/)
-  assert.match(previewPanelBlock, /box-sizing: border-box;/)
-  assert.match(previewPanelBlock, /margin-inline: auto;/)
-  assert.doesNotMatch(previewPanelBlock, /\n\s{2}height:\s*\d|\n\s{2}min-height:\s*\d/)
-  assert.match(trackBlock, /overflow-x: auto;/)
-  assert.match(trackBlock, /scroll-snap-type: x mandatory;/)
-  assert.match(heroCardBlock, /grid-template-columns: 3\.75rem minmax\(0, 1fr\);/)
-  assert.match(heroCardBlock, /grid-template-rows: auto auto;/)
-  assert.match(heroCardBlock, /width: 100%;/)
-  assert.match(heroCardBlock, /flex: 0 0 100%;/)
-  assert.match(heroCardBlock, /padding: 0\.85rem;/)
-  assert.doesNotMatch(heroCardBlock, /\n\s{2}height:\s*\d|\n\s{2}min-height:\s*\d/)
-  assert.match(heroHeadingBlock, /display: flex;[\s\S]*?flex-wrap: wrap;[\s\S]*?align-items: flex-start;/)
-  assert.match(styles, /\.public-business-card--hero \.public-business-card__heading > div\s*\{[\s\S]*?flex: 1 1 8rem;[\s\S]*?min-width: 0;/)
-  assert.match(styles, /\.public-business-card--hero \.public-business-card__heading > span\s*\{[\s\S]*?flex: 0 1 auto;[\s\S]*?margin-left: auto;[\s\S]*?overflow-wrap: anywhere;/)
-  assert.match(heroBodyBlock, /gap: 0\.45rem 0\.8rem;/)
-  assert.match(styles, /\.public-business-card__hero-meta\s*\{[\s\S]*?gap: 0\.25rem;/)
-  assert.match(styles, /\.public-business-card__hero-meta div\s*\{[\s\S]*?gap: 0\.34rem;[\s\S]*?align-items: flex-start;/)
-  assert.doesNotMatch(styles, /@media \(min-width: 48rem\)[\s\S]*?\.public-business-card--hero\s*\{[\s\S]*?flex-basis: min\(82vw, 20rem\);/)
-  assert.match(desktopBreakpoint, /\.marketing-hero__track\s*\{[\s\S]*?display: grid;[\s\S]*?overflow: visible;[\s\S]*?scroll-snap-type: none;/)
-  assert.match(desktopBreakpoint, /\.public-business-card--hero\s*\{[\s\S]*?flex-basis: auto;/)
-  assert.doesNotMatch(desktopBreakpoint, /\.marketing-hero__visual\s*\{[\s\S]*?min-height: 36rem;/)
+  assert.match(previewGrid, /display: grid;/)
+  assert.match(previewGrid, /gap: 1rem;/)
+  assert.match(styles, /\.homepage-business-preview__grid\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/)
+  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.homepage-business-preview__grid\s*\{[\s\S]*?repeat\(3, minmax\(0, 1fr\)\)/)
 })
 
 test('mobile header keeps the full brand visible while preserving controls', async () => {
@@ -466,7 +393,19 @@ test('services page uses the shared directory implementation and safe states', a
 
   assert.match(source, /getActivePublicBusinesses/)
   assert.match(source, /PublicBusinessCard/)
-  assert.match(source, /const selectedBusiness = businesses\.find/)
+  assert.match(source, /businesses\.find\(\(candidate\) => candidate\.businessId === businessId\)/)
+  assert.match(source, /parseServiceDiscoveryQuery\(searchParamsKey\)/)
+  assert.match(source, /buildServiceSelectionSearchParams\(currentParams, serviceId\)/)
+  assert.match(source, /serviceQuery\.type !== SERVICE_DISCOVERY_QUERY_TYPES\.NONE/)
+  assert.match(source, /SERVICE_TAXONOMY_GROUPS\.map/)
+  assert.match(source, /getServiceIdsForGroup\(selectedGroupId\)/)
+  assert.match(source, /aria-pressed=\{selectedGroupId === group\.id\}/)
+  assert.match(source, /const taxonomyStateToken = useMemo\(\(\) => \(\{ taxonomyQueryKey \}\), \[taxonomyQueryKey\]\)/)
+  assert.match(source, /browseGroupOverride\.taxonomyStateToken === taxonomyStateToken/)
+  assert.match(source, /setBrowseGroupOverride\(\{ groupId: group\.id, taxonomyStateToken \}\)/)
+  assert.match(source, /activeBrowseGroupOverride \|\| derivedBrowseSelection\.groupId/)
+  assert.doesNotMatch(source, /set\(['"]group['"]/)
+  assert.match(source, /setSearchParams\(new URLSearchParams\(\), \{ replace: true \}\)/)
   assert.match(source, /publicBusinessDetail\.unavailableTitle/)
   assert.match(source, /publicBusinessDetail\.unavailableDescription/)
   assert.match(source, /services\.emptyTitle/)
@@ -652,7 +591,7 @@ test('dirty business editor protects browser history with its existing confirmat
   assert.match(source, /if \(historyNavigation\.allowNext\) \{\s*historyNavigation\.allowNext = false/s)
   assert.match(source, /historyNavigationRef\.current\.allowNext = true/)
   assert.match(source, /window\.history\.go\(action\.delta\)/)
-  assert.match(source, /setInitialDraftSignature\(currentDraftSignature\)\s*setSaveSuccess\(true\)/)
+  assert.match(source, /const savedTaxonomy = deriveBusinessTaxonomyForm\(savedBusiness\)[\s\S]*setTaxonomyDirty\(false\)[\s\S]*setInitialDraftSignature\(draftSignature\(form, customLanguage, savedTaxonomy, false\)\)[\s\S]*setSaveSuccess\(true\)/)
   assert.match(source, /action\?\.type === 'signOut'[\s\S]*await signOutUser\(\)/)
   assert.match(source, /onClose=\{cancelPendingNavigation\}/)
   assert.equal((source.match(/id="unsaved-business-title"/g) ?? []).length, 1)
