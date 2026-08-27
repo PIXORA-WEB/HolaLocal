@@ -325,33 +325,34 @@ test('homepage service groups use a compact responsive grid', async () => {
 test('homepage card sections use compact content-driven vertical rhythm', async () => {
   const styles = await readFile(globalStylesPath, 'utf8')
   const marketingCardBlock = readCssBlock(styles, '.marketing-card')
-  const journeyTrustCardBlock = readCssBlock(styles, '.journey-card,\n.trust-card')
+  const journeyCardBlock = readCssBlock(styles, '.journey-card')
 
   assert.match(styles, /\.marketing-section\s*\{[\s\S]*?padding-block: 4rem;/)
-  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.marketing-section\s*\{[\s\S]*?padding-block: 4\.75rem;/)
+  assert.match(styles, /\.marketing-home \.marketing-section\s*\{[\s\S]*?padding-block: clamp\(2\.75rem, 6vw, 4\.25rem\);/)
   assert.match(styles, /\.marketing-card-grid\s*\{[\s\S]*?margin-top: 1\.6rem;/)
-  assert.match(styles, /\.journey-grid,\n\.trust-card-grid\s*\{[\s\S]*?margin-top: 1\.6rem;/)
+  assert.match(styles, /\.journey-grid\s*\{[\s\S]*?margin-top: 1\.6rem;/)
   assert.match(styles, /\.marketing-card\s*\{[\s\S]*?display: grid;[\s\S]*?min-width: 0;[\s\S]*?align-content: start;[\s\S]*?padding: 1\.35rem;/)
-  assert.match(styles, /\.journey-card,\n\.trust-card\s*\{[\s\S]*?display: flex;[\s\S]*?min-width: 0;[\s\S]*?flex-direction: column;[\s\S]*?padding: 1\.35rem;/)
+  assert.match(styles, /\.journey-card\s*\{[\s\S]*?display: flex;[\s\S]*?min-width: 0;[\s\S]*?flex-direction: column;[\s\S]*?padding: 1\.35rem;/)
   assert.match(styles, /\.journey-card > a\s*\{[\s\S]*?margin-top: auto;[\s\S]*?padding-top: 1\.1rem;/)
   assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.marketing-card\s*\{[\s\S]*?padding: 2rem;/)
-  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.journey-card,\n  \.trust-card\s*\{[\s\S]*?padding: 2rem;/)
+  assert.match(styles, /@media \(min-width: 48rem\)[\s\S]*?\.journey-card\s*\{[\s\S]*?padding: 2rem;/)
   assert.doesNotMatch(marketingCardBlock, /\n\s{2}height:\s*\d/)
-  assert.doesNotMatch(journeyTrustCardBlock, /\n\s{2}height:\s*\d/)
+  assert.doesNotMatch(journeyCardBlock, /\n\s{2}height:\s*\d/)
 })
 
 test('homepage hero remains compact and content-led across breakpoints', async () => {
   const styles = await readFile(globalStylesPath, 'utf8')
 
   const mediumBreakpoint = styles.match(/@media \(min-width: 48rem\) \{[\s\S]*?\n\}/)?.[0] ?? ''
-  const desktopBreakpoint = styles.match(/@media \(min-width: 72rem\) \{[\s\S]*?\.trust-card-grid/)?.[0] ?? ''
+  const desktopBreakpoint = styles.match(/@media \(min-width: 72rem\) \{[\s\S]*?\.service-browser__groups/)?.[0] ?? ''
   const stackedBreakpoint = styles.match(/@media \(max-width: 71\.999rem\) \{[\s\S]*?\n\}/)?.[0] ?? ''
 
   assert.doesNotMatch(mediumBreakpoint, /grid-template-columns:[^;]*marketing-hero|\.marketing-hero\s*\{[\s\S]*?grid-template-columns/)
-  assert.match(desktopBreakpoint, /\.marketing-hero\s*\{[\s\S]*?min-height: min\(42rem, calc\(100dvh - 5\.75rem\)\)/)
+  assert.match(desktopBreakpoint, /\.marketing-hero\s*\{[\s\S]*?min-height: min\(34rem, calc\(100dvh - 5\.75rem\)\)/)
   assert.doesNotMatch(desktopBreakpoint, /grid-template-columns:[^;]*24rem/)
   assert.match(stackedBreakpoint, /\.marketing-hero__content\s*\{[\s\S]*?text-align: center;/)
   assert.match(styles, /\.marketing-hero h1\s*\{[\s\S]*?font-size: clamp\(3rem, 8vw, 6\.5rem\);/)
+  assert.doesNotMatch(styles, /marketing-hero__(visual|viewport|track|carousel-controls|load-error)|\.trust-strip|\.trust-card/)
 })
 
 test('homepage real business preview stays compact and responsive', async () => {
