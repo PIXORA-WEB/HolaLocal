@@ -1,16 +1,7 @@
-import { normalizeLanguages, normalizeServiceAreas, validatePrimaryLanguage } from '@holalocal/firebase-contract'
-
-export const CANONICAL_BUSINESS_CATEGORIES = Object.freeze([
-  'Cleaning', 'Plumbing', 'Electrical', 'Gardening', 'Painting & Decorating',
-  'Building & Renovation', 'Handyman', 'Air Conditioning', 'Locksmith',
-  'Pest Control', 'Pool Maintenance', 'Pet Services',
-])
-export const BUSINESS_CATEGORY_KEYS = Object.freeze({
-  Cleaning: 'cleaning', Plumbing: 'plumbing', Electrical: 'electrical', Gardening: 'gardening',
-  'Painting & Decorating': 'paintingDecorating', 'Building & Renovation': 'buildingRenovation',
-  Handyman: 'handyman', 'Air Conditioning': 'airConditioning', Locksmith: 'locksmith',
-  'Pest Control': 'pestControl', 'Pool Maintenance': 'poolMaintenance', 'Pet Services': 'petServices',
-})
+import {
+  normalizeLanguages, normalizeServiceAreas, validateCanonicalBusinessTaxonomy,
+  validatePrimaryLanguage,
+} from '@holalocal/firebase-contract'
 
 function text(value) { return typeof value === 'string' ? value.trim() : '' }
 function strings(value) {
@@ -29,9 +20,8 @@ export function computeBusinessProfileCompleted(business = {}) {
   return Boolean(
     text(business.name)
     && text(business.description)
-    && CANONICAL_BUSINESS_CATEGORIES.includes(text(business.primaryCategoryId))
+    && text(business.primaryCategoryId)
     && categoryIds.length > 0
-    && categoryIds.every((category) => CANONICAL_BUSINESS_CATEGORIES.includes(category))
     && normalizedAreas.identifiers.length > 0
     && normalizedLanguages.identifiers.length > 0
     && primary.valid
@@ -41,16 +31,35 @@ export function computeBusinessProfileCompleted(business = {}) {
   )
 }
 
-export function buildCanonicalBusinessUpdate(form = {}) {
+export function buildCanonicalBusinessUpdate(form = {}, {
+  taxonomy = null, taxonomyDirty = false, requireTaxonomy = false,
+} = {}) {
   if (form?.compatibility?.writeSafe === false) {
     return { valid: false, payload: null, issues: ['COMPATIBILITY_VIEW_NOT_WRITE_SAFE'] }
   }
   const issues = []
-  const primaryCategoryId = text(form.primaryCategoryId)
-  const categoryIds = strings(form.categoryIds)
-  if (!CANONICAL_BUSINESS_CATEGORIES.includes(primaryCategoryId)) issues.push('BUSINESS_CATEGORY_INVALID')
-  if (categoryIds.some((category) => !CANONICAL_BUSINESS_CATEGORIES.includes(category))) {
-    issues.push('BUSINESS_CATEGORY_INVALID')
+  let taxonomyPayload = {}
+  if (taxonomyDirty || requireTaxonomy) {
+    const categoryIds = [taxonomy?.primaryServiceId, ...(taxonomy?.additionalServiceIds ?? [])]
+    const usesCustomDescription = categoryIds.includes('other-local-service')
+    const selection = {
+      primaryCategoryId: taxonomy?.primaryServiceId,
+      categoryIds,
+      ...(usesCustomDescription
+        ? { customServiceDescription: text(taxonomy?.customServiceDescription) }
+        : {}),
+    }
+    const taxonomyValidation = validateCanonicalBusinessTaxonomy(selection)
+    if (!taxonomyValidation.valid) issues.push('BUSINESS_TAXONOMY_INVALID')
+    else {
+      taxonomyPayload = {
+        primaryCategoryId: selection.primaryCategoryId,
+        categoryIds: selection.categoryIds,
+        customServiceDescription: usesCustomDescription
+          ? selection.customServiceDescription
+          : null,
+      }
+    }
   }
 
   const normalizedLanguages = normalizeLanguages(form.languages)
@@ -74,8 +83,7 @@ export function buildCanonicalBusinessUpdate(form = {}) {
       name: text(form.name),
       tagline: text(form.tagline),
       description: text(form.description),
-      primaryCategoryId,
-      categoryIds,
+      ...taxonomyPayload,
       serviceAreas: normalizedAreas.identifiers,
       serviceRadiusKm: Math.min(Math.max(Number(form.serviceRadiusKm) || 0, 0), 500),
       location: {

@@ -20,8 +20,8 @@ const safeContact = {
 function canonical(overrides = {}) {
   return {
     ownerId: 'owner-1', managerIds: ['owner-1'], name: 'Canonical Business',
-    tagline: '', description: 'Description', primaryCategoryId: 'Cleaning',
-    categoryIds: ['Cleaning'], serviceAreas: ['marbella'], serviceRadiusKm: 20,
+    tagline: '', description: 'Description', primaryCategoryId: 'plumber',
+    categoryIds: ['plumber'], serviceAreas: ['marbella'], serviceRadiusKm: 20,
     location: { locality: 'Marbella', region: 'Málaga', countryCode: 'ES' },
     languages: ['en', 'es'], primaryLanguage: 'en', contact: safeContact,
     status: 'draft', verificationStatus: 'unverified', profileCompleted: true,
@@ -82,7 +82,6 @@ test('editability predicate rejects unsupported owner, contact, taxonomy and leg
     ['legacy top-level contact', { phone: '000000000' }],
     ['hidden nested contact value', { contact: { ...safeContact, email: 'hidden@example.invalid' } }],
     ['hidden nested website value', { contact: { ...safeContact, website: 'https://example.invalid' } }],
-    ['unsupported category', { primaryCategoryId: 'Unknown', categoryIds: ['Unknown'] }],
     ['unsupported language label', { languages: ['Custom Tongue'], primaryLanguage: 'Custom Tongue' }],
     ['unsupported service area label', { serviceAreas: ['Custom Coast'] }],
   ]) {
@@ -91,6 +90,10 @@ test('editability predicate rejects unsupported owner, contact, taxonomy and leg
   }
   const uidManaged = toMobileManagedBusiness('owner-1', canonical())
   assert.equal(uidManaged.editSupport.supported, true)
+  const legacyTaxonomy = toMobileManagedBusiness('auto-id', canonical({
+    primaryCategoryId: 'Pet Services', categoryIds: ['Pet Services'],
+  }))
+  assert.equal(legacyTaxonomy.editSupport.supported, true)
 })
 
 test('legacy UID business remains readable without trust, contact or media promotion', () => {
@@ -148,7 +151,7 @@ test('public view never promotes private legacy or hidden nested contact values'
 
 test('canonical fields win conflicts and report compatibility issues', () => {
   const managed = toMobileManagedBusiness('auto-id', canonical({
-    name: 'Canonical', businessName: 'Legacy', primaryCategoryId: 'Cleaning',
+    name: 'Canonical', businessName: 'Legacy', primaryCategoryId: 'plumber',
     mainCategory: 'Plumbing',
   }))
   assert.equal(managed.name, 'Canonical')
@@ -184,7 +187,7 @@ test('lookup validates sources and never chooses duplicate businesses', () => {
   assert.equal(resolveMobileBusinessLookup({ ownerId: 'owner-1' }).lookup.status, 'not_found')
 })
 
-test('canonical edit builder allowlists fields and excludes legacy, trusted and derived values', () => {
+test('ordinary edit builder allowlists fields and omits untouched taxonomy', () => {
   const built = buildCanonicalBusinessUpdate({
     ...canonical(), businessId: 'forbidden', ownerId: 'forbidden', managerIds: ['forbidden'],
     businessName: 'legacy', mainCategory: 'legacy', isActive: true, isVerified: true,
@@ -198,15 +201,13 @@ test('canonical edit builder allowlists fields and excludes legacy, trusted and 
   })
   assert.equal(built.valid, true)
   assert.deepEqual(Object.keys(built.payload).sort(), [
-    'categoryIds', 'description', 'languages', 'location', 'name', 'primaryCategoryId',
-    'primaryLanguage', 'serviceAreas', 'serviceRadiusKm', 'tagline',
+    'description', 'languages', 'location', 'name', 'primaryLanguage',
+    'serviceAreas', 'serviceRadiusKm', 'tagline',
   ])
   assert.deepEqual(built.payload, {
     name: 'Canonical Business',
     tagline: '',
     description: 'Description',
-    primaryCategoryId: 'Cleaning',
-    categoryIds: ['Cleaning'],
     serviceAreas: ['marbella'],
     serviceRadiusKm: 20,
     location: { locality: 'Marbella', region: 'Málaga', countryCode: 'ES' },
@@ -215,8 +216,11 @@ test('canonical edit builder allowlists fields and excludes legacy, trusted and 
   })
 })
 
-test('edit builder validates categories, languages, service areas and compatibility views', () => {
-  assert.equal(buildCanonicalBusinessUpdate({ ...canonical(), primaryCategoryId: 'Unknown' }).valid, false)
+test('edit builder validates deliberate taxonomy, languages, service areas and compatibility views', () => {
+  assert.equal(buildCanonicalBusinessUpdate(canonical(), {
+    taxonomyDirty: true,
+    taxonomy: { primaryServiceId: 'Unknown', additionalServiceIds: [], customServiceDescription: '' },
+  }).valid, false)
   assert.equal(buildCanonicalBusinessUpdate({ ...canonical(), primaryLanguage: 'fr' }).valid, false)
   assert.equal(buildCanonicalBusinessUpdate({ ...canonical(), languages: ['Custom Tongue'] }).valid, false)
   assert.equal(buildCanonicalBusinessUpdate({ ...canonical(), serviceAreas: ['Custom Coast'] }).valid, false)

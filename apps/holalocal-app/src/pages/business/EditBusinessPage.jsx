@@ -1,12 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { SERVICE_AREA_LABELS } from '@holalocal/firebase-contract'
+import {
+  getServiceIdsForGroup,
+  getServiceTaxonomyService,
+  MAX_BUSINESS_SERVICE_SELECTIONS,
+  MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH,
+  SERVICE_AREA_LABELS,
+  SERVICE_TAXONOMY_GROUPS,
+} from '@holalocal/firebase-contract'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { getBusinessByOwnerId, updateBusinessProfile } from '../../services/businessService.js'
-import { BUSINESS_CATEGORY_KEYS, CANONICAL_BUSINESS_CATEGORIES } from '../../services/businessPayloads.js'
+import {
+  beginMobileTaxonomyEdit,
+  deriveMobileBusinessTaxonomy,
+  selectMobilePrimaryService,
+  selectMobileTaxonomyGroup,
+  toggleMobileAdditionalService,
+} from '../../services/businessTaxonomyForm.js'
 import { getLanguageDisplayName, supportedAccountLanguageCodes } from '../../utils/languages.js'
 
 function selectedValues(event) {
@@ -19,6 +32,8 @@ function EditBusinessPage() {
   const navigate = useNavigate()
   const [business, setBusiness] = useState(null)
   const [form, setForm] = useState(null)
+  const [taxonomy, setTaxonomy] = useState(null)
+  const [taxonomyDirty, setTaxonomyDirty] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -33,14 +48,16 @@ function EditBusinessPage() {
           name: profile.name,
           tagline: profile.tagline,
           description: profile.description,
-          primaryCategoryId: profile.primaryCategoryId,
-          categoryIds: [...profile.categoryIds],
           serviceAreas: [...profile.serviceAreas],
           serviceRadiusKm: profile.serviceRadiusKm ?? 20,
           location: { ...profile.location },
           languages: [...profile.languages],
           primaryLanguage: profile.primaryLanguage,
         })
+        if (profile) {
+          setTaxonomy(deriveMobileBusinessTaxonomy(profile))
+          setTaxonomyDirty(false)
+        }
       })
       .catch((caught) => { if (active) setError(getAuthenticationErrorMessage(caught, t)) })
       .finally(() => { if (active) setLoading(false) })
@@ -51,13 +68,21 @@ function EditBusinessPage() {
   function location(name, value) {
     setForm((current) => ({ ...current, location: { ...current.location, [name]: value } }))
   }
+  function editTaxonomy(update) {
+    setTaxonomyDirty(true)
+    setTaxonomy((current) => update(current))
+  }
 
   async function submit(event) {
     event.preventDefault()
     setError('')
     setSaving(true)
     try {
-      await updateBusinessProfile(business.businessId, form)
+      const requireTaxonomy = !business.primaryCategoryId
+        && (!Array.isArray(business.categoryIds) || business.categoryIds.length === 0)
+      await updateBusinessProfile(business.businessId, form, {
+        taxonomy, taxonomyDirty, requireTaxonomy,
+      })
       navigate('/business/dashboard', { replace: true })
     } catch (caught) {
       setError(getAuthenticationErrorMessage(caught, t))
@@ -71,6 +96,10 @@ function EditBusinessPage() {
 
   const customLanguages = business.languageValues.filter(({ isCustom }) => isCustom)
   const customAreas = business.serviceAreaValues.filter(({ isCustom }) => isCustom)
+  const mainServiceOptions = getServiceIdsForGroup(taxonomy.groupId)
+    .map(getServiceTaxonomyService)
+  const otherSelected = taxonomy.primaryServiceId === 'other-local-service'
+    || taxonomy.additionalServiceIds.includes('other-local-service')
   return (
     <section className="business-form-page">
       <h1>{t('business.edit')}</h1>
@@ -83,15 +112,105 @@ function EditBusinessPage() {
         <input id="business-tagline" maxLength={160} onChange={(event) => field('tagline', event.target.value)} value={form.tagline} />
         <label htmlFor="business-description">{t('business.fields.description')}</label>
         <textarea id="business-description" maxLength={2000} onChange={(event) => field('description', event.target.value)} required value={form.description} />
-        <label htmlFor="business-category">{t('business.fields.category')}</label>
-        <select id="business-category" onChange={(event) => field('primaryCategoryId', event.target.value)} required value={form.primaryCategoryId}>
-          <option value="">{t('business.fields.chooseCategory')}</option>
-          {CANONICAL_BUSINESS_CATEGORIES.map((category) => <option key={category} value={category}>{t(`business.categoryLabels.${BUSINESS_CATEGORY_KEYS[category]}`)}</option>)}
-        </select>
-        <label htmlFor="business-categories">{t('business.fields.categories')}</label>
-        <select id="business-categories" multiple onChange={(event) => field('categoryIds', selectedValues(event))} value={form.categoryIds}>
-          {CANONICAL_BUSINESS_CATEGORIES.map((category) => <option key={category} value={category}>{t(`business.categoryLabels.${BUSINESS_CATEGORY_KEYS[category]}`)}</option>)}
-        </select>
+        <section className="mobile-taxonomy" aria-labelledby="business-services-title">
+          <h2 id="business-services-title">{t('business.taxonomyEditor.title')}</h2>
+          <p>{t('business.taxonomyEditor.description')}</p>
+          {taxonomy.hasLegacyValues && (
+            <div className="mobile-taxonomy__legacy" role="status">
+              <strong>{t('business.taxonomyEditor.legacyTitle')}</strong>
+              <p>{t('business.taxonomyEditor.legacyDescription')}</p>
+              {taxonomy.unresolvedValues.length > 0 && (
+                <p>{t('business.taxonomyEditor.currentLegacyValues')}: {taxonomy.unresolvedValues.join(', ')}</p>
+              )}
+              {!taxonomy.editing && (
+                <button className="button button--secondary" onClick={() => editTaxonomy(beginMobileTaxonomyEdit)} type="button">
+                  {t('business.taxonomyEditor.updateServices')}
+                </button>
+              )}
+            </div>
+          )}
+          <label htmlFor="business-service-group">{t('business.taxonomyEditor.serviceGroup')}</label>
+          <select
+            disabled={!taxonomy.editing}
+            id="business-service-group"
+            onChange={(event) => editTaxonomy((current) => selectMobileTaxonomyGroup(current, event.target.value))}
+            required
+            value={taxonomy.groupId}
+          >
+            <option value="">{t('business.taxonomyEditor.chooseGroup')}</option>
+            {SERVICE_TAXONOMY_GROUPS.map((group) => (
+              <option key={group.id} value={group.id}>{t(group.translationKey, { defaultValue: group.defaultLabel })}</option>
+            ))}
+          </select>
+          <label htmlFor="business-category">{t('business.taxonomyEditor.mainService')}</label>
+          <select
+            disabled={!taxonomy.editing || !taxonomy.groupId}
+            id="business-category"
+            onChange={(event) => editTaxonomy((current) => selectMobilePrimaryService(current, event.target.value))}
+            required
+            value={taxonomy.primaryServiceId}
+          >
+            <option value="">{t('business.taxonomyEditor.chooseMain')}</option>
+            {mainServiceOptions.map((service) => (
+              <option key={service.id} value={service.id}>{t(service.translationKey, { defaultValue: service.defaultLabel })}</option>
+            ))}
+          </select>
+          <fieldset className="checkbox-group" id="business-additional-services">
+            <legend>{t('business.taxonomyEditor.additionalServices')}</legend>
+            {SERVICE_TAXONOMY_GROUPS.map((group) => (
+              <div className="mobile-taxonomy__group" key={group.id}>
+                <strong>{t(group.translationKey, { defaultValue: group.defaultLabel })}</strong>
+                <div className="checkbox-group__options">
+                  {getServiceIdsForGroup(group.id)
+                    .filter((serviceId) => serviceId !== taxonomy.primaryServiceId)
+                    .map((serviceId) => {
+                      const service = getServiceTaxonomyService(serviceId)
+                      const selected = taxonomy.additionalServiceIds.includes(serviceId)
+                      const disabled = !taxonomy.editing || (
+                        taxonomy.additionalServiceIds.length >= MAX_BUSINESS_SERVICE_SELECTIONS - 1 && !selected
+                      )
+                      return (
+                        <label key={serviceId}>
+                          <input
+                            checked={selected}
+                            disabled={disabled}
+                            onChange={() => editTaxonomy((current) => toggleMobileAdditionalService(current, serviceId))}
+                            type="checkbox"
+                          />
+                          <span>{t(service.translationKey, { defaultValue: service.defaultLabel })}</span>
+                        </label>
+                      )
+                    })}
+                </div>
+              </div>
+            ))}
+          </fieldset>
+          <p className="mobile-taxonomy__limit">
+            {t('business.taxonomyEditor.additionalLimit', {
+              selected: taxonomy.additionalServiceIds.length,
+              count: MAX_BUSINESS_SERVICE_SELECTIONS - 1,
+            })}
+          </p>
+          {otherSelected && (
+            <div className="custom-option-field">
+              <label htmlFor="business-custom-service">{t('business.taxonomyEditor.customDescription')}</label>
+              <input
+                aria-describedby="business-custom-service-help"
+                disabled={!taxonomy.editing}
+                id="business-custom-service"
+                maxLength={MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH}
+                onChange={(event) => editTaxonomy((current) => ({
+                  ...current, customServiceDescription: event.target.value,
+                }))}
+                required
+                value={taxonomy.customServiceDescription}
+              />
+              <small id="business-custom-service-help">
+                {t('business.taxonomyEditor.customDescriptionLimit', { count: MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH })}
+              </small>
+            </div>
+          )}
+        </section>
         <label htmlFor="business-areas">{t('business.fields.serviceAreas')}</label>
         <select id="business-areas" multiple onChange={(event) => field('serviceAreas', selectedValues(event))} value={form.serviceAreas}>
           {Object.entries(SERVICE_AREA_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}

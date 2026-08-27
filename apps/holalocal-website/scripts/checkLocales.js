@@ -8,6 +8,11 @@ import { mergeLocale } from '../src/i18n/locales/mergeLocale.js'
 import { universalOperationalTranslations } from '../src/i18n/locales/universalOperationalTranslations.js'
 import { serviceAreaLabels } from '../src/utils/locations.js'
 import { supportedUILanguages } from '../src/utils/languages.js'
+import {
+  SERVICE_TAXONOMY_GROUPS, SERVICE_TAXONOMY_SERVICES,
+} from '../../../shared/firebase-contract/index.js'
+import { serviceTaxonomyTranslations } from '../src/i18n/locales/serviceTaxonomyTranslations.js'
+import { businessTaxonomyEditorTranslations } from '../src/i18n/locales/businessTaxonomyEditorTranslations.js'
 
 const root = fileURLToPath(new URL('../src/i18n/locales/', import.meta.url))
 const sourceRoot = fileURLToPath(new URL('../src/', import.meta.url))
@@ -102,7 +107,7 @@ async function countAwareTranslationKeys() {
 }
 
 const english = await readJsonLocale('en')
-const englishResource = mergeLocale(english, authenticatedTranslations.en, { legalPages: legalPageContent.en }, {
+const englishResource = mergeLocale(english, authenticatedTranslations.en, serviceTaxonomyTranslations.en, businessTaxonomyEditorTranslations.en, { legalPages: legalPageContent.en }, {
   locations: { areas: serviceAreaLabels },
 })
 const referenceRoot = englishResource
@@ -119,7 +124,7 @@ for (const { code } of supportedUILanguages) {
   }
 
   const authenticatedIssues = compare(authenticatedTranslations.en, authenticated, code)
-  const resource = mergeLocale(english, base, authenticated, fallbackLocaleCompletionTranslations[code], universalOperationalTranslations[code], {
+  const resource = mergeLocale(english, base, authenticated, fallbackLocaleCompletionTranslations[code], universalOperationalTranslations[code], serviceTaxonomyTranslations[code], businessTaxonomyEditorTranslations[code], {
     legalPages: legalPageContent[code],
     locations: { areas: serviceAreaLabels },
   })
@@ -173,6 +178,27 @@ for (const { code } of supportedUILanguages) {
         failures.push(`${code}: ${key} count ${count} did not interpolate the count`)
       }
     }
+  }
+}
+
+if (SERVICE_TAXONOMY_GROUPS.length !== 6) failures.push(`taxonomy: expected 6 groups, received ${SERVICE_TAXONOMY_GROUPS.length}`)
+if (SERVICE_TAXONOMY_SERVICES.length !== 35) failures.push(`taxonomy: expected 35 services, received ${SERVICE_TAXONOMY_SERVICES.length}`)
+const taxonomyTranslationKeys = [
+  ...SERVICE_TAXONOMY_GROUPS.map(({ translationKey }) => translationKey),
+  ...SERVICE_TAXONOMY_SERVICES.map(({ translationKey }) => translationKey),
+]
+for (const { code } of supportedUILanguages) {
+  const taxonomyGroups = getPath(resources[code]?.translation, 'services.taxonomy.groups')
+  const taxonomyServices = getPath(resources[code]?.translation, 'services.taxonomy.services')
+  if (Object.keys(taxonomyGroups ?? {}).length !== SERVICE_TAXONOMY_GROUPS.length) {
+    failures.push(`${code}: expected exactly ${SERVICE_TAXONOMY_GROUPS.length} taxonomy groups`)
+  }
+  if (Object.keys(taxonomyServices ?? {}).length !== SERVICE_TAXONOMY_SERVICES.length) {
+    failures.push(`${code}: expected exactly ${SERVICE_TAXONOMY_SERVICES.length} taxonomy services`)
+  }
+  for (const key of taxonomyTranslationKeys) {
+    const value = getPath(resources[code]?.translation, key)
+    if (typeof value !== 'string' || !value.trim()) failures.push(`${code}: ${key}: missing or empty taxonomy translation`)
   }
 }
 

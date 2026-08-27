@@ -742,6 +742,49 @@ a {
   border-left: 3px solid #a7c9bd;
 }
 
+.mobile-taxonomy {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+  padding-top: 1rem;
+  border-top: 1px solid #e1e7e4;
+}
+
+.mobile-taxonomy h2,
+.mobile-taxonomy p {
+  margin: 0;
+}
+
+.mobile-taxonomy__legacy {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.875rem;
+  border: 1px solid #e4c66c;
+  border-radius: 0.75rem;
+  background: #fff9e8;
+}
+
+.mobile-taxonomy__legacy .button {
+  justify-self: start;
+  margin-top: 0.25rem;
+}
+
+.mobile-taxonomy__group {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.mobile-taxonomy__group + .mobile-taxonomy__group {
+  margin-top: 0.875rem;
+}
+
+.mobile-taxonomy__group > strong,
+.mobile-taxonomy__limit,
+.custom-option-field small {
+  color: #63706c;
+  font-size: 0.8125rem;
+}
+
 .workspace-badge {
   display: none;
   padding: 0.45rem 0.75rem;

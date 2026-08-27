@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import {
-  collection, deleteDoc, doc, documentId, FieldPath, getCountFromServer, getDoc, getDocs,
+  collection, deleteDoc, deleteField, doc, documentId, FieldPath, getCountFromServer, getDoc, getDocs,
   limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where,
   writeBatch,
 } from 'firebase/firestore'
@@ -340,6 +340,18 @@ async function seedMessageWithoutRules(conversationId, messageId, messageData = 
   })
 }
 
+async function seedDraftBusinessWithoutRules(businessId, overrides = {}) {
+  await environment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'businesses', businessId), business({
+      managerIds: ['owner'],
+      status: 'draft',
+      publishedAt: null,
+      submittedAt: null,
+      ...overrides,
+    }))
+  })
+}
+
 async function seedStorageWithoutRules(path, data = new Uint8Array([137, 80, 78, 71]), metadata = { contentType: 'image/png' }) {
   await environment.withSecurityRulesDisabled(async (context) => {
     await uploadBytes(ref(context.storage(), path), data, metadata)
@@ -635,14 +647,22 @@ describe('business documents', () => {
   function mobileBusinessPayload(overrides = {}) {
     const built = buildCanonicalBusinessUpdate({
       name: 'Updated business', tagline: 'Synthetic tagline', description: 'Synthetic description',
-      primaryCategoryId: 'Cleaning', categoryIds: ['Cleaning'],
       serviceAreas: ['marbella'], serviceRadiusKm: 20,
       location: { locality: 'Marbella', region: 'Málaga', countryCode: 'ES' },
       languages: ['en', 'es'], primaryLanguage: 'en',
       ...overrides,
+    }, {
+      taxonomy: { primaryServiceId: 'cleaner', additionalServiceIds: [] },
+      taxonomyDirty: true,
     })
     assert.equal(built.valid, true)
-    return { ...built.payload, updatedAt: serverTimestamp() }
+    return {
+      ...built.payload,
+      customServiceDescription: built.payload.customServiceDescription === null
+        ? deleteField()
+        : built.payload.customServiceDescription,
+      updatedAt: serverTimestamp(),
+    }
   }
 
   test('mobile edit builder emits the exact supported canonical owner payload', () => {
@@ -659,7 +679,7 @@ describe('business documents', () => {
       profileCompleted: true,
     })
     assert.deepEqual(Object.keys(payload).sort(), [
-      'categoryIds', 'description', 'languages', 'location', 'name', 'primaryCategoryId',
+      'categoryIds', 'customServiceDescription', 'description', 'languages', 'location', 'name', 'primaryCategoryId',
       'primaryLanguage', 'serviceAreas', 'serviceRadiusKm', 'tagline', 'updatedAt',
     ])
   })
@@ -672,6 +692,180 @@ describe('business documents', () => {
     await assertSucceeds(updateDoc(
       doc(environment.authenticatedContext('manager').firestore(), 'businesses', 'manager'),
       mobileBusinessPayload({ name: 'UID business updated' }),
+    ))
+  })
+
+  test('unrelated edits grandfather unchanged legacy taxonomy including ambiguous custom and over-limit values', async () => {
+    const cases = [
+      ['legacy-services', {
+        primaryCategoryId: 'Plumbing',
+        categoryIds: ['Plumbing', 'Air Conditioning'],
+      }],
+      ['legacy-pets', {
+        primaryCategoryId: 'Pet Services',
+        categoryIds: ['Pet Services'],
+      }],
+      ['legacy-custom', {
+        primaryCategoryId: 'Solar panel cleaning',
+        categoryIds: ['Solar panel cleaning'],
+      }],
+      ['legacy-over-limit', {
+        primaryCategoryId: 'Plumbing',
+        categoryIds: [
+          'Plumbing', 'Electrical', 'Cleaning', 'Gardening', 'Handyman',
+          'Air Conditioning', 'Locksmith', 'Pest Control',
+        ],
+      }],
+      ['legacy-stale-description', {
+        primaryCategoryId: 'Plumbing',
+        categoryIds: ['Plumbing'],
+        customServiceDescription: 'Historical text',
+      }],
+    ]
+
+    for (const [businessId, taxonomy] of cases) {
+      await seedDraftBusinessWithoutRules(businessId, taxonomy)
+      const reference = doc(
+        environment.authenticatedContext('owner').firestore(),
+        'businesses',
+        businessId,
+      )
+      await assertSucceeds(updateDoc(reference, {
+        description: `Unrelated edit for ${businessId}`,
+        updatedAt: serverTimestamp(),
+      }))
+      const updated = (await getDoc(reference)).data()
+      assert.equal(updated.primaryCategoryId, taxonomy.primaryCategoryId)
+      assert.deepEqual(updated.categoryIds, taxonomy.categoryIds)
+      if (taxonomy.customServiceDescription) {
+        assert.equal(updated.customServiceDescription, taxonomy.customServiceDescription)
+      }
+    }
+  })
+
+  test('changed taxonomy accepts complete canonical selections of one through six services', async () => {
+    const validSelections = [
+      ['plumber'],
+      ['plumber', 'air-conditioning', 'handyman'],
+      ['plumber', 'electrician', 'cleaner', 'gardener', 'handyman', 'locksmith'],
+    ]
+    for (const [index, categoryIds] of validSelections.entries()) {
+      const businessId = `canonical-selection-${index}`
+      await seedDraftBusinessWithoutRules(businessId)
+      await assertSucceeds(updateDoc(
+        doc(environment.authenticatedContext('owner').firestore(), 'businesses', businessId),
+        { primaryCategoryId: 'plumber', categoryIds, updatedAt: serverTimestamp() },
+      ))
+    }
+  })
+
+  test('changed taxonomy rejects legacy custom padded and unknown service values', async () => {
+    for (const [index, value] of [
+      'Plumbing', 'Cleaning', 'Pet Services', 'Other', 'Solar panel cleaning', ' plumber ', 'unknown', '',
+    ].entries()) {
+      const businessId = `invalid-taxonomy-value-${index}`
+      await seedDraftBusinessWithoutRules(businessId, {
+        primaryCategoryId: 'plumber', categoryIds: ['plumber'],
+      })
+      await assertFails(updateDoc(
+        doc(environment.authenticatedContext('owner').firestore(), 'businesses', businessId),
+        { primaryCategoryId: value, categoryIds: [value], updatedAt: serverTimestamp() },
+      ))
+    }
+  })
+
+  test('changed taxonomy enforces list limits uniqueness primary membership and item types', async () => {
+    const invalidSelections = [
+      { primaryCategoryId: 'plumber', categoryIds: [] },
+      {
+        primaryCategoryId: 'plumber',
+        categoryIds: [
+          'plumber', 'electrician', 'cleaner', 'gardener', 'handyman', 'locksmith', 'removals',
+        ],
+      },
+      { primaryCategoryId: 'plumber', categoryIds: ['plumber', 'plumber'] },
+      { primaryCategoryId: 'plumber', categoryIds: ['electrician'] },
+      { primaryCategoryId: 7, categoryIds: ['plumber'] },
+      { primaryCategoryId: 'plumber', categoryIds: 'plumber' },
+      { primaryCategoryId: 'plumber', categoryIds: ['plumber', 7] },
+      { primaryCategoryId: 'plumber', categoryIds: ['plumber', null] },
+      { primaryCategoryId: 'plumber', categoryIds: ['plumber', { id: 'electrician' }] },
+    ]
+
+    for (const [index, taxonomy] of invalidSelections.entries()) {
+      const businessId = `invalid-taxonomy-shape-${index}`
+      await seedDraftBusinessWithoutRules(businessId, {
+        primaryCategoryId: 'cleaner', categoryIds: ['cleaner'],
+      })
+      await assertFails(updateDoc(
+        doc(environment.authenticatedContext('owner').firestore(), 'businesses', businessId),
+        { ...taxonomy, updatedAt: serverTimestamp() },
+      ))
+    }
+  })
+
+  test('changed taxonomy enforces Other custom-description relationship', async () => {
+    const validCases = [
+      {
+        primaryCategoryId: 'other-local-service',
+        categoryIds: ['other-local-service'],
+        customServiceDescription: 'Marine upholstery specialist',
+      },
+      {
+        primaryCategoryId: 'plumber',
+        categoryIds: ['plumber', 'other-local-service'],
+        customServiceDescription: 'Solar panel cleaning',
+      },
+    ]
+    for (const [index, taxonomy] of validCases.entries()) {
+      const businessId = `valid-other-${index}`
+      await seedDraftBusinessWithoutRules(businessId)
+      await assertSucceeds(updateDoc(
+        doc(environment.authenticatedContext('owner').firestore(), 'businesses', businessId),
+        { ...taxonomy, updatedAt: serverTimestamp() },
+      ))
+    }
+
+    const invalidDescriptions = [undefined, '', '   ', ' padded', 'padded ', 'x'.repeat(81), 7]
+    for (const [index, customServiceDescription] of invalidDescriptions.entries()) {
+      const businessId = `invalid-other-${index}`
+      await seedDraftBusinessWithoutRules(businessId)
+      const taxonomy = {
+        primaryCategoryId: 'other-local-service',
+        categoryIds: ['other-local-service'],
+        ...(customServiceDescription === undefined ? {} : { customServiceDescription }),
+      }
+      await assertFails(updateDoc(
+        doc(environment.authenticatedContext('owner').firestore(), 'businesses', businessId),
+        { ...taxonomy, updatedAt: serverTimestamp() },
+      ))
+    }
+  })
+
+  test('changed taxonomy allows deleting Other description and rejects retaining it without Other', async () => {
+    for (const businessId of ['remove-other', 'retain-stale-other']) {
+      await seedDraftBusinessWithoutRules(businessId, {
+        primaryCategoryId: 'other-local-service',
+        categoryIds: ['other-local-service'],
+        customServiceDescription: 'Specialist service',
+      })
+    }
+    await assertSucceeds(updateDoc(
+      doc(environment.authenticatedContext('owner').firestore(), 'businesses', 'remove-other'),
+      {
+        primaryCategoryId: 'plumber',
+        categoryIds: ['plumber'],
+        customServiceDescription: deleteField(),
+        updatedAt: serverTimestamp(),
+      },
+    ))
+    await assertFails(updateDoc(
+      doc(environment.authenticatedContext('owner').firestore(), 'businesses', 'retain-stale-other'),
+      {
+        primaryCategoryId: 'plumber',
+        categoryIds: ['plumber'],
+        updatedAt: serverTimestamp(),
+      },
     ))
   })
 

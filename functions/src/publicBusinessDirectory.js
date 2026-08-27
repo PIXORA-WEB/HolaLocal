@@ -3,6 +3,7 @@ import {
   adaptBusinessDocument,
   isCustomIdentifier,
   isPublicBusinessEligible,
+  projectBusinessTaxonomy,
   projectPublicContact,
   resolveAuthoritativeBusinessEntitlements,
 } from '@holalocal/firebase-contract'
@@ -39,6 +40,7 @@ export function toPublicDirectoryBusiness(documentId, rawDocument, privateSubscr
     { privateRecordExists },
   )
   const media = projectSafeBusinessMedia(documentId, rawDocument)
+  const taxonomy = projectBusinessTaxonomy(business)
 
   return {
     businessId: documentId,
@@ -53,6 +55,9 @@ export function toPublicDirectoryBusiness(documentId, rawDocument, privateSubscr
     description: business.description,
     tagline: business.tagline,
     services: [...business.categoryIds],
+    primaryServiceId: taxonomy.primaryServiceId,
+    serviceIds: [...taxonomy.serviceIds],
+    customServiceDescription: business.customServiceDescription || null,
     galleryUrls: media.galleryUrls,
     galleryStoragePaths: media.galleryStoragePaths,
     contact: projectPublicContact(business.contact).contact,

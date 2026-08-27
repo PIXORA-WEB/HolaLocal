@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { getServiceTaxonomyService, resolveServiceValue } from '@holalocal/firebase-contract'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { getBusinessByOwnerId } from '../../services/businessService.js'
-import { BUSINESS_CATEGORY_KEYS } from '../../services/businessPayloads.js'
 
 function BusinessDashboardPage() {
   const { t } = useTranslation()
@@ -69,6 +69,10 @@ function BusinessDashboardPage() {
 
   const subscriptionPlan = businessProfile.entitlements?.effectivePlanId ?? 'early_access'
   const subscriptionStatus = businessProfile.entitlements?.accessStatus ?? 'active'
+  const primaryResolution = resolveServiceValue(businessProfile.primaryCategoryId)
+  const primaryService = primaryResolution.serviceId
+    ? getServiceTaxonomyService(primaryResolution.serviceId)
+    : null
 
   return (
     <section className="business-dashboard">
@@ -78,8 +82,8 @@ function BusinessDashboardPage() {
       <dl className="profile-details business-details">
         <div>
           <dt>Category</dt>
-          <dd>{BUSINESS_CATEGORY_KEYS[businessProfile.primaryCategoryId]
-            ? t(`business.categoryLabels.${BUSINESS_CATEGORY_KEYS[businessProfile.primaryCategoryId]}`)
+          <dd>{primaryService
+            ? t(primaryService.translationKey, { defaultValue: primaryService.defaultLabel })
             : businessProfile.primaryCategoryId}</dd>
         </div>
         <div>

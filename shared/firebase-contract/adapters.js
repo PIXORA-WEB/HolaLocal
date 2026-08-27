@@ -216,6 +216,7 @@ export function adaptBusinessDocument(documentId, rawDocument = {}) {
       description: string(raw.description),
       primaryCategoryId: string(raw.primaryCategoryId) || string(raw.mainCategory),
       categoryIds: clone(Array.isArray(raw.categoryIds) ? raw.categoryIds : (raw.subcategories ?? [])),
+      customServiceDescription: string(raw.customServiceDescription),
       serviceAreas: serviceAreas.identifiers,
       serviceAreaValues: serviceAreas.values,
       languages: languages.languages.map(({ id }) => id),

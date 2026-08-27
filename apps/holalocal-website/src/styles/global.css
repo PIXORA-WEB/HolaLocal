@@ -1760,6 +1760,27 @@
   background: var(--surface-soft);
 }
 
+.business-taxonomy-legacy {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #f2c96d;
+  border-radius: 0.85rem;
+  background: #fff9e9;
+}
+
+.business-taxonomy-legacy p,
+.business-taxonomy-limit {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.business-taxonomy-legacy .button {
+  justify-self: start;
+}
+
 .business-form__save {
   position: sticky;
   z-index: 12;

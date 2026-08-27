@@ -176,6 +176,7 @@ test('authenticated and unauthenticated listPublicBusinesses handlers return the
     'businessId',
     'category',
     'contact',
+    'customServiceDescription',
     'description',
     'galleryUrls',
     'galleryStoragePaths',
@@ -184,18 +185,148 @@ test('authenticated and unauthenticated listPublicBusinesses handlers return the
     'logoStoragePath',
     'name',
     'primaryLanguage',
+    'primaryServiceId',
     'profileComplete',
     'ratingAverage',
     'ratingCount',
     'serviceArea',
     'serviceAreas',
     'services',
+    'serviceIds',
     'status',
     'subscriptionStatus',
     'subscriptionTier',
     'tagline',
     'verificationStatus',
   ].sort())
+})
+
+test('public taxonomy projection adds canonical fields while preserving raw compatibility fields', () => {
+  const cases = [
+    {
+      raw: { primaryCategoryId: 'plumber', categoryIds: ['plumber', 'handyman'] },
+      canonical: { primaryServiceId: 'plumber', serviceIds: ['plumber', 'handyman'] },
+    },
+    {
+      raw: { primaryCategoryId: 'Plumbing', categoryIds: ['Plumbing', 'Air Conditioning'] },
+      canonical: { primaryServiceId: 'plumber', serviceIds: ['plumber', 'air-conditioning'] },
+    },
+    {
+      raw: { primaryCategoryId: 'Pet Services', categoryIds: ['Pet Services'] },
+      canonical: { primaryServiceId: null, serviceIds: [] },
+    },
+    {
+      raw: { primaryCategoryId: 'Other', categoryIds: ['Other'] },
+      canonical: { primaryServiceId: null, serviceIds: [] },
+    },
+    {
+      raw: { primaryCategoryId: 'Solar panel cleaning', categoryIds: ['Solar panel cleaning'] },
+      canonical: { primaryServiceId: null, serviceIds: [] },
+    },
+    {
+      raw: {
+        primaryCategoryId: 'Plumbing',
+        categoryIds: ['Plumbing', 'Pet Services', 'Solar panel cleaning', 'Air Conditioning'],
+      },
+      canonical: { primaryServiceId: 'plumber', serviceIds: ['plumber', 'air-conditioning'] },
+    },
+  ]
+
+  for (const { raw, canonical } of cases) {
+    const view = toPublicDirectoryBusiness('taxonomy-business', eligibleBusiness(raw))
+    assert.equal(view.category, raw.primaryCategoryId)
+    assert.deepEqual(view.services, raw.categoryIds)
+    assert.equal(view.primaryServiceId, canonical.primaryServiceId)
+    assert.deepEqual(view.serviceIds, canonical.serviceIds)
+  }
+})
+
+test('public taxonomy projection repairs safe primary membership and removes canonical duplicates', () => {
+  const missingPrimary = toPublicDirectoryBusiness('missing-primary', eligibleBusiness({
+    primaryCategoryId: 'Plumbing',
+    categoryIds: ['Air Conditioning'],
+  }))
+  assert.equal(missingPrimary.primaryServiceId, 'plumber')
+  assert.deepEqual(missingPrimary.serviceIds, ['plumber', 'air-conditioning'])
+
+  const duplicates = toPublicDirectoryBusiness('duplicates', eligibleBusiness({
+    primaryCategoryId: 'Plumbing',
+    categoryIds: ['Plumbing', 'plumber', 'Plumbing'],
+  }))
+  assert.deepEqual(duplicates.services, ['Plumbing', 'plumber', 'Plumbing'])
+  assert.deepEqual(duplicates.serviceIds, ['plumber'])
+})
+
+test('public taxonomy projection preserves complete over-limit historical compatibility data', () => {
+  const historicalServices = [
+    'Plumbing',
+    'Electrical',
+    'Cleaning',
+    'Gardening',
+    'Handyman',
+    'Air Conditioning',
+    'Locksmith',
+    'Pest Control',
+  ]
+  const view = toPublicDirectoryBusiness('historical-services', eligibleBusiness({
+    primaryCategoryId: 'Plumbing',
+    categoryIds: historicalServices,
+  }))
+
+  assert.equal(view.category, 'Plumbing')
+  assert.deepEqual(view.services, historicalServices)
+  assert.equal(view.services.length, 8)
+  assert.equal(view.primaryServiceId, 'plumber')
+  assert.deepEqual(view.serviceIds, [
+    'plumber',
+    'electrician',
+    'cleaner',
+    'gardener',
+    'handyman',
+    'air-conditioning',
+    'locksmith',
+    'pest-control',
+  ])
+  assert.equal(view.serviceIds.length, 8)
+})
+
+test('public taxonomy projection handles malformed structures without throwing', () => {
+  for (const primaryCategoryId of [null, 42, '', '   ']) {
+    assert.doesNotThrow(() => toPublicDirectoryBusiness('malformed-taxonomy', eligibleBusiness({
+      primaryCategoryId, categoryIds: 'not-an-array',
+    })))
+  }
+
+  assert.doesNotThrow(() => toPublicDirectoryBusiness('valid-primary', eligibleBusiness({
+    primaryCategoryId: 'Plumbing',
+    categoryIds: 'not-an-array',
+  })))
+
+  assert.doesNotThrow(() => toPublicDirectoryBusiness('invalid-items', eligibleBusiness({
+    primaryCategoryId: null,
+    categoryIds: [null, 7, '', 'Handyman'],
+  })))
+})
+
+test('public projection exposes only a sanitized stored custom service description', () => {
+  const other = toPublicDirectoryBusiness('other', eligibleBusiness({
+    primaryCategoryId: 'other-local-service',
+    categoryIds: ['other-local-service'],
+    customServiceDescription: '  Marine upholstery specialist  ',
+  }))
+  assert.equal(other.customServiceDescription, 'Marine upholstery specialist')
+
+  const storedWithoutOther = toPublicDirectoryBusiness('stored-without-other', eligibleBusiness({
+    customServiceDescription: 'Stored specialist text',
+  }))
+  assert.equal(storedWithoutOther.customServiceDescription, 'Stored specialist text')
+
+  for (const malformed of [null, 42, {}, []]) {
+    const view = toPublicDirectoryBusiness('malformed-description', eligibleBusiness({
+      customServiceDescription: malformed,
+    }))
+    assert.equal(view.customServiceDescription, null)
+  }
 })
 
 test('public directory safely resolves legacy, canonical and malformed subscription states', () => {

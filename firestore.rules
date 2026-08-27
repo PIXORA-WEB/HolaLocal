@@ -280,7 +280,7 @@ service cloud.firestore {
     function validBusinessKeys(data) {
       return data.keys().hasOnly([
         'ownerId', 'managerIds', 'name', 'nameNormalized', 'slug', 'tagline',
-        'description', 'primaryCategoryId', 'categoryIds', 'serviceAreas',
+        'description', 'primaryCategoryId', 'categoryIds', 'customServiceDescription', 'serviceAreas',
         'serviceRadiusKm', 'location', 'contact', 'languages', 'primaryLanguage',
         'profilePhoto', 'coverPhoto', 'galleryImageURLs', 'galleryImages',
         'logoStoragePath', 'galleryStoragePaths',
@@ -289,6 +289,50 @@ service cloud.firestore {
         'publishedAt', 'submittedAt', 'deletionRequestedAt', 'deletedAt',
         'createdAt', 'updatedAt'
       ]);
+    }
+
+    // SERVICE_TAXONOMY_SERVICE_IDS_START
+    function canonicalServiceIds() {
+      return [
+        'plumber', 'electrician', 'cleaner', 'gardener', 'builder-renovation',
+        'painter-decorator', 'handyman', 'air-conditioning', 'pool-services',
+        'pest-control', 'locksmith', 'removals', 'lawyer', 'accountant',
+        'translator-interpreter', 'graphic-designer', 'web-designer-developer',
+        'photographer', 'marketing', 'business-consultant', 'personal-trainer',
+        'hairdresser', 'beauty-services', 'massage-wellness', 'nutrition',
+        'yoga-fitness', 'tutor', 'language-teacher', 'music-teacher',
+        'childcare-babysitting', 'dog-walker', 'pet-sitter', 'pet-groomer',
+        'dog-trainer', 'other-local-service'
+      ];
+    }
+    // SERVICE_TAXONOMY_SERVICE_IDS_END
+
+    function businessTaxonomyChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'primaryCategoryId', 'categoryIds', 'customServiceDescription'
+      ]);
+    }
+
+    function validCanonicalBusinessTaxonomy(data) {
+      return data.keys().hasAll(['primaryCategoryId', 'categoryIds'])
+        && data.primaryCategoryId is string
+        && data.primaryCategoryId in canonicalServiceIds()
+        && data.categoryIds is list
+        && data.categoryIds.size() >= 1
+        && data.categoryIds.size() <= 6
+        && data.categoryIds.hasOnly(canonicalServiceIds())
+        && data.categoryIds.toSet().size() == data.categoryIds.size()
+        && data.primaryCategoryId in data.categoryIds
+        && (
+          ('other-local-service' in data.categoryIds
+            && data.keys().hasAll(['customServiceDescription'])
+            && data.customServiceDescription is string
+            && data.customServiceDescription.size() > 0
+            && data.customServiceDescription.size() <= 80
+            && data.customServiceDescription.matches('^\\S(.*\\S)?$'))
+          || (!('other-local-service' in data.categoryIds)
+            && !data.keys().hasAny(['customServiceDescription']))
+        );
     }
 
     function validCanonicalBusinessMedia(data, businessId) {
@@ -352,6 +396,7 @@ service cloud.firestore {
     function validBusinessDraftEdit(businessId) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'name', 'tagline', 'description', 'primaryCategoryId', 'categoryIds',
+          'customServiceDescription',
           'serviceAreas', 'serviceRadiusKm', 'location', 'contact', 'languages',
           'primaryLanguage', 'profilePhoto', 'galleryImageURLs', 'galleryImages',
           'updatedAt'
@@ -374,6 +419,8 @@ service cloud.firestore {
         && request.resource.data.deletedAt == resource.data.deletedAt
         && request.resource.data.updatedAt == request.time
         && safePublicContact(request.resource.data.contact)
+        && (!businessTaxonomyChanged()
+          || validCanonicalBusinessTaxonomy(request.resource.data))
         && (request.resource.data.status != 'active' || hasSafePublicBusinessData(request.resource.data));
     }
 

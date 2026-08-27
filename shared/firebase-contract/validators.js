@@ -6,6 +6,10 @@ import {
 import { detectUnsafePublicContact } from './contact.js'
 import { ISSUE_CODES, issue } from './issues.js'
 import { isCustomIdentifier, isStandardLanguageCode } from './normalization.js'
+import {
+  isCanonicalServiceId, MAX_BUSINESS_SERVICE_SELECTIONS,
+  MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH, serviceSupportsCustomDescription,
+} from './taxonomy.js'
 
 function result(issues) {
   return { valid: issues.length === 0, issues }
@@ -48,6 +52,64 @@ export function validatePrimaryLanguage(primaryLanguage, languages) {
     issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_VALUE, { field: 'languages' }))
   }
   if (!languages?.includes(primaryLanguage)) issues.push(issue(ISSUE_CODES.VALIDATION_PRIMARY_NOT_IN_LANGUAGES))
+  return result(issues)
+}
+
+export function validateCanonicalBusinessTaxonomy(selection) {
+  if (!selection || typeof selection !== 'object' || Array.isArray(selection)) {
+    return result([issue(ISSUE_CODES.VALIDATION_INVALID_TYPE, { field: 'taxonomy' })])
+  }
+
+  const { primaryCategoryId, categoryIds, customServiceDescription } = selection
+  const issues = []
+
+  if (typeof primaryCategoryId !== 'string') {
+    issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_TYPE, { field: 'primaryCategoryId' }))
+  } else if (!isCanonicalServiceId(primaryCategoryId)) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_VALUE, { field: 'primaryCategoryId' }))
+  }
+
+  if (!Array.isArray(categoryIds)) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_TYPE, { field: 'categoryIds' }))
+    return result(issues)
+  }
+  if (categoryIds.length === 0) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_VALUE, { field: 'categoryIds', reason: 'empty' }))
+  }
+  if (categoryIds.length > MAX_BUSINESS_SERVICE_SELECTIONS) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_ARRAY_TOO_LARGE, {
+      field: 'categoryIds', maximum: MAX_BUSINESS_SERVICE_SELECTIONS,
+    }))
+  }
+  if (new Set(categoryIds).size !== categoryIds.length) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_ARRAY_DUPLICATE, { field: 'categoryIds' }))
+  }
+  if (categoryIds.some((serviceId) => typeof serviceId !== 'string')) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_TYPE, { field: 'categoryIds' }))
+  }
+  if (categoryIds.some((serviceId) => !isCanonicalServiceId(serviceId))) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_VALUE, { field: 'categoryIds' }))
+  }
+  if (!categoryIds.includes(primaryCategoryId)) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_PRIMARY_NOT_IN_CATEGORIES))
+  }
+
+  if (categoryIds.some(serviceSupportsCustomDescription)) {
+    if (typeof customServiceDescription !== 'string') {
+      issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_TYPE, { field: 'customServiceDescription' }))
+    } else if (
+      !customServiceDescription.trim()
+      || customServiceDescription !== customServiceDescription.trim()
+      || customServiceDescription.length > MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH
+    ) {
+      issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_VALUE, {
+        field: 'customServiceDescription', maximum: MAX_CUSTOM_SERVICE_DESCRIPTION_LENGTH,
+      }))
+    }
+  } else if (customServiceDescription !== undefined && customServiceDescription !== null) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_VALUE, { field: 'customServiceDescription' }))
+  }
+
   return result(issues)
 }
 
