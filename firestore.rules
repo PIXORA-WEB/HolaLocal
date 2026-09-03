@@ -21,6 +21,20 @@ service cloud.firestore {
         && accountData(request.auth.uid).deletionRequestedAt == null;
     }
 
+    function hasActiveCustomerAccount(userId) {
+      return isOwner(userId)
+        && hasActiveAccount()
+        && accountData(userId).roles is list
+        && 'customer' in accountData(userId).roles;
+    }
+
+    function isCustomerOwner(userId) {
+      return isOwner(userId)
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && accountData(userId).roles is list
+        && 'customer' in accountData(userId).roles;
+    }
+
     function isAdmin() {
       return signedIn()
         && request.auth.token.keys().hasAll(['admin'])
@@ -518,6 +532,19 @@ service cloud.firestore {
         && hasActiveAccount()
         && validUserOwnerUpdate(userId);
       allow delete: if false;
+
+      match /savedBusinesses/{businessId} {
+        allow get, list: if hasActiveCustomerAccount(userId);
+        allow create: if hasActiveCustomerAccount(userId)
+          && request.resource.data.keys().hasOnly(['businessId', 'createdAt'])
+          && request.resource.data.keys().hasAll(['businessId', 'createdAt'])
+          && request.resource.data.businessId == businessId
+          && request.resource.data.createdAt == request.time
+          && exists(/databases/$(database)/documents/businesses/$(businessId))
+          && hasSafePublicBusinessData(businessData(businessId));
+        allow update: if false;
+        allow delete: if isCustomerOwner(userId);
+      }
     }
 
     match /accountDeletionRequests/{userId} {

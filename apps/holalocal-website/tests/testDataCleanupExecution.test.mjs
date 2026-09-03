@@ -73,6 +73,10 @@ function sourceFixture({ failPath = '', protectedDrift = false } = {}) {
       deleteLog.push(['doc', path])
       return { path, status: 'deleted' }
     },
+    async deleteUserSavedBusinesses(uid) {
+      deleteLog.push(['saved', uid])
+      return { deleted: uid === TARGETS[0] ? 2 : 0, status: 'deleted', uid }
+    },
     async deleteAuthAccount(uid) {
       deleteLog.push(['auth', uid])
       return { uid, status: uid === TARGETS[1] || uid === TARGETS[2] ? 'already-absent' : 'deleted' }
@@ -134,6 +138,7 @@ describe('cleanup execution safeguards', () => {
     const report = await runCleanupExecution(source, { ...options, apply: true }, await approvedReport(), () => '2026-07-10T00:00:00.000Z')
     assert.equal(report.metadata.status, 'complete')
     assert.deepEqual(source.deleteLog.map(([kind]) => kind).slice(-2), ['auth', 'auth'])
+    assert.deepEqual(source.deleteLog.filter(([kind]) => kind === 'saved').map(([, uid]) => uid), TARGETS)
     assert.equal(source.deleteLog.some(([, value]) => value.includes('biz-protected')), false)
   })
 

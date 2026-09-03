@@ -48,6 +48,16 @@ export const USER_CONTRACT = Object.freeze({
   }),
 })
 
+export const SAVED_BUSINESS_CONTRACT = Object.freeze({
+  path: 'users/{uid}/savedBusinesses/{businessId}',
+  documentId: 'matching_business_id',
+  schemaVersion: FIREBASE_CONTRACT_SCHEMA_VERSION,
+  fields: Object.freeze({
+    businessId: field('string', 'owner_writable_validated', 'private_owner', 'required'),
+    createdAt: field('Timestamp', 'owner_writable_create_only', 'private_owner', 'required'),
+  }),
+})
+
 export const BUSINESS_CONTRACT = Object.freeze({
   path: 'businesses/{businessId}', documentId: 'stable_firestore_id',
   newDocumentId: 'opaque_auto_id', legacyDocumentId: 'owner_uid_may_remain_after_audit',

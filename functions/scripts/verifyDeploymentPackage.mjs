@@ -18,6 +18,7 @@ const REQUIRED_CONTRACT_FILES = [
   'contact.js',
   'legalConsent.js',
   'deletion.js',
+  'savedBusinesses.js',
   'media.js',
   'messaging.js',
   'publication.js',
@@ -47,6 +48,7 @@ const REQUIRED_FUNCTION_FILES = [
   'src/subscriptionPlanAssignment.js',
   'src/ownerSubscriptionStatus.js',
   'src/publicBusinessDirectory.js',
+  'src/savedBusinesses.js',
 ]
 
 const FORBIDDEN_SEGMENTS = new Set([
@@ -193,6 +195,7 @@ async function assertContractInstalledInsideArtifact(root) {
     typeof imported.resolveAuthoritativeBusinessEntitlements !== 'function' ||
     typeof imported.hasCurrentLegalConsent !== 'function'
     || typeof imported.isCanonicalBusinessLogoPath !== 'function'
+    || typeof imported.validateSavedBusinessRecord !== 'function'
   ) {
     throw new Error('@holalocal/firebase-contract import smoke test failed.')
   }

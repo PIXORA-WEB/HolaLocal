@@ -25,6 +25,7 @@ function successfulPrimitives(order = []) {
     },
     removeManagerRelationships: async () => { order.push('manager-cleanup'); return { removed: 1 } },
     tombstoneConversations: async () => { order.push('conversation-tombstone'); return { tombstoned: 1 } },
+    cleanupSavedBusinesses: async () => { order.push('saved-business-cleanup'); return { deleted: 2 } },
     cleanupMedia: async () => { order.push('media-cleanup'); return { ok: true, counts: { attempted: 1, deleted: 1, alreadyMissing: 0, failed: 0 } } },
     minimizeEvidenceAndRemoveUser: async () => { order.push('user-removal'); version += 1; return { requestVersion: version } },
     deleteAuthUser: async () => { order.push('auth-delete'); return { ok: true } },
@@ -46,6 +47,7 @@ test('admin finalizer runs the approved order and Auth is the last external dest
     'ownership-check', 'lease', 'ownership-check', 'checkpoint:ownership_verified',
     'manager-cleanup', 'checkpoint:manager_relationships_cleaned',
     'conversation-tombstone', 'checkpoint:conversations_tombstoned',
+    'saved-business-cleanup', 'checkpoint:saved_businesses_cleaned',
     'media-cleanup', 'checkpoint:profile_media_cleaned', 'user-removal',
     'auth-delete', 'checkpoint:firebase_auth_removed', 'complete',
   ])
@@ -78,6 +80,21 @@ test('media partial failure records sanitized retry state and stops user/Auth de
   assert.deepEqual(result.cleanupCounts, { attempted: 3, deleted: 2, alreadyMissing: 0, failed: 1 })
   assert.equal(order.includes('user-removal'), false)
   assert.equal(order.includes('auth-delete'), false)
+})
+
+test('saved-business cleanup failure is retryable and stops user and Auth deletion', async () => {
+  const order = []; const primitives = successfulPrimitives(order)
+  primitives.cleanupSavedBusinesses = async () => {
+    order.push('saved-business-cleanup')
+    throw new Error('private saved path')
+  }
+  const result = await invoke(database(), primitives)
+  assert.equal(result.state, 'failed_retryable')
+  assert.equal(result.failureCode, 'saved_businesses_cleanup_failed')
+  assert.equal(order.includes('media-cleanup'), false)
+  assert.equal(order.includes('user-removal'), false)
+  assert.equal(order.includes('auth-delete'), false)
+  assert.equal(JSON.stringify(result).includes('private saved path'), false)
 })
 
 test('consent/user failure stops before Auth and persists only a fixed failure code', async () => {

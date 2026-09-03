@@ -23,8 +23,18 @@ export {
 } from './insights.js'
 export {
   ACCOUNT_DELETION_REQUEST_CONTRACT, BUSINESS_CONTRACT, BUSINESS_OWNER_CONTRACT,
-  BUSINESS_PRIVATE_CONTRACT, USER_CONTRACT,
+  BUSINESS_PRIVATE_CONTRACT, SAVED_BUSINESS_CONTRACT, USER_CONTRACT,
 } from './contracts.js'
+export {
+  hasSavedBusinessCustomerCapability,
+  normalizeSavedBusinessesPageSize,
+  SAVED_BUSINESSES_DEFAULT_PAGE_SIZE,
+  SAVED_BUSINESSES_MAX_PAGE_SIZE,
+  SAVED_BUSINESSES_SUBCOLLECTION,
+  SAVED_BUSINESS_FIELDS,
+  validateSavedBusinessesCursor,
+  validateSavedBusinessRecord,
+} from './savedBusinesses.js'
 export {
   ACCOUNT_DELETION_RECENT_AUTH_MAX_AGE_SECONDS,
   ACCOUNT_DELETION_FAILURE_CODES,
@@ -32,6 +42,7 @@ export {
   ACCOUNT_DELETION_FINALIZER_LEASE_SECONDS,
   ACCOUNT_DELETION_REQUEST_STATES,
   ACCOUNT_DELETION_REVERSIBLE_STATES,
+  canStartNewAccountDeletionRequestCycle,
   canTransitionAccountDeletionState,
   hasOnlyAccountDeletionWorkflowFields,
   hasReachedAccountDeletionCheckpoint,
@@ -40,6 +51,7 @@ export {
   isAccountDeletionRequestState,
   isSanitizedAccountDeletionCleanupCounts,
   isCancellableAccountDeletionRequest,
+  isFreshAccountDeletionRequestCycle,
   nextAccountDeletionCheckpoint,
   projectAccountDeletionRequest,
 } from './deletion.js'

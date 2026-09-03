@@ -123,6 +123,55 @@ test('cancellation clears only pending mirrors, preserves profile data, and is i
   assert.equal(second.idempotent, true)
 })
 
+test('a later request replaces a cancelled cycle with fresh metadata and no workflow progress', async () => {
+  const currentConsent = { seconds: 1_750_000_000, nanoseconds: 0, toMillis: () => 1_750_000_000_000 }
+  const db = database(profile({
+    termsAcceptedAt: currentConsent,
+    privacyAcceptedAt: currentConsent,
+    deletionRequestedAt: null,
+    deletionScheduledFor: null,
+  }))
+  const cancelledAt = { seconds: 1_700_000_100, nanoseconds: 0 }
+  const oldRequestedAt = { seconds: 1_700_000_000, nanoseconds: 0 }
+  db.store.set('accountDeletionRequests/user-1', {
+    uid: 'user-1', state: 'cancelled', requestedAt: oldRequestedAt, requestedBy: 'user-1',
+    cancelledAt, updatedAt: cancelledAt, requestVersion: 8,
+    finalizationStartedAt: consentTimestamp, finalizedBy: 'old-admin', completedAt: consentTimestamp,
+    lastCompletedStep: 'conversations_tombstoned', failureCode: 'internal_retryable', retryCount: 3,
+    leaseId: 'old-lease', leaseExpiresAt: consentTimestamp,
+    cleanupCounts: { attempted: 2, deleted: 1, failed: 1 },
+    retainedConsentEvidence: { termsVersion: 'old' },
+  })
+
+  const result = await request(db)
+  const nextRequest = db.data('accountDeletionRequests/user-1')
+  const nextProfile = db.data('users/user-1')
+  assert.equal(result.idempotent, false)
+  assert.deepEqual(Object.keys(nextRequest).sort(), [
+    'cancelledAt', 'requestVersion', 'requestedAt', 'requestedBy', 'state', 'uid', 'updatedAt',
+  ])
+  assert.equal(nextRequest.state, 'requested')
+  assert.equal(nextRequest.requestVersion, 9)
+  assert.notEqual(nextRequest.requestedAt, oldRequestedAt)
+  assert.equal(nextRequest.cancelledAt, null)
+  assert.equal(nextProfile.deletionRequestedAt, nextRequest.requestedAt)
+  assert.equal(nextProfile.deletionScheduledFor, null)
+  assert.equal(nextProfile.termsAcceptedAt, currentConsent)
+  assert.equal(nextProfile.privacyAcceptedAt, currentConsent)
+})
+
+test('new request cycles reject active finalization retry and completed states', async () => {
+  for (const state of ['requested', 'finalizing', 'failed_retryable', 'completed']) {
+    const db = database()
+    db.store.set('accountDeletionRequests/user-1', {
+      uid: 'user-1', state, requestedAt: consentTimestamp, requestedBy: 'user-1',
+      cancelledAt: null, updatedAt: consentTimestamp, requestVersion: 3,
+    })
+    await assert.rejects(() => request(db), (error) => error.message === 'account-deletion-state-conflict')
+    assert.equal(db.writePaths.length, 0)
+  }
+})
+
 test('cancellation rejects absent and future non-cancellable states', async () => {
   const db = database()
   await assert.rejects(() => cancelAccountDeletion({ uid: 'user-1', db }), (error) => error.message === 'account-deletion-request-not-found')

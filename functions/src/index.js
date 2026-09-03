@@ -30,6 +30,7 @@ import {
   listPublicBusinesses as runListPublicBusinesses,
 } from './publicBusinessDirectory.js'
 import { getOwnerSubscriptionStatus as runGetOwnerSubscriptionStatus } from './ownerSubscriptionStatus.js'
+import { listSavedBusinesses as runListSavedBusinesses } from './savedBusinesses.js'
 import {
   countCreatedConversation,
   getOwnerBusinessInsights as runGetOwnerBusinessInsights,
@@ -267,6 +268,18 @@ export async function handleGetPublicBusiness(request, db) {
   return runGetPublicBusiness({ businessId: request.data.businessId, db: db ?? getFirestore() })
 }
 
+export async function handleListSavedBusinesses(request, db) {
+  const uid = requireCallableUid(request)
+  const data = request.data ?? {}
+  requireExactInput(data, ['pageSize', 'cursor'])
+  return runListSavedBusinesses({
+    uid,
+    pageSize: data.pageSize,
+    cursor: data.cursor,
+    db: db ?? getFirestore(),
+  })
+}
+
 export async function handleGetOwnerSubscriptionStatus(request, db) {
   const uid = requireCallableUid(request)
   requireExactInput(request.data, ['businessId'])
@@ -398,6 +411,11 @@ export const listPublicBusinesses = onCall(
 export const getPublicBusiness = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleGetPublicBusiness(request),
+)
+
+export const listSavedBusinesses = onCall(
+  PUBLIC_CALLABLE_OPTIONS,
+  async (request) => handleListSavedBusinesses(request),
 )
 
 export const getOwnerSubscriptionStatus = onCall(

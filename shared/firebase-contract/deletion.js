@@ -8,6 +8,7 @@ export const ACCOUNT_DELETION_FINALIZATION_CHECKPOINTS = Object.freeze([
   'ownership_verified',
   'manager_relationships_cleaned',
   'conversations_tombstoned',
+  'saved_businesses_cleaned',
   'profile_media_cleaned',
   'user_evidence_minimized',
   'firebase_auth_removed',
@@ -19,6 +20,7 @@ export const ACCOUNT_DELETION_FAILURE_CODES = Object.freeze([
   'ownership_integrity_conflict',
   'manager_relationship_integrity_conflict',
   'conversation_integrity_conflict',
+  'saved_businesses_cleanup_failed',
   'profile_media_cleanup_failed',
   'consent_evidence_invalid',
   'user_evidence_minimization_failed',
@@ -46,6 +48,10 @@ const WORKFLOW_FIELDS = new Set([
   'retryCount', 'leaseId', 'leaseExpiresAt', 'cleanupCounts', 'retainedConsentEvidence',
 ])
 
+const FRESH_REQUEST_CYCLE_FIELDS = new Set([
+  'uid', 'state', 'requestedAt', 'requestedBy', 'cancelledAt', 'updatedAt', 'requestVersion',
+])
+
 export function isAccountDeletionRequestState(value) {
   return ACCOUNT_DELETION_REQUEST_STATES.includes(value)
 }
@@ -62,6 +68,27 @@ export function canTransitionAccountDeletionState(from, to) {
   return isAccountDeletionRequestState(from)
     && isAccountDeletionRequestState(to)
     && TRANSITIONS[from].includes(to)
+}
+
+export function canStartNewAccountDeletionRequestCycle(previousRequest) {
+  return previousRequest == null || previousRequest?.state === 'cancelled'
+}
+
+export function isFreshAccountDeletionRequestCycle(previousRequest, nextRequest) {
+  if (!canStartNewAccountDeletionRequestCycle(previousRequest)
+    || nextRequest == null || typeof nextRequest !== 'object' || Array.isArray(nextRequest)) return false
+  const previousVersion = previousRequest == null ? 0 : previousRequest.requestVersion
+  return Number.isSafeInteger(previousVersion) && previousVersion >= 0
+    && Object.keys(nextRequest).length === FRESH_REQUEST_CYCLE_FIELDS.size
+    && Object.keys(nextRequest).every((key) => FRESH_REQUEST_CYCLE_FIELDS.has(key))
+    && typeof nextRequest.uid === 'string' && nextRequest.uid.length > 0
+    && nextRequest.requestedBy === nextRequest.uid
+    && nextRequest.state === 'requested'
+    && nextRequest.requestedAt != null
+    && nextRequest.updatedAt != null
+    && nextRequest.cancelledAt === null
+    && Number.isSafeInteger(nextRequest.requestVersion)
+    && nextRequest.requestVersion === previousVersion + 1
 }
 
 export function isCancellableAccountDeletionRequest(value) {
@@ -88,7 +115,7 @@ export function hasOnlyAccountDeletionWorkflowFields(value) {
 
 export function isSanitizedAccountDeletionCleanupCounts(value) {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) return false
-  const allowed = new Set(['attempted', 'deleted', 'alreadyMissing', 'failed', 'managerRelationshipsRemoved', 'conversationsTombstoned'])
+  const allowed = new Set(['attempted', 'deleted', 'alreadyMissing', 'failed', 'managerRelationshipsRemoved', 'conversationsTombstoned', 'savedBusinessesDeleted'])
   return Object.keys(value).length > 0 && Object.entries(value).every(([key, count]) => (
     allowed.has(key) && Number.isSafeInteger(count) && count >= 0
   ))

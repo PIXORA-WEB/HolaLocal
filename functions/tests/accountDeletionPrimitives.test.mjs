@@ -4,6 +4,7 @@ import { Timestamp } from 'firebase-admin/firestore'
 import {
   acquireAccountDeletionLease,
   assertNoAuthoritativeOwnedBusinesses,
+  cleanupUserSavedBusinesses,
   cleanupUserMedia,
   completeAccountDeletionWorkflow,
   deleteFirebaseAuthUser,
@@ -118,6 +119,40 @@ test('conversation tombstone is minimal, preserves structure/history, and is ide
   assert.deepEqual(await tombstoneDeletedUserConversations({ uid: 'u1', db }), { matched: 1, tombstoned: 0 })
   const invalid = new FakeFirestore({ 'conversations/c2': { status: 'active', customerId: 'customer', participantIds: ['u1', 'customer'] } })
   await assert.rejects(() => tombstoneDeletedUserConversations({ uid: 'u1', db: invalid }), /integrity-conflict/)
+})
+
+test('saved-business cleanup handles zero, one, and multiple owner-scoped records idempotently', async () => {
+  for (const count of [0, 1, 3]) {
+    const seed = { 'users/other/savedBusinesses/keep': { businessId: 'keep' } }
+    for (let index = 0; index < count; index += 1) {
+      seed[`users/u1/savedBusinesses/business-${index}`] = { businessId: `business-${index}` }
+    }
+    const db = new FakeFirestore(seed)
+    assert.deepEqual(await cleanupUserSavedBusinesses({ uid: 'u1', db }), { deleted: count })
+    assert.deepEqual(await cleanupUserSavedBusinesses({ uid: 'u1', db }), { deleted: 0 })
+    assert.deepEqual(db.data('users/other/savedBusinesses/keep'), { businessId: 'keep' })
+  }
+  await assert.rejects(() => cleanupUserSavedBusinesses({ uid: '../other', db: new FakeFirestore() }), /invalid-trusted-uid/)
+})
+
+test('saved-business cleanup is bounded and resumes safely after a partial batch failure', async () => {
+  const seed = {}
+  for (let index = 0; index < 205; index += 1) {
+    seed[`users/u1/savedBusinesses/business-${String(index).padStart(3, '0')}`] = { businessId: `business-${index}` }
+  }
+  seed['users/u2/savedBusinesses/keep'] = { businessId: 'keep' }
+  const db = new FakeFirestore(seed)
+  const runTransaction = db.runTransaction.bind(db)
+  let calls = 0
+  db.runTransaction = async (callback) => {
+    calls += 1
+    if (calls === 2) throw new Error('temporary batch failure')
+    return runTransaction(callback)
+  }
+  await assert.rejects(() => cleanupUserSavedBusinesses({ uid: 'u1', db }), /temporary batch failure/)
+  assert.equal([...db.store.keys()].filter((path) => path.startsWith('users/u1/savedBusinesses/')).length, 5)
+  assert.deepEqual(await cleanupUserSavedBusinesses({ uid: 'u1', db }), { deleted: 5 })
+  assert.deepEqual(db.data('users/u2/savedBusinesses/keep'), { businessId: 'keep' })
 })
 
 test('profile media cleanup scopes to exact UID prefix and sanitizes partial failures', async () => {

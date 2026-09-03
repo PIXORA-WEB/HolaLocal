@@ -11,7 +11,7 @@ const EXPECTED_COUNTS = Object.freeze({
   usersSafe: 4,
 })
 
-const DELETE_ORDER = ['conversations', 'businessOwners', 'businessPrivate', 'businesses', 'userDocuments', 'authAccounts']
+const DELETE_ORDER = ['conversations', 'businessOwners', 'businessPrivate', 'businesses', 'savedBusinesses', 'userDocuments', 'authAccounts']
 
 export async function loadApprovedDryRunReport(path) {
   return JSON.parse(await readFile(path, 'utf8'))
@@ -90,6 +90,8 @@ export async function runCleanupExecution(source, options, approvedReport, now =
         try {
           if (operation.kind === 'auth') {
             operations.push({ ...operation, result: await source.deleteAuthAccount(operation.uid) })
+          } else if (operation.kind === 'saved-businesses') {
+            operations.push({ ...operation, result: await source.deleteUserSavedBusinesses(operation.uid) })
           } else {
             operations.push({ ...operation, result: await source.deleteDocument(operation.path) })
           }
@@ -112,6 +114,7 @@ function buildOperations(allowlist) {
     ...allowlist.businessOwners.map((path) => ({ group: 'businessOwners', kind: 'firestore-document', path })),
     ...allowlist.businessPrivate.map((path) => ({ group: 'businessPrivate', kind: 'firestore-document', path })),
     ...allowlist.businesses.map((path) => ({ group: 'businesses', kind: 'firestore-document', path })),
+    ...allowlist.userDocuments.map((path) => ({ group: 'savedBusinesses', kind: 'saved-businesses', uid: path.split('/')[1] })),
     ...allowlist.userDocuments.map((path) => ({ group: 'userDocuments', kind: 'firestore-document', path })),
     ...allowlist.authAccounts.map((uid) => ({ group: 'authAccounts', kind: 'auth', uid })),
   ]
