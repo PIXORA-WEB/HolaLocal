@@ -59,6 +59,12 @@ export async function requestAccountDeletion({ uid, emailVerified, authTime, cla
     }
     assertRequestEligible(latestProfile)
     if (latestProfile.deletionRequestedAt != null) throw new HttpsError('failed-precondition', 'account-deletion-state-conflict')
+    if (latestRequest != null && (latestRequest.state !== 'cancelled'
+      || !Number.isSafeInteger(latestRequest.requestVersion)
+      || latestRequest.requestVersion < 1
+      || latestRequest.requestVersion === Number.MAX_SAFE_INTEGER)) {
+      throw new HttpsError('failed-precondition', 'account-deletion-state-conflict')
+    }
     const ownerIds = new Set(ownedSnapshot.docs.map((snapshot) => snapshot.id))
     assertOwnershipMirrors({
       uid: safeUid,

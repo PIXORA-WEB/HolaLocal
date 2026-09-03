@@ -2,7 +2,11 @@ import assert from 'node:assert/strict'
 import { before, test } from 'node:test'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
-import { acquireAccountDeletionLease, minimizeConsentEvidenceAndRemoveUser } from '../src/accountDeletionPrimitives.js'
+import {
+  acquireAccountDeletionLease,
+  cleanupUserSavedBusinesses,
+  minimizeConsentEvidenceAndRemoveUser,
+} from '../src/accountDeletionPrimitives.js'
 
 const enabled = process.env.HOLALOCAL_CALLABLE_BOUNDARY === '1'
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT
@@ -15,6 +19,23 @@ if (enabled) {
       ?? initializeApp({ projectId }, 'account-deletion-primitives-emulator')
     db = getFirestore(app)
   })
+}
+
+async function seedSavedBusinesses(uid, count, prefix) {
+  const batch = db.batch()
+  for (let index = 0; index < count; index += 1) {
+    const businessId = `${prefix}-${String(index).padStart(3, '0')}`
+    batch.set(db.doc(`users/${uid}/savedBusinesses/${businessId}`), {
+      businessId,
+      createdAt: Timestamp.fromMillis(1_700_000_000_000 + index),
+    })
+  }
+  await batch.commit()
+}
+
+async function savedBusinessIds(uid) {
+  const snapshot = await db.collection(`users/${uid}/savedBusinesses`).get()
+  return snapshot.docs.map((document) => document.id).sort()
 }
 
 test('real Firestore transaction atomically minimizes consent evidence and removes profile', { skip: !enabled }, async () => {
@@ -57,4 +78,64 @@ test('real Firestore transaction allows only one administrator to recover an exp
   const request = (await db.doc(`accountDeletionRequests/${uid}`).get()).data()
   assert.equal(request.requestVersion, 5)
   assert.ok(['lease-a', 'lease-b'].includes(request.leaseId))
+})
+
+test('real Firestore saved-business cleanup completes safely with zero target records', { skip: !enabled }, async () => {
+  const targetUid = 'saved-cleanup-zero-user'
+  const controlUid = 'saved-cleanup-zero-control'
+  await seedSavedBusinesses(controlUid, 1, 'saved-cleanup-zero-control-business')
+
+  assert.deepEqual(await cleanupUserSavedBusinesses({ uid: targetUid, db }), { deleted: 0 })
+  assert.deepEqual(await savedBusinessIds(targetUid), [])
+  assert.deepEqual(await savedBusinessIds(controlUid), ['saved-cleanup-zero-control-business-000'])
+})
+
+test('real Firestore saved-business cleanup removes one target record and is idempotent', { skip: !enabled }, async () => {
+  const targetUid = 'saved-cleanup-one-user'
+  const controlUid = 'saved-cleanup-one-control'
+  await Promise.all([
+    seedSavedBusinesses(targetUid, 1, 'saved-cleanup-one-business'),
+    seedSavedBusinesses(controlUid, 1, 'saved-cleanup-one-control-business'),
+  ])
+
+  assert.deepEqual(await cleanupUserSavedBusinesses({ uid: targetUid, db }), { deleted: 1 })
+  assert.deepEqual(await savedBusinessIds(targetUid), [])
+  assert.deepEqual(await savedBusinessIds(controlUid), ['saved-cleanup-one-control-business-000'])
+  assert.deepEqual(await cleanupUserSavedBusinesses({ uid: targetUid, db }), { deleted: 0 })
+  assert.deepEqual(await savedBusinessIds(controlUid), ['saved-cleanup-one-control-business-000'])
+})
+
+test('real Firestore saved-business cleanup crosses its bounded batch and preserves unrelated data', { skip: !enabled }, async () => {
+  const targetUid = 'saved-cleanup-many-user'
+  const controlUid = 'saved-cleanup-many-control'
+  const businessPath = 'businesses/saved-cleanup-business-sentinel'
+  const userPath = 'users/saved-cleanup-unrelated-user'
+  const requestPath = 'accountDeletionRequests/saved-cleanup-unrelated-request'
+  const businessData = { name: 'Cleanup sentinel business', status: 'active' }
+  const userData = { uid: 'saved-cleanup-unrelated-user', marker: 'unchanged' }
+  const requestData = { uid: 'saved-cleanup-unrelated-request', state: 'requested', requestVersion: 1 }
+
+  await Promise.all([
+    seedSavedBusinesses(targetUid, 201, 'saved-cleanup-many-business'),
+    seedSavedBusinesses(controlUid, 2, 'saved-cleanup-many-control-business'),
+    db.doc(businessPath).set(businessData),
+    db.doc(userPath).set(userData),
+    db.doc(requestPath).set(requestData),
+  ])
+
+  assert.deepEqual(await cleanupUserSavedBusinesses({ uid: targetUid, db }), { deleted: 201 })
+  assert.deepEqual(await savedBusinessIds(targetUid), [])
+  assert.deepEqual(await savedBusinessIds(controlUid), [
+    'saved-cleanup-many-control-business-000',
+    'saved-cleanup-many-control-business-001',
+  ])
+  assert.deepEqual((await db.doc(businessPath).get()).data(), businessData)
+  assert.deepEqual((await db.doc(userPath).get()).data(), userData)
+  assert.deepEqual((await db.doc(requestPath).get()).data(), requestData)
+
+  assert.deepEqual(await cleanupUserSavedBusinesses({ uid: targetUid, db }), { deleted: 0 })
+  assert.deepEqual(await savedBusinessIds(controlUid), [
+    'saved-cleanup-many-control-business-000',
+    'saved-cleanup-many-control-business-001',
+  ])
 })

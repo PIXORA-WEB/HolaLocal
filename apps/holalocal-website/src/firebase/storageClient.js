@@ -11,13 +11,13 @@ import { createApplicationError } from '../utils/frontendErrors.js'
 import { getFirebaseApp } from './config.js'
 import {
   connectFirebaseEmulatorOnce,
-  FIREBASE_EMULATOR_ENDPOINTS,
+  getFirebaseEmulatorEndpoint,
   shouldUseFirebaseEmulators,
 } from './emulatorMode.js'
 
 const storage = getStorage(getFirebaseApp())
 if (shouldUseFirebaseEmulators()) {
-  const { host, port } = FIREBASE_EMULATOR_ENDPOINTS.storage
+  const { host, port } = getFirebaseEmulatorEndpoint('storage')
   connectFirebaseEmulatorOnce(storage, () => connectStorageEmulator(storage, host, port))
 }
 const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])

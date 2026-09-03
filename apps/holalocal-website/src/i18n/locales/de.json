@@ -53,7 +53,7 @@
   "metadata": {
     "title": "HolaLocal",
     "pageTitle": "{{page}} · HolaLocal",
-    "description": "Finden Sie vertrauenswürdige lokale Dienste und kontaktieren Sie lokale Unternehmen an der Costa del Sol und in Gibraltar."
+    "description": "Finden Sie lokale Dienste und kontaktieren Sie lokale Unternehmen an der Costa del Sol und in Gibraltar."
   },
   "errors": {
     "application": {
@@ -332,18 +332,18 @@
     "how": {
       "eyebrow": "So funktioniert es",
       "title": "Lokale Hilfe in drei klaren Schritten.",
-      "description": "Entdecken Sie Anbieter, prüfen Sie öffentliche Profile und nehmen Sie Kontakt auf.",
+      "description": "Entdecken Sie lokale Dienste, prüfen Sie veröffentlichte Unternehmensprofile und nehmen Sie Kontakt auf.",
       "browse": {
-        "title": "Stöbern",
-        "description": "Entdecken Sie lokale Dienste und Anbieter zunächst ohne Konto."
+        "title": "Lokale Dienste entdecken",
+        "description": "Entdecken Sie lokale Dienste und veröffentlichte Unternehmensprofile ohne Konto."
+      },
+      "review": {
+        "title": "Profile prüfen",
+        "description": "Vergleichen Sie Dienste, Einsatzgebiete, Sprachen und öffentliche Kontaktdaten, die Unternehmen freigeben."
       },
       "connect": {
-        "title": "Kontakt aufnehmen",
-        "description": "Melden Sie sich an und sprechen Sie privat mit dem passenden Unternehmen."
-      },
-      "choose": {
-        "title": "Sicher entscheiden",
-        "description": "Vergleichen Sie klare öffentliche Angaben und wählen Sie den passenden Anbieter."
+        "title": "Privat Kontakt aufnehmen",
+        "description": "Melden Sie sich an und beginnen Sie ein privates Gespräch mit dem passenden Unternehmen."
       }
     },
     "journeys": {
@@ -351,13 +351,13 @@
       "title": "Hilfe finden oder lokal sichtbar werden.",
       "customers": {
         "title": "Für Kunden",
-        "description": "Stöbern Sie frei, speichern Sie Profile und kontaktieren Sie den passenden Anbieter privat.",
+        "description": "Speichern Sie nützliche Profile und melden Sie sich an, wenn Sie privat Kontakt aufnehmen möchten.",
         "action": "Lokale Dienste finden"
       },
       "businesses": {
         "title": "Für lokale Unternehmen",
-        "description": "Erstellen Sie ein professionelles Profil und machen Sie Ihre Dienste leichter auffindbar.",
-        "action": "Unternehmen verwalten"
+        "description": "Präsentieren Sie Ihre Dienste, Einsatzgebiete und Sprachen in einem übersichtlichen Profil.",
+        "action": "Unternehmen eintragen"
       }
     },
     "region": {
@@ -531,7 +531,7 @@
     }
   },
   "footer": {
-    "description": "Eine vertrauenswürdige, mehrsprachige lokale Community für Dienste an der Costa del Sol und in Gibraltar.",
+    "description": "Eine mehrsprachige lokale Plattform zum Finden und Anbieten von Diensten an der Costa del Sol und in Gibraltar.",
     "platform": "Plattform",
     "platformLabel": "Plattformlinks",
     "findServices": "Dienste finden",

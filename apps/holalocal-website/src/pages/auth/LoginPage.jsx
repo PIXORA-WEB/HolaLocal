@@ -5,6 +5,7 @@ import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import FormFieldError from '../../components/common/FormFieldError.jsx'
 import PasswordField from '../../components/common/PasswordField.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
+import { internalPathFromLocation, normalizeInternalLocation } from '../../utils/internalNavigation.js'
 
 function LoginPage() {
   const { t } = useTranslation()
@@ -33,11 +34,7 @@ function LoginPage() {
 
     try {
       await signIn(email.trim(), password)
-      const returnLocation = location.state?.from
-      const destination = returnLocation
-        ? `${returnLocation.pathname}${returnLocation.search ?? ''}${returnLocation.hash ?? ''}`
-        : '/'
-      navigate(destination, { replace: true })
+      navigate(internalPathFromLocation(location.state?.from), { replace: true })
     } catch (submissionError) {
       setError(getAuthenticationErrorMessage(submissionError, t))
     } finally {
@@ -88,7 +85,10 @@ function LoginPage() {
       </form>
 
       <p className="auth-card__footer">
-        {t('auth.newUser')} <Link to="/register">{t('auth.createAccount')}</Link>
+        {t('auth.newUser')}{' '}
+        <Link state={{ from: normalizeInternalLocation(location.state?.from) }} to="/register">
+          {t('auth.createAccount')}
+        </Link>
       </p>
     </section>
   )

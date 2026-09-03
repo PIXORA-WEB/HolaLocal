@@ -7,6 +7,7 @@ import BusinessLayout from '../components/layout/BusinessLayout.jsx'
 import AdminLayout from '../components/layout/AdminLayout.jsx'
 import SiteLayout from '../components/layout/SiteLayout.jsx'
 import BusinessRoute from './BusinessRoute.jsx'
+import CustomerRoute from './CustomerRoute.jsx'
 import ProtectedRoute from './ProtectedRoute.jsx'
 import PublicRoute from './PublicRoute.jsx'
 import AdminRoute from './AdminRoute.jsx'
@@ -25,9 +26,12 @@ const BusinessDashboardPage = lazy(() => import('../pages/business/BusinessDashb
 const EditBusinessPage = lazy(() => import('../pages/business/EditBusinessPage.jsx'))
 const SubscriptionPage = lazy(() => import('../pages/business/SubscriptionPage.jsx'))
 const ContactPage = lazy(() => import('../pages/ContactPage.jsx'))
+const CommunityPage = lazy(() => import('../pages/CommunityPage.jsx'))
+const EventsPage = lazy(() => import('../pages/EventsPage.jsx'))
 const HomePage = lazy(() => import('../pages/HomePage.jsx'))
 const ProfilePage = lazy(() => import('../pages/customer/ProfilePage.jsx'))
 const AccountDeletionPage = lazy(() => import('../pages/customer/AccountDeletionPage.jsx'))
+const SavedBusinessesPage = lazy(() => import('../pages/customer/SavedBusinessesPage.jsx'))
 const MessagesPage = lazy(() => import('../pages/MessagesPage.jsx'))
 const PrivacyPage = lazy(() => import('../pages/PrivacyPage.jsx'))
 const ServicesPage = lazy(() => import('../pages/ServicesPage.jsx'))
@@ -78,6 +82,8 @@ function AppRoutes() {
       <Routes>
         <Route element={<SiteLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="events" element={<EventsPage />} />
+          <Route path="community" element={<CommunityPage />} />
           <Route path="services" element={<ServicesPage />} />
           <Route path="services/:businessId" element={<ServicesPage />} />
           <Route path="businesses" element={<LegacyBusinessRedirect />} />
@@ -87,14 +93,18 @@ function AppRoutes() {
           <Route path="contact" element={<ContactPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="subscription" element={<SubscriptionPage />} />
             <Route path="messages" element={<MessagesPage />} />
             <Route path="messages/:conversationId" element={<MessagesPage />} />
+            <Route element={<CustomerRoute />}>
+              <Route path="favourites" element={<SavedBusinessesPage />} />
+            </Route>
             <Route element={<BusinessRoute />}>
               <Route path="business" element={<BusinessLayout />}>
                 <Route index element={<Navigate replace to="dashboard" />} />
                 <Route path="dashboard" element={<BusinessDashboardPage />} />
                 <Route path="edit" element={<EditBusinessPage />} />
-                <Route path="subscription" element={<SubscriptionPage />} />
+                <Route path="subscription" element={<Navigate replace to="/subscription" />} />
               </Route>
             </Route>
           </Route>

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing'
 import {
-  collection, deleteDoc, deleteField, doc, documentId, FieldPath, getCountFromServer, getDoc, getDocs,
+  collection, collectionGroup, deleteDoc, deleteField, doc, documentId, FieldPath, getCountFromServer, getDoc, getDocs,
   limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where,
   writeBatch,
 } from 'firebase/firestore'
@@ -40,6 +40,8 @@ const users = {
   'deletion-pending': user('deletion-pending', { deletionRequestedAt: serverTimestamp() }),
   moderator: user('moderator'),
   admin: user('admin'),
+  'admin-business-only': user('admin-business-only', { roles: ['business'], accountType: 'business' }),
+  'moderator-business-only': user('moderator-business-only', { roles: ['business'], accountType: 'business' }),
 }
 let environment
 
@@ -640,6 +642,103 @@ describe('users and account lifecycle', () => {
     for (const id of ['suspended', 'deleted', 'deletion-pending']) {
       await assertFails(setDoc(doc(environment.authenticatedContext(id).firestore(), 'reports', `report-${id}`), { reporterId: id }))
     }
+  })
+})
+
+describe('saved businesses', () => {
+  const savedReference = (database, userId = 'customer', businessId = 'active-business') => (
+    doc(database, 'users', userId, 'savedBusinesses', businessId)
+  )
+  const validSave = (businessId = 'active-business') => ({ businessId, createdAt: serverTimestamp() })
+
+  test('eligible customer and both-role owners can create, get, list, and delete saves', async () => {
+    for (const userId of ['customer', 'both']) {
+      const database = environment.authenticatedContext(userId).firestore()
+      const reference = savedReference(database, userId)
+      await assertSucceeds(setDoc(reference, validSave()))
+      await assertSucceeds(getDoc(reference))
+      await assertSucceeds(getDocs(query(
+        collection(database, 'users', userId, 'savedBusinesses'),
+        orderBy('createdAt', 'desc'),
+        orderBy(documentId(), 'desc'),
+        limit(20),
+      )))
+      await assertSucceeds(deleteDoc(reference))
+    }
+  })
+
+  test('anonymous, cross-user, business-only, and privileged claims alone cannot access saves', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(savedReference(context.firestore()), {
+        businessId: 'active-business', createdAt: serverTimestamp(),
+      })
+    })
+    const anonymous = environment.unauthenticatedContext().firestore()
+    const unrelated = environment.authenticatedContext('unrelated').firestore()
+    const owner = environment.authenticatedContext('owner').firestore()
+    const admin = environment.authenticatedContext('admin-business-only', { admin: true }).firestore()
+    const moderator = environment.authenticatedContext('moderator-business-only', { moderator: true }).firestore()
+    for (const database of [anonymous, unrelated, owner, admin, moderator]) {
+      await assertFails(getDoc(savedReference(database)))
+      await assertFails(getDocs(collection(database, 'users', 'customer', 'savedBusinesses')))
+      await assertFails(setDoc(savedReference(database), validSave()))
+      await assertFails(deleteDoc(savedReference(database)))
+    }
+    await assertFails(getDocs(collectionGroup(owner, 'savedBusinesses')))
+  })
+
+  test('create requires exact matching fields and a trusted server timestamp', async () => {
+    const database = environment.authenticatedContext('customer').firestore()
+    await assertFails(setDoc(savedReference(database, 'customer', 'other-business'), validSave('active-business')))
+    await assertFails(setDoc(savedReference(database), { businessId: 'active-business' }))
+    await assertFails(setDoc(savedReference(database), { createdAt: serverTimestamp() }))
+    await assertFails(setDoc(savedReference(database), { ...validSave(), cachedName: 'Must not persist' }))
+    await assertFails(setDoc(savedReference(database), {
+      businessId: 'active-business', createdAt: Timestamp.fromMillis(Date.now()),
+    }))
+    await assertFails(setDoc(savedReference(database, 'customer', 'missing-business'), validSave('missing-business')))
+  })
+
+  test('only safe public businesses can be saved', async () => {
+    const database = environment.authenticatedContext('customer').firestore()
+    const ineligibleBusinessIds = [
+      'draft-business', 'active-without-publishedAt-business', 'suspended-business',
+      'archived-business', 'deleted-business', 'active-with-deletion-request-business',
+      'active-with-deletedAt-business', 'incomplete-active-business', 'unsafe-active-business',
+    ]
+    for (const businessId of ineligibleBusinessIds) {
+      await assertFails(setDoc(
+        savedReference(database, 'customer', businessId), validSave(businessId),
+      ))
+    }
+    await assertSucceeds(setDoc(savedReference(database), validSave()))
+  })
+
+  test('saved records cannot be updated and remain removable after a business becomes unavailable', async () => {
+    const customer = environment.authenticatedContext('customer').firestore()
+    const reference = savedReference(customer)
+    await assertSucceeds(setDoc(reference, validSave()))
+    await assertFails(updateDoc(reference, { createdAt: serverTimestamp() }))
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'businesses', 'active-business'), {
+        status: 'suspended', publishedAt: null,
+      })
+    })
+    await assertSucceeds(deleteDoc(reference))
+  })
+
+  test('inactive customer accounts cannot read, list, or create but retain owner removal', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(savedReference(context.firestore(), 'suspended'), {
+        businessId: 'active-business', createdAt: serverTimestamp(),
+      })
+    })
+    const database = environment.authenticatedContext('suspended').firestore()
+    const reference = savedReference(database, 'suspended')
+    await assertFails(getDoc(reference))
+    await assertFails(getDocs(collection(database, 'users', 'suspended', 'savedBusinesses')))
+    await assertFails(setDoc(savedReference(database, 'suspended', 'draft-business'), validSave('draft-business')))
+    await assertSucceeds(deleteDoc(reference))
   })
 })
 
@@ -2131,6 +2230,37 @@ describe('storage', () => {
     await assertSucceeds(getBytes(ref(publicStorage, referencedLogo)))
     await assertSucceeds(getBytes(ref(publicStorage, referencedPhoto)))
     await assertFails(getBytes(ref(publicStorage, unreferencedPhoto)))
+  })
+  test('pending-review canonical media allows its owner and an admin but denies customers and anonymous users', async () => {
+    const businessId = 'pending-canonical-browser-contract'
+    const logoPath = `businesses/${businessId}/logos/logo`
+    const galleryPath = `businesses/${businessId}/photos/0`
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'businesses', businessId), business({
+        ownerId: 'owner',
+        managerIds: ['owner'],
+        status: 'pending_review',
+        publishedAt: null,
+        submittedAt: serverTimestamp(),
+        logoStoragePath: logoPath,
+        galleryStoragePaths: [galleryPath],
+      }))
+      await Promise.all([
+        uploadBytes(ref(context.storage(), logoPath), image, { contentType: 'image/png' }),
+        uploadBytes(ref(context.storage(), galleryPath), image, { contentType: 'image/png' }),
+      ])
+    })
+
+    const adminStorage = environment.authenticatedContext('admin', { admin: true }).storage()
+    const ownerStorage = environment.authenticatedContext('owner').storage()
+    const customerStorage = environment.authenticatedContext('customer').storage()
+    const anonymousStorage = environment.unauthenticatedContext().storage()
+    for (const path of [logoPath, galleryPath]) {
+      await assertSucceeds(getBytes(ref(adminStorage, path)))
+      await assertSucceeds(getBytes(ref(ownerStorage, path)))
+      await assertFails(getBytes(ref(customerStorage, path)))
+      await assertFails(getBytes(ref(anonymousStorage, path)))
+    }
   })
   test('public A/B reads allow only the exact active manifest slot', async () => {
     const businessId = 'active-business'

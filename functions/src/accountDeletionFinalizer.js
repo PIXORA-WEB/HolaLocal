@@ -4,6 +4,7 @@ import {
   acquireAccountDeletionLease,
   assertNoAuthoritativeOwnedBusinesses,
   cleanupUserMedia,
+  cleanupUserSavedBusinesses,
   completeAccountDeletionWorkflow,
   deleteFirebaseAuthUser,
   getAccountDeletionFinalizationEligibility,
@@ -57,6 +58,7 @@ function failureCodeFor(error) {
   if (message === 'manager-cleanup-owner-conflict' || message === 'business-ownership-integrity-conflict') return 'ownership_integrity_conflict'
   if (message === 'manager-relationship-integrity-conflict') return 'manager_relationship_integrity_conflict'
   if (message === 'conversation-deletion-integrity-conflict') return 'conversation_integrity_conflict'
+  if (message === 'saved-businesses-cleanup-failed') return 'saved_businesses_cleanup_failed'
   if (message === 'consent-evidence-invalid') return 'consent_evidence_invalid'
   if (message === 'profile-not-found') return 'user_evidence_minimization_failed'
   return 'internal_retryable'
@@ -78,6 +80,7 @@ export async function finalizeAccountDeletion({
     assertNoOwnedBusinesses: primitives.assertNoOwnedBusinesses ?? assertNoAuthoritativeOwnedBusinesses,
     removeManagerRelationships: primitives.removeManagerRelationships ?? removeUserManagerRelationships,
     tombstoneConversations: primitives.tombstoneConversations ?? tombstoneDeletedUserConversations,
+    cleanupSavedBusinesses: primitives.cleanupSavedBusinesses ?? cleanupUserSavedBusinesses,
     cleanupMedia: primitives.cleanupMedia ?? cleanupUserMedia,
     minimizeEvidenceAndRemoveUser: primitives.minimizeEvidenceAndRemoveUser ?? minimizeConsentEvidenceAndRemoveUser,
     deleteAuthUser: primitives.deleteAuthUser ?? deleteFirebaseAuthUser,
@@ -158,13 +161,25 @@ export async function finalizeAccountDeletion({
     await deps.tombstoneConversations({ uid: safeUid, db })
     await checkpoint('conversations_tombstoned')
 
+    try {
+      const savedBusinesses = await deps.cleanupSavedBusinesses({ uid: safeUid, db })
+      await checkpoint('saved_businesses_cleaned', {
+        savedBusinessesDeleted: savedBusinesses?.deleted ?? 0,
+      })
+    } catch {
+      return fail('saved_businesses_cleanup_failed')
+    }
+
     const mediaResult = await deps.cleanupMedia({ uid: safeUid, db })
     if (!mediaResult?.ok || mediaResult.counts?.failed > 0) {
       return fail('profile_media_cleanup_failed', mediaResult?.counts ?? {
         attempted: 0, deleted: 0, alreadyMissing: 0, failed: 1,
       })
     }
-    await checkpoint('profile_media_cleaned', mediaResult.counts)
+    await checkpoint('profile_media_cleaned', {
+      ...mediaResult.counts,
+      savedBusinessesDeleted: cleanupCounts?.savedBusinessesDeleted ?? 0,
+    })
 
     const evidenceResult = await deps.minimizeEvidenceAndRemoveUser({
       uid: safeUid, db, expectedRequestVersion: version,

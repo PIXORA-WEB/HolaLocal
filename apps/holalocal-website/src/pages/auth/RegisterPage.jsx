@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import FormFieldError from '../../components/common/FormFieldError.jsx'
@@ -9,11 +9,13 @@ import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
 } from '../../utils/policies.js'
+import { normalizeInternalLocation } from '../../utils/internalNavigation.js'
 
 function RegisterPage() {
   const { t } = useTranslation()
   const { signUp } = useAuthentication()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -54,7 +56,10 @@ function RegisterPage() {
       const intent = searchParams.get('intent')
       navigate(intent ? `/verify-email?intent=${intent}` : '/verify-email', {
         replace: true,
-        state: { verificationEmailSent: registration.verificationEmailSent },
+        state: {
+          from: normalizeInternalLocation(location.state?.from),
+          verificationEmailSent: registration.verificationEmailSent,
+        },
       })
     } catch (submissionError) {
       setError(getAuthenticationErrorMessage(submissionError, t))
@@ -173,7 +178,12 @@ function RegisterPage() {
 
       <p className="auth-card__footer">
         {t('auth.registration.existingAccount')}{' '}
-        <Link to="/login">{t('auth.login')}</Link>
+        <Link
+          state={{ from: normalizeInternalLocation(location.state?.from) }}
+          to={searchParams.toString() ? `/login?${searchParams}` : '/login'}
+        >
+          {t('auth.login')}
+        </Link>
       </p>
     </section>
   )

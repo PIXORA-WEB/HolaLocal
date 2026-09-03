@@ -1,6 +1,6 @@
 import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
-import { getFirestore } from 'firebase-admin/firestore'
+import { FieldPath, getFirestore } from 'firebase-admin/firestore'
 import { createAdminCleanupAuditSource } from '../testDataCleanupAudit/adminSource.js'
 
 export function createAdminCleanupExecutionSource(options) {
@@ -20,6 +20,21 @@ export function createAdminCleanupExecutionSource(options) {
       if (!collectionName || !documentId || String(path).split('/').length !== 2) throw new Error('Invalid document path.')
       await database.collection(collectionName).doc(documentId).delete()
       return { path, status: 'deleted' }
+    },
+
+    async deleteUserSavedBusinesses(uid) {
+      if (!uid || String(uid).includes('/')) throw new Error('Invalid user ID.')
+      const collection = database.collection('users').doc(uid).collection('savedBusinesses')
+      let deleted = 0
+      while (true) {
+        const snapshot = await collection.orderBy(FieldPath.documentId()).limit(200).get()
+        if (snapshot.empty) break
+        const batch = database.batch()
+        for (const document of snapshot.docs) batch.delete(document.ref)
+        await batch.commit()
+        deleted += snapshot.size
+      }
+      return { deleted, status: 'deleted', uid }
     },
 
     async deleteAuthAccount(uid) {

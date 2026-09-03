@@ -2,6 +2,7 @@
 // module; this module deliberately has no dependency on Auth, Firestore or Storage.
 import { getApp, getApps, initializeApp } from 'firebase/app'
 import { initializeWebsiteAppCheck } from './appCheckClient.js'
+import { assertFirebaseBrowserTestSafety } from './emulatorMode.js'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -39,6 +40,7 @@ export function validateFirebaseConfiguration() {
 export function getFirebaseApp() {
   if (firebaseApp) return firebaseApp
 
+  assertFirebaseBrowserTestSafety()
   validateFirebaseConfiguration()
   firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
   initializeWebsiteAppCheck(firebaseApp)

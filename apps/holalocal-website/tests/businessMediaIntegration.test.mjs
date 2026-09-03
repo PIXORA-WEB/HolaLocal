@@ -6,6 +6,11 @@ import {
   resolveBusinessMediaPresentation,
 } from '../src/services/businessMediaPresentation.js'
 import {
+  CANONICAL_MEDIA_TIMEOUT_CODE,
+  loadCanonicalBlobPresentation,
+} from '../src/services/canonicalMediaPresentation.js'
+import { OperationTimeoutError } from '../src/utils/withTimeout.js'
+import {
   selectAvailableCanonicalGallerySlot,
   runBusinessGalleryUploads,
   runBusinessLogoUpload,
@@ -191,6 +196,144 @@ test('wrong-business canonical media and malformed legacy media never reach pres
   }, { resolveCanonicalUrl: async () => { throw new Error('must not resolve') } })
   assert.equal(resolved.logoUrl, null)
   assert.deepEqual(resolved.galleryUrls, [])
+})
+
+test('successful canonical media still creates a managed blob presentation', async () => {
+  const revoked = []
+  const presentation = await loadCanonicalBlobPresentation('businesses/business-1/photos/0', {
+    createObjectURL: () => 'blob:canonical-success',
+    getBlob: async () => new Blob(['fixture']),
+    revokeObjectURL: (url) => revoked.push(url),
+    timeoutMs: 25,
+  })
+  assert.equal(presentation.url, 'blob:canonical-success')
+  presentation.revoke()
+  presentation.revoke()
+  assert.deepEqual(revoked, ['blob:canonical-success'])
+})
+
+test('never-settling canonical gallery uses validated legacy fallback and preserves business text', async () => {
+  clearBusinessMediaPresentationCache()
+  const resolved = await resolveBusinessMediaPresentation(businessId, {
+    businessId,
+    description: 'Business text remains available.',
+    galleryStoragePaths: [`businesses/${businessId}/photos/0`],
+    galleryImageURLs: [legacy('photos')],
+  }, {
+    resolveCanonicalUrl: (storagePath) => loadCanonicalBlobPresentation(storagePath, {
+      getBlob: async () => new Promise(() => {}),
+      timeoutMs: 5,
+    }),
+  })
+  assert.equal(resolved.description, 'Business text remains available.')
+  assert.deepEqual(resolved.galleryEntries.map(({ kind }) => kind), ['legacy'])
+})
+
+test('never-settling canonical logo without valid legacy media renders no image', async () => {
+  clearBusinessMediaPresentationCache()
+  const resolved = await resolveBusinessMediaPresentation(businessId, {
+    businessId,
+    name: 'Readable without a logo',
+    logoStoragePath: `businesses/${businessId}/logos/logo`,
+  }, {
+    resolveCanonicalUrl: (storagePath) => loadCanonicalBlobPresentation(storagePath, {
+      getBlob: async () => new Promise(() => {}),
+      timeoutMs: 5,
+    }),
+  })
+  assert.equal(resolved.name, 'Readable without a logo')
+  assert.equal(resolved.logoUrl, null)
+})
+
+test('canonical rejection continues to use validated legacy media', async () => {
+  clearBusinessMediaPresentationCache()
+  const resolved = await resolveBusinessMediaPresentation(businessId, {
+    businessId,
+    logoStoragePath: `businesses/${businessId}/logos/logo`,
+    profilePhoto: { downloadUrl: legacy('logos') },
+  }, { resolveCanonicalUrl: async () => { throw new Error('storage-rejected') } })
+  assert.equal(resolved.logoUrl, legacy('logos'))
+})
+
+test('timed-out canonical cache entries are evicted so a later attempt can succeed', async () => {
+  clearBusinessMediaPresentationCache()
+  const storagePath = `businesses/${businessId}/logos/logo`
+  const first = await resolveBusinessMediaPresentation(businessId, {
+    businessId, logoStoragePath: storagePath,
+  }, {
+    resolveCanonicalUrl: (path) => loadCanonicalBlobPresentation(path, {
+      getBlob: async () => new Promise(() => {}), timeoutMs: 5,
+    }),
+  })
+  assert.equal(first.logoUrl, null)
+
+  const second = await resolveBusinessMediaPresentation(businessId, {
+    businessId, logoStoragePath: storagePath,
+  }, { resolveCanonicalUrl: async () => ({ url: 'blob:fresh-attempt', revoke() {} }) })
+  assert.equal(second.logoUrl, 'blob:fresh-attempt')
+})
+
+test('an older pending cache entry cannot evict a newer successful presentation', async () => {
+  clearBusinessMediaPresentationCache()
+  const storagePath = `businesses/${businessId}/logos/logo`
+  let rejectOlder
+  const older = resolveBusinessMediaPresentation(businessId, {
+    businessId, logoStoragePath: storagePath,
+  }, {
+    resolveCanonicalUrl: async () => new Promise((_resolve, reject) => { rejectOlder = reject }),
+  })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  clearBusinessMediaPresentationCache()
+  const newer = await resolveBusinessMediaPresentation(businessId, {
+    businessId, logoStoragePath: storagePath,
+  }, { resolveCanonicalUrl: async () => ({ url: 'blob:newer', revoke() {} }) })
+  assert.equal(newer.logoUrl, 'blob:newer')
+  rejectOlder(new Error('older-failed'))
+  assert.equal((await older).logoUrl, null)
+  const cached = await resolveBusinessMediaPresentation(businessId, {
+    businessId, logoStoragePath: storagePath,
+  }, { resolveCanonicalUrl: async () => { throw new Error('newer cache was lost') } })
+  assert.equal(cached.logoUrl, 'blob:newer')
+})
+
+test('one stalled business media operation does not suppress another business', async () => {
+  clearBusinessMediaPresentationCache()
+  const stalledId = 'stalled-business'
+  const healthyId = 'healthy-business'
+  const results = await Promise.all([
+    resolveBusinessMediaPresentation(stalledId, {
+      businessId: stalledId,
+      name: 'Stalled media business',
+      logoStoragePath: `businesses/${stalledId}/logos/logo`,
+    }, {
+      resolveCanonicalUrl: (path) => loadCanonicalBlobPresentation(path, {
+        getBlob: async () => new Promise(() => {}), timeoutMs: 5,
+      }),
+    }),
+    resolveBusinessMediaPresentation(healthyId, {
+      businessId: healthyId,
+      name: 'Healthy media business',
+      logoStoragePath: `businesses/${healthyId}/logos/logo`,
+    }, { resolveCanonicalUrl: async () => ({ url: 'blob:healthy-business', revoke() {} }) }),
+  ])
+  assert.deepEqual(results.map(({ name, logoUrl }) => ({ name, logoUrl })), [
+    { name: 'Stalled media business', logoUrl: null },
+    { name: 'Healthy media business', logoUrl: 'blob:healthy-business' },
+  ])
+})
+
+test('late canonical completion creates no object URL after timeout', async () => {
+  let resolveBlob
+  let objectUrlsCreated = 0
+  const blob = new Promise((resolve) => { resolveBlob = resolve })
+  await assert.rejects(loadCanonicalBlobPresentation('businesses/business-1/photos/0', {
+    createObjectURL: () => { objectUrlsCreated += 1; return 'blob:late' },
+    getBlob: async () => blob,
+    timeoutMs: 5,
+  }), (error) => error instanceof OperationTimeoutError && error.code === CANONICAL_MEDIA_TIMEOUT_CODE)
+  resolveBlob(new Blob(['late']))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(objectUrlsCreated, 0)
 })
 
 test('route replacement and application unmount revoke cached canonical business object URLs', async () => {

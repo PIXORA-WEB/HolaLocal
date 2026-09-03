@@ -398,7 +398,7 @@ function BusinessDashboardPage() {
                 <Link className="button button--secondary" to="/business/edit#business-contact-title">{t('business.control.contactSettings')}</Link>
               </>
             )}
-            <Link className="button button--secondary" to="/business/subscription">{t('business.subscription')}</Link>
+            <Link className="button button--secondary" to="/subscription">{t('business.subscription')}</Link>
           </div>
         </article>
 

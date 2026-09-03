@@ -32,6 +32,7 @@ import {
 } from './firebaseCompatibility.js'
 import { isOwnerEditableBusinessStatus } from '../utils/business.js'
 import { clearBusinessMediaPresentationCache, resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
+import { loadPublicBusinessDirectory } from './publicBusinessDirectoryLoader.js'
 import {
   runBusinessGalleryUploads,
   runBusinessLogoUpload,
@@ -65,6 +66,12 @@ async function presentBusiness(business) {
   return business?.businessId
     ? resolveBusinessMediaPresentation(business.businessId, business)
     : business
+}
+
+async function presentBusinessWithoutCanonicalMedia(business) {
+  return resolveBusinessMediaPresentation(business.businessId, business, {
+    resolveCanonicalUrl: async () => { throw new Error('Canonical media is unavailable.') },
+  })
 }
 
 async function presentManagedBusiness(business) {
@@ -185,12 +192,15 @@ function storedPublicContact(contact = {}) {
   return projectPublicContact(sanitizeContact(contact)).contact
 }
 
-export async function getActivePublicBusinesses(maxResults = 60) {
+export async function getActivePublicBusinesses(maxResults = 60, dependencies = {}) {
   const resultLimit = Math.min(Math.max(Number(maxResults) || 1, 1), 100)
-  const result = await listPublicBusinessesCallable({ maxResults: resultLimit })
-  const businesses = Array.isArray(result.data?.businesses)
-    ? result.data.businesses.filter((business) => business?.businessId && business?.name) : []
-  return Promise.all(businesses.map(presentBusiness))
+  return loadPublicBusinessDirectory({
+    callPublicBusinesses: dependencies.callPublicBusinesses ?? listPublicBusinessesCallable,
+    fallbackBusiness: dependencies.fallbackBusiness ?? presentBusinessWithoutCanonicalMedia,
+    maxResults: resultLimit,
+    presentBusiness: dependencies.presentBusiness ?? presentBusiness,
+    timeoutMs: dependencies.timeoutMs,
+  })
 }
 
 export async function getFeaturedActiveBusinesses(maxResults = 60) {

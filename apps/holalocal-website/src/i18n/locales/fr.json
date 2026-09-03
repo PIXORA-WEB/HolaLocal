@@ -53,7 +53,7 @@
   "metadata": {
     "title": "HolaLocal",
     "pageTitle": "{{page}} · HolaLocal",
-    "description": "Trouvez des services locaux fiables et contactez des entreprises locales sur la Costa del Sol et à Gibraltar."
+    "description": "Trouvez des services locaux et contactez des entreprises locales sur la Costa del Sol et à Gibraltar."
   },
   "errors": {
     "application": {
@@ -332,18 +332,18 @@
     "how": {
       "eyebrow": "Comment ça marche",
       "title": "Une aide locale en trois étapes.",
-      "description": "Découvrez les prestataires, consultez leurs profils publics et échangez quand vous êtes prêt.",
+      "description": "Parcourez les services locaux, consultez les profils d’entreprise publiés et échangez quand vous êtes prêt.",
       "browse": {
-        "title": "Parcourir",
-        "description": "Explorez les services et prestataires locaux avant de créer un compte."
+        "title": "Parcourir les services locaux",
+        "description": "Explorez les services locaux et les profils d’entreprise publiés sans créer de compte."
+      },
+      "review": {
+        "title": "Consulter les profils",
+        "description": "Comparez les services, les zones desservies, les langues et les coordonnées publiques que les entreprises choisissent de partager."
       },
       "connect": {
-        "title": "Échanger",
-        "description": "Connectez-vous pour discuter en privé avec l’entreprise adaptée à vos besoins."
-      },
-      "choose": {
-        "title": "Choisir en confiance",
-        "description": "Comparez des informations publiques claires et choisissez le bon prestataire."
+        "title": "Échanger en privé",
+        "description": "Connectez-vous pour démarrer une conversation privée avec l’entreprise adaptée à vos besoins."
       }
     },
     "journeys": {
@@ -351,13 +351,13 @@
       "title": "Trouvez de l’aide ou développez votre présence locale.",
       "customers": {
         "title": "Pour les clients",
-        "description": "Parcourez librement, enregistrez des profils et échangez en privé avec le bon prestataire.",
+        "description": "Enregistrez des profils utiles et connectez-vous lorsque vous souhaitez échanger en privé.",
         "action": "Trouver des services"
       },
       "businesses": {
         "title": "Pour les entreprises locales",
-        "description": "Créez un profil professionnel et rendez vos services plus faciles à découvrir.",
-        "action": "Gérer votre entreprise"
+        "description": "Présentez vos services, zones d’intervention et langues dans un profil clair.",
+        "action": "Référencer votre entreprise"
       }
     },
     "region": {
@@ -531,7 +531,7 @@
     }
   },
   "footer": {
-    "description": "Une communauté locale multilingue et fiable pour trouver et proposer des services sur la Costa del Sol et à Gibraltar.",
+    "description": "Une plateforme locale multilingue pour trouver et proposer des services sur la Costa del Sol et à Gibraltar.",
     "platform": "Plateforme",
     "platformLabel": "Liens de la plateforme",
     "findServices": "Trouver des services",

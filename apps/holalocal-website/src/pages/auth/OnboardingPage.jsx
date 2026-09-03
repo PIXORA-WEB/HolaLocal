@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import logoIcon from '../../assets/logos/logo-icon-display.png'
+import BrandLockup from '../../components/common/BrandLockup.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
-import { internalPathFromLocation } from '../../utils/internalNavigation.js'
+import { intendedLocation, internalPathFromLocation } from '../../utils/internalNavigation.js'
 
 const onboardingOptions = ['customer', 'business', 'both']
 
@@ -61,7 +61,7 @@ function OnboardingPage() {
       await completeOnboarding(accountType)
 
       const fallback = requiresBusinessProfile ? '/business/dashboard' : '/profile'
-      navigate(internalPathFromLocation(location.state?.from, fallback), { replace: true })
+      navigate(internalPathFromLocation(intendedLocation(location), fallback), { replace: true })
     } catch (submissionError) {
       setError(classifyFrontendError(submissionError, {
         domain: 'workflow',
@@ -87,7 +87,7 @@ function OnboardingPage() {
   return (
     <section className="auth-card onboarding-card" aria-labelledby="onboarding-title">
       <div className="onboarding-card__heading">
-        <img className="onboarding-card__logo" decoding="async" height="200" src={logoIcon} alt={t('onboarding.logoAlt')} width="184" />
+        <BrandLockup className="onboarding-card__logo" label={t('onboarding.logoAlt')} linked={false} variant="icon" />
         <p className="auth-card__eyebrow">{t('onboarding.eyebrow')}</p>
         <h1 id="onboarding-title">{t('onboarding.title')}</h1>
         <p>{t('onboarding.description')}</p>

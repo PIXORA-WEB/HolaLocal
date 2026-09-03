@@ -547,25 +547,23 @@ fields and must preserve the original sender and creation timestamp.
 Disable indexing for `text`, attachment URLs, and unqueried attachment metadata.
 Paginate message history; never attach a listener to an unbounded history.
 
-## 7. `favourites`
+## 7. Saved businesses
 
-**Collection path:** `favourites/{favouriteId}`  
-**Document ID:** Deterministic `{userId}_{businessId}` to make add/remove
-idempotent and enforce one favourite per user/business pair.
+**Collection path:** `users/{uid}/savedBusinesses/{businessId}`
+**Document ID:** The canonical business ID. The deterministic path makes save
+creation idempotent and permits only one saved record per user/business pair.
 
 ### Fields
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `userId` | `string` | Yes | Owning customer UID. |
 | `businessId` | `string` | Yes | Saved business ID. |
-| `createdAt` | `Timestamp` | Yes | Time favourited. |
+| `createdAt` | `Timestamp` | Yes | Trusted server time when the business was saved. |
 
 ### Example document template
 
 ```json
 {
-  "userId": "<uid>",
   "businessId": "<businessId>",
   "createdAt": "<Timestamp>"
 }
@@ -573,20 +571,34 @@ idempotent and enforce one favourite per user/business pair.
 
 ### Relationships
 
-- `userId` references `users/{uid}`.
+- The parent `users/{uid}` path is the private owner boundary.
 - `businessId` references `businesses/{businessId}`.
-- Business display data should be joined in the client/service layer or copied
-  only as a deliberately maintained bounded snapshot.
+- The payload business ID must equal the document ID.
+- Only active accounts whose canonical `roles` contains `customer` may create,
+  get, or list saved records. A `both` account is eligible; a business-only
+  account is not. Administrative claims alone do not grant access.
+- Saved records are private to their owning customer. Businesses cannot query
+  saver identities, and no public save count or business-facing aggregate is
+  part of this contract.
+- No business name, description, location, contact data, media, lifecycle state,
+  or other business snapshot is copied into a saved record. Website and mobile
+  clients resolve current display data through the same bounded trusted list
+  boundary and canonical public-business projection.
+- Missing, deleted, suspended, archived, malformed, or unpublished businesses
+  are represented only as generic unavailable saved entries. Their records
+  remain removable by the owner without revealing stale business data.
+- Save creation uses the deterministic document ID and a server timestamp;
+  duplicate attempts are harmlessly idempotent. Removal deletes that exact
+  owner-scoped document. Updates are not supported.
+- Trusted account deletion must remove every document in the user's
+  `savedBusinesses` subcollection before deleting the parent user document.
+- This is the shared website/mobile persistence contract.
 
 ### Recommended indexes
 
-| Query | Composite index |
-| --- | --- |
-| User favourites, newest first | `userId ASC, createdAt DESC` |
-| Favourite count/administration by business | `businessId ASC, createdAt DESC` |
-
-Security rules must allow users to read and mutate only favourites whose
-`userId` matches their authenticated UID.
+The owner-scoped query orders by `createdAt DESC` and document ID as a stable
+tie-breaker. Add an index only if the implemented query is proven to require
+one; no business-oriented saver or count index is approved.
 
 ## 8. `reports`
 

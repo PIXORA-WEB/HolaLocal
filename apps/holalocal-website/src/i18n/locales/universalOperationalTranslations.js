@@ -827,3 +827,49 @@ for (const [locale, translations] of Object.entries(conversationLifecycleTransla
 for (const [locale, translations] of Object.entries(messagingErrorTranslations)) {
   Object.assign(universalOperationalTranslations[locale].messages.errors, translations)
 }
+
+const customerOnboardingDescriptions = {
+  es: 'Descubre profesionales locales y consulta sus perfiles públicos de negocio.',
+  fr: 'Découvrez des professionnels locaux et consultez leurs profils d’entreprise publics.',
+  de: 'Entdecken Sie lokale Fachleute und sehen Sie sich deren öffentliche Unternehmensprofile an.',
+  nl: 'Ontdek lokale professionals en bekijk hun openbare bedrijfsprofielen.',
+  pt: 'Descubra profissionais locais e consulte os seus perfis públicos de empresa.',
+  pl: 'Znajdź lokalnych specjalistów i przejrzyj ich publiczne profile firmowe.',
+  ro: 'Descoperă profesioniști locali și consultă profilurile publice ale firmelor lor.',
+  cs: 'Najděte místní odborníky a prohlédněte si jejich veřejné firemní profily.',
+  sk: 'Nájdite miestnych odborníkov a prezrite si ich verejné firemné profily.',
+  hu: 'Fedezz fel helyi szakembereket, és tekintsd meg nyilvános vállalkozási profiljukat.',
+  uk: 'Знаходьте місцевих фахівців і переглядайте їхні публічні бізнес-профілі.',
+  it: 'Scopri professionisti locali e consulta i loro profili pubblici.',
+  sv: 'Hitta lokala yrkespersoner och se deras offentliga företagsprofiler.',
+  da: 'Find lokale fagfolk, og se deres offentlige virksomhedsprofiler.',
+  fi: 'Löydä paikallisia ammattilaisia ja tutustu heidän julkisiin yritysprofiileihinsa.',
+  no: 'Finn lokale fagfolk og se de offentlige bedriftsprofilene deres.',
+}
+
+for (const [locale, description] of Object.entries(customerOnboardingDescriptions)) {
+  universalOperationalTranslations[locale].onboarding.options.customer.description = description
+}
+
+const privateReportConfirmationTranslations = {
+  es: 'Tu denuncia se ha enviado de forma privada al equipo de HolaLocal.',
+  fr: 'Votre signalement a été envoyé en privé à l’équipe HolaLocal.',
+  de: 'Ihre Meldung wurde privat an das HolaLocal-Team gesendet.',
+  nl: 'Je melding is privé naar het HolaLocal-team verstuurd.',
+  pt: 'A sua denúncia foi enviada em privado para a equipa da HolaLocal.',
+  pl: 'Twoje zgłoszenie zostało prywatnie wysłane do zespołu HolaLocal.',
+  ro: 'Raportul tău a fost trimis în mod privat echipei HolaLocal.',
+  cs: 'Vaše hlášení bylo soukromě odesláno týmu HolaLocal.',
+  sk: 'Vaše hlásenie bolo súkromne odoslané tímu HolaLocal.',
+  hu: 'A bejelentésedet privát módon elküldtük a HolaLocal csapatának.',
+  uk: 'Вашу скаргу приватно надіслано команді HolaLocal.',
+  it: 'La tua segnalazione è stata inviata in privato al team di HolaLocal.',
+  sv: 'Din anmälan har skickats privat till HolaLocal-teamet.',
+  da: 'Din anmeldelse er sendt privat til HolaLocal-teamet.',
+  fi: 'Ilmoituksesi on lähetetty yksityisesti HolaLocal-tiimille.',
+  no: 'Rapporten din er sendt privat til HolaLocal-teamet.',
+}
+
+for (const [locale, value] of Object.entries(privateReportConfirmationTranslations)) {
+  universalOperationalTranslations[locale].reports.submittedDescription = value
+}

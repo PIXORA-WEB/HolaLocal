@@ -1,72 +1,83 @@
-import { mkdtemp, mkdir, readdir, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { spawn } from 'node:child_process'
+import { connect } from 'node:net'
+import { join } from 'node:path'
+import {
+  adminBrowserEmulatorArguments,
+  getAdminBrowserLifecycle,
+  parseAdminBrowserSmokeArguments,
+} from './adminBrowserSmokeSelection.mjs'
+import { createProtectedBrowserTestEnvironment } from './browserTestEnvironment.mjs'
+import { TEST_PROJECT_ID } from './fixtures.js'
 
-const projectId = 'demo-holalocal-admin-browser'
-const cache = process.env.FIREBASE_EMULATORS_PATH
-  ?? join(tmpdir(), 'holalocal-firebase-emulators-cache')
+const protectedPorts = Object.freeze([4175, 5001, 8080, 9099, 9199])
+const selection = parseAdminBrowserSmokeArguments(process.argv.slice(2))
+let activeChild = null
 
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-  throw new Error('Browser smoke tests refuse to run while GOOGLE_APPLICATION_CREDENTIALS is set.')
-}
-const cacheEntries = await readdir(cache).catch(() => [])
-if (!cacheEntries.some((entry) => /^cloud-firestore-emulator-v.*\.jar$/.test(entry))) {
-  throw new Error(`A preseeded Firestore emulator cache is required at ${cache}.`)
-}
-
-const isolatedRoot = await mkdtemp(join(tmpdir(), 'holalocal-admin-browser-'))
-const xdg = join(isolatedRoot, 'xdg')
-await mkdir(join(xdg, 'configstore'), { recursive: true })
-await writeFile(
-  join(xdg, 'configstore', 'firebase-tools.json'),
-  `${JSON.stringify({ motd: { fetched: 4102444800000 } })}\n`,
-)
-
-const env = {
-  ...process.env,
-  CLOUDSDK_CONFIG: join(isolatedRoot, 'gcloud'),
-  FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
-  FIREBASE_EMULATORS_PATH: cache,
-  FIREBASE_TOOLS_DISABLE_UPDATE_NOTIFIER: 'true',
-  FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
-  GCLOUD_PROJECT: projectId,
-  GOOGLE_APPLICATION_CREDENTIALS: '',
-  GOOGLE_CLOUD_PROJECT: projectId,
-  HOME: join(isolatedRoot, 'home'),
-  MESSAGE_TRANSLATION_PROVIDER: 'disabled',
-  NO_UPDATE_NOTIFIER: '1',
-  PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH
-    ?? join(process.env.HOME, '.cache', 'ms-playwright'),
-  STORAGE_EMULATOR_HOST: '127.0.0.1:9199',
-  VITE_FIREBASE_API_KEY: 'demo-api-key',
-  VITE_FIREBASE_APP_ID: '1:123456789:web:adminbrowser',
-  VITE_FIREBASE_AUTH_DOMAIN: `${projectId}.firebaseapp.com`,
-  VITE_FIREBASE_MESSAGING_SENDER_ID: '123456789',
-  VITE_FIREBASE_PROJECT_ID: projectId,
-  VITE_FIREBASE_STORAGE_BUCKET: `${projectId}.appspot.com`,
-  VITE_USE_FIREBASE_EMULATORS: 'true',
-  XDG_CONFIG_HOME: xdg,
-}
-delete env.DEBUG
-
-const child = spawn('firebase', [
-  'emulators:exec',
-  '--config',
-  '../../firebase.json',
-  '--project',
-  projectId,
-  '--only',
-  'auth,firestore,storage,functions',
-  'node tests/browser/seedAdminBrowser.mjs && node tests/browser/warmAdminBrowser.mjs && playwright test --config playwright.admin.config.js',
-], { env, stdio: 'inherit' })
-
-for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.once(signal, () => {
-    child.kill(signal)
+function portAcceptsConnections(port) {
+  return new Promise((resolve) => {
+    const socket = connect({ host: '127.0.0.1', port })
+    const finish = (open) => {
+      socket.destroy()
+      resolve(open)
+    }
+    socket.setTimeout(250, () => finish(false))
+    socket.once('connect', () => finish(true))
+    socket.once('error', () => finish(false))
   })
 }
 
-child.on('exit', (code, signal) => {
-  process.exitCode = signal ? 1 : code ?? 1
-})
+async function assertProtectedPortsClosed(boundary) {
+  const states = await Promise.all(protectedPorts.map(async (port) => ({
+    open: await portAcceptsConnections(port), port,
+  })))
+  const openPorts = states.filter(({ open }) => open).map(({ port }) => port)
+  if (openPorts.length) throw new Error(`${boundary} requires closed protected ports: ${openPorts.join(', ')}.`)
+}
+
+function runProcess(command, args, options) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, options)
+    activeChild = child
+    child.once('error', reject)
+    child.once('exit', (code, signal) => {
+      activeChild = null
+      resolve({ code: code ?? 1, signal })
+    })
+  })
+}
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => activeChild?.kill(signal))
+}
+
+if (selection.mode === 'diagnostic') {
+  console.log('Protected targeted diagnostic mode: route-claims only; Playwright retries disabled.')
+} else {
+  console.log('Protected admin-browser acceptance plan: three exclusive emulator lifecycles; Playwright retries disabled.')
+}
+
+for (const lifecycleId of selection.lifecycleIds) {
+  const lifecycle = getAdminBrowserLifecycle(lifecycleId)
+  await assertProtectedPortsClosed(`${lifecycle.label} startup`)
+  const { environment } = await createProtectedBrowserTestEnvironment({
+    prefix: `holalocal-admin-browser-${lifecycle.id}-`,
+    playwrightBrowsersPath: process.env.PLAYWRIGHT_BROWSERS_PATH
+      ?? join(process.env.HOME, '.cache', 'ms-playwright'),
+  })
+  const env = {
+    ...environment,
+    HOLALOCAL_ADMIN_BROWSER_ARTIFACT_GROUP: lifecycle.artifactGroup,
+    HOLALOCAL_ADMIN_BROWSER_LIFECYCLE_ID: lifecycle.id,
+  }
+  console.log(`${lifecycle.label} starting fresh: ${lifecycle.scenarioTitles.join(' → ')}; retries=${lifecycle.retries}.`)
+  const result = await runProcess(
+    'firebase', adminBrowserEmulatorArguments(TEST_PROJECT_ID), { env, stdio: 'inherit' },
+  )
+  if (result.signal || result.code !== 0) {
+    throw new Error(`${lifecycle.label} failed${result.signal ? ` with signal ${result.signal}` : ` with exit code ${result.code}`}.`)
+  }
+  await assertProtectedPortsClosed(`${lifecycle.label} shutdown`)
+  console.log(`${lifecycle.label} passed and shut down cleanly.`)
+}
+
+console.log(`Protected admin-browser ${selection.mode} plan passed.`)

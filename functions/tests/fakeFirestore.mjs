@@ -1,6 +1,7 @@
 export class FakeSnapshot {
-  constructor(id, data) {
+  constructor(id, data, ref = null) {
     this.id = id
+    this.ref = ref
     this.exists = data !== undefined
     this._data = data
   }
@@ -45,8 +46,9 @@ class FakeCollectionRef {
     this.database = database
     this.path = path
     this.filters = []
-    this.order = null
+    this.orders = []
     this.limitCount = Infinity
+    this.cursor = null
   }
 
   doc(id) {
@@ -56,31 +58,45 @@ class FakeCollectionRef {
   where(field, operator, value) {
     const next = new FakeCollectionRef(this.database, this.path)
     next.filters = [...this.filters, { field, operator, value }]
-    next.order = this.order
+    next.orders = this.orders
     next.limitCount = this.limitCount
+    next.cursor = this.cursor
     return next
   }
 
   orderBy(field, direction = 'asc') {
     const next = new FakeCollectionRef(this.database, this.path)
     next.filters = this.filters
-    next.order = { field, direction }
+    next.orders = [...this.orders, { field, direction }]
     next.limitCount = this.limitCount
+    next.cursor = this.cursor
     return next
   }
 
   limit(count) {
     const next = new FakeCollectionRef(this.database, this.path)
     next.filters = this.filters
-    next.order = this.order
+    next.orders = this.orders
     next.limitCount = count
+    next.cursor = this.cursor
+    return next
+  }
+
+  startAfter(...values) {
+    const next = new FakeCollectionRef(this.database, this.path)
+    next.filters = this.filters
+    next.orders = this.orders
+    next.limitCount = this.limitCount
+    next.cursor = values
     return next
   }
 
   async get() {
     let documents = [...this.database.store.entries()]
       .filter(([path]) => path.startsWith(`${this.path}/`) && !path.slice(this.path.length + 1).includes('/'))
-      .map(([path, data]) => new FakeSnapshot(path.split('/').pop(), data))
+      .map(([path, data]) => new FakeSnapshot(
+        path.split('/').pop(), data, new FakeDocRef(this.database, path),
+      ))
     for (const filter of this.filters) {
       documents = documents.filter((snapshot) => {
         const value = String(filter.field) === '__name__' ? snapshot.id : snapshot.data()?.[filter.field]
@@ -92,15 +108,26 @@ class FakeCollectionRef {
         throw new Error(`Unsupported fake query operator: ${filter.operator}`)
       })
     }
-    if (this.order) {
-      const direction = this.order.direction === 'desc' ? -1 : 1
+    const fieldValue = (snapshot, field) => String(field) === '__name__'
+      ? snapshot.id
+      : snapshot.data()?.[field]
+    const comparable = (value) => typeof value?.toMillis === 'function' ? value.toMillis() : value
+    if (this.orders.length > 0) {
       documents.sort((first, second) => {
-        const left = first.data()?.[this.order.field]
-        const right = second.data()?.[this.order.field]
-        const leftTime = typeof left?.toMillis === 'function' ? left.toMillis() : Number(new Date(left))
-        const rightTime = typeof right?.toMillis === 'function' ? right.toMillis() : Number(new Date(right))
-        return (leftTime - rightTime) * direction
+        for (const order of this.orders) {
+          const left = comparable(fieldValue(first, order.field))
+          const right = comparable(fieldValue(second, order.field))
+          if (left === right) continue
+          return (left < right ? -1 : 1) * (order.direction === 'desc' ? -1 : 1)
+        }
+        return 0
       })
+    }
+    if (this.cursor) {
+      const cursorIndex = documents.findIndex((snapshot) => this.orders.every((order, index) => (
+        comparable(fieldValue(snapshot, order.field)) === comparable(this.cursor[index])
+      )))
+      documents = cursorIndex >= 0 ? documents.slice(cursorIndex + 1) : []
     }
     documents = documents.slice(0, this.limitCount)
     return {
@@ -176,7 +203,7 @@ export class FakeFirestore {
   }
 
   snapshot(path) {
-    return new FakeSnapshot(path.split('/').pop(), this.store.get(path))
+    return new FakeSnapshot(path.split('/').pop(), this.store.get(path), new FakeDocRef(this, path))
   }
 
   async runTransaction(callback) {

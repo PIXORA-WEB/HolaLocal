@@ -10,7 +10,11 @@ import {
   TEST_LEGACY_LOGO_URL,
   TEST_PASSWORD,
   TEST_PROJECT_ID,
+  TEST_PUBLIC_BUSINESSES,
   TEST_USERS,
+  assertLoopbackFixtureMediaUrl,
+  normalizeStorageEmulatorHost,
+  testLegacyMediaUrl,
 } from './fixtures.js'
 
 if (process.env.GCLOUD_PROJECT !== TEST_PROJECT_ID) {
@@ -22,6 +26,12 @@ if (!process.env.FIREBASE_AUTH_EMULATOR_HOST || !process.env.FIRESTORE_EMULATOR_
 if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   throw new Error('Browser fixture seeding refuses application credentials.')
 }
+const storageEmulatorHost = normalizeStorageEmulatorHost(process.env.STORAGE_EMULATOR_HOST)
+if (process.env.FIREBASE_AUTH_EMULATOR_HOST !== '127.0.0.1:9099'
+  || process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8080') {
+  throw new Error('Browser fixture seeding requires the fixed loopback emulator endpoints.')
+}
+process.env.STORAGE_EMULATOR_HOST = storageEmulatorHost
 
 const storageBucket = `${TEST_PROJECT_ID}.appspot.com`
 const app = getApps()[0] ?? initializeApp({ projectId: TEST_PROJECT_ID, storageBucket })
@@ -35,7 +45,7 @@ await fetch(`http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/emulator/v1/proje
 await fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${TEST_PROJECT_ID}/databases/(default)/documents`, {
   method: 'DELETE',
 })
-await fetch(`http://${process.env.STORAGE_EMULATOR_HOST}/emulator/v1/projects/${TEST_PROJECT_ID}/buckets/${storageBucket}`, {
+await fetch(`${process.env.STORAGE_EMULATOR_HOST}/emulator/v1/projects/${TEST_PROJECT_ID}/buckets/${storageBucket}`, {
   method: 'DELETE',
 }).catch(() => undefined)
 
@@ -60,14 +70,14 @@ for (const user of Object.values(TEST_USERS)) {
     preferredLocale: user.preferredLocale,
     city: 'Marbella',
     country: 'Spain',
-    accountType: user.uid === TEST_USERS.owner.uid ? 'business' : 'customer',
-    roles: user.uid === TEST_USERS.owner.uid ? ['business'] : ['customer'],
+    accountType: user.businessId ? 'business' : 'customer',
+    roles: user.businessId ? ['business'] : ['customer'],
     accountStatus: 'active',
     profileCompleted: true,
     onboardingCompleted: true,
     businessProfileRequired: false,
-    businessProfileCompleted: user.uid === TEST_USERS.owner.uid,
-    businessId: user.uid === TEST_USERS.owner.uid ? TEST_BUSINESS_ID : null,
+    businessProfileCompleted: Boolean(user.businessId),
+    businessId: user.businessId ?? null,
     termsAccepted: true,
     termsVersion: '1.0',
     privacyAccepted: true,
@@ -89,7 +99,11 @@ const onePixelPng = Buffer.from(
 )
 const logoPath = TEST_LEGACY_LOGO_PATH
 const galleryPath = TEST_LEGACY_GALLERY_PATH
-for (const path of [logoPath, galleryPath]) {
+const publicMediaPaths = TEST_PUBLIC_BUSINESSES.flatMap((business) => [
+  business.logoStoragePath,
+  ...business.galleryStoragePaths,
+])
+for (const path of [logoPath, galleryPath, ...publicMediaPaths]) {
   await bucket.file(path).save(onePixelPng, {
     contentType: 'image/png',
   })
@@ -124,6 +138,8 @@ await db.doc(`businesses/${TEST_BUSINESS_ID}`).set({
     originalName: 'gallery.png', size: onePixelPng.length,
   }],
   galleryImageURLs: [TEST_LEGACY_GALLERY_URL],
+  logoStoragePath: logoPath,
+  galleryStoragePaths: [galleryPath],
   galleryCount: 1,
   ratingAverage: 0,
   ratingCount: 0,
@@ -147,5 +163,75 @@ await db.doc(`businessPrivate/${TEST_BUSINESS_ID}`).set({
   createdAt: submittedAt,
   updatedAt: submittedAt,
 })
+
+for (const [index, fixture] of TEST_PUBLIC_BUSINESSES.entries()) {
+  const publishedAt = Timestamp.fromDate(new Date(`2026-07-0${index + 2}T12:00:00.000Z`))
+  const logoUrl = assertLoopbackFixtureMediaUrl(
+    testLegacyMediaUrl(fixture.logoStoragePath),
+    fixture.logoStoragePath,
+  )
+  const galleryUrls = fixture.galleryStoragePaths.map((path) => (
+    assertLoopbackFixtureMediaUrl(testLegacyMediaUrl(path), path)
+  ))
+  await db.doc(`businesses/${fixture.businessId}`).set({
+    ownerId: fixture.ownerId,
+    managerIds: [fixture.ownerId],
+    name: fixture.name,
+    nameNormalized: fixture.nameNormalized,
+    slug: fixture.slug,
+    tagline: fixture.tagline,
+    description: fixture.description,
+    primaryCategoryId: fixture.primaryCategoryId,
+    categoryIds: [...fixture.categoryIds],
+    serviceAreas: [...fixture.serviceAreas],
+    serviceRadiusKm: index === 0 ? 12 : 35,
+    location: { ...fixture.location },
+    contact: {
+      phone: '', phoneVisible: false, email: '', emailVisible: false,
+      whatsappNumber: '', whatsappVisible: false, website: '', websiteVisible: false,
+      preferredContactMethod: 'holalocal', allowCallbackRequests: false,
+    },
+    languages: [...fixture.languages],
+    primaryLanguage: fixture.primaryLanguage,
+    profilePhoto: {
+      storagePath: fixture.logoStoragePath, downloadUrl: logoUrl, contentType: 'image/png',
+      originalName: 'synthetic-logo.png', size: onePixelPng.length,
+    },
+    galleryImages: fixture.galleryStoragePaths.map((storagePath, galleryIndex) => ({
+      storagePath,
+      downloadUrl: galleryUrls[galleryIndex],
+      contentType: 'image/png',
+      originalName: `synthetic-gallery-${galleryIndex}.png`,
+      size: onePixelPng.length,
+    })),
+    galleryImageURLs: galleryUrls,
+    logoStoragePath: fixture.logoStoragePath,
+    galleryStoragePaths: [...fixture.galleryStoragePaths],
+    galleryCount: fixture.galleryStoragePaths.length,
+    ratingAverage: fixture.ratingAverage,
+    ratingCount: fixture.ratingCount,
+    status: 'active',
+    verificationStatus: fixture.verificationStatus,
+    verifiedAt: fixture.verificationStatus === 'verified' ? publishedAt : null,
+    subscription: { tier: 'free', status: 'none', provider: null, currentPeriodEnd: null },
+    profileCompleted: true,
+    publishedAt,
+    deletionRequestedAt: null,
+    deletedAt: null,
+    createdAt: publishedAt,
+    submittedAt: publishedAt,
+    updatedAt: publishedAt,
+  })
+  await db.doc(`businessPrivate/${fixture.businessId}`).set({
+    ownerId: fixture.ownerId,
+    managerIds: [fixture.ownerId],
+    contact: { email: `${fixture.businessId}@example.invalid`, phone: '' },
+    visibility: { email: false, phone: false, whatsapp: false, website: false },
+    preferredContactMethod: 'holalocal',
+    currentRejection: null,
+    createdAt: publishedAt,
+    updatedAt: publishedAt,
+  })
+}
 
 console.log(`Seeded isolated browser fixtures for ${TEST_PROJECT_ID}.`)

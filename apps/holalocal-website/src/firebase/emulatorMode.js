@@ -1,26 +1,44 @@
-const EMULATOR_MODE = 'browser-test'
-const DEMO_PROJECT_PREFIX = 'demo-'
+import {
+  BROWSER_TEST_MODE,
+  validateBrowserTestSafety,
+} from './browserTestSafety.js'
+
 const CONNECTIONS_KEY = Symbol.for('holalocal.firebaseEmulatorConnections')
 const emulatorConnections = globalThis[CONNECTIONS_KEY] ??= new WeakSet()
+let validatedConfiguration
 
-export const FIREBASE_EMULATOR_ENDPOINTS = Object.freeze({
-  auth: Object.freeze({ host: '127.0.0.1', port: 9099 }),
-  firestore: Object.freeze({ host: '127.0.0.1', port: 8080 }),
-  functions: Object.freeze({ host: '127.0.0.1', port: 5001 }),
-  storage: Object.freeze({ host: '127.0.0.1', port: 9199 }),
-})
+function currentEnvironment() {
+  return import.meta.env
+}
+
+export function getFirebaseEmulatorConfiguration() {
+  const environment = currentEnvironment()
+  if (validatedConfiguration !== undefined) return validatedConfiguration
+
+  validatedConfiguration = validateBrowserTestSafety({
+    mode: environment.MODE,
+    production: environment.PROD === true,
+    environment,
+  })
+  return validatedConfiguration
+}
+
+export function assertFirebaseBrowserTestSafety() {
+  return getFirebaseEmulatorConfiguration()
+}
 
 export function shouldUseFirebaseEmulators() {
-  const requested = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
-  if (!requested) return false
+  const configuration = getFirebaseEmulatorConfiguration()
+  if (currentEnvironment().MODE === BROWSER_TEST_MODE) return true
+  return configuration !== null
+}
 
-  if (import.meta.env.MODE !== EMULATOR_MODE || import.meta.env.PROD) {
-    throw new Error('Firebase emulator mode is restricted to the browser-test Vite development mode.')
+export function getFirebaseEmulatorEndpoint(service) {
+  const configuration = getFirebaseEmulatorConfiguration()
+  if (!configuration?.endpoints?.[service]) {
+    throw new Error(`Firebase ${service} emulator endpoint is unavailable outside protected browser-test mode.`)
   }
-  if (!import.meta.env.VITE_FIREBASE_PROJECT_ID?.startsWith(DEMO_PROJECT_PREFIX)) {
-    throw new Error('Firebase emulator mode requires an explicit demo-* Firebase project ID.')
-  }
-  return true
+  return configuration.endpoints[service]
 }
 
 export function connectFirebaseEmulatorOnce(client, connect) {

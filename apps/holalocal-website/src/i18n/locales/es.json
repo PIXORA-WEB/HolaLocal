@@ -53,7 +53,7 @@
   "metadata": {
     "title": "HolaLocal",
     "pageTitle": "{{page}} · HolaLocal",
-    "description": "Encuentra servicios locales de confianza y conecta con empresas locales en la Costa del Sol y Gibraltar."
+    "description": "Encuentra servicios locales y conecta con empresas locales en la Costa del Sol y Gibraltar."
   },
   "errors": {
     "application": {
@@ -332,18 +332,18 @@
     "how": {
       "eyebrow": "Cómo funciona",
       "title": "Ayuda local en tres pasos claros.",
-      "description": "Descubre proveedores relevantes, revisa sus perfiles públicos y conecta cuando quieras.",
+      "description": "Explora servicios locales, revisa perfiles de negocios publicados y conecta cuando quieras.",
       "browse": {
-        "title": "Explora",
-        "description": "Consulta servicios y proveedores locales antes de crear una cuenta."
+        "title": "Explora servicios locales",
+        "description": "Explora servicios locales y perfiles de negocios publicados sin crear una cuenta."
+      },
+      "review": {
+        "title": "Revisa perfiles",
+        "description": "Compara servicios, zonas de servicio, idiomas y los datos de contacto públicos que cada negocio decida compartir."
       },
       "connect": {
-        "title": "Conecta",
+        "title": "Conecta en privado",
         "description": "Inicia sesión para hablar en privado con el negocio que mejor encaje contigo."
-      },
-      "choose": {
-        "title": "Elige con confianza",
-        "description": "Compara información pública clara y elige al profesional adecuado."
       }
     },
     "journeys": {
@@ -351,13 +351,13 @@
       "title": "Encuentra ayuda o impulsa tu presencia local.",
       "customers": {
         "title": "Para clientes",
-        "description": "Explora libremente, guarda perfiles útiles y conecta en privado con el proveedor adecuado.",
+        "description": "Guarda perfiles útiles e inicia sesión cuando quieras conectar en privado.",
         "action": "Encontrar servicios"
       },
       "businesses": {
         "title": "Para negocios locales",
-        "description": "Crea un perfil profesional y facilita que los clientes cercanos descubran tus servicios.",
-        "action": "Gestionar tu negocio"
+        "description": "Presenta tus servicios, zonas de servicio e idiomas en un perfil claro.",
+        "action": "Publicar tu negocio"
       }
     },
     "region": {
@@ -531,7 +531,7 @@
     }
   },
   "footer": {
-    "description": "Una comunidad local multilingüe y de confianza para encontrar y ofrecer servicios en la Costa del Sol y Gibraltar.",
+    "description": "Una plataforma local multilingüe para encontrar y ofrecer servicios en la Costa del Sol y Gibraltar.",
     "platform": "Plataforma",
     "platformLabel": "Enlaces de la plataforma",
     "findServices": "Encontrar servicios",

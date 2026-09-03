@@ -1,11 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { assertCallableBoundaryEnvironment } from '../scripts/runIsolatedEmulatorTests.mjs'
 
 if (process.env.HOLALOCAL_CALLABLE_BOUNDARY === '1') {
+  assertCallableBoundaryEnvironment()
   await import('./accountDeletionPrimitivesEmulator.test.mjs')
+  await import('./accountDeletionCallableEmulator.test.mjs')
   await import('./businessInsightsEmulator.test.mjs')
   await import('./businessMediaEmulator.test.mjs')
+  await import('./savedBusinessesEmulator.test.mjs')
 }
 
 test('callable boundary harness runs only under demo project isolation', () => {
@@ -13,8 +17,13 @@ test('callable boundary harness runs only under demo project isolation', () => {
   const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT
   assert.match(projectId ?? '', /^demo-/)
   assert.equal(process.env.GOOGLE_APPLICATION_CREDENTIALS ?? '', '')
+  assert.equal(process.env.FIREBASE_TOKEN ?? '', '')
+  assert.equal(process.env.GOOGLE_OAUTH_ACCESS_TOKEN ?? '', '')
   assert.equal(process.env.MESSAGE_TRANSLATION_PROVIDER, 'disabled')
-  assert.equal(JSON.parse(process.env.FIREBASE_CONFIG ?? '{}').projectId, projectId)
+  assert.deepEqual(JSON.parse(process.env.FIREBASE_CONFIG ?? '{}'), {
+    projectId,
+    storageBucket: 'demo-holalocal-functions.appspot.com',
+  })
 })
 
 test('callable exports remain registered in europe-west1', async () => {
@@ -25,6 +34,7 @@ test('callable exports remain registered in europe-west1', async () => {
     'getAdminBusinessReview', 'listPublicBusinesses', 'recordBusinessInsight',
     'getOwnerBusinessInsights',
     'assignBusinessSubscriptionPlan', 'getPublicBusiness', 'getOwnerSubscriptionStatus',
+    'listSavedBusinesses',
     'openBusinessConversation', 'getConversationBusinessContext',
     'manageBusinessMedia', 'requestAccountDeletion', 'cancelAccountDeletion',
     'finalizeAccountDeletion', 'listAdminAccountDeletionRequests',

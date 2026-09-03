@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  ACCOUNT_STATUSES, BUSINESS_CONTRACT, BUSINESS_STATUSES, CONTACT_METHODS, ISSUE_CODES, SUBSCRIPTION_STATUSES,
+  ACCOUNT_STATUSES, BUSINESS_CONTRACT, BUSINESS_STATUSES, CONTACT_METHODS, ISSUE_CODES,
+  SAVED_BUSINESS_CONTRACT, SUBSCRIPTION_STATUSES,
   SUPPORTED_LANGUAGE_CODES, USER_ROLES, VERIFICATION_STATUSES, adaptBusinessDocument,
   adaptUserDocument, ambiguousBusinesses, buildConversationId, buildLegacyConversationId,
   businessNotFound, conversationMatchesPair, detectUnsafePublicContact,
@@ -17,6 +18,10 @@ import {
   validateAccountStatus, validateBusinessOwnerMapping, validateBusinessStatus,
   validateManagerIds, validateOwnerWritablePayload, validatePrimaryLanguage, validateRoles,
   validateSubscriptionStatus, validateVerificationStatus, isConversationIdFor, MAX_MESSAGE_LENGTH,
+  hasSavedBusinessCustomerCapability, normalizeSavedBusinessesPageSize,
+  SAVED_BUSINESSES_DEFAULT_PAGE_SIZE, SAVED_BUSINESSES_MAX_PAGE_SIZE,
+  SAVED_BUSINESSES_SUBCOLLECTION, SAVED_BUSINESS_FIELDS,
+  validateSavedBusinessesCursor, validateSavedBusinessRecord,
 } from '../index.js'
 
 const hasIssue = (result, code) => result.issues.some((entry) => entry.code === code)
@@ -30,6 +35,54 @@ test('controlled values match the approved contract', () => {
   assert.ok(BUSINESS_STATUSES.includes('rejected'))
   assert.ok(VERIFICATION_STATUSES.includes('rejected'))
   assert.ok(SUBSCRIPTION_STATUSES.includes('past_due'))
+})
+
+test('saved businesses use one private owner-scoped shared contract', () => {
+  assert.equal(SAVED_BUSINESSES_SUBCOLLECTION, 'savedBusinesses')
+  assert.deepEqual(SAVED_BUSINESS_FIELDS, ['businessId', 'createdAt'])
+  assert.equal(SAVED_BUSINESS_CONTRACT.path, 'users/{uid}/savedBusinesses/{businessId}')
+  assert.equal(SAVED_BUSINESS_CONTRACT.documentId, 'matching_business_id')
+  assert.deepEqual(Object.keys(SAVED_BUSINESS_CONTRACT.fields), SAVED_BUSINESS_FIELDS)
+  assert.equal(SAVED_BUSINESSES_DEFAULT_PAGE_SIZE, 20)
+  assert.equal(SAVED_BUSINESSES_MAX_PAGE_SIZE, 50)
+})
+
+test('saved-business validator enforces exact fields, matching IDs, and timestamps', () => {
+  const timestamp = { seconds: 1, nanoseconds: 2 }
+  assert.deepEqual(
+    validateSavedBusinessRecord({ businessId: 'business-1', createdAt: timestamp }, { businessId: 'business-1' }),
+    { valid: true, reason: null },
+  )
+  assert.equal(validateSavedBusinessRecord(null).valid, false)
+  assert.equal(validateSavedBusinessRecord({ createdAt: timestamp }).reason, 'invalid-fields')
+  assert.equal(validateSavedBusinessRecord({ businessId: '', createdAt: timestamp }).reason, 'invalid-business-id')
+  assert.equal(validateSavedBusinessRecord({ businessId: 'business/1', createdAt: timestamp }).reason, 'invalid-business-id')
+  assert.equal(validateSavedBusinessRecord({ businessId: 'business-1', createdAt: timestamp, name: 'Cached' }).reason, 'invalid-fields')
+  assert.equal(validateSavedBusinessRecord({ businessId: 'business-1', createdAt: 'now' }).reason, 'invalid-created-at')
+  assert.equal(validateSavedBusinessRecord(
+    { businessId: 'business-1', createdAt: timestamp }, { businessId: 'business-2' },
+  ).reason, 'business-id-mismatch')
+})
+
+test('saved-business eligibility and page bounds are canonical and role based', () => {
+  assert.equal(hasSavedBusinessCustomerCapability({ roles: ['customer'], accountStatus: 'active', deletionRequestedAt: null }), true)
+  assert.equal(hasSavedBusinessCustomerCapability({ roles: ['customer', 'business'], accountStatus: 'active', deletionRequestedAt: null }), true)
+  assert.equal(hasSavedBusinessCustomerCapability({ roles: ['business'], accountStatus: 'active', deletionRequestedAt: null }), false)
+  assert.equal(hasSavedBusinessCustomerCapability({ roles: ['customer'], accountStatus: 'suspended', deletionRequestedAt: null }), false)
+  assert.equal(hasSavedBusinessCustomerCapability({ roles: ['customer'], accountStatus: 'active', deletionRequestedAt: { seconds: 1, nanoseconds: 0 } }), false)
+  assert.equal(normalizeSavedBusinessesPageSize(), SAVED_BUSINESSES_DEFAULT_PAGE_SIZE)
+  assert.equal(normalizeSavedBusinessesPageSize(SAVED_BUSINESSES_MAX_PAGE_SIZE), SAVED_BUSINESSES_MAX_PAGE_SIZE)
+  for (const invalid of [0, -1, 1.5, '20', SAVED_BUSINESSES_MAX_PAGE_SIZE + 1]) {
+    assert.equal(normalizeSavedBusinessesPageSize(invalid), null)
+  }
+  assert.deepEqual(validateSavedBusinessesCursor(null), { valid: true, value: null })
+  assert.equal(validateSavedBusinessesCursor({ createdAtMillis: 1, businessId: 'business-1' }).valid, true)
+  for (const invalid of [
+    {}, { createdAtMillis: -1, businessId: 'business-1' },
+    { createdAtMillis: 1.5, businessId: 'business-1' },
+    { createdAtMillis: 1, businessId: '' },
+    { createdAtMillis: 1, businessId: 'business-1', userId: 'other' },
+  ]) assert.equal(validateSavedBusinessesCursor(invalid).valid, false)
 })
 
 test('user profile completion is derived from canonical profile fields', () => {

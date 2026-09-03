@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -8,7 +8,7 @@ import {
   SERVICE_TAXONOMY_SERVICES,
 } from '@holalocal/firebase-contract'
 import BusinessDetailPanel from '../components/common/BusinessDetailPanel.jsx'
-import AccessibleDialog from '../components/common/AccessibleDialog.jsx'
+import AuthenticationChoiceDialog from '../components/common/AuthenticationChoiceDialog.jsx'
 import BusinessReportDialog from '../components/common/BusinessReportDialog.jsx'
 import PublicBusinessCard from '../components/common/PublicBusinessCard.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
@@ -18,6 +18,12 @@ import { createBusinessReport } from '../services/reportService.js'
 import { getLanguageNameFromCode } from '../utils/languages.js'
 import SelectField from '../components/common/SelectField.jsx'
 import { recordPublicContactAction, recordPublicProfileView } from '../services/businessInsightsService.js'
+import {
+  getSavedBusinessState,
+  removeSavedBusiness,
+  saveBusiness,
+} from '../services/savedBusinessService.js'
+import { normalizeInternalLocation } from '../utils/internalNavigation.js'
 import {
   filterPublicBusinesses,
   getPublicBusinessPrimaryServiceLabel,
@@ -33,7 +39,7 @@ let resultsScrollPosition = null
 
 function ServicesPage() {
   const { t } = useTranslation()
-  const { user } = useAuthentication()
+  const { profileLoading, user, userProfile } = useAuthentication()
   const currentLocation = useLocation()
   const navigate = useNavigate()
   const { businessId } = useParams()
@@ -43,6 +49,13 @@ function ServicesPage() {
   const [error, setError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [authPromptReason, setAuthPromptReason] = useState(null)
+  const [savedBusinessState, setSavedBusinessState] = useState({
+    businessId: null,
+    error: '',
+    status: 'idle',
+  })
+  const [savedBusinessLoadAttempt, setSavedBusinessLoadAttempt] = useState(0)
+  const savedBusinessRequestRef = useRef(0)
   const [messaging, setMessaging] = useState(false)
   const [messagingError, setMessagingError] = useState('')
   const [reportOpen, setReportOpen] = useState(false)
@@ -140,10 +153,49 @@ function ServicesPage() {
       category: getPublicBusinessPrimaryServiceLabel(business, taxonomyLabel),
     } : null
   }, [businessId, businesses, taxonomyLabel])
+  const canSaveBusinesses = Boolean(
+    user
+    && !profileLoading
+    && userProfile?.accountStatus === 'active'
+    && userProfile?.deletionRequestedAt == null
+    && Array.isArray(userProfile?.roles)
+    && userProfile.roles.includes('customer'),
+  )
 
   useEffect(() => {
     if (selectedBusiness?.businessId) recordPublicProfileView(selectedBusiness.businessId)
   }, [selectedBusiness?.businessId])
+
+  useEffect(() => {
+    const requestId = ++savedBusinessRequestRef.current
+    const selectedBusinessId = selectedBusiness?.businessId ?? null
+
+    if (!selectedBusinessId || !canSaveBusinesses || !user?.uid) {
+      return undefined
+    }
+
+    getSavedBusinessState(user.uid, selectedBusinessId)
+      .then(({ saved }) => {
+        if (requestId !== savedBusinessRequestRef.current) return
+        setSavedBusinessState({
+          businessId: selectedBusinessId,
+          error: '',
+          status: saved ? 'saved' : 'not-saved',
+        })
+      })
+      .catch(() => {
+        if (requestId !== savedBusinessRequestRef.current) return
+        setSavedBusinessState({
+          businessId: selectedBusinessId,
+          error: t('savedBusinesses.loadFailed'),
+          status: 'load-failed',
+        })
+      })
+
+    return () => {
+      if (requestId === savedBusinessRequestRef.current) savedBusinessRequestRef.current += 1
+    }
+  }, [canSaveBusinesses, savedBusinessLoadAttempt, selectedBusiness?.businessId, t, user?.uid])
 
   useEffect(() => {
     if (businessId || loading || resultsScrollPosition === null) return undefined
@@ -153,17 +205,6 @@ function ServicesPage() {
     const frame = requestAnimationFrame(() => window.scrollTo({ top: scrollPosition }))
     return () => cancelAnimationFrame(frame)
   }, [businessId, loading])
-
-  useEffect(() => {
-    if (!authPromptReason) return undefined
-
-    function handleEscape(event) {
-      if (event.key === 'Escape') setAuthPromptReason(null)
-    }
-
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [authPromptReason])
 
   function clearFilters() {
     setSearchParams(new URLSearchParams(), { replace: true })
@@ -227,6 +268,51 @@ function ServicesPage() {
     setReportOpen(true)
   }
 
+  async function handleSavedBusinessToggle() {
+    if (!selectedBusiness) return
+    if (!user) {
+      setAuthPromptReason('save')
+      return
+    }
+    if (!canSaveBusinesses || savedBusinessState.businessId !== selectedBusiness.businessId) return
+    if (savedBusinessState.status === 'load-failed') {
+      setSavedBusinessState({
+        businessId: selectedBusiness.businessId,
+        error: '',
+        status: 'loading',
+      })
+      setSavedBusinessLoadAttempt((attempt) => attempt + 1)
+      return
+    }
+    if (!['not-saved', 'saved'].includes(savedBusinessState.status)) return
+
+    const selectedBusinessId = selectedBusiness.businessId
+    const previousStatus = savedBusinessState.status
+    const requestId = ++savedBusinessRequestRef.current
+    setSavedBusinessState({
+      businessId: selectedBusinessId,
+      error: '',
+      status: previousStatus === 'saved' ? 'removing' : 'saving',
+    })
+    try {
+      if (previousStatus === 'saved') await removeSavedBusiness(user.uid, selectedBusinessId)
+      else await saveBusiness(user.uid, selectedBusinessId)
+      if (requestId !== savedBusinessRequestRef.current) return
+      setSavedBusinessState({
+        businessId: selectedBusinessId,
+        error: '',
+        status: previousStatus === 'saved' ? 'not-saved' : 'saved',
+      })
+    } catch {
+      if (requestId !== savedBusinessRequestRef.current) return
+      setSavedBusinessState({
+        businessId: selectedBusinessId,
+        error: t(previousStatus === 'saved' ? 'savedBusinesses.removeFailed' : 'savedBusinesses.saveFailed'),
+        status: previousStatus,
+      })
+    }
+  }
+
   async function handleReportSubmit({ details, reason }) {
     if (!user || !selectedBusiness) return
 
@@ -254,39 +340,31 @@ function ServicesPage() {
     setReportSuccess(false)
   }
 
+  const authPromptCopy = authPromptReason === 'report'
+    ? {
+        eyebrow: 'reports.eyebrow',
+        title: 'services.authPrompt.reportTitle',
+        description: 'services.authPrompt.reportDescription',
+      }
+    : authPromptReason === 'save'
+      ? {
+          eyebrow: 'savedBusinesses.authPrompt.eyebrow',
+          title: 'savedBusinesses.authPrompt.title',
+          description: 'savedBusinesses.authPrompt.description',
+        }
+      : {
+          eyebrow: 'services.authPrompt.messagingEyebrow',
+          title: 'services.authPrompt.messageTitle',
+          description: 'services.authPrompt.messageDescription',
+        }
+
   const authPrompt = (
-    <AccessibleDialog
-      ariaLabelledBy="messaging-auth-title"
-      className="profile-edit-dialog messaging-auth-dialog"
+    <AuthenticationChoiceDialog
+      copy={authPromptCopy}
       onClose={() => setAuthPromptReason(null)}
       open={Boolean(authPromptReason)}
-    >
-      <section className="profile-edit-dialog__panel">
-        <button
-          aria-label={t('services.authPrompt.close')}
-          className="messaging-auth-prompt__close"
-          onClick={() => setAuthPromptReason(null)}
-          type="button"
-        >
-          ×
-        </button>
-        <p className="account-card__eyebrow">
-          {t(authPromptReason === 'report' ? 'reports.eyebrow' : 'services.authPrompt.messagingEyebrow')}
-        </p>
-        <h2 id="messaging-auth-title">
-          {t(authPromptReason === 'report' ? 'services.authPrompt.reportTitle' : 'services.authPrompt.messageTitle')}
-        </h2>
-        <p>
-          {authPromptReason === 'report'
-            ? t('services.authPrompt.reportDescription')
-            : t('services.authPrompt.messageDescription')}
-        </p>
-        <div>
-          <Link className="button button--primary" state={{ from: currentLocation }} to="/login">{t('auth.login')}</Link>
-          <Link className="button button--secondary" state={{ from: currentLocation }} to="/register">{t('auth.register')}</Link>
-        </div>
-      </section>
-    </AccessibleDialog>
+      returnLocation={normalizeInternalLocation(currentLocation)}
+    />
   )
 
   if (businessId) {
@@ -331,6 +409,17 @@ function ServicesPage() {
               onMessage={() => void handleMessageBusiness()}
               onContactAction={(action) => recordPublicContactAction(selectedBusiness.businessId, action)}
               onReport={handleReportBusiness}
+              onSavedToggle={() => void handleSavedBusinessToggle()}
+              saveError={savedBusinessState.businessId === selectedBusiness.businessId
+                ? savedBusinessState.error
+                : ''}
+              saveState={!user
+                ? 'not-saved'
+                : canSaveBusinesses
+                  ? savedBusinessState.businessId === selectedBusiness.businessId
+                    ? savedBusinessState.status
+                    : 'loading'
+                  : null}
             />
             <BusinessReportDialog
               business={selectedBusiness}

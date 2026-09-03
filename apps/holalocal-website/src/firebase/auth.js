@@ -19,7 +19,7 @@ import {
 import { getFirebaseApp } from './config.js'
 import {
   connectFirebaseEmulatorOnce,
-  FIREBASE_EMULATOR_ENDPOINTS,
+  getFirebaseEmulatorEndpoint,
   shouldUseFirebaseEmulators,
 } from './emulatorMode.js'
 import { shouldMaintainProfileAfterLogin } from './loginProfilePolicy.js'
@@ -32,9 +32,9 @@ let firebaseAuth
 export function getFirebaseAuth() {
   firebaseAuth ??= getAuth(getFirebaseApp())
   if (shouldUseFirebaseEmulators()) {
-    const { host, port } = FIREBASE_EMULATOR_ENDPOINTS.auth
+    const { url } = getFirebaseEmulatorEndpoint('auth')
     connectFirebaseEmulatorOnce(firebaseAuth, () => {
-      connectAuthEmulator(firebaseAuth, `http://${host}:${port}`, { disableWarnings: true })
+      connectAuthEmulator(firebaseAuth, url, { disableWarnings: true })
     })
   }
   return firebaseAuth

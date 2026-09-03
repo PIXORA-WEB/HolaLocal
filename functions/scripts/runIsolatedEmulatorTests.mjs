@@ -3,22 +3,37 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
 
-const PRODUCTION_PROJECT_IDS = new Set(['holalocal-491c9'])
+const FUNCTIONS_EMULATOR_PROJECT_ID = 'demo-holalocal-functions'
+const FUNCTIONS_EMULATOR_STORAGE_BUCKET = `${FUNCTIONS_EMULATOR_PROJECT_ID}.appspot.com`
+const FUNCTIONS_EMULATOR_HOSTS = Object.freeze({
+  auth: '127.0.0.1:9099',
+  firestore: '127.0.0.1:8080',
+  storage: '127.0.0.1:9199',
+})
 
 export function parseProjectId(argv = process.argv.slice(2)) {
-  const index = argv.indexOf('--project')
-  return index >= 0 ? argv[index + 1] : 'demo-holalocal-functions'
+  if (argv.length === 0) return FUNCTIONS_EMULATOR_PROJECT_ID
+  if (argv.length !== 2 || argv[0] !== '--project' || !argv[1]) {
+    throw new Error('Callable emulator tests accept only --project demo-holalocal-functions.')
+  }
+  return argv[1]
 }
 
 export function assertDemoProject(projectId) {
-  if (!projectId || !projectId.startsWith('demo-') || PRODUCTION_PROJECT_IDS.has(projectId)) {
+  if (projectId !== FUNCTIONS_EMULATOR_PROJECT_ID) {
     throw new Error(`Refusing to start callable emulator tests for non-demo project: ${projectId || '(missing)'}`)
   }
 }
 
 export function assertCredentialIsolation(env = process.env) {
-  if (env.GOOGLE_APPLICATION_CREDENTIALS) {
-    throw new Error('Refusing to start callable emulator tests while GOOGLE_APPLICATION_CREDENTIALS is set.')
+  for (const name of [
+    'GOOGLE_APPLICATION_CREDENTIALS',
+    'FIREBASE_TOKEN',
+    'GOOGLE_OAUTH_ACCESS_TOKEN',
+  ]) {
+    if (env[name]) {
+      throw new Error(`Refusing to start callable emulator tests while ${name} is set.`)
+    }
   }
 }
 
@@ -31,6 +46,35 @@ export async function assertEmulatorCache(cachePath) {
   }
   if (!entries.some((entry) => /^cloud-firestore-emulator-v.*\.jar$/.test(entry))) {
     throw new Error(`Refusing to start callable emulator tests without the Firestore emulator jar in: ${cachePath}`)
+  }
+  if (!entries.some((entry) => /^cloud-storage-rules-runtime-v.*\.jar$/.test(entry))) {
+    throw new Error(`Refusing to start callable emulator tests without the Storage emulator jar in: ${cachePath}`)
+  }
+}
+
+export function assertCallableBoundaryEnvironment(env = process.env) {
+  assertDemoProject(env.GCLOUD_PROJECT)
+  if (env.GOOGLE_CLOUD_PROJECT !== FUNCTIONS_EMULATOR_PROJECT_ID) {
+    throw new Error('Callable emulator tests require the exact demo Google Cloud project.')
+  }
+  if (env.FIREBASE_AUTH_EMULATOR_HOST !== FUNCTIONS_EMULATOR_HOSTS.auth
+    || env.FIRESTORE_EMULATOR_HOST !== FUNCTIONS_EMULATOR_HOSTS.firestore
+    || env.FIREBASE_STORAGE_EMULATOR_HOST !== FUNCTIONS_EMULATOR_HOSTS.storage
+    || env.STORAGE_EMULATOR_HOST !== `http://${FUNCTIONS_EMULATOR_HOSTS.storage}`) {
+    throw new Error('Callable emulator tests require the fixed loopback emulator endpoints.')
+  }
+  let config
+  try { config = JSON.parse(env.FIREBASE_CONFIG ?? '') } catch { config = null }
+  if (!config || Object.keys(config).sort().join(',') !== 'projectId,storageBucket'
+    || config.projectId !== FUNCTIONS_EMULATOR_PROJECT_ID
+    || config.storageBucket !== FUNCTIONS_EMULATOR_STORAGE_BUCKET) {
+    throw new Error('Callable emulator tests require the exact demo project and Storage bucket configuration.')
+  }
+  if (env.GOOGLE_APPLICATION_CREDENTIALS || env.FIREBASE_TOKEN || env.GOOGLE_OAUTH_ACCESS_TOKEN) {
+    throw new Error('Callable emulator boundary refuses credential variables.')
+  }
+  if (env.MESSAGE_TRANSLATION_PROVIDER !== 'disabled') {
+    throw new Error('Callable emulator boundary requires the disabled translation provider.')
   }
 }
 
@@ -58,13 +102,23 @@ export async function buildIsolatedEnv(projectId, baseEnv = process.env) {
     GCLOUD_PROJECT: projectId,
     GOOGLE_CLOUD_PROJECT: projectId,
     GCP_PROJECT: projectId,
-    FIREBASE_CONFIG: JSON.stringify({ projectId }),
+    FIREBASE_CONFIG: JSON.stringify({
+      projectId,
+      storageBucket: FUNCTIONS_EMULATOR_STORAGE_BUCKET,
+    }),
+    FIREBASE_AUTH_EMULATOR_HOST: FUNCTIONS_EMULATOR_HOSTS.auth,
+    FIRESTORE_EMULATOR_HOST: FUNCTIONS_EMULATOR_HOSTS.firestore,
+    FIREBASE_STORAGE_EMULATOR_HOST: FUNCTIONS_EMULATOR_HOSTS.storage,
+    STORAGE_EMULATOR_HOST: `http://${FUNCTIONS_EMULATOR_HOSTS.storage}`,
     GOOGLE_APPLICATION_CREDENTIALS: '',
+    FIREBASE_TOKEN: '',
+    GOOGLE_OAUTH_ACCESS_TOKEN: '',
     FIREBASE_EMULATORS_PATH: emulatorCache,
     MESSAGE_TRANSLATION_PROVIDER: 'disabled',
     HOLALOCAL_CALLABLE_BOUNDARY: '1',
     FIREBASE_TOOLS_DISABLE_UPDATE_NOTIFIER: 'true',
     NO_UPDATE_NOTIFIER: '1',
+    NO_GCE_CHECK: 'true',
     HOME: home,
     CLOUDSDK_CONFIG: config,
     XDG_CONFIG_HOME: xdg,
@@ -81,7 +135,7 @@ async function main() {
     '--project',
     projectId,
     '--only',
-    'firestore,functions',
+    'auth,firestore,functions,storage',
     'node --test tests/callableBoundary.test.mjs',
   ], { stdio: 'inherit', env })
 

@@ -28,6 +28,7 @@ test('message translation trigger pins the Firestore region to europe-west1', as
   assert.match(source, /listPublicBusinesses = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /assignBusinessSubscriptionPlan = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /getPublicBusiness = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
+  assert.match(source, /listSavedBusinesses = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /getOwnerSubscriptionStatus = onCall\(\s*PUBLIC_CALLABLE_OPTIONS,/s)
   assert.match(source, /recordBusinessInsight = onCall\(\s*BUSINESS_INSIGHT_CALLABLE_OPTIONS,/s)
   assert.match(source, /process\.env\[TRANSLATION_PROVIDER_CONFIG\]/)
@@ -42,7 +43,7 @@ test('only callable functions opt in to public Cloud Run invocation', async () =
   assert.match(source, /translateCreatedMessage = onDocumentCreated\(\s*\{\s*document: 'conversations\/\{conversationId\}\/messages\/\{messageId\}',\s*region: MESSAGE_TRANSLATION_REGION,\s*\}/s)
   assert.doesNotMatch(source, /translateCreatedMessage = onDocumentCreated\(\s*PUBLIC_CALLABLE_OPTIONS/s)
 
-  for (const callableName of ['updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'openBusinessConversation', 'getConversationBusinessContext', 'acceptLegalConsent', 'manageBusinessMedia', 'requestAccountDeletion', 'cancelAccountDeletion', 'finalizeAccountDeletion', 'listAdminAccountDeletionRequests', 'moderateBusiness', 'listPublicBusinesses', 'assignBusinessSubscriptionPlan', 'getPublicBusiness', 'getOwnerSubscriptionStatus']) {
+  for (const callableName of ['updateAccountRole', 'ensureOwnerBusiness', 'sendMessage', 'openBusinessConversation', 'getConversationBusinessContext', 'acceptLegalConsent', 'manageBusinessMedia', 'requestAccountDeletion', 'cancelAccountDeletion', 'finalizeAccountDeletion', 'listAdminAccountDeletionRequests', 'moderateBusiness', 'listPublicBusinesses', 'assignBusinessSubscriptionPlan', 'getPublicBusiness', 'getOwnerSubscriptionStatus', 'listSavedBusinesses']) {
     assert.match(source, new RegExp(`${callableName} = onCall\\(\\s*PUBLIC_CALLABLE_OPTIONS,`, 's'))
   }
   assert.match(source, /recordBusinessInsight = onCall\(\s*BUSINESS_INSIGHT_CALLABLE_OPTIONS,/s)
@@ -58,5 +59,5 @@ test('functions package keeps the Node 20 runtime and demo emulator script', asy
   assert.match(manifest.scripts['test:emulator'], /demo-holalocal-functions/)
   assert.match(manifest.scripts['test:callable-emulator'], /runIsolatedEmulatorTests\.mjs/)
   assert.match(harness, /MESSAGE_TRANSLATION_PROVIDER: 'disabled'/)
-  assert.match(harness, /--only',\s*'firestore,functions'/)
+  assert.match(harness, /--only',\s*'auth,firestore,functions,storage'/)
 })

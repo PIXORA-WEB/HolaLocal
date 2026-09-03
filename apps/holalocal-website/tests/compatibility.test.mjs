@@ -217,6 +217,11 @@ test('launch-critical operational translations are complete for every locale', a
     assert.notEqual(resource.reports.reasonLegend, englishResource.reports.reasonLegend)
     assert.notEqual(resource.onboarding.title, englishResource.onboarding.title)
   }
+
+  assert.equal(
+    englishResource.reports.submittedDescription,
+    'Your report has been sent privately to the HolaLocal team.',
+  )
 })
 
 test('fallback locale completion packs merge without overriding specialized content', async () => {
@@ -236,8 +241,8 @@ test('fallback locale completion packs merge without overriding specialized cont
     const entries = leafEntries(completion)
 
     const expectedLeafCounts = {
-      pl: 260, ro: 254, cs: 254, sk: 286, hu: 262, uk: 274,
-      it: 248, fi: 262, sv: 262, da: 261, no: 262,
+      pl: 261, ro: 255, cs: 255, sk: 287, hu: 263, uk: 275,
+      it: 249, fi: 263, sv: 263, da: 262, no: 263,
     }
     assert.equal(entries.length, expectedLeafCounts[code], `${code}: scoped completion leaf count`)
     for (const [path, value] of entries) {
@@ -403,6 +408,52 @@ test('shared residual interface and fuller-locale gaps are localized', async () 
       assert.notEqual(getPath(resource, path), getPath(englishResource, path), `${code}: ${path} is localized`)
     }
   }
+})
+
+test('active global descriptions avoid unsupported provider-trust claims in every locale', async () => {
+  const english = await readJsonLocale('en')
+  const activePaths = [
+    'metadata.description',
+    'footer.description',
+    'onboarding.options.customer.description',
+  ]
+
+  for (const { code } of supportedUILanguages) {
+    const resource = resourceForLocale(code, english, await readBaseLocale(code, english))
+    for (const path of activePaths) {
+      const value = getPath(resource, path)
+      assert.equal(typeof value, 'string', `${code}: ${path}`)
+      assert.ok(value.trim(), `${code}: ${path} is non-empty`)
+      assert.doesNotMatch(
+        value,
+        /\b(?:trusted|verified|vetted|approved|guaranteed)\b/i,
+        `${code}: ${path} avoids unsupported English trust claims`,
+      )
+    }
+  }
+
+  const englishResource = resourceForLocale('en', english, english)
+  assert.equal(
+    englishResource.metadata.description,
+    'Find local services and connect with local businesses across Costa del Sol and Gibraltar.',
+  )
+  assert.equal(
+    englishResource.footer.description,
+    'A multilingual local platform for finding and offering services across Costa del Sol and Gibraltar.',
+  )
+  assert.equal(
+    englishResource.onboarding.options.customer.description,
+    'Discover local professionals and review their public business profiles.',
+  )
+  assert.doesNotMatch(
+    activePaths.map((path) => getPath(englishResource, path)).join('\n'),
+    /identity checks?|qualifications?|insurance|guarantees?/i,
+  )
+
+  assert.equal(typeof englishResource.appHome.title, 'string')
+  assert.equal(typeof englishResource.marketing.hero.title, 'string')
+  assert.equal(typeof englishResource.marketing.trust.verified.description, 'string')
+  assert.equal(typeof englishResource.earlyAccess.hero.description, 'string')
 })
 
 test('French, German, Dutch and Portuguese final account residuals are localized in their owning layers', async () => {
@@ -939,6 +990,8 @@ test('canonical managed and public business views remain compatible', () => {
   assert.equal('subscription' in publicView, false)
   assert.equal('entitlements' in publicView, false)
   assert.equal(publicView.ratingAverage, 4.5)
+  assert.equal(publicView.ratingCount, 2)
+  assert.equal(publicView.verificationStatus, 'unverified')
 })
 
 test('managed business views resolve canonical and malformed subscription states safely', () => {
@@ -1335,15 +1388,19 @@ test('shared navigation, services-first homepage, and footer keep their responsi
   assert.match(homePage, /featuredBusinesses\.map\(\(business\) => \([\s\S]*?<PublicBusinessCard/)
   assert.match(hero, /min-width: 0/)
   assert.match(hero, /box-sizing: border-box/)
-  assert.match(serviceGroups, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(serviceGroups, /grid-template-columns: minmax\(0, 1fr\)/)
+  assert.match(globalStyles, /@media \(min-width: 24rem\) \{[\s\S]*?\.homepage-service-groups \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
   assert.match(globalStyles, /@media \(min-width: 72rem\) \{[\s\S]*?\.homepage-service-groups \{[\s\S]*?grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/)
+  assert.match(globalStyles, /\.homepage-platform__grid \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/)
+  assert.match(globalStyles, /@media \(min-width: 48rem\) \{[\s\S]*?\.homepage-platform__grid \{[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/)
+  assert.match(globalStyles, /@media \(min-width: 64rem\) \{[\s\S]*?\.homepage-platform__grid \{[\s\S]*?repeat\(3, minmax\(0, 1fr\)\)/)
   assert.doesNotMatch(
     `${baseStyles}\n${globalStyles}`,
     /(?:html|body|#root)[^{]*\{[^}]*overflow-x:\s*hidden/s,
   )
   assert.match(footerInner, /text-align: center/)
-  assert.match(footerNavigation, /justify-items: center/)
-  assert.match(footerLinks, /align-items: center/)
+  assert.match(footerNavigation, /justify-items: stretch/)
+  assert.match(footerLinks, /align-items: flex-start/)
   assert.doesNotMatch(globalStyles, /\.site-footer__links a:hover \{[^}]*translateX/s)
 })
 
@@ -1353,6 +1410,7 @@ test('public business-detail translations are complete and localized for every s
   const reference = englishResource.publicBusinessDetail
   const representativeKeys = [
     'backToResults',
+    'profileInformationProvided',
     'verificationComingSoon',
     'messageBusiness',
     'workImageAlt',
@@ -1370,7 +1428,22 @@ test('public business-detail translations are complete and localized for every s
     uk: ['reviewCount_few', 'reviewCount_many'],
   }
 
-  assert.equal(Object.keys(reference).length, 45)
+  assert.equal(Object.keys(reference).length, 44)
+  assert.equal(
+    reference.profileInformationProvided,
+    'Profile information is provided by the business.',
+  )
+  for (const dormantKey of [
+    'verificationComingSoon',
+    'reviews',
+    'customerFeedback',
+    'reviewsUnavailable',
+    'noReceivedReviews',
+    'noReviews',
+    'reviewCount_other',
+  ]) {
+    assert.equal(Object.hasOwn(reference, dormantKey), true, `${dormantKey} remains available`)
+  }
 
   for (const { code } of supportedUILanguages) {
     const baseLocale = await readBaseLocale(code, english)
@@ -1626,7 +1699,7 @@ test('public directory and exact public detail use safe callable projections', a
     readFile(new URL('../src/pages/ServicesPage.jsx', import.meta.url), 'utf8'),
   ])
   const activeDirectorySource = businessService.match(
-    /export async function getActivePublicBusinesses\(maxResults = 60\) \{[\s\S]*?\n\}/,
+    /export async function getActivePublicBusinesses\(maxResults = 60, dependencies = \{\}\) \{[\s\S]*?\n\}/,
   )?.[0] ?? ''
   const publicDetailSource = businessService.match(
     /export async function getPublicBusinessById\(businessId\) \{[\s\S]*?\n\}/,
@@ -1634,10 +1707,10 @@ test('public directory and exact public detail use safe callable projections', a
 
   assert.match(functionsClient, /httpsCallable\(functions, 'listPublicBusinesses'\)/)
   assert.match(functionsClient, /httpsCallable\(functions, 'getPublicBusiness'\)/)
-  assert.match(activeDirectorySource, /listPublicBusinessesCallable\(\{ maxResults: resultLimit \}\)/)
+  assert.match(activeDirectorySource, /callPublicBusinesses: dependencies\.callPublicBusinesses \?\? listPublicBusinessesCallable/)
   assert.doesNotMatch(activeDirectorySource, /collection\(db, 'businesses'\)|getDocs\(|where\(|orderBy\(/)
-  assert.match(activeDirectorySource, /const businesses = Array\.isArray\(result\.data\?\.businesses\)/)
-  assert.match(activeDirectorySource, /return Promise\.all\(businesses\.map\(presentBusiness\)\)/)
+  assert.match(activeDirectorySource, /return loadPublicBusinessDirectory\(\{/)
+  assert.match(activeDirectorySource, /presentBusiness: dependencies\.presentBusiness \?\? presentBusiness/)
   assert.match(servicesPage, /setBusinesses\(activeBusinesses\)/)
   assert.match(servicesPage, /services\.emptyTitle/)
 

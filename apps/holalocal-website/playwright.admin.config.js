@@ -1,5 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const artifactGroup = globalThis.process.env.HOLALOCAL_ADMIN_BROWSER_ARTIFACT_GROUP
+const approvedArtifactGroups = new Set(['lifecycle-a', 'lifecycle-b', 'lifecycle-c'])
+if (artifactGroup && !approvedArtifactGroups.has(artifactGroup)) {
+  throw new Error('Unapproved protected browser artifact group.')
+}
+const artifactSuffix = artifactGroup ? `-${artifactGroup}` : ''
+
 export default defineConfig({
   testDir: './tests/browser',
   testMatch: 'adminSmoke.spec.js',
@@ -10,8 +17,8 @@ export default defineConfig({
   expect: {
     timeout: 15_000,
   },
-  reporter: [['list'], ['html', { open: 'never', outputFolder: 'test-results/admin-html' }]],
-  outputDir: 'test-results/admin-artifacts',
+  reporter: [['list'], ['html', { open: 'never', outputFolder: `test-results/admin-html${artifactSuffix}` }]],
+  outputDir: `test-results/admin-artifacts${artifactSuffix}`,
   use: {
     ...devices['Desktop Chrome'],
     actionTimeout: 15_000,

@@ -2,13 +2,13 @@ import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/
 import { getFirebaseApp } from './config.js'
 import {
   connectFirebaseEmulatorOnce,
-  FIREBASE_EMULATOR_ENDPOINTS,
+  getFirebaseEmulatorEndpoint,
   shouldUseFirebaseEmulators,
 } from './emulatorMode.js'
 
 const functions = getFunctions(getFirebaseApp(), 'europe-west1')
 if (shouldUseFirebaseEmulators()) {
-  const { host, port } = FIREBASE_EMULATOR_ENDPOINTS.functions
+  const { host, port } = getFirebaseEmulatorEndpoint('functions')
   connectFirebaseEmulatorOnce(functions, () => connectFunctionsEmulator(functions, host, port))
 }
 
@@ -33,3 +33,4 @@ export const getOwnerSubscriptionStatusCallable = httpsCallable(functions, 'getO
 export const updateAccountRoleCallable = httpsCallable(functions, 'updateAccountRole')
 export const recordBusinessInsightCallable = httpsCallable(functions, 'recordBusinessInsight')
 export const getOwnerBusinessInsightsCallable = httpsCallable(functions, 'getOwnerBusinessInsights')
+export const listSavedBusinessesCallable = httpsCallable(functions, 'listSavedBusinesses')

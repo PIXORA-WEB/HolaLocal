@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
+import { normalizeInternalLocation } from '../../utils/internalNavigation.js'
 
 function VerificationPendingPage() {
   const { t } = useTranslation()
@@ -27,13 +28,17 @@ function VerificationPendingPage() {
   )
   const intent = searchParams.get('intent')
   const destination = intent ? `/complete-profile?intent=${intent}` : '/complete-profile'
+  const returnLocation = useMemo(
+    () => normalizeInternalLocation(location.state?.from),
+    [location.state?.from],
+  )
 
   useEffect(() => {
     if (emailVerified) navigate(destination, {
       replace: true,
-      state: { from: location.state?.from },
+      state: { from: returnLocation },
     })
-  }, [destination, emailVerified, location.state?.from, navigate])
+  }, [destination, emailVerified, navigate, returnLocation])
 
   async function checkVerification() {
     setError('')
@@ -42,7 +47,7 @@ function VerificationPendingPage() {
       const verified = await refreshEmailVerification()
       if (verified) navigate(destination, {
         replace: true,
-        state: { from: location.state?.from },
+        state: { from: returnLocation },
       })
       else setMessage(t('auth.verification.notVerified'))
     } catch (verificationError) {

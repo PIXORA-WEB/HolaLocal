@@ -3,7 +3,7 @@ import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import { HttpsError } from 'firebase-functions/v2/https'
-import { ACCOUNT_DELETION_FINALIZER_LEASE_SECONDS, hasCurrentLegalConsent, hasReachedAccountDeletionCheckpoint, isAccountDeletionFailureCode, isSanitizedAccountDeletionCleanupCounts, nextAccountDeletionCheckpoint } from '@holalocal/firebase-contract'
+import { ACCOUNT_DELETION_FINALIZER_LEASE_SECONDS, SAVED_BUSINESSES_SUBCOLLECTION, hasCurrentLegalConsent, hasReachedAccountDeletionCheckpoint, isAccountDeletionFailureCode, isSanitizedAccountDeletionCleanupCounts, nextAccountDeletionCheckpoint } from '@holalocal/firebase-contract'
 
 function requireTrustedUid(value) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
@@ -154,6 +154,24 @@ export async function tombstoneDeletedUserConversations({ uid, db }) {
     if (changed) tombstoned += 1
   }
   return { matched: matches.size, tombstoned }
+}
+
+const SAVED_BUSINESS_DELETION_BATCH_SIZE = 200
+
+export async function cleanupUserSavedBusinesses({ uid, db }) {
+  const safeUid = requireTrustedUid(uid)
+  const collection = db.collection(`users/${safeUid}/${SAVED_BUSINESSES_SUBCOLLECTION}`)
+  let deleted = 0
+  while (true) {
+    const removed = await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(collection.limit(SAVED_BUSINESS_DELETION_BATCH_SIZE))
+      for (const document of snapshot.docs) transaction.delete(document.ref ?? collection.doc(document.id))
+      return snapshot.size
+    })
+    deleted += removed
+    if (removed < SAVED_BUSINESS_DELETION_BATCH_SIZE) break
+  }
+  return { deleted }
 }
 
 const storageMissing = (error) => ['404', 404, 'storage/object-not-found', 'not-found'].includes(error?.code)

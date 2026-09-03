@@ -7,12 +7,14 @@ import {
   ACCOUNT_DELETION_FINALIZER_LEASE_SECONDS,
   ACCOUNT_DELETION_REQUEST_CONTRACT,
   ACCOUNT_DELETION_REQUEST_STATES,
+  canStartNewAccountDeletionRequestCycle,
   canTransitionAccountDeletionState,
   hasOnlyAccountDeletionWorkflowFields,
   hasReachedAccountDeletionCheckpoint,
   nextAccountDeletionCheckpoint,
   isSanitizedAccountDeletionCleanupCounts,
   isCancellableAccountDeletionRequest,
+  isFreshAccountDeletionRequestCycle,
   projectAccountDeletionRequest,
 } from '../index.js'
 
@@ -57,6 +59,37 @@ test('only a requested account deletion is cancellable', () => {
   assert.equal(isCancellableAccountDeletionRequest({ state: 'requested' }), true)
   assert.equal(isCancellableAccountDeletionRequest({ state: 'cancelled' }), false)
   assert.equal(isCancellableAccountDeletionRequest({ state: 'finalizing' }), false)
+})
+
+test('new account deletion cycles are distinct from terminal same-cycle transitions', () => {
+  assert.equal(canTransitionAccountDeletionState('requested', 'cancelled'), true)
+  assert.equal(canTransitionAccountDeletionState('cancelled', 'requested'), false)
+  assert.equal(canStartNewAccountDeletionRequestCycle(null), true)
+  assert.equal(canStartNewAccountDeletionRequestCycle({ state: 'cancelled' }), true)
+  for (const state of ['requested', 'finalizing', 'failed_retryable', 'completed']) {
+    assert.equal(canStartNewAccountDeletionRequestCycle({ state }), false)
+  }
+})
+
+test('a fresh request cycle increments version and cannot retain prior workflow fields', () => {
+  const cancelled = { state: 'cancelled', requestVersion: 4 }
+  const fresh = {
+    uid: 'user-1', state: 'requested', requestedAt: 2, requestedBy: 'user-1',
+    cancelledAt: null, updatedAt: 2, requestVersion: 5,
+  }
+  assert.equal(isFreshAccountDeletionRequestCycle(null, { ...fresh, requestVersion: 1 }), true)
+  assert.equal(isFreshAccountDeletionRequestCycle(cancelled, fresh), true)
+  assert.equal(isFreshAccountDeletionRequestCycle(cancelled, { ...fresh, requestVersion: 4 }), false)
+  assert.equal(isFreshAccountDeletionRequestCycle(
+    { state: 'cancelled', requestVersion: Number.MAX_SAFE_INTEGER },
+    { ...fresh, requestVersion: Number.MAX_SAFE_INTEGER + 1 },
+  ), false)
+  for (const staleField of [
+    'finalizationStartedAt', 'finalizedBy', 'completedAt', 'lastCompletedStep', 'failureCode',
+    'retryCount', 'leaseId', 'leaseExpiresAt', 'cleanupCounts', 'retainedConsentEvidence',
+  ]) {
+    assert.equal(isFreshAccountDeletionRequestCycle(cancelled, { ...fresh, [staleField]: null }), false)
+  }
 })
 
 test('account deletion projection exposes only owner-safe status fields', () => {

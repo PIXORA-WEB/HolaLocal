@@ -85,16 +85,17 @@ test('profile and business save paths use contextual classification and retain f
   assert.match(business, /id="business-profile-form" onSubmit=\{handleSubmit\}/)
 })
 
-test('contact support recovery points to the active public contact route', () => {
+test('recoverable business failures point to Contact while Subscription stays informational', () => {
   const routes = source('../src/routes/AppRoutes.jsx')
   const contact = source('../src/pages/ContactPage.jsx')
+  const subscription = source('../src/pages/business/SubscriptionPage.jsx')
   for (const page of [
     '../src/pages/business/BusinessDashboardPage.jsx',
     '../src/pages/business/EditBusinessPage.jsx',
-    '../src/pages/business/SubscriptionPage.jsx',
   ]) {
     assert.match(source(page), /navigate\('\/contact'\)/)
   }
+  assert.doesNotMatch(subscription, /navigate\(|RecoveryMessage|useEffect|useState|loadOwnerSubscriptionProjection/)
   assert.match(routes, /<Route path="contact" element=\{<ContactPage \/>\} \/>/)
   assert.match(contact, /hello@holalocal\.es/)
 })
