@@ -1,11 +1,24 @@
 import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import i18next from 'i18next'
+import {
+  adminEnglishTranslations,
+  ownerEnglishRejectionTranslations,
+} from '../src/i18n/defaultTranslations.js'
+import { englishLegalPages } from '../src/i18n/englishLegalPages.js'
+import { legalConsentEnglishTranslations } from '../src/i18n/legalConsentEnglishTranslations.js'
+import { accountDeletionEnglishTranslations } from '../src/i18n/accountDeletionEnglishTranslations.js'
+import { conversationTerminalTranslations } from '../src/i18n/conversationTerminalTranslations.js'
+import { adminDeletionTranslations } from '../src/i18n/adminDeletionTranslations.js'
+import { englishAuthenticatedResidual } from '../src/i18n/englishAuthenticatedResidual.js'
+import { ownerRejectionTranslations } from '../src/i18n/adminTranslations.js'
+import { accountDeletionTranslations } from '../src/i18n/accountDeletionTranslations.js'
 import { authenticatedTranslations } from '../src/i18n/locales/authenticatedTranslations.js'
 import { fallbackLocaleCompletionTranslations } from '../src/i18n/locales/fallbackLocaleCompletionTranslations.js'
+import { legalConsentTranslations } from '../src/i18n/locales/legalConsentTranslations.js'
 import { legalPageContent } from '../src/i18n/locales/legalContent.js'
-import { mergeLocale } from '../src/i18n/locales/mergeLocale.js'
 import { universalOperationalTranslations } from '../src/i18n/locales/universalOperationalTranslations.js'
+import { publicBusinessDetailTranslations } from '../src/i18n/locales/publicBusinessDetailTranslations.js'
 import { serviceAreaLabels } from '../src/utils/locations.js'
 import { supportedUILanguages } from '../src/utils/languages.js'
 import {
@@ -15,12 +28,30 @@ import { serviceTaxonomyTranslations } from '../src/i18n/locales/serviceTaxonomy
 import { businessTaxonomyEditorTranslations } from '../src/i18n/locales/businessTaxonomyEditorTranslations.js'
 import { serviceBrowseTranslations } from '../src/i18n/locales/serviceBrowseTranslations.js'
 import { homepagePlatformTranslations } from '../src/i18n/locales/homepagePlatformTranslations.js'
+import { productLandingTranslations } from '../src/i18n/locales/productLandingTranslations.js'
+import { productNavigationTranslations } from '../src/i18n/locales/productNavigationTranslations.js'
+import { footerNavigationTranslations } from '../src/i18n/locales/footerNavigationTranslations.js'
+import { subscriptionProductTranslations } from '../src/i18n/locales/subscriptionProductTranslations.js'
+import { savedBusinessTranslations } from '../src/i18n/locales/savedBusinessTranslations.js'
+import {
+  composeEnglishTranslationResource,
+  composeLocaleTranslationResource,
+  validateLocalePack,
+} from '../src/i18n/translationComposition.js'
+import {
+  ENGLISH_ADMIN_SOURCE_NAME,
+  ENGLISH_ONLY_ADMIN_PLURAL_KEY,
+  isApprovedEnglishAdminPluralFallback,
+} from './localePluralValidation.js'
 
 const root = fileURLToPath(new URL('../src/i18n/locales/', import.meta.url))
 const sourceRoot = fileURLToPath(new URL('../src/', import.meta.url))
 const jsonLocales = new Set(['en', 'es', 'fr', 'de', 'nl', 'pt'])
 const representativeIntegerCounts = [0, 1, 2, 3, 4, 5, 10, 11, 12, 20, 21, 22, 25, 100, 101, 102]
 const pluralSuffixPattern = /_(zero|one|two|few|many|other)$/
+const supportedLocaleCodes = supportedUILanguages.map(({ code }) => code)
+const nonEnglishLocaleCodes = supportedLocaleCodes.filter((code) => code !== 'en')
+const fallbackLocaleCodes = ['ro', 'pl', 'cs', 'sk', 'hu', 'uk', 'it', 'fi', 'sv', 'da', 'no']
 
 async function readJsonLocale(code) {
   return JSON.parse(await readFile(`${root}${code}.json`, 'utf8'))
@@ -40,6 +71,29 @@ function interpolationVariables(value) {
   return [...String(value).matchAll(/{{\s*([^}\s]+)\s*}}/g)]
     .map((match) => match[1])
     .sort()
+}
+
+function nonEmptyLeafIssues(value, locale, path = '', issues = []) {
+  if (typeof value === 'string') {
+    if (!value.trim()) issues.push(`${locale}: ${path}: empty translation`)
+    return issues
+  }
+  if (!value || typeof value !== 'object') return issues
+  for (const [key, child] of Object.entries(value)) {
+    nonEmptyLeafIssues(child, locale, path ? `${path}.${key}` : key, issues)
+  }
+  return issues
+}
+
+function exactLocalePackIssues(name, pack, expectedLocales) {
+  const issues = validateLocalePack(name, pack, expectedLocales)
+  if (!pack || typeof pack !== 'object' || Array.isArray(pack)) return issues
+  const expected = [...expectedLocales].sort()
+  const received = Object.keys(pack).sort()
+  if (JSON.stringify(expected) !== JSON.stringify(received)) {
+    issues.push(`${name}: expected locales ${expected.join(', ')}, received ${received.join(', ')}`)
+  }
+  return issues
 }
 
 function requiredIntegerCategories(locale) {
@@ -109,15 +163,68 @@ async function countAwareTranslationKeys() {
 }
 
 const english = await readJsonLocale('en')
-const englishResource = mergeLocale(english, authenticatedTranslations.en, serviceTaxonomyTranslations.en, businessTaxonomyEditorTranslations.en, serviceBrowseTranslations.en, homepagePlatformTranslations.en, { legalPages: legalPageContent.en }, {
-  locations: { areas: serviceAreaLabels },
+const englishResource = composeEnglishTranslationResource({
+  baseLocaleJson: english,
+  productNavigationTranslations: productNavigationTranslations.en,
+  footerNavigationTranslations: footerNavigationTranslations.en,
+  subscriptionProductTranslations: subscriptionProductTranslations.en,
+  savedBusinessTranslations: savedBusinessTranslations.en,
+  englishAuthenticatedResidual,
+  adminEnglishTranslations,
+  ownerEnglishRejectionTranslations,
+  englishLegalPages: { legalPages: englishLegalPages },
+  legalConsentEnglishTranslations,
+  accountDeletionEnglishTranslations,
+  conversationTerminalTranslations: conversationTerminalTranslations.en,
+  adminDeletionTranslations: adminDeletionTranslations.en,
+  serviceTaxonomyTranslations: serviceTaxonomyTranslations.en,
+  businessTaxonomyEditorTranslations: businessTaxonomyEditorTranslations.en,
+  serviceBrowseTranslations: serviceBrowseTranslations.en,
+  homepagePlatformTranslations: homepagePlatformTranslations.en,
+  productLandingTranslations: productLandingTranslations.en,
+  serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
 })
 const referenceRoot = englishResource
 const failures = []
 const resources = { en: { translation: englishResource } }
 const countAwareKeys = await countAwareTranslationKeys()
 
+const fullLocalePacks = {
+  productNavigationTranslations,
+  footerNavigationTranslations,
+  subscriptionProductTranslations,
+  savedBusinessTranslations,
+  productLandingTranslations,
+  authenticatedTranslations,
+  conversationTerminalTranslations,
+  adminDeletionTranslations,
+  serviceTaxonomyTranslations,
+  businessTaxonomyEditorTranslations,
+  serviceBrowseTranslations,
+  homepagePlatformTranslations,
+  publicBusinessDetailTranslations,
+  legalPageContent,
+  ownerRejectionTranslations,
+}
+for (const [name, pack] of Object.entries(fullLocalePacks)) {
+  failures.push(...exactLocalePackIssues(name, pack, supportedLocaleCodes))
+}
+for (const [name, pack] of Object.entries({
+  legalConsentTranslations,
+  universalOperationalTranslations,
+  accountDeletionTranslations,
+})) {
+  failures.push(...exactLocalePackIssues(name, pack, nonEnglishLocaleCodes))
+}
+failures.push(...exactLocalePackIssues(
+  'fallbackLocaleCompletionTranslations',
+  fallbackLocaleCompletionTranslations,
+  fallbackLocaleCodes,
+))
+failures.push(...nonEmptyLeafIssues(englishResource, 'en'))
+
 for (const { code } of supportedUILanguages) {
+  if (code === 'en') continue
   const base = jsonLocales.has(code) ? await readJsonLocale(code) : english
   const authenticated = authenticatedTranslations[code]
   if (!authenticated) {
@@ -126,13 +233,34 @@ for (const { code } of supportedUILanguages) {
   }
 
   const authenticatedIssues = compare(authenticatedTranslations.en, authenticated, code)
-  const resource = mergeLocale(english, base, authenticated, fallbackLocaleCompletionTranslations[code], universalOperationalTranslations[code], serviceTaxonomyTranslations[code], businessTaxonomyEditorTranslations[code], serviceBrowseTranslations[code], homepagePlatformTranslations[code], {
-    legalPages: legalPageContent[code],
-    locations: { areas: serviceAreaLabels },
+  const resource = composeLocaleTranslationResource({
+    englishFallbackJson: english,
+    baseLocale: base,
+    productNavigationTranslations: productNavigationTranslations[code],
+    footerNavigationTranslations: footerNavigationTranslations[code],
+    subscriptionProductTranslations: subscriptionProductTranslations[code],
+    savedBusinessTranslations: savedBusinessTranslations[code],
+    authenticatedTranslations: authenticated,
+    fallbackLocaleCompletionTranslations: fallbackLocaleCompletionTranslations[code],
+    legalConsentTranslations: legalConsentTranslations[code],
+    universalOperationalTranslations: universalOperationalTranslations[code],
+    adminEnglishTranslations,
+    ownerRejectionTranslations: ownerRejectionTranslations[code],
+    accountDeletionTranslations: accountDeletionTranslations[code],
+    conversationTerminalTranslations: conversationTerminalTranslations[code],
+    adminDeletionTranslations: adminDeletionTranslations[code],
+    serviceTaxonomyTranslations: serviceTaxonomyTranslations[code],
+    businessTaxonomyEditorTranslations: businessTaxonomyEditorTranslations[code],
+    serviceBrowseTranslations: serviceBrowseTranslations[code],
+    homepagePlatformTranslations: homepagePlatformTranslations[code],
+    productLandingTranslations: productLandingTranslations[code],
+    legalPageContent: { legalPages: legalPageContent[code] },
+    serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
   })
   resources[code] = { translation: resource }
   const resourceIssues = compare(englishResource, resource, code)
   for (const issue of [...authenticatedIssues, ...resourceIssues]) failures.push(`${code}: ${issue}`)
+  failures.push(...nonEmptyLeafIssues(resource, code))
 }
 
 const pluralizedCountKeys = [...countAwareKeys].filter((key) => (
@@ -140,16 +268,24 @@ const pluralizedCountKeys = [...countAwareKeys].filter((key) => (
   && typeof getPath(englishResource, `${key}_other`) === 'string'
 ))
 const expectedPluralizedKeys = new Set([
-  'marketing.hero.ratingCount',
-  'publicBusinessDetail.reviewCount',
   'services.resultCount',
   'business.control.heroContextAreas',
   'business.control.missingCount',
   'business.control.serviceAreas',
   'business.form.errors.galleryRemaining',
 ])
+const preservedDormantPluralizedKeys = new Set([
+  'marketing.hero.ratingCount',
+  'publicBusinessDetail.reviewCount',
+])
 for (const key of expectedPluralizedKeys) {
   if (!pluralizedCountKeys.includes(key)) failures.push(`${key}: pluralized count key is not used by source`)
+}
+for (const key of preservedDormantPluralizedKeys) {
+  if (typeof getPath(englishResource, `${key}_one`) !== 'string'
+    || typeof getPath(englishResource, `${key}_other`) !== 'string') {
+    failures.push(`${key}: preserved dormant pluralized count key is incomplete`)
+  }
 }
 
 const runtime = i18next.createInstance()
@@ -164,7 +300,7 @@ await runtime.init({
 })
 
 for (const { code } of supportedUILanguages) {
-  const coveredPluralKeys = new Set(['publicBusinessDetail.reviewCount'])
+  const coveredPluralKeys = new Set(preservedDormantPluralizedKeys)
   if (jsonLocales.has(code) || fallbackLocaleCompletionTranslations[code]) {
     pluralizedCountKeys.forEach((key) => coveredPluralKeys.add(key))
   }
@@ -173,7 +309,11 @@ for (const { code } of supportedUILanguages) {
       const category = new Intl.PluralRules(code).select(count)
       const details = runtime.t(key, { count, lng: code, returnDetails: true })
       if (details.usedLng !== code) {
-        failures.push(`${code}: ${key} count ${count} fell back to ${details.usedLng}`)
+        if (!isApprovedEnglishAdminPluralFallback({
+          key,
+          locale: code,
+          sourceName: ENGLISH_ADMIN_SOURCE_NAME,
+        })) failures.push(`${code}: ${key} count ${count} fell back to ${details.usedLng}`)
       } else if (details.exactUsedKey !== `${key}_${category}`) {
         failures.push(`${code}: ${key} count ${count} used ${details.exactUsedKey}, expected ${key}_${category}`)
       } else if (!String(details.res).includes(String(count))) {
@@ -181,6 +321,13 @@ for (const { code } of supportedUILanguages) {
       }
     }
   }
+}
+
+if (getPath(adminEnglishTranslations, `${ENGLISH_ONLY_ADMIN_PLURAL_KEY}_one`)
+  !== getPath(englishResource, `${ENGLISH_ONLY_ADMIN_PLURAL_KEY}_one`)
+  || getPath(adminEnglishTranslations, `${ENGLISH_ONLY_ADMIN_PLURAL_KEY}_other`)
+  !== getPath(englishResource, `${ENGLISH_ONLY_ADMIN_PLURAL_KEY}_other`)) {
+  failures.push(`${ENGLISH_ONLY_ADMIN_PLURAL_KEY}: English admin source is not authoritative`)
 }
 
 if (SERVICE_TAXONOMY_GROUPS.length !== 6) failures.push(`taxonomy: expected 6 groups, received ${SERVICE_TAXONOMY_GROUPS.length}`)

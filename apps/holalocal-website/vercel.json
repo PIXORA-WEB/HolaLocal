@@ -7,6 +7,8 @@
   "rewrites": [
     { "source": "/services", "destination": "/index.html" },
     { "source": "/services/:businessId", "destination": "/index.html" },
+    { "source": "/events", "destination": "/index.html" },
+    { "source": "/community", "destination": "/index.html" },
 
     { "source": "/contact", "destination": "/index.html" },
     { "source": "/privacy", "destination": "/index.html" },
@@ -23,6 +25,8 @@
     { "source": "/onboarding", "destination": "/index.html" },
 
     { "source": "/profile", "destination": "/index.html" },
+    { "source": "/favourites", "destination": "/index.html" },
+    { "source": "/subscription", "destination": "/index.html" },
     { "source": "/messages", "destination": "/index.html" },
     { "source": "/messages/:conversationId", "destination": "/index.html" },
 

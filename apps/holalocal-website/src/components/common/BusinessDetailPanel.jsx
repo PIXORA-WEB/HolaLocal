@@ -8,9 +8,26 @@ function externalUrl(value) {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`
 }
 
-function BusinessDetailPanel({ business, messaging, onBack, onContactAction, onMessage, onReport }) {
+function SavedBusinessIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" focusable="false" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
+      <path d="M6.75 4.5h10.5v15l-5.25-3.25-5.25 3.25z" />
+    </svg>
+  )
+}
+
+function BusinessDetailPanel({
+  business,
+  messaging,
+  onBack,
+  onContactAction,
+  onMessage,
+  onReport,
+  onSavedToggle,
+  saveError = '',
+  saveState = null,
+}) {
   const { i18n, t } = useTranslation()
-  const hasRating = business.ratingAverage > 0 && business.ratingCount > 0
   const categoryLabel = business.category
     ? getBusinessCategoryLabel(business.category, t)
     : t('publicBusinessDetail.categoryNotSpecified')
@@ -24,6 +41,19 @@ function BusinessDetailPanel({ business, messaging, onBack, onContactAction, onM
     business.contact.whatsappNumber ||
     business.contact.allowCallbackRequests,
   )
+  const savePending = saveState === 'loading' || saveState === 'saving' || saveState === 'removing'
+  const savePressed = saveState === 'saved' || saveState === 'removing'
+  const saveLabel = saveState === 'loading'
+    ? t('savedBusinesses.checking')
+    : saveState === 'saving'
+      ? t('savedBusinesses.saving')
+      : saveState === 'removing'
+        ? t('savedBusinesses.removing')
+        : saveState === 'saved'
+          ? t('savedBusinesses.remove')
+          : saveState === 'load-failed'
+            ? t('savedBusinesses.retry')
+            : t('savedBusinesses.save')
 
   return (
     <article className="business-detail" aria-labelledby="business-detail-title">
@@ -44,7 +74,6 @@ function BusinessDetailPanel({ business, messaging, onBack, onContactAction, onM
         </div>
         <div className="business-detail__badges">
           <span className="is-active">{t('publicBusinessDetail.activeProfile')}</span>
-          <span>{t('publicBusinessDetail.verificationComingSoon')}</span>
           <span>
             {t('publicBusinessDetail.subscriptionPlan', {
               plan: t(`subscription.plans.${business.subscriptionTier}`, {
@@ -53,24 +82,15 @@ function BusinessDetailPanel({ business, messaging, onBack, onContactAction, onM
             })}
           </span>
         </div>
+        <p className="business-detail__disclosure">
+          {t('publicBusinessDetail.profileInformationProvided')}
+        </p>
       </header>
-
-      <div className="business-detail__rating">
-        {hasRating ? (
-          <p>
-            <span aria-hidden="true">★</span> {business.ratingAverage.toFixed(1)} ·{' '}
-            {t('publicBusinessDetail.reviewCount', { count: business.ratingCount })}
-          </p>
-        ) : (
-          <p><span aria-hidden="true">☆</span> {t('publicBusinessDetail.noReviews')}</p>
-        )}
-      </div>
 
       <nav className="business-detail__navigation" aria-label={t('publicBusinessDetail.sectionsLabel')}>
         <a href="#business-overview">{t('publicBusinessDetail.overview')}</a>
         <a href="#business-services">{t('publicBusinessDetail.services')}</a>
         <a href="#business-photos">{t('publicBusinessDetail.photos')}</a>
-        <a href="#business-reviews">{t('publicBusinessDetail.reviews')}</a>
         <a href="#business-about">{t('publicBusinessDetail.about')}</a>
       </nav>
 
@@ -85,17 +105,25 @@ function BusinessDetailPanel({ business, messaging, onBack, onContactAction, onM
             ? t('publicBusinessDetail.openingConversation')
             : t('publicBusinessDetail.messageBusiness')}
         </button>
-        <button
-          className="button button--secondary"
-          disabled
-          title={t('publicBusinessDetail.favouritesComingSoon')}
-          type="button"
-        >
-          ♡ {t('publicBusinessDetail.save')}
-        </button>
+        {saveState && (
+          <button
+            aria-busy={savePending || undefined}
+            aria-pressed={['not-saved', 'saving', 'saved', 'removing'].includes(saveState)
+              ? savePressed
+              : undefined}
+            className={`button business-detail__save${savePressed ? ' is-saved' : ''}`}
+            disabled={savePending}
+            onClick={onSavedToggle}
+            type="button"
+          >
+            <SavedBusinessIcon />
+            <span>{saveLabel}</span>
+          </button>
+        )}
         <button className="business-detail__report" onClick={onReport} type="button">
           {t('publicBusinessDetail.reportBusiness')}
         </button>
+        {saveError && <p className="business-detail__save-error" role="alert">{saveError}</p>}
       </div>
 
       <section className="business-detail__section" id="business-overview">
@@ -161,19 +189,6 @@ function BusinessDetailPanel({ business, messaging, onBack, onContactAction, onM
             <p>{t('publicBusinessDetail.noPhotos')}</p>
           </div>
         )}
-      </section>
-
-      <section className="business-detail__section" id="business-reviews">
-        <p className="account-card__eyebrow">{t('publicBusinessDetail.reviews')}</p>
-        <h2>{t('publicBusinessDetail.customerFeedback')}</h2>
-        <div className="business-detail__empty business-detail__empty--panel">
-          <span aria-hidden="true">☆</span>
-          <p>
-            {hasRating
-              ? t('publicBusinessDetail.reviewsUnavailable')
-              : t('publicBusinessDetail.noReceivedReviews')}
-          </p>
-        </div>
       </section>
 
       <section className="business-detail__section" id="business-about">

@@ -13,11 +13,13 @@ void i18nReady.then(() => {
     </StrictMode>,
   )
 
-  const initializeAnalytics = () => {
-    void import('./firebase/analyticsClient.js')
-      .then((module) => module.initializeAnalytics())
-      .catch(() => null)
+  if (import.meta.env.MODE !== 'browser-test') {
+    const initializeAnalytics = () => {
+      void import('./firebase/analyticsClient.js')
+        .then((module) => module.initializeAnalytics())
+        .catch(() => null)
+    }
+    if ('requestIdleCallback' in window) window.requestIdleCallback(initializeAnalytics)
+    else window.setTimeout(initializeAnalytics, 1500)
   }
-  if ('requestIdleCallback' in window) window.requestIdleCallback(initializeAnalytics)
-  else window.setTimeout(initializeAnalytics, 1500)
 })

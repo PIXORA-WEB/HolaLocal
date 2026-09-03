@@ -53,7 +53,7 @@
   "metadata": {
     "title": "HolaLocal",
     "pageTitle": "{{page}} · HolaLocal",
-    "description": "Vind betrouwbare lokale diensten en kom in contact met lokale bedrijven aan de Costa del Sol en in Gibraltar."
+    "description": "Vind lokale diensten en kom in contact met lokale bedrijven aan de Costa del Sol en in Gibraltar."
   },
   "errors": {
     "application": {
@@ -332,18 +332,18 @@
     "how": {
       "eyebrow": "Zo werkt het",
       "title": "Lokale hulp in drie duidelijke stappen.",
-      "description": "Ontdek aanbieders, bekijk openbare profielen en neem contact op wanneer je wilt.",
+      "description": "Bekijk lokale diensten, lees gepubliceerde bedrijfsprofielen en neem contact op wanneer je wilt.",
       "browse": {
-        "title": "Bekijken",
-        "description": "Ontdek lokale diensten en aanbieders voordat je een account maakt."
+        "title": "Lokale diensten bekijken",
+        "description": "Bekijk lokale diensten en gepubliceerde bedrijfsprofielen zonder een account te maken."
+      },
+      "review": {
+        "title": "Profielen bekijken",
+        "description": "Vergelijk diensten, werkgebieden, talen en openbare contactgegevens die bedrijven zelf delen."
       },
       "connect": {
-        "title": "Verbinden",
-        "description": "Log in voor een privégesprek met het bedrijf dat bij je past."
-      },
-      "choose": {
-        "title": "Kies met vertrouwen",
-        "description": "Vergelijk duidelijke openbare informatie en kies de juiste aanbieder."
+        "title": "Privé contact opnemen",
+        "description": "Log in om een privégesprek te starten met het bedrijf dat bij je past."
       }
     },
     "journeys": {
@@ -351,13 +351,13 @@
       "title": "Vind hulp of bouw aan je lokale zichtbaarheid.",
       "customers": {
         "title": "Voor klanten",
-        "description": "Bekijk vrij, bewaar nuttige profielen en neem privé contact op met de juiste aanbieder.",
+        "description": "Bewaar nuttige profielen en log in wanneer je privé contact wilt opnemen.",
         "action": "Lokale diensten vinden"
       },
       "businesses": {
         "title": "Voor lokale bedrijven",
-        "description": "Maak een professioneel profiel en laat klanten in de buurt je diensten makkelijker vinden.",
-        "action": "Bedrijf beheren"
+        "description": "Presenteer je diensten, werkgebieden en talen in één duidelijk profiel.",
+        "action": "Bedrijf vermelden"
       }
     },
     "region": {
@@ -531,7 +531,7 @@
     }
   },
   "footer": {
-    "description": "Een betrouwbare, meertalige lokale community voor diensten aan de Costa del Sol en in Gibraltar.",
+    "description": "Een meertalig lokaal platform om diensten te vinden en aan te bieden aan de Costa del Sol en in Gibraltar.",
     "platform": "Platform",
     "platformLabel": "Platformlinks",
     "findServices": "Diensten vinden",

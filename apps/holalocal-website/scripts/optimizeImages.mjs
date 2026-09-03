@@ -27,12 +27,16 @@ async function decodePng(path) {
   if (!png.subarray(0, 8).equals(signature)) throw new Error(`${path} is not a PNG file.`)
   let offset = 8
   let header
+  let palette
+  let transparency
   const compressed = []
   while (offset < png.length) {
     const length = png.readUInt32BE(offset)
     const type = png.toString('ascii', offset + 4, offset + 8)
     const data = png.subarray(offset + 8, offset + 8 + length)
     if (type === 'IHDR') header = data
+    if (type === 'PLTE') palette = data
+    if (type === 'tRNS') transparency = data
     if (type === 'IDAT') compressed.push(data)
     offset += length + 12
   }
@@ -40,7 +44,7 @@ async function decodePng(path) {
   const height = header.readUInt32BE(4)
   const bitDepth = header[8]
   const colourType = header[9]
-  const channels = colourType === 6 ? 4 : colourType === 2 ? 3 : 0
+  const channels = colourType === 6 ? 4 : colourType === 2 ? 3 : colourType === 3 ? 1 : 0
   if (bitDepth !== 8 || !channels || header[12] !== 0) throw new Error(`${path} uses an unsupported PNG format.`)
   const raw = inflateSync(Buffer.concat(compressed))
   const stride = width * channels
@@ -69,7 +73,20 @@ async function decodePng(path) {
     }
     sourceOffset += stride
   }
-  return { channels, height, pixels, width }
+  if (colourType !== 3) return { channels, height, pixels, width }
+  if (!palette) throw new Error(`${path} does not contain a PNG palette.`)
+
+  const rgba = Buffer.alloc(width * height * 4)
+  for (let index = 0; index < pixels.length; index += 1) {
+    const paletteOffset = pixels[index] * 3
+    if (paletteOffset + 2 >= palette.length) throw new Error(`${path} contains an invalid palette index.`)
+    const outputOffset = index * 4
+    rgba[outputOffset] = palette[paletteOffset]
+    rgba[outputOffset + 1] = palette[paletteOffset + 1]
+    rgba[outputOffset + 2] = palette[paletteOffset + 2]
+    rgba[outputOffset + 3] = transparency?.[pixels[index]] ?? 255
+  }
+  return { channels: 4, height, pixels: rgba, width }
 }
 
 function resize(source, width, height) {
@@ -96,6 +113,29 @@ function resize(source, width, height) {
       }
     }
   }
+  return { channels: source.channels, height, pixels: output, width }
+}
+
+function resizeContained(source, width, height) {
+  const scale = Math.min(width / source.width, height / source.height)
+  const contentWidth = Math.max(1, Math.round(source.width * scale))
+  const contentHeight = Math.max(1, Math.round(source.height * scale))
+  const content = resize(source, contentWidth, contentHeight)
+  const output = Buffer.alloc(width * height * source.channels)
+  const xOffset = Math.floor((width - contentWidth) / 2)
+  const yOffset = Math.floor((height - contentHeight) / 2)
+  const sourceStride = contentWidth * source.channels
+  const outputStride = width * source.channels
+
+  for (let y = 0; y < contentHeight; y += 1) {
+    content.pixels.copy(
+      output,
+      (y + yOffset) * outputStride + xOffset * source.channels,
+      y * sourceStride,
+      (y + 1) * sourceStride,
+    )
+  }
+
   return { channels: source.channels, height, pixels: output, width }
 }
 
@@ -127,6 +167,6 @@ const tasks = [
 
 for (const [sourcePath, outputPath, width, height] of tasks) {
   const source = await decodePng(sourcePath)
-  await encodePng(outputPath, resize(source, width, height))
+  await encodePng(outputPath, resizeContained(source, width, height))
   console.log(`Created ${outputPath} (${width}×${height})`)
 }

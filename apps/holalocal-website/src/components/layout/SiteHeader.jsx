@@ -8,9 +8,16 @@ import LanguageSwitcher from '../common/LanguageSwitcher.jsx'
 import useUnreadMessageCount from '../../hooks/useUnreadMessageCount.js'
 
 const publicNavigationLinks = [
-  { labelKey: 'nav.home', to: '/' },
-  { labelKey: 'nav.findServices', to: '/services' },
-  { labelKey: 'footer.contact', to: '/contact' },
+  { product: 'services', labelKey: 'nav.services', to: '/services' },
+  { product: 'events', labelKey: 'nav.events', to: '/events' },
+  { product: 'community', labelKey: 'nav.community', to: '/community' },
+]
+
+const accountNavigationLinks = [
+  { labelKey: 'account.profile', to: '/profile' },
+  { labelKey: 'savedBusinesses.page.navigation', to: '/favourites', requiresCustomerAccess: true },
+  { labelKey: 'account.business', to: '/business/dashboard', requiresBusinessAccess: true },
+  { labelKey: 'business.subscription', to: '/subscription' },
 ]
 
 function SiteHeader() {
@@ -36,6 +43,11 @@ function SiteHeader() {
     .join('')
     .toUpperCase()
   const hasBusinessAccess = userProfile?.roles?.includes('business') === true
+  const hasCustomerAccess = userProfile?.roles?.includes('customer') === true
+  const visibleAccountNavigationLinks = accountNavigationLinks.filter(
+    (link) => (!link.requiresBusinessAccess || hasBusinessAccess)
+      && (!link.requiresCustomerAccess || hasCustomerAccess),
+  )
   const unreadMessageCount = useUnreadMessageCount(user?.uid)
 
   function renderUnreadBadge() {
@@ -110,7 +122,7 @@ function SiteHeader() {
         <BrandLockup />
         <nav className="site-header__nav" aria-label={t('nav.primary')}>
           {publicNavigationLinks.map((link) => (
-            <NavLink end={link.to === '/'} key={link.to} to={link.to}>
+            <NavLink className={`public-navigation-link public-navigation-link--${link.product}`} key={link.to} to={link.to}>
               {t(link.labelKey)}
             </NavLink>
           ))}
@@ -126,8 +138,9 @@ function SiteHeader() {
                 <span>{t('account.greeting', { name: firstName })}</span>
               </summary>
               <nav aria-label={t('account.navigationLabel')}>
-                <NavLink to="/profile">{t('account.profile')}</NavLink>
-                {hasBusinessAccess && <NavLink to="/business/dashboard">{t('account.business')}</NavLink>}
+                {visibleAccountNavigationLinks.map((link) => (
+                  <NavLink key={link.to} to={link.to}>{t(link.labelKey)}</NavLink>
+                ))}
                 <NavLink to="/messages">
                   <span>{t('account.messages')}</span>
                   {renderUnreadBadge()}
@@ -153,7 +166,7 @@ function SiteHeader() {
               {!user ? (
                 <>
                   {publicNavigationLinks.map((link) => (
-                    <NavLink end={link.to === '/'} key={link.to} onClick={closeMobileMenu} to={link.to}>
+                    <NavLink className={`public-navigation-link public-navigation-link--${link.product}`} key={link.to} onClick={closeMobileMenu} to={link.to}>
                       {t(link.labelKey)}
                     </NavLink>
                   ))}
@@ -164,19 +177,15 @@ function SiteHeader() {
                 <>
                   <div className="mobile-navigation__group">
                     {publicNavigationLinks.map((link) => (
-                      <NavLink end={link.to === '/'} key={link.to} onClick={closeMobileMenu} to={link.to}>
+                      <NavLink className={`public-navigation-link public-navigation-link--${link.product}`} key={link.to} onClick={closeMobileMenu} to={link.to}>
                         {t(link.labelKey)}
                       </NavLink>
                     ))}
                   </div>
                   <div className="mobile-navigation__group mobile-navigation__group--account">
-                    <NavLink onClick={closeMobileMenu} to="/profile">{t('account.profile')}</NavLink>
-                    {hasBusinessAccess && (
-                      <>
-                        <NavLink onClick={closeMobileMenu} to="/business/dashboard">{t('account.business')}</NavLink>
-                        <NavLink onClick={closeMobileMenu} to="/business/subscription">{t('business.subscription')}</NavLink>
-                      </>
-                    )}
+                    {visibleAccountNavigationLinks.map((link) => (
+                      <NavLink key={link.to} onClick={closeMobileMenu} to={link.to}>{t(link.labelKey)}</NavLink>
+                    ))}
                     <NavLink onClick={closeMobileMenu} to="/messages">
                       <span>{t('account.messages')}</span>
                       {renderUnreadBadge()}

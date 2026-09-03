@@ -141,9 +141,10 @@ test('email verification profile completion and onboarding preserve the intended
   const verification = await readFile(path.resolve(__dirname, '../src/pages/auth/VerificationPendingPage.jsx'), 'utf8')
   const completion = await readFile(path.resolve(__dirname, '../src/pages/auth/CompleteProfilePage.jsx'), 'utf8')
   const onboarding = await readFile(path.resolve(__dirname, '../src/pages/auth/OnboardingPage.jsx'), 'utf8')
-  assert.match(verification, /state: \{ from: location\.state\?\.from \}/)
-  assert.match(completion, /state: \{ from: location\.state\?\.from \}/)
-  assert.match(onboarding, /internalPathFromLocation\(location\.state\?\.from, fallback\)/)
+  assert.match(verification, /normalizeInternalLocation\(location\.state\?\.from\)/)
+  assert.match(verification, /state: \{ from: returnLocation \}/)
+  assert.match(completion, /normalizeInternalLocation\(location\.state\?\.from\)/)
+  assert.match(onboarding, /internalPathFromLocation\(intendedLocation\(location\), fallback\)/)
 })
 
 test('legal consent UI is explicit accessible and does not precheck acknowledgements', async () => {

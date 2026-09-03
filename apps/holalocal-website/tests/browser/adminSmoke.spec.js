@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { formatStorageReadAssertionMessage } from './storageReadDiagnostics.mjs'
 import { Buffer } from 'node:buffer'
 import { getApps, initializeApp } from 'firebase-admin/app'
 import { getFirestore, Timestamp } from 'firebase-admin/firestore'
@@ -135,14 +136,12 @@ async function assignmentCallable(page, payload) {
 
 async function storageRead(page, storagePath) {
   return page.evaluate(async (path) => {
-    const { getBytes, ref } = await import('/@id/firebase/storage')
-    const { storage } = await import('/src/firebase/storageClient.js')
-    try {
-      await getBytes(ref(storage, path))
-      return 'allowed'
-    } catch (error) {
-      return error.code
-    }
+    const { getCanonicalImageBlob } = await import('/src/firebase/storageClient.js')
+    const {
+      runStorageReadDiagnostic,
+      validateStorageReadPath,
+    } = await import('/tests/browser/storageReadDiagnostics.mjs')
+    return runStorageReadDiagnostic(() => getCanonicalImageBlob(validateStorageReadPath(path)))
   }, storagePath)
 }
 
@@ -269,8 +268,15 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     for (const result of Object.values(ownerDirectAccess)) expect(result).not.toBe('allowed')
 
     await ownerPage.goto('/business/subscription')
-    await expect(ownerPage.locator('.subscription-current-card h2')).toContainText(/Growth|Crecimiento/)
-    await expect(ownerPage.locator('.subscription-plan-card[aria-current="true"]')).toContainText(/Growth|Crecimiento/)
+    await expect(ownerPage).toHaveURL(/\/subscription$/)
+    const subscriptionProducts = ownerPage.getByRole('region', { name: 'Tus suscripciones' })
+    await expect(subscriptionProducts).toBeVisible()
+    await expect(subscriptionProducts.getByRole('heading', { name: 'Empresa', exact: true })).toBeVisible()
+    await expect(subscriptionProducts.getByText('Gratis durante el acceso anticipado', { exact: true })).toBeVisible()
+    await expect(subscriptionProducts.getByRole('heading', { name: 'Eventos', exact: true })).toBeVisible()
+    await expect(subscriptionProducts.getByText('Próximamente', { exact: true })).toBeVisible()
+    await expect(subscriptionProducts.getByRole('button')).toHaveCount(0)
+    await expect(subscriptionProducts.getByRole('link')).toHaveCount(0)
     await expect(ownerPage.locator('body')).not.toContainText(assignmentReason)
     await expect(ownerPage.locator('body')).not.toContainText(noChangeReason)
     await expect(ownerPage.locator('body')).not.toContainText(TEST_USERS.admin.uid)
@@ -371,10 +377,15 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     await anonymousPage.goto(`/admin/businesses/${TEST_BUSINESS_ID}`)
     await expect(anonymousPage).toHaveURL(/\/login/)
     await expect(anonymousPage.getByText('Private business details')).toHaveCount(0)
-    expect(await storageRead(
+    const anonymousStorageRead = await storageRead(
       anonymousPage,
       TEST_LEGACY_LOGO_PATH,
-    )).not.toBe('allowed')
+    )
+    expect(anonymousStorageRead, formatStorageReadAssertionMessage({
+      actor: 'anonymous',
+      pathCategory: 'canonical business logo',
+      expected: 'denied with storage/unauthorized',
+    }, anonymousStorageRead)).toMatchObject({ outcome: 'denied', code: 'storage/unauthorized' })
     await closeTestContext(anonymous)
 
     const customer = await newTestContext(browser)
@@ -405,10 +416,15 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
       }
     }, TEST_BUSINESS_ID)
     expect(deniedReview).not.toBe('allowed')
-    expect(await storageRead(
+    const customerStorageRead = await storageRead(
       customerPage,
       TEST_LEGACY_GALLERY_PATH,
-    )).not.toBe('allowed')
+    )
+    expect(customerStorageRead, formatStorageReadAssertionMessage({
+      actor: 'customer',
+      pathCategory: 'canonical business gallery image',
+      expected: 'denied with storage/unauthorized',
+    }, customerStorageRead)).toMatchObject({ outcome: 'denied', code: 'storage/unauthorized' })
     await closeTestContext(customer)
 
     const admin = await newTestContext(browser)
@@ -449,10 +465,15 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     await expect(adminPage.getByText('private.owner@example.invalid')).toHaveCount(0)
     await expect(adminPage.locator('.admin-review__logo')).toHaveJSProperty('complete', true)
     await expect(adminPage.locator('.admin-review__gallery img')).toHaveJSProperty('complete', true)
-    expect(await storageRead(
+    const adminStorageRead = await storageRead(
       adminPage,
       TEST_LEGACY_LOGO_PATH,
-    )).toBe('allowed')
+    )
+    expect(adminStorageRead, formatStorageReadAssertionMessage({
+      actor: 'admin',
+      pathCategory: 'canonical business logo',
+      expected: 'allowed',
+    }, adminStorageRead)).toMatchObject({ outcome: 'allowed', code: null })
 
     const rejectButton = adminPage.getByRole('button', { name: 'Reject', exact: true })
     await rejectButton.focus()
@@ -710,7 +731,7 @@ test.describe.serial('emulator-only Admin Dashboard smoke', () => {
     await page.getByRole('button', { name: 'Idioma' }).first().click()
     await page.getByRole('option', { name: /Français/ }).click()
     await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-    await expect(page.getByRole('heading', { name: /Find trusted local help/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Find local services. In your language.', exact: true })).toBeVisible()
     await page.reload()
     await page.getByRole('button', { name: 'Language' }).first().click()
     await page.getByRole('option', { name: /Français/ }).click()

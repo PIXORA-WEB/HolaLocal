@@ -14,9 +14,9 @@ function BrandLockup({ className = '', label, linked = true, to = '/', variant =
   const accessibleLabel = label ?? `${brand.name} ${t('nav.home')}`
   const content = (
     <>
-      <img className="brand-lockup__icon" decoding="async" height="768" src={logoIcon} alt="" width="768" />
+      <img className="brand-lockup__icon" decoding="async" height="824" src={logoIcon} alt="" width="758" />
       {variant !== 'icon' && (
-        <img className="brand-lockup__text" decoding="async" height="384" src={logoText} alt="" width="1024" />
+        <img className="brand-lockup__text" decoding="async" height="329" src={logoText} alt="" width="1813" />
       )}
     </>
   )

@@ -58,13 +58,3 @@ test('verification and blocked-account sign-out failures are handled locally', (
     assert.match(contents, /disabled=\{signingOut\}/)
   }
 })
-
-test('SubscriptionPage classifies owner-business workflow failures and executes mapped recovery', () => {
-  const subscription = source('../src/pages/business/SubscriptionPage.jsx')
-  assert.match(subscription, /classifyFrontendError\(loadError, \{\s*domain: 'workflow'/s)
-  for (const recovery of ['verify-email', 'complete-profile', 'refresh-account', 'contact-support']) {
-    assert.match(subscription, new RegExp(`recovery === '${recovery}'`))
-  }
-  assert.doesNotMatch(subscription, /getAuthenticationErrorMessage/)
-  assert.doesNotMatch(subscription, /\.message\s*\|\|/)
-})

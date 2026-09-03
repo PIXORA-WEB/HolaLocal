@@ -11,12 +11,21 @@ import { legalConsentEnglishTranslations } from './legalConsentEnglishTranslatio
 import { accountDeletionEnglishTranslations } from './accountDeletionEnglishTranslations.js'
 import { conversationTerminalTranslations } from './conversationTerminalTranslations.js'
 import { adminDeletionTranslations } from './adminDeletionTranslations.js'
+import { englishAuthenticatedResidual } from './englishAuthenticatedResidual.js'
+import { businessTaxonomyEditorEnglishTranslations } from './businessTaxonomyEditorEnglishTranslations.js'
+import { footerNavigationEnglishTranslations } from './footerNavigationEnglishTranslations.js'
+import { homepagePlatformEnglishTranslations } from './homepagePlatformEnglishTranslations.js'
+import { productLandingEnglishTranslations } from './productLandingEnglishTranslations.js'
+import { productNavigationEnglishTranslations } from './productNavigationEnglishTranslations.js'
+import { savedBusinessEnglishTranslations } from './savedBusinessEnglishTranslations.js'
+import { serviceBrowseEnglishTranslations } from './serviceBrowseEnglishTranslations.js'
+import { serviceTaxonomyEnglishTranslations } from './serviceTaxonomyEnglishTranslations.js'
+import { subscriptionProductEnglishTranslations } from './subscriptionProductEnglishTranslations.js'
 import en from './locales/en.json'
-import { mergeLocale } from './locales/mergeLocale.js'
-import { serviceTaxonomyTranslations } from './locales/serviceTaxonomyTranslations.js'
-import { businessTaxonomyEditorTranslations } from './locales/businessTaxonomyEditorTranslations.js'
-import { serviceBrowseTranslations } from './locales/serviceBrowseTranslations.js'
-import { homepagePlatformTranslations } from './locales/homepagePlatformTranslations.js'
+import {
+  composeEnglishTranslationResource,
+  composeLocaleTranslationResource,
+} from './translationComposition.js'
 
 export const LANGUAGE_STORAGE_KEY = 'holalocal.uiLanguage'
 
@@ -44,21 +53,27 @@ const storedLanguage = typeof window === 'undefined'
   ? null
   : window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
 const initialLanguage = supportedLanguageCodes.includes(storedLanguage) ? storedLanguage : 'en'
-const englishResource = mergeLocale(
-  en,
+const englishResource = composeEnglishTranslationResource({
+  baseLocaleJson: en,
+  productNavigationTranslations: productNavigationEnglishTranslations,
+  footerNavigationTranslations: footerNavigationEnglishTranslations,
+  subscriptionProductTranslations: subscriptionProductEnglishTranslations,
+  savedBusinessTranslations: savedBusinessEnglishTranslations,
+  englishAuthenticatedResidual,
   adminEnglishTranslations,
   ownerEnglishRejectionTranslations,
-  { legalPages: englishLegalPages },
+  englishLegalPages: { legalPages: englishLegalPages },
   legalConsentEnglishTranslations,
   accountDeletionEnglishTranslations,
-  conversationTerminalTranslations.en,
-  adminDeletionTranslations.en,
-  serviceTaxonomyTranslations.en,
-  businessTaxonomyEditorTranslations.en,
-  serviceBrowseTranslations.en,
-  homepagePlatformTranslations.en,
-  { locations: { areas: serviceAreaLabels } },
-)
+  conversationTerminalTranslations: conversationTerminalTranslations.en,
+  adminDeletionTranslations: adminDeletionTranslations.en,
+  serviceTaxonomyTranslations: serviceTaxonomyEnglishTranslations,
+  businessTaxonomyEditorTranslations: businessTaxonomyEditorEnglishTranslations,
+  serviceBrowseTranslations: serviceBrowseEnglishTranslations,
+  homepagePlatformTranslations: homepagePlatformEnglishTranslations,
+  productLandingTranslations: productLandingEnglishTranslations,
+  serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
+})
 const loadedLocales = new Set(['en'])
 const localeLoadPromises = new Map()
 let languageChangeSequence = 0
@@ -87,6 +102,7 @@ export async function loadLocale(languageCode) {
     import('./locales/universalOperationalTranslations.js'),
     import('./adminTranslations.js'),
     import('./accountDeletionTranslations.js'),
+    import('./locales/nonEnglishTranslationPacks.js'),
   ]).then(([
     { default: baseLocale },
     { authenticatedTranslations },
@@ -96,26 +112,33 @@ export async function loadLocale(languageCode) {
     { universalOperationalTranslations },
     { ownerRejectionTranslations },
     { accountDeletionTranslations },
+    { getNonEnglishTranslationSlices },
   ]) => {
-    const resource = mergeLocale(
-      en,
+    const translationPacks = getNonEnglishTranslationSlices(code)
+    const resource = composeLocaleTranslationResource({
+      englishFallbackJson: en,
       baseLocale,
-      authenticatedTranslations[code],
-      fallbackLocaleCompletionTranslations[code],
-      legalConsentTranslations[code],
-      universalOperationalTranslations[code],
+      productNavigationTranslations: translationPacks.productNavigationTranslations,
+      footerNavigationTranslations: translationPacks.footerNavigationTranslations,
+      subscriptionProductTranslations: translationPacks.subscriptionProductTranslations,
+      savedBusinessTranslations: translationPacks.savedBusinessTranslations,
+      authenticatedTranslations: authenticatedTranslations[code],
+      fallbackLocaleCompletionTranslations: fallbackLocaleCompletionTranslations[code],
+      legalConsentTranslations: legalConsentTranslations[code],
+      universalOperationalTranslations: universalOperationalTranslations[code],
       adminEnglishTranslations,
-      ownerRejectionTranslations[code],
-      accountDeletionTranslations[code],
-      conversationTerminalTranslations[code],
-      adminDeletionTranslations[code],
-      serviceTaxonomyTranslations[code],
-      businessTaxonomyEditorTranslations[code],
-      serviceBrowseTranslations[code],
-      homepagePlatformTranslations[code],
-      { legalPages: legalPageContent[code] },
-      { locations: { areas: serviceAreaLabels } },
-    )
+      ownerRejectionTranslations: ownerRejectionTranslations[code],
+      accountDeletionTranslations: accountDeletionTranslations[code],
+      conversationTerminalTranslations: conversationTerminalTranslations[code],
+      adminDeletionTranslations: adminDeletionTranslations[code],
+      serviceTaxonomyTranslations: translationPacks.serviceTaxonomyTranslations,
+      businessTaxonomyEditorTranslations: translationPacks.businessTaxonomyEditorTranslations,
+      serviceBrowseTranslations: translationPacks.serviceBrowseTranslations,
+      homepagePlatformTranslations: translationPacks.homepagePlatformTranslations,
+      productLandingTranslations: translationPacks.productLandingTranslations,
+      legalPageContent: { legalPages: legalPageContent[code] },
+      serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
+    })
     i18n.addResourceBundle(code, 'translation', resource, true, true)
     loadedLocales.add(code)
     return code

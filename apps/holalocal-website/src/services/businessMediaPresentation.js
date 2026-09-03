@@ -13,10 +13,13 @@ async function defaultCanonicalUrlResolver(storagePath) {
 
 async function resolveCanonicalUrl(storagePath, resolver) {
   if (!canonicalUrlCache.has(storagePath)) {
-    canonicalUrlCache.set(storagePath, Promise.resolve(resolver(storagePath)).catch((error) => {
-      canonicalUrlCache.delete(storagePath)
+    const presentationPromise = Promise.resolve(resolver(storagePath)).catch((error) => {
+      if (canonicalUrlCache.get(storagePath) === presentationPromise) {
+        canonicalUrlCache.delete(storagePath)
+      }
       throw error
-    }))
+    })
+    canonicalUrlCache.set(storagePath, presentationPromise)
   }
   return canonicalUrlCache.get(storagePath)
 }

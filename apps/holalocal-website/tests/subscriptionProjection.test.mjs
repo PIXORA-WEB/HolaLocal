@@ -42,16 +42,17 @@ test('legacy Growth remains selected when projection is unavailable and retry ca
   assert.equal(safeSubscriptionAccessStatus(retried.projection.accessStatus, 'ended'), 'active')
 })
 
-test('owner pages preserve managed profiles and expose a non-blocking retry notice', async () => {
+test('business dashboard preserves managed profiles and exposes a non-blocking retry notice', async () => {
   const [dashboard, subscription] = await Promise.all([
     readFile(new URL('../src/pages/business/BusinessDashboardPage.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/business/SubscriptionPage.jsx', import.meta.url), 'utf8'),
   ])
-  for (const source of [dashboard, subscription]) {
-    assert.match(source, /setBusinessProfile\(profile\)/)
-    assert.match(source, /loadOwnerSubscriptionProjection/)
-    assert.match(source, /subscriptionProjectionUnavailable/)
-    assert.match(source, /retrySubscriptionProjection/)
-    assert.match(source, /subscriptionProjection\.unavailable/)
-  }
+  assert.match(dashboard, /setBusinessProfile\(profile\)/)
+  assert.match(dashboard, /loadOwnerSubscriptionProjection/)
+  assert.match(dashboard, /subscriptionProjectionUnavailable/)
+  assert.match(dashboard, /retrySubscriptionProjection/)
+  assert.match(dashboard, /subscriptionProjection\.unavailable/)
+
+  assert.doesNotMatch(subscription, /loadOwnerSubscriptionProjection/)
+  assert.doesNotMatch(subscription, /getOwnerSubscriptionStatus/)
 })

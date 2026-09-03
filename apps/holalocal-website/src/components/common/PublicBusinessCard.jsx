@@ -80,8 +80,6 @@ function PublicBusinessCard({
 }) {
   const { i18n, t } = useTranslation()
   const isHero = variant === 'hero'
-  const isVerified = business.verificationStatus === 'verified'
-  const hasRating = business.ratingAverage > 0 && business.ratingCount > 0
   const languages = Array.isArray(business.languages) ? business.languages : []
   const categoryLabel = business.category
     ? getBusinessCategoryLabel(business.category, t)
@@ -144,21 +142,6 @@ function PublicBusinessCard({
 
       {isHero ? (
         <div className="public-business-card__hero-body">
-          {hasRating ? (
-            <p
-              className="public-business-card__rating"
-              aria-label={`${business.ratingAverage.toFixed(1)}, ${t('marketing.hero.ratingCount', { count: business.ratingCount })}`}
-            >
-              <span aria-hidden="true">★</span>
-              <strong>{business.ratingAverage.toFixed(1)}</strong>
-              <span>({t('marketing.hero.ratingCount', { count: business.ratingCount })})</span>
-            </p>
-          ) : (
-            <p className="public-business-card__rating public-business-card__rating--empty">
-              <span aria-hidden="true">☆</span>
-              <span>{t('services.noReviews')}</span>
-            </p>
-          )}
           <dl className="public-business-card__hero-meta">
             <div>
               <dt>
@@ -195,17 +178,6 @@ function PublicBusinessCard({
             </div>
           </dl>
           <div className="public-business-card__result-footer">
-            {hasRating ? (
-              <p className="public-business-card__rating">
-                ★ {business.ratingAverage.toFixed(1)}
-                <span>({t('marketing.hero.ratingCount', { count: business.ratingCount })})</span>
-              </p>
-            ) : (
-              <p className="public-business-card__rating public-business-card__rating--empty">
-                ☆ <span>{t('services.noReviews')}</span>
-              </p>
-            )}
-            {isVerified && <span className="public-business-card__verified">✓ {t('services.verified')}</span>}
             <span className="public-business-card__result-arrow" aria-hidden="true">→</span>
           </div>
         </div>

@@ -29,16 +29,18 @@ test('sitemap contains only stable public MVP routes', async () => {
   )
 
   assert.deepEqual(urls, [
-    'https://www.holalocal.es/',
-    'https://www.holalocal.es/services',
-    'https://www.holalocal.es/contact',
-    'https://www.holalocal.es/privacy',
-    'https://www.holalocal.es/terms',
+    'https:\/\/www.holalocal.es\/',
+    'https:\/\/www.holalocal.es\/services',
+    'https:\/\/www.holalocal.es\/events',
+    'https:\/\/www.holalocal.es\/community',
+    'https:\/\/www.holalocal.es\/contact',
+    'https:\/\/www.holalocal.es\/privacy',
+    'https:\/\/www.holalocal.es\/terms',
   ])
 
   assert.doesNotMatch(
     sitemap,
-    /\/login|\/register|\/admin|\/profile|\/messages|\/businesses/,
+    /\/login|\/register|\/admin|\/profile|\/favourites|\/subscription|\/messages|\/businesses/,
   )
 })
 
@@ -65,6 +67,10 @@ test('canonical URL defaults use the Production www hostname', async () => {
     metadataManager,
     /'https:\/\/www\.holalocal\.es'/,
   )
+  assert.match(metadataManager, /'\/subscription': 'subscriptionProducts\.title'/)
+  assert.match(metadataManager, /'\/subscription': 'subscriptionProducts\.description'/)
+  assert.match(metadataManager, /'\/favourites': 'savedBusinesses\.page\.metadataTitle'/)
+  assert.match(metadataManager, /location\.pathname === '\/favourites' \? 'noindex, nofollow'/)
 
   for (const source of [indexHtml, envExample, metadataManager]) {
     assert.doesNotMatch(source, /https:\/\/holalocal\.es/)
@@ -80,15 +86,20 @@ test('Vercel routing keeps known SPA routes and permanent legacy redirects', asy
   for (const route of [
     '/services',
     '/services/:businessId',
+    '/events',
+    '/community',
     '/contact',
     '/privacy',
     '/terms',
     '/login',
     '/register',
     '/profile',
+    '/favourites',
+    '/subscription',
     '/messages',
     '/messages/:conversationId',
     '/business/dashboard',
+    '/business/subscription',
     '/admin',
     '/admin/businesses',
     '/admin/businesses/:businessId',

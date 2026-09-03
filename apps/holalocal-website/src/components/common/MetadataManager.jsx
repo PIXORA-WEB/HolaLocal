@@ -3,13 +3,24 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 const routeTitleKeys = {
+  '/community': 'productLanding.community.eyebrow',
   '/contact': 'footer.contact',
+  '/events': 'productLanding.events.eyebrow',
   '/forgot-password': 'auth.forgotPassword',
+  '/favourites': 'savedBusinesses.page.metadataTitle',
   '/login': 'auth.loginTitle',
   '/privacy': 'legalPages.privacy.title',
   '/register': 'auth.registration.title',
+  '/subscription': 'subscriptionProducts.title',
   '/terms': 'legalPages.terms.title',
   '/verify-email': 'auth.verification.title',
+}
+
+const routeDescriptionKeys = {
+  '/community': 'productLanding.community.description',
+  '/events': 'productLanding.events.description',
+  '/favourites': 'savedBusinesses.page.metadataDescription',
+  '/subscription': 'subscriptionProducts.description',
 }
 
 function setMetaContent(selector, content) {
@@ -32,7 +43,10 @@ function MetadataManager() {
     const title = routeTitleKey
       ? t('metadata.pageTitle', { page: t(routeTitleKey) })
       : t('metadata.title')
-    const description = t('metadata.description')
+    const descriptionKey = routeDescriptionKeys[location.pathname]
+    const description = descriptionKey
+      ? t(descriptionKey)
+      : t('metadata.description')
     const siteUrl = (import.meta.env.VITE_SITE_URL || 'https://www.holalocal.es').replace(/\/$/, '')
     const canonicalUrl = `${siteUrl}${location.pathname === '/' ? '/' : location.pathname}`
 
@@ -45,6 +59,7 @@ function MetadataManager() {
     setMetaContent('meta[property="og:locale"]', language)
     setMetaContent('meta[name="twitter:title"]', title)
     setMetaContent('meta[name="twitter:description"]', description)
+    setMetaContent('meta[name="robots"]', location.pathname === '/favourites' ? 'noindex, nofollow' : 'index, follow')
     document.head.querySelector('link[rel="canonical"]')?.setAttribute('href', canonicalUrl)
   }, [i18n.resolvedLanguage, location.pathname, t])
 

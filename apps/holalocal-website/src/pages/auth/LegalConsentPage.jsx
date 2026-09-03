@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import FormFieldError from '../../components/common/FormFieldError.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import { hasCurrentLegalConsent } from '../../utils/policies.js'
-import { internalPathFromLocation } from '../../utils/internalNavigation.js'
+import { intendedLocation, internalPathFromLocation } from '../../utils/internalNavigation.js'
 
 function nextAccountPath(profile, intended) {
   if (profile?.profileCompleted !== true) return '/complete-profile'
@@ -22,7 +22,7 @@ function LegalConsentPage() {
   } = useAuthentication()
   const location = useLocation()
   const navigate = useNavigate()
-  const intended = location.state?.from ?? null
+  const intended = useMemo(() => intendedLocation(location), [location])
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [acceptPrivacy, setAcceptPrivacy] = useState(false)
   const [error, setError] = useState('')

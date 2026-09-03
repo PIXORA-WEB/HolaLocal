@@ -1,15 +1,15 @@
-export function internalPathFromLocation(location, fallback = '/') {
+export function normalizeInternalLocation(location) {
   const pathname = location?.pathname
   if (typeof pathname !== 'string' || !pathname.startsWith('/') || pathname.includes('\\')) {
-    return fallback
+    return null
   }
   let decodedPathname
   try {
     decodedPathname = decodeURIComponent(pathname)
   } catch {
-    return fallback
+    return null
   }
-  if (decodedPathname.startsWith('//') || decodedPathname.includes('\\')) return fallback
+  if (decodedPathname.startsWith('//') || decodedPathname.includes('\\')) return null
 
   const search = typeof location.search === 'string' && location.search.startsWith('?')
     ? location.search : ''
@@ -19,13 +19,24 @@ export function internalPathFromLocation(location, fallback = '/') {
   try {
     const base = new URL('https://internal.holalocal.invalid/')
     const resolved = new URL(candidate, base)
-    if (resolved.origin !== base.origin) return fallback
-    return `${resolved.pathname}${resolved.search}${resolved.hash}`
+    if (resolved.origin !== base.origin) return null
+    return Object.freeze({
+      pathname: resolved.pathname,
+      search: resolved.search,
+      hash: resolved.hash,
+    })
   } catch {
-    return fallback
+    return null
   }
 }
 
+export function internalPathFromLocation(location, fallback = '/') {
+  const normalized = normalizeInternalLocation(location)
+  return normalized
+    ? `${normalized.pathname}${normalized.search}${normalized.hash}`
+    : fallback
+}
+
 export function intendedLocation(location) {
-  return location?.state?.from ?? null
+  return normalizeInternalLocation(location?.state?.from)
 }

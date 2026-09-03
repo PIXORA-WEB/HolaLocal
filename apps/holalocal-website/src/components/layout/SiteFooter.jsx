@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next'
 import BrandLockup from '../common/BrandLockup.jsx'
 import LanguageSwitcher from '../common/LanguageSwitcher.jsx'
 
-const platformLinks = [
-  { labelKey: 'nav.home', to: '/' },
-  { labelKey: 'nav.findServices', to: '/services' },
-  { labelKey: 'footer.contact', to: '/contact' },
+const exploreLinks = [
+  { product: 'services', labelKey: 'nav.services', to: '/services' },
+  { product: 'events', labelKey: 'nav.events', to: '/events' },
+  { product: 'community', labelKey: 'nav.community', to: '/community' },
 ]
 
 const accountLinks = [
@@ -14,7 +14,8 @@ const accountLinks = [
   { labelKey: 'nav.join', to: '/register' },
 ]
 
-const legalLinks = [
+const helpLegalLinks = [
+  { labelKey: 'footer.contact', to: '/contact' },
   { labelKey: 'footer.privacy', to: '/privacy' },
   { labelKey: 'footer.terms', to: '/terms' },
 ]
@@ -30,10 +31,14 @@ function SiteFooter() {
           <p>{t('footer.description')}</p>
         </div>
         <div className="site-footer__navigation">
-          <nav className="site-footer__group" aria-label={t('footer.platformLabel')}>
-            <h2>{t('footer.platform')}</h2>
+          <nav className="site-footer__group" aria-label={t('footer.exploreLabel')}>
+            <h2>{t('footer.explore')}</h2>
             <div className="site-footer__links">
-              {platformLinks.map((link) => <Link key={link.to} to={link.to}>{t(link.labelKey)}</Link>)}
+              {exploreLinks.map((link) => (
+                <Link className={`site-footer__link site-footer__link--${link.product}`} key={link.to} to={link.to}>
+                  {t(link.labelKey)}
+                </Link>
+              ))}
             </div>
           </nav>
           <nav className="site-footer__group" aria-label={t('footer.accountLabel')}>
@@ -42,10 +47,10 @@ function SiteFooter() {
               {accountLinks.map((link) => <Link key={link.to} to={link.to}>{t(link.labelKey)}</Link>)}
             </div>
           </nav>
-          <nav className="site-footer__group" aria-label={t('footer.legalLabel')}>
-            <h2>{t('footer.legal')}</h2>
+          <nav className="site-footer__group" aria-label={t('footer.helpLegalLabel')}>
+            <h2>{t('footer.helpLegal')}</h2>
             <div className="site-footer__links">
-              {legalLinks.map((link) => <Link key={link.to} to={link.to}>{t(link.labelKey)}</Link>)}
+              {helpLegalLinks.map((link) => <Link key={link.to} to={link.to}>{t(link.labelKey)}</Link>)}
             </div>
           </nav>
           <div className="site-footer__language">

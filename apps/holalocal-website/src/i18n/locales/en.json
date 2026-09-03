@@ -75,7 +75,7 @@
   "metadata": {
     "title": "HolaLocal",
     "pageTitle": "{{page}} · HolaLocal",
-    "description": "Find trusted local services and connect with local businesses across Costa del Sol and Gibraltar."
+    "description": "Find local services and connect with local businesses across Costa del Sol and Gibraltar."
   },
   "errors": {
     "application": {
@@ -594,7 +594,7 @@
     "options": {
       "customer": {
         "title": "Finding services",
-        "description": "Discover trusted local professionals when you need help."
+        "description": "Discover local professionals and review their public business profiles."
       },
       "business": {
         "title": "Offering services",
@@ -693,7 +693,7 @@
     "title": "Report {{name}}",
     "close": "Close report form",
     "submitted": "Report submitted",
-    "submittedDescription": "Thank you. Your report is private and will be reviewed by the HolaLocal team.",
+    "submittedDescription": "Your report has been sent privately to the HolaLocal team.",
     "description": "Use this form for moderation or trust and safety concerns. Reports never appear as public reviews.",
     "reasonLegend": "What is the concern?",
     "reasons": {
@@ -763,6 +763,7 @@
     "categoryNotSpecified": "Category not specified",
     "serviceAreaNotSpecified": "Service area not specified",
     "activeProfile": "Public profile",
+    "profileInformationProvided": "Profile information is provided by the business.",
     "verificationComingSoon": "Verification coming soon",
     "subscriptionPlan": "{{plan}} plan",
     "reviewCount_one": "{{count}} review",
@@ -776,8 +777,6 @@
     "about": "About",
     "openingConversation": "Opening conversation…",
     "messageBusiness": "Message business",
-    "favouritesComingSoon": "Favourites are coming soon",
-    "save": "Save",
     "reportBusiness": "Report business",
     "aboutBusiness": "About this business",
     "noDescription": "This business has not added a public description yet.",
@@ -905,18 +904,18 @@
     "how": {
       "eyebrow": "How it works",
       "title": "Local help in three clear steps.",
-      "description": "Discover relevant providers, review their public profiles and connect when you are ready.",
+      "description": "Browse local services, review published business profiles and connect when you are ready.",
       "browse": {
-        "title": "Browse",
-        "description": "Explore local services and providers without creating an account first."
+        "title": "Browse local services",
+        "description": "Explore local services and published business profiles without creating an account."
+      },
+      "review": {
+        "title": "Review profiles",
+        "description": "Compare services, service areas, languages and any public contact details businesses choose to share."
       },
       "connect": {
-        "title": "Connect",
+        "title": "Connect privately",
         "description": "Sign in to start a private conversation with the business that suits your needs."
-      },
-      "choose": {
-        "title": "Choose with confidence",
-        "description": "Compare clear public information and choose the provider that feels right for you."
       }
     },
     "journeys": {
@@ -924,13 +923,13 @@
       "title": "Find support or grow your local presence.",
       "customers": {
         "title": "For customers",
-        "description": "Browse freely, save useful profiles and connect privately when you find the right provider.",
+        "description": "Save useful profiles and sign in when you’re ready to connect privately.",
         "action": "Find local services"
       },
       "businesses": {
         "title": "For local businesses",
-        "description": "Create a professional profile and make your services easier for nearby customers to discover.",
-        "action": "Manage your business"
+        "description": "Present your services, areas and languages in one clear profile.",
+        "action": "List your business"
       }
     },
     "region": {
@@ -1104,7 +1103,7 @@
     }
   },
   "footer": {
-    "description": "A trusted, multilingual local community for finding and offering local services across Costa del Sol and Gibraltar.",
+    "description": "A multilingual local platform for finding and offering services across Costa del Sol and Gibraltar.",
     "platform": "Platform",
     "platformLabel": "Platform links",
     "findServices": "Find services",

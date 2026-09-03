@@ -36,6 +36,7 @@ test('the initial i18n module eagerly includes only default-locale resources', a
     'fallbackLocaleCompletionTranslations.js',
     'legalContent.js',
     'universalOperationalTranslations.js',
+    'nonEnglishTranslationPacks.js',
   ]) {
     assert.match(source, new RegExp(`import\\(['"].*${aggregateModule.replace('.', '\\.')}['"]\\)`))
     assert.doesNotMatch(source, new RegExp(`^import .*${aggregateModule.replace('.', '\\.')}`, 'm'))

@@ -8,7 +8,7 @@ import {
   classifyFrontendError,
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
-import { internalPathFromLocation } from '../../utils/internalNavigation.js'
+import { intendedLocation, internalPathFromLocation } from '../../utils/internalNavigation.js'
 
 const onboardingOptions = ['customer', 'business', 'both']
 
@@ -61,7 +61,7 @@ function OnboardingPage() {
       await completeOnboarding(accountType)
 
       const fallback = requiresBusinessProfile ? '/business/dashboard' : '/profile'
-      navigate(internalPathFromLocation(location.state?.from, fallback), { replace: true })
+      navigate(internalPathFromLocation(intendedLocation(location), fallback), { replace: true })
     } catch (submissionError) {
       setError(classifyFrontendError(submissionError, {
         domain: 'workflow',

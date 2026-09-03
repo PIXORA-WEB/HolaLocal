@@ -7,6 +7,7 @@ import { supportedUILanguages } from '../../utils/languages.js'
 import SelectField from '../../components/common/SelectField.jsx'
 import { getDisplayName } from '../../utils/profile.js'
 import FormFieldError from '../../components/common/FormFieldError.jsx'
+import { normalizeInternalLocation } from '../../utils/internalNavigation.js'
 
 function CompleteProfilePage() {
   const { t } = useTranslation()
@@ -61,7 +62,7 @@ function CompleteProfilePage() {
       const intent = searchParams.get('intent')
       navigate(intent ? `/onboarding?intent=${intent}` : '/onboarding', {
         replace: true,
-        state: { from: location.state?.from },
+        state: { from: normalizeInternalLocation(location.state?.from) },
       })
     } catch (submissionError) {
       setError(getAuthenticationErrorMessage(submissionError, t))

@@ -1,9 +1,11 @@
+import { serviceBrowseEnglishTranslations } from '../serviceBrowseEnglishTranslations.js'
+
 const browse = (browseTitle, browseDescription) => ({
   services: { browseTitle, browseDescription },
 })
 
 export const serviceBrowseTranslations = Object.freeze({
-  en: browse('Browse by service', 'Choose a group, then select the service you need.'),
+  en: serviceBrowseEnglishTranslations,
   es: browse('Buscar por servicio', 'Elige un grupo y después el servicio que necesitas.'),
   fr: browse('Parcourir par service', 'Choisissez un groupe, puis le service dont vous avez besoin.'),
   de: browse('Nach Dienstleistung suchen', 'Wählen Sie eine Gruppe und dann die gewünschte Dienstleistung.'),
