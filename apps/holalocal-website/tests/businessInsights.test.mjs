@@ -158,7 +158,8 @@ test('zero activity uses a compact state while populated activity retains the ch
   assert.match(panel, /business-insights__activity-empty/)
   assert.match(panel, /<ol className="visually-hidden">/)
   assert.match(panel, /business-insights__activity-days--\$\{chartConfiguration\.density\}/)
-  assert.match(styles, /business-insights__activity-empty[\s\S]*?padding: 0\.85rem 1rem/)
+  assert.match(styles, /business-insights__activity-empty[\s\S]*?padding: 0\.75rem 0\.85rem;[\s\S]*?border: 1px solid/)
+  assert.doesNotMatch(panel, /business-insights__activity-empty[\s\S]{0,100}<span aria-hidden/)
   assert.doesNotMatch(styles, /\.business-insights__activity ol\s*\{/)
 })
 

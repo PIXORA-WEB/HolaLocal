@@ -6,6 +6,7 @@ import {
   SERVICE_TAXONOMY_GROUPS,
 } from '@holalocal/firebase-contract'
 import PublicBusinessCard from '../components/common/PublicBusinessCard.jsx'
+import ServiceCategoryIcon from '../components/common/ServiceCategoryIcon.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
 import { getFeaturedActiveBusinesses } from '../services/businessService.js'
 import { getPublicBusinessPrimaryServiceLabel } from '../utils/serviceDiscovery.js'
@@ -24,8 +25,8 @@ const howItWorksCards = Object.freeze([
 ])
 
 const journeyCards = Object.freeze([
-  { key: 'customers', icon: 'people', audience: 'customer' },
-  { key: 'businesses', icon: 'briefcase', audience: 'business' },
+  { key: 'customers', audience: 'customer' },
+  { key: 'businesses', audience: 'business' },
 ])
 
 function getHomepageJourneyHref(audience, { user, userProfile }) {
@@ -38,15 +39,6 @@ function getHomepageJourneyHref(audience, { user, userProfile }) {
 const FEATURED_SERVICE_IDS = Object.freeze([
   'plumber', 'cleaner', 'lawyer', 'personal-trainer', 'dog-walker',
 ])
-
-const SERVICE_CATEGORY_ICONS = Object.freeze({
-  'home-property': <><path d="M3.5 10.5 12 3l8.5 7.5" /><path d="M5.5 9.5V21h13V9.5M9.5 21v-6h5v6" /></>,
-  'professional-services': <><rect x="3" y="7" width="18" height="12" rx="2" /><path d="M9 7V5h6v2M3 12h18M10 12v2h4v-2" /></>,
-  'health-beauty-lifestyle': <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.7A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" />,
-  'learning-family': <><path d="M3.5 5.5c3.5-.8 6.3.1 8.5 2.2v11c-2.2-2.1-5-3-8.5-2.2v-11ZM20.5 5.5c-3.5-.8-6.3.1-8.5 2.2v11c2.2-2.1 5-3 8.5-2.2v-11Z" /><circle cx="7.5" cy="10" r="1.2" /><path d="M5.5 14c.4-1.5 1.1-2.2 2-2.2s1.6.7 2 2.2" /></>,
-  pets: <><circle cx="7" cy="8" r="1.7" /><circle cx="11" cy="5.5" r="1.7" /><circle cx="15" cy="6.5" r="1.7" /><circle cx="18" cy="10" r="1.7" /><path d="M12.3 10.5c-3 0-5.4 2.7-5.4 5.2 0 2 1.5 3 3.3 2.3a5 5 0 0 1 4.1 0c1.8.7 3.3-.3 3.3-2.3 0-2.5-2.3-5.2-5.3-5.2Z" /></>,
-  'other-local-services': <><rect x="4" y="4" width="6" height="6" rx="1.5" /><rect x="14" y="4" width="6" height="6" rx="1.5" /><rect x="4" y="14" width="6" height="6" rx="1.5" /><rect x="14" y="14" width="6" height="6" rx="1.5" /></>,
-})
 
 const platformPillars = Object.freeze([
   { key: 'services', icon: 'briefcase', state: 'available', to: '/services' },
@@ -75,26 +67,6 @@ function MarketingIcon({ name }) {
 
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" focusable="false" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      {icon}
-    </svg>
-  )
-}
-
-function ServiceCategoryIcon({ groupId }) {
-  const icon = SERVICE_CATEGORY_ICONS[groupId]
-  if (!icon) throw new Error(`Missing service category icon for ${groupId}`)
-
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      focusable="false"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-      viewBox="0 0 24 24"
-    >
       {icon}
     </svg>
   )
@@ -243,7 +215,6 @@ function HomePage() {
                 <ServiceCategoryIcon groupId={group.id} />
               </span>
               <span className="homepage-service-group__label">{taxonomyLabel(group)}</span>
-              <span aria-hidden="true" className="homepage-service-group__arrow">→</span>
             </Link>
           ))}
         </nav>
@@ -323,18 +294,23 @@ function HomePage() {
           <h2>{t('marketing.journeys.title')}</h2>
         </div>
         <div className="journey-grid">
-          {journeyCards.map(({ audience, icon, key }) => (
-            <article className="journey-card" data-audience={audience} key={key}>
-              <span className="journey-card__icon"><MarketingIcon name={icon} /></span>
-              <h3>{t(`marketing.journeys.${key}.title`)}</h3>
-              <p>{t(`marketing.journeys.${key}.description`)}</p>
-              <Link
-                className="journey-card__action"
-                to={getHomepageJourneyHref(audience, { user, userProfile })}
-              >
-                {t(`marketing.journeys.${key}.action`)}
-                <span aria-hidden="true" className="journey-card__arrow">→</span>
-              </Link>
+          {journeyCards.map(({ audience, key }) => (
+            <article
+              className="journey-card"
+              data-audience={audience}
+              key={key}
+            >
+              <div className="journey-card__content">
+                <h3>{t(`marketing.journeys.${key}.title`)}</h3>
+                <p>{t(`marketing.journeys.${key}.description`)}</p>
+                <Link
+                  className="journey-card__action"
+                  to={getHomepageJourneyHref(audience, { user, userProfile })}
+                >
+                  {t(`marketing.journeys.${key}.action`)}
+                  <span aria-hidden="true" className="journey-card__arrow">→</span>
+                </Link>
+              </div>
             </article>
           ))}
         </div>

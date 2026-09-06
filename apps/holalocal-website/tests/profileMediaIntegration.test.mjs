@@ -111,4 +111,5 @@ test('profile page synchronously guards submissions, suppresses committed files,
   assert.match(upload, /onCommitted: \(\) => submission\.markSuccessful\(pendingFile\)/)
   assert.match(upload, /finally \{\s*submission\.release\(\)/)
   assert.match(source, /actionPending=\{photoUploading\}/)
+  assert.match(source, /<EditableImageAvatar[\s\S]*?iconOnly[\s\S]*?onChange=\{handleProfilePhotoChange\}/)
 })

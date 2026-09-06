@@ -24,9 +24,12 @@ test('homepage uses the six central groups and canonical service handoff', async
 })
 
 test('homepage service categories use one complete decorative icon map', async () => {
-  const source = await readFile(homeUrl, 'utf8')
-  const iconMap = source.match(/const SERVICE_CATEGORY_ICONS = Object\.freeze\(\{[\s\S]*?\n\}\)/)?.[0] ?? ''
-  const iconComponent = source.match(/function ServiceCategoryIcon\(\{ groupId \}\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  const [source, iconSource] = await Promise.all([
+    readFile(homeUrl, 'utf8'),
+    readFile(new URL('../src/components/common/ServiceCategoryIcon.jsx', import.meta.url), 'utf8'),
+  ])
+  const iconMap = iconSource.match(/const SERVICE_CATEGORY_ICONS = Object\.freeze\(\{[\s\S]*?\n\}\)/)?.[0] ?? ''
+  const iconComponent = iconSource.match(/function ServiceCategoryIcon\(\{ groupId \}\) \{[\s\S]*?\n\}/)?.[0] ?? ''
 
   for (const { id } of SERVICE_TAXONOMY_GROUPS) {
     assert.match(iconMap, new RegExp(`['"]?${id}['"]?:`), `${id} icon mapping`)
@@ -41,10 +44,11 @@ test('homepage service categories use one complete decorative icon map', async (
   assert.match(iconComponent, /strokeLinecap="round"/)
   assert.match(iconComponent, /strokeLinejoin="round"/)
   assert.match(iconComponent, /viewBox="0 0 24 24"/)
-  assert.equal(source.match(/function ServiceCategoryIcon/g)?.length, 1)
+  assert.equal(iconSource.match(/function ServiceCategoryIcon/g)?.length, 1)
+  assert.match(source, /import ServiceCategoryIcon from '\.\.\/components\/common\/ServiceCategoryIcon\.jsx'/)
   assert.match(source, /<ServiceCategoryIcon groupId=\{group\.id\} \/>/)
   assert.match(source, /className="homepage-service-group__label">\{taxonomyLabel\(group\)\}<\/span>/)
-  assert.match(source, /aria-hidden="true" className="homepage-service-group__arrow">→<\/span>/)
+  assert.doesNotMatch(source, /homepage-service-group__arrow/)
   assert.doesNotMatch(source, /from ['"](?:lucide|@heroicons|react-icons|@fortawesome)/)
 })
 
@@ -96,8 +100,8 @@ test('homepage journey cards preserve honest role-aware destinations and accessi
 
   assert.equal((data.match(/\{ key:/g) ?? []).length, 2)
   assert.ok(data.indexOf("key: 'customers'") < data.indexOf("key: 'businesses'"))
-  assert.match(data, /key: 'customers', icon: 'people', audience: 'customer'/)
-  assert.match(data, /key: 'businesses', icon: 'briefcase', audience: 'business'/)
+  assert.match(data, /key: 'customers', audience: 'customer'/)
+  assert.match(data, /key: 'businesses', audience: 'business'/)
   assert.match(helper, /audience === 'customer'\) return '\/services'/)
   assert.match(helper, /if \(!user\) return '\/register\?intent=business'/)
   assert.match(helper, /userProfile\?\.roles\?\.includes\('business'\)\) return '\/business\/dashboard'/)
@@ -106,8 +110,11 @@ test('homepage journey cards preserve honest role-aware destinations and accessi
 
   assert.equal(markup.match(/<article/g)?.length, 1, 'one mapped article implementation')
   assert.match(markup, /<section className="marketing-section journey-section" id="for-businesses">/)
-  assert.match(markup, /<article className="journey-card" data-audience=\{audience\} key=\{key\}>/)
-  assert.match(markup, /<span className="journey-card__icon"><MarketingIcon name=\{icon\} \/><\/span>/)
+  assert.match(markup, /journeyCards\.map\(\(\{ audience, key \}\) => \(/)
+  assert.match(markup, /<article[\s\S]*?className="journey-card"[\s\S]*?data-audience=\{audience\}/)
+  assert.match(markup, /className="journey-card__content"/)
+  assert.doesNotMatch(markup, /JourneyIllustration|journey-card__(?:icon|visual)|<svg/)
+  assert.doesNotMatch(source, /function JourneyIllustration|journey-illustration__/)
   assert.match(markup, /<h3>\{t\(`marketing\.journeys\.\$\{key\}\.title`\)\}<\/h3>/)
   assert.match(markup, /className="journey-card__action"/)
   assert.match(markup, /getHomepageJourneyHref\(audience, \{ user, userProfile \}\)/)
@@ -116,8 +123,13 @@ test('homepage journey cards preserve honest role-aware destinations and accessi
 
   assert.match(journeyStyles, /--journey-accent: var\(--brand-blue\)/)
   assert.match(journeyStyles, /\[data-audience='business'\][\s\S]*?var\(--product-services\)/)
-  assert.match(cardStyles, /border-top: 3px solid var\(--journey-accent\)/)
-  assert.doesNotMatch(cardStyles, /\n\s+border:|border-radius:|background:|box-shadow:/)
+  assert.match(journeyStyles, /\.journey-grid \{[\s\S]*?border: 1px solid[\s\S]*?border-radius: 1\.5rem;[\s\S]*?box-shadow:/)
+  assert.match(cardStyles, /background-color: color-mix\(in srgb, var\(--journey-accent\) 5%, var\(--surface\)\)/)
+  assert.match(cardStyles, /background-image: radial-gradient\(circle at 0 100%/)
+  assert.match(journeyStyles, /\.journey-card__content \{[\s\S]*?grid-template-rows: auto minmax\(0, 1fr\) auto;/)
+  assert.doesNotMatch(journeyStyles, /journey-card__(?:icon|visual)|journey-illustration__/)
+  assert.doesNotMatch(styles, /@media \(min-width: 72rem\) \{[\s\S]*?\.journey-card/)
+  assert.doesNotMatch(`${source}\n${journeyStyles}`, /(?:business|customer)Panel(?:375|768|1440)|panel-(?:375|768|1440)px|JourneyArtwork|journey-card__artwork|--journey-artwork/)
   assert.match(journeyStyles, /\.journey-card__action \{[\s\S]*?min-height: 2\.75rem;[\s\S]*?color: var\(--brand-navy\)/)
   assert.match(styles, /@media \(min-width: 48rem\) \{[\s\S]*?\.journey-grid \{[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/)
   assert.doesNotMatch(cardStyles, /(?:^|[;{]\s*)height:|min-height:|overflow:\s*(?:hidden|clip)|cursor:\s*pointer/)
@@ -260,12 +272,13 @@ test('homepage How section is one truthful semantic process rail', async () => {
 
   assert.match(listStyles, /grid-template-columns: minmax\(0, 1fr\)/)
   assert.match(listStyles, /gap: 1\.75rem/)
-  assert.match(itemStyles, /grid-template-columns: 3rem minmax\(0, 1fr\)/)
+  assert.match(itemStyles, /grid-template-columns: 5\.25rem minmax\(0, 1fr\)/)
   assert.match(itemStyles, /min-width: 0/)
   assert.match(itemStyles, /padding: 0;/)
   assert.doesNotMatch(itemStyles, /border:|background:|box-shadow:/)
   assert.doesNotMatch(howStyles, /bottom:\s*-|width:\s*1px/)
-  assert.doesNotMatch(iconStyles, /border:/)
+  assert.match(iconStyles, /width: 5\.25rem;[\s\S]*?height: 5\.25rem;/)
+  assert.match(iconStyles, /border: 1px solid[\s\S]*?border-radius: 50%/)
   assert.match(iconStyles, /background: color-mix\(in srgb, var\(--how-accent\) 8%, var\(--surface\)\)/)
   assert.match(desktopStyles, /\.homepage-how__list \{[\s\S]*?repeat\(3, minmax\(0, 1fr\)\)/)
   assert.match(desktopStyles, /\.homepage-how__item:not\(:last-child\)::after \{[\s\S]*?height: 1px;[\s\S]*?pointer-events: none;/)
@@ -527,18 +540,31 @@ test('homepage uses tighter outer section rhythm without adding a gap around the
 })
 
 test('homepage Services discovery uses accessible icon-led category cards', async () => {
-  const styles = await readFile(stylesUrl, 'utf8')
+  const [source, styles] = await Promise.all([
+    readFile(homeUrl, 'utf8'),
+    readFile(stylesUrl, 'utf8'),
+  ])
   const servicesStart = styles.indexOf('.homepage-services .marketing-eyebrow {')
   const servicesEnd = styles.indexOf('.homepage-platform__grid {', servicesStart)
   const servicesStyles = styles.slice(servicesStart, servicesEnd)
+  const markupStart = source.indexOf('<section className="marketing-section homepage-services"')
+  const markupEnd = source.indexOf('</section>', markupStart)
+  const markup = source.slice(markupStart, markupEnd)
+  const categoryNav = markup.slice(markup.indexOf('<nav'), markup.indexOf('</nav>') + 6)
 
   assert.match(servicesStyles, /\.homepage-services \.marketing-eyebrow \{\s*color: var\(--product-services\);/)
-  assert.match(servicesStyles, /\.homepage-services \.homepage-service-groups a \{[\s\S]*?min-height: 7\.25rem;[\s\S]*?color: var\(--brand-navy\);[\s\S]*?overflow-wrap: anywhere;[\s\S]*?hyphens: auto;/)
-  assert.match(servicesStyles, /\.homepage-service-group__icon \{[\s\S]*?width: 2\.75rem;[\s\S]*?height: 2\.75rem;[\s\S]*?grid-column: 1 \/ -1;/)
-  assert.match(servicesStyles, /\.homepage-service-group__icon svg \{[\s\S]*?width: 1\.4rem;[\s\S]*?height: 1\.4rem;/)
+  assert.match(servicesStyles, /\.homepage-service-groups \{[\s\S]*?grid-auto-rows: 1fr;/)
+  assert.match(servicesStyles, /\.homepage-services \.homepage-service-groups a \{[\s\S]*?min-height: 9rem;[\s\S]*?grid-template-rows: 3\.4rem minmax\(3\.1rem, auto\);[\s\S]*?cursor: pointer;[\s\S]*?overflow-wrap: anywhere;[\s\S]*?hyphens: auto;/)
+  assert.match(servicesStyles, /\.homepage-service-group__icon \{[\s\S]*?width: 3\.4rem;[\s\S]*?height: 3\.4rem;[\s\S]*?grid-column: 1 \/ -1;/)
+  assert.doesNotMatch(servicesStyles.match(/\.homepage-service-group__icon \{[^}]*\}/)?.[0] ?? '', /background:|border-radius:/)
+  assert.match(servicesStyles, /\.homepage-service-group__icon svg \{[\s\S]*?width: 3\.15rem;[\s\S]*?height: 3\.15rem;[\s\S]*?vector-effect: non-scaling-stroke;/)
   assert.match(servicesStyles, /\.homepage-service-group__label \{[\s\S]*?color: var\(--brand-navy\);/)
   assert.match(servicesStyles, /\.homepage-services \.homepage-service-groups a:hover,[\s\S]*?color: var\(--brand-navy\);[\s\S]*?background: color-mix\(in srgb, var\(--service-category-accent\) 6%, var\(--surface\)\);/)
+  assert.doesNotMatch(categoryNav, /homepage-service-group__arrow|→/)
+  assert.match(markup, /homepage-section-link[\s\S]*?<span aria-hidden="true">→<\/span>/)
+  assert.doesNotMatch(servicesStyles, /homepage-service-group__arrow/)
   assert.match(servicesStyles, /\.homepage-services \.homepage-featured-services a \{[\s\S]*?border: 1px solid color-mix\(in srgb, var\(--product-services\) 30%, var\(--line\)\);[\s\S]*?color: var\(--brand-navy\);/)
+  assert.match(servicesStyles, /\.homepage-services \.homepage-featured-services a \{[\s\S]*?display: inline-flex;[\s\S]*?min-height: 2\.75rem;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;/)
   assert.match(servicesStyles, /\.homepage-services \.homepage-section-link \{[\s\S]*?color: var\(--brand-navy\);/)
   assert.doesNotMatch(servicesStyles, /(?:^|[;{]\s*)height:\s*7\.25rem|white-space: nowrap|transform:|translate:|animation:|transition:/)
   assert.doesNotMatch(styles, /\.homepage-(?:platform|why|how|business-preview)[^\n{]*\.homepage-services/)
