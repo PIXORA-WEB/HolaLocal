@@ -258,7 +258,7 @@ test('homepage How section is one truthful semantic process rail', async () => {
   assert.doesNotMatch(data, /choose|icon: 'check'/)
 
   assert.match(markup, /<h2>\{t\('marketing\.how\.title'\)\}<\/h2>/)
-  assert.match(markup, /<p>\{t\('marketing\.how\.description'\)\}<\/p>/)
+  assert.doesNotMatch(markup, /<p>\{t\('marketing\.how\.description'\)\}<\/p>/)
   assert.equal(markup.match(/<ol className="homepage-how__list">/g)?.length, 1)
   assert.equal(markup.match(/<li className="homepage-how__item"/g)?.length, 1, 'one mapped list-item implementation')
   assert.match(markup, /howItWorksCards\.map\(\(\{ accent, icon, key \}, index\) => \(/)
@@ -418,7 +418,7 @@ test('homepage hero uses one inert responsive coastal and community WebP scene',
   assert.doesNotMatch(`${source}\n${heroStyles}`, /fake-app|fake-screen|mockup|statistic|testimonial|verified businesses/i)
 })
 
-test('homepage hero is full width beneath the header with constrained content-driven inner layout', async () => {
+test('homepage hero is full width beneath the header with stable content-driven inner layout', async () => {
   const [source, styles] = await Promise.all([
     readFile(homeUrl, 'utf8'),
     readFile(stylesUrl, 'utf8'),
@@ -431,12 +431,13 @@ test('homepage hero is full width beneath the header with constrained content-dr
 
   assert.match(outerHeroStyles, /width: 100%;/)
   assert.match(outerHeroStyles, /margin: 0;/)
-  for (const viewportUnit of ['vh', 'svh', 'dvh']) {
+  for (const viewportUnit of ['vh', 'svh']) {
     assert.match(
       outerHeroStyles,
       new RegExp(`min-height: calc\\(100${viewportUnit} - var\\(--site-header-height\\)\\);`),
     )
   }
+  assert.doesNotMatch(outerHeroStyles, /100dvh/)
   assert.doesNotMatch(outerHeroStyles, /--homepage-header-height/)
   assert.doesNotMatch(outerHeroStyles, /(?:^|\n)\s*height:/)
   assert.doesNotMatch(outerHeroStyles, /border(?:-radius)?:|box-shadow:/)
@@ -445,6 +446,19 @@ test('homepage hero is full width beneath the header with constrained content-dr
     source,
     /<section className="marketing-hero">\s*<div className="marketing-hero__scene"[\s\S]*?<\/div>\s*<div className="marketing-hero__inner">/,
   )
+})
+
+test('homepage omits the three approved introductory paragraphs while retaining their locale keys', async () => {
+  const [source, translations] = await Promise.all([
+    readFile(homeUrl, 'utf8'),
+    readFile(translationsUrl, 'utf8'),
+  ])
+
+  assert.doesNotMatch(source, /marketing\.homepage\.hero\.description/)
+  assert.doesNotMatch(source, /marketing\.homepage\.services\.description/)
+  assert.doesNotMatch(source, /marketing\.how\.description/)
+  assert.doesNotMatch(source, /marketing-hero__lead/)
+  assert.match(translations, /description:/)
 })
 
 test('homepage hero provides a semantic translated search handoff without loading directory data', async () => {

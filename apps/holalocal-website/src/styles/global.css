@@ -3515,7 +3515,6 @@
   min-width: 0;
   min-height: calc(100vh - var(--site-header-height));
   min-height: calc(100svh - var(--site-header-height));
-  min-height: calc(100dvh - var(--site-header-height));
   box-sizing: border-box;
   margin: 0;
   background:
@@ -3609,14 +3608,6 @@
 
 .marketing-hero__title-line {
   display: block;
-}
-
-.marketing-hero__lead {
-  max-width: 38rem;
-  margin: 1.35rem 0 0;
-  color: #475569;
-  font-size: clamp(1rem, 2vw, 1.2rem);
-  line-height: 1.7;
 }
 
 .marketing-hero__search {
@@ -6904,8 +6895,7 @@
     text-align: center;
   }
 
-  .marketing-hero h1,
-  .marketing-hero__lead {
+  .marketing-hero h1 {
     margin-inline: auto;
   }
 
