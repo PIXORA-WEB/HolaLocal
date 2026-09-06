@@ -11,6 +11,7 @@ import BusinessDetailPanel from '../components/common/BusinessDetailPanel.jsx'
 import AuthenticationChoiceDialog from '../components/common/AuthenticationChoiceDialog.jsx'
 import BusinessReportDialog from '../components/common/BusinessReportDialog.jsx'
 import PublicBusinessCard from '../components/common/PublicBusinessCard.jsx'
+import ServiceCategoryIcon from '../components/common/ServiceCategoryIcon.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
 import { getActivePublicBusinesses } from '../services/businessService.js'
 import { getOrCreateConversationForBusiness } from '../services/conversationService.js'
@@ -499,11 +500,15 @@ function ServicesPage() {
             <button
               aria-pressed={selectedGroupId === group.id}
               className={selectedGroupId === group.id ? 'is-active' : ''}
+              data-service-group={group.id}
               key={group.id}
               onClick={() => setBrowseGroupOverride({ groupId: group.id, taxonomyStateToken })}
               type="button"
             >
-              {taxonomyLabel(group)}
+              <span className="service-browser__group-icon">
+                <ServiceCategoryIcon groupId={group.id} />
+              </span>
+              <span>{taxonomyLabel(group)}</span>
             </button>
           ))}
         </div>
@@ -566,7 +571,7 @@ function ServicesPage() {
           </div>
         )}
         {!loading && !error && businesses.length === 0 && (
-          <div className="services-state">
+          <div className="services-state services-state--empty">
             <h3>{t('services.emptyTitle')}</h3>
             <p>{t('services.emptyDescription')}</p>
             <Link className="button button--secondary" to="/register?intent=business">
@@ -575,7 +580,7 @@ function ServicesPage() {
           </div>
         )}
         {!loading && !error && businesses.length > 0 && filteredBusinesses.length === 0 && (
-          <div className="services-state">
+          <div className="services-state services-state--empty">
             <h3>{t('services.noMatchesTitle')}</h3>
             <p>{t('services.noMatchesDescription')}</p>
             <button className="button button--secondary" onClick={clearFilters} type="button">

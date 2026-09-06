@@ -66,11 +66,14 @@ test('subscription product statuses use a calm responsive product treatment', as
     assert.match(subscriptionStyles, new RegExp(selector.replaceAll('.', '\\.')))
   }
 
-  assert.match(subscriptionStyles, /\.subscription-products-grid \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/)
+  assert.match(subscriptionStyles, /\.subscription-products-page \{[\s\S]*?width: min\(calc\(100% - 2rem\), 64rem\);[\s\S]*?min-width: 0;/)
+  assert.match(subscriptionStyles, /\.subscription-products-grid \{[\s\S]*?min-width: 0;[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/)
   assert.match(subscriptionStyles, /@media \(min-width: 48rem\) \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
   assert.match(subscriptionStyles, /\.subscription-product-card--business \{\s*--subscription-product-accent: var\(--product-services\)/)
   assert.match(subscriptionStyles, /\.subscription-product-card--events \{\s*--subscription-product-accent: var\(--product-events\)/)
-  assert.match(subscriptionStyles, /\.subscription-product-card__status \{[\s\S]*?border-left: 0\.2rem solid var\(--subscription-product-accent\)/)
+  assert.match(subscriptionStyles, /\.subscription-product-card \{[\s\S]*?box-shadow: inset 0\.25rem 0 0 var\(--subscription-product-accent\)/)
+  assert.match(subscriptionStyles, /\.subscription-product-card__status \{[\s\S]*?width: fit-content;[\s\S]*?border-radius: 999px;/)
+  assert.doesNotMatch(subscriptionStyles, /\.subscription-product-card::before/)
   assert.doesNotMatch(subscriptionStyles, /:hover|transform:|animation:|transition:/)
 })
 

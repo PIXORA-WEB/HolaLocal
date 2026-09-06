@@ -289,6 +289,7 @@ function ProfilePage() {
           <EditableImageAvatar
             className="image-avatar--profile"
             disabled={photoUploading}
+            iconOnly
             inputLabel={t('profile.changeImage')}
             name={displayName}
             onChange={handleProfilePhotoChange}
@@ -400,7 +401,7 @@ function ProfilePage() {
         </section>
 
         {hasBusinessAccess ? (
-          <section className="account-card business-tools-card" aria-labelledby="business-tools-title">
+          <section className="account-card business-tools-card business-tools-card--active" aria-labelledby="business-tools-title">
             <div>
               <header className="account-card__header">
                 <p className="account-card__eyebrow">{t('profile.businessAccess')}</p>
@@ -426,7 +427,7 @@ function ProfilePage() {
             </div>
           </section>
         ) : (
-          <section className="account-card business-tools-card" aria-labelledby="business-upgrade-title">
+          <section className="account-card business-tools-card business-tools-card--upgrade" aria-labelledby="business-upgrade-title">
             <div>
               <header className="account-card__header">
                 <p className="account-card__eyebrow">{t('profile.forProfessionals')}</p>
@@ -457,7 +458,7 @@ function ProfilePage() {
           </section>
         )}
 
-        <section className="account-card profile-dashboard__card" aria-labelledby="account-deletion-section-title">
+        <section className="account-card profile-dashboard__card profile-dashboard__card--danger" aria-labelledby="account-deletion-section-title">
           <header className="account-card__header">
             <p className="account-card__eyebrow">{t('accountDeletion.request.eyebrow')}</p>
             <h2 id="account-deletion-section-title">{t('accountDeletion.request.title')}</h2>

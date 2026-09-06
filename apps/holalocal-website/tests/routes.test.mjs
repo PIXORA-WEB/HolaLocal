@@ -325,7 +325,7 @@ test('homepage service and platform controls use semantic links without dead rou
   assert.match(home, /\{ key: 'events', icon: 'calendar', state: 'upcoming', to: '\/events' \}/)
   assert.match(home, /\{ key: 'community', icon: 'people', state: 'upcoming', to: '\/community' \}/)
   assert.doesNotMatch(home, /\?group=|\?category=/)
-  assert.match(styles, /\.homepage-service-groups a\s*\{[\s\S]*?min-height: 7\.25rem;/)
+  assert.match(styles, /\.homepage-services \.homepage-service-groups a\s*\{[\s\S]*?min-height: 9rem;/)
   assert.match(styles, /\.homepage-service-groups a:focus-visible/)
 })
 
@@ -520,11 +520,13 @@ test('homepage card sections use compact content-driven vertical rhythm', async 
   assert.match(styles, /\.journey-grid\s*\{[\s\S]*?margin-top: 1\.6rem;/)
   assert.match(howItemBlock, /display: grid;/)
   assert.match(howItemBlock, /min-width: 0;/)
-  assert.match(styles, /\.journey-card\s*\{[\s\S]*?display: flex;[\s\S]*?min-width: 0;[\s\S]*?flex-direction: column;[\s\S]*?padding: 1\.15rem 0\.35rem 0;/)
-  assert.match(styles, /\.journey-card__action\s*\{[\s\S]*?min-height: 2\.75rem;[\s\S]*?margin-top: auto;/)
+  assert.match(styles, /\.journey-card\s*\{[\s\S]*?display: flex;[\s\S]*?min-width: 0;[\s\S]*?flex-direction: column;[\s\S]*?padding: clamp\(1\.4rem, 5vw, 2rem\);/)
+  assert.match(styles, /\.journey-card__action\s*\{[\s\S]*?min-height: 2\.75rem;[\s\S]*?margin-top: 0\.6rem;/)
   assert.doesNotMatch(howItemBlock, /\n\s{2}height:\s*\d|min-height:\s*100%/)
   assert.doesNotMatch(journeyCardBlock, /\n\s{2}height:\s*\d/)
-  assert.doesNotMatch(journeyCardBlock, /\n\s+border:|border-radius:|background:|box-shadow:|min-height:\s*100%|transition:|transform:/)
+  assert.match(journeyCardBlock, /background-color: color-mix\(in srgb, var\(--journey-accent\) 5%, var\(--surface\)\);/)
+  assert.match(journeyCardBlock, /box-shadow: inset 3px 0 0 color-mix\(in srgb, var\(--journey-accent\) 38%, transparent\);/)
+  assert.doesNotMatch(journeyCardBlock, /min-height:\s*100%|transition:|transform:/)
 })
 
 test('homepage hero fills the viewport below the responsive header without clipping content', async () => {

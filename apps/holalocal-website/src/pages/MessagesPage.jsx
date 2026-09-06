@@ -55,6 +55,8 @@ function MessagesPage() {
   const navigate = useNavigate()
   const { user, userProfile } = useAuthentication()
   const messagesEndRef = useRef(null)
+  const conversationListHeadingRef = useRef(null)
+  const mobileBackRef = useRef(null)
   const readMarkersRef = useRef(new Set())
   const activeSendOperationsRef = useRef(new Map())
   const activeHideOperationsRef = useRef(new Map())
@@ -227,8 +229,19 @@ function MessagesPage() {
   }, [conversationAttempt, conversationId, t, user.uid])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    messagesEndRef.current?.scrollIntoView({ behavior })
   }, [messages])
+
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 63.999rem)').matches) return undefined
+
+    const frame = window.requestAnimationFrame(() => {
+      const focusTarget = conversationId ? mobileBackRef.current : conversationListHeadingRef.current
+      focusTarget?.focus()
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [conversationId, conversationLoadStatus])
 
   useEffect(() => {
     if (!conversationId || !user.uid) return
@@ -363,6 +376,7 @@ function MessagesPage() {
     : error?.recovery === 'sign-in'
       ? t('account.signIn')
       : undefined
+  const isEmptyInbox = inboxStatus === 'ready' && conversations.length === 0
 
   return (
     <div className={`messages-page${conversationId ? ' has-conversation' : ''}`}>
@@ -383,10 +397,17 @@ function MessagesPage() {
       )}
       {success && <p className="form-message form-message--success messages-page__error" role="status">{success}</p>}
 
+      {isEmptyInbox ? (
+        <section className="messages-empty-state">
+          <h2>{t('messages.privateMessages')}</h2>
+          <p>{t('messages.emptyConversations')}</p>
+          <Link className="button button--primary" to="/">{t('messages.returnHome')}</Link>
+        </section>
+      ) : (
       <div className="messages-layout">
         <aside className="conversation-list" aria-label={t('messages.conversations')}>
           <header>
-            <h2>{t('messages.conversations')}</h2>
+            <h2 ref={conversationListHeadingRef} tabIndex="-1">{t('messages.conversations')}</h2>
             <span>{conversations.length}</span>
           </header>
           {inboxStatus === 'loading' ? (
@@ -431,22 +452,14 @@ function MessagesPage() {
                 })()
               ))}
             </nav>
-          ) : (
-            <div className="conversation-list__empty">
-              <span aria-hidden="true">✦</span>
-              <p>{t('messages.emptyConversations')}</p>
-              <Link to="/">{t('messages.returnHome')}</Link>
-            </div>
-          )}
+          ) : null}
         </aside>
 
         <section className="conversation-view">
           {!conversationId ? (
             <div className="conversation-view__placeholder">
-              <span aria-hidden="true">✦</span>
               <h2>{t('messages.privateMessages')}</h2>
               <p>{t('messages.selectConversation')}</p>
-              <Link className="button button--primary" to="/">{t('messages.returnHome')}</Link>
             </div>
           ) : (
             conversationLoadStatus === 'unavailable' ||
@@ -463,7 +476,10 @@ function MessagesPage() {
           ) : conversation && business ? (
             <>
               <header className="conversation-view__header">
-                <button className="conversation-view__back" aria-label={t('messages.back')} onClick={() => navigate('/messages')} type="button">←</button>
+                <button className="conversation-view__back" aria-label={t('messages.back')} onClick={() => navigate('/messages')} ref={mobileBackRef} type="button">
+                  <span aria-hidden="true">←</span>
+                  <span>{t('messages.back')}</span>
+                </button>
                 <ImageAvatar
                   className="image-avatar--conversation-header"
                   name={participantPresentation.deleted ? participantPresentation.label : business.name}
@@ -590,6 +606,7 @@ function MessagesPage() {
           ) : null}
         </section>
       </div>
+      )}
       <AccessibleDialog
         ariaDescribedBy="remove-conversation-description"
         ariaLabelledBy="remove-conversation-title"

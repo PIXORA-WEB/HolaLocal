@@ -40,6 +40,7 @@ export function EditableImageAvatar({
   actionLabel,
   className = '',
   disabled = false,
+  iconOnly = false,
   inputLabel,
   imageAlt = '',
   name,
@@ -49,14 +50,14 @@ export function EditableImageAvatar({
 }) {
   const { t } = useTranslation()
   return (
-    <label className={`editable-image-avatar${disabled ? ' is-disabled' : ''}`}>
+    <label className={`editable-image-avatar${iconOnly ? ' editable-image-avatar--icon-only' : ''}${disabled ? ' is-disabled' : ''}`}>
       <ImageAvatar alt={imageAlt} className={className} name={name} src={src} />
       <span className="editable-image-avatar__overlay" aria-hidden="true">
         <svg viewBox="0 0 24 24">
           <path d="M4 8.5h3l1.5-2h7l1.5 2h3v10H4z" />
           <circle cx="12" cy="13.5" r="3" />
         </svg>
-        <span>{uploading ? t('common.uploading') : actionLabel ?? t('common.change')}</span>
+        {!iconOnly && <span>{uploading ? t('common.uploading') : actionLabel ?? t('common.change')}</span>}
       </span>
       <input
         accept="image/jpeg,image/png,image/webp"

@@ -172,7 +172,6 @@ export default function BusinessInsightsPanel({ businessId, status }) {
             ) : (
               <>
                 <div className="business-insights__activity-empty" role="status">
-                  <span aria-hidden="true">—</span>
                   <p>{t('businessInsights.state.empty')}</p>
                 </div>
                 <ol className="visually-hidden">

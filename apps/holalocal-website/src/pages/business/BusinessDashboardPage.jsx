@@ -300,7 +300,8 @@ function BusinessDashboardPage() {
           </ul>
         </article>
 
-        <article className="account-card business-dashboard__card business-dashboard__card--next">
+        <div className="business-dashboard__status-stack">
+          <article className="account-card business-dashboard__card business-dashboard__card--next">
           <header className="account-card__header">
             <p className="account-card__eyebrow">{t('business.control.nextEyebrow')}</p>
             <h2>{t('business.control.nextTitle')}</h2>
@@ -334,9 +335,9 @@ function BusinessDashboardPage() {
           ) : canEditBusiness ? (
             <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>
           ) : null}
-        </article>
+          </article>
 
-        <article className={`account-card business-dashboard__card business-dashboard__card--visibility business-dashboard__card--${status}`}>
+          <article className={`account-card business-dashboard__card business-dashboard__card--visibility business-dashboard__card--${status}`}>
           <header className="account-card__header account-card__header--row">
             <div>
               <p className="account-card__eyebrow">{t('business.control.visibilityEyebrow')}</p>
@@ -355,7 +356,8 @@ function BusinessDashboardPage() {
               ))}
             </ul>
           )}
-        </article>
+          </article>
+        </div>
 
         <article className="account-card business-dashboard__card business-dashboard__card--coverage">
           <header className="account-card__header">
