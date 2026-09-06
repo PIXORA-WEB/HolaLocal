@@ -2617,6 +2617,131 @@
   overflow: hidden;
 }
 
+.business-dashboard-skeleton {
+  width: 100%;
+  min-width: 0;
+}
+
+.business-dashboard-skeleton__summary,
+.business-dashboard-skeleton__card {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--brand-blue) 14%, var(--line));
+  border-radius: 1.25rem;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.business-dashboard-skeleton__summary {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.business-dashboard-skeleton__logo {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 1.35rem;
+  background: #e7edf5;
+}
+
+.business-dashboard-skeleton__identity,
+.business-dashboard-skeleton__card,
+.business-dashboard-skeleton__card > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 0.7rem;
+}
+
+.business-dashboard-skeleton__identity {
+  width: min(100%, 38rem);
+  justify-items: center;
+}
+
+.business-dashboard-skeleton__line,
+.business-dashboard-skeleton__progress,
+.business-dashboard-skeleton__checklist span,
+.business-dashboard-skeleton__detail-grid span,
+.business-dashboard-skeleton__tile-grid span,
+.business-dashboard-skeleton__metrics span,
+.business-dashboard-skeleton__button,
+.business-dashboard-skeleton__badges span {
+  display: block;
+  max-width: 100%;
+  border-radius: 999px;
+  background: #e7edf5;
+}
+
+.business-dashboard-skeleton__line {
+  width: 100%;
+  height: 0.75rem;
+}
+
+.business-dashboard-skeleton__line--eyebrow { width: 5.5rem; height: 0.5rem; }
+.business-dashboard-skeleton__line--title { width: min(100%, 28rem); height: 2rem; }
+.business-dashboard-skeleton__line--description { width: min(100%, 22rem); }
+.business-dashboard-skeleton__line--heading { width: min(70%, 12rem); height: 1rem; }
+.business-dashboard-skeleton__line--copy { width: min(88%, 22rem); }
+
+.business-dashboard-skeleton__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.business-dashboard-skeleton__badges span {
+  width: 4.75rem;
+  height: 2rem;
+}
+
+.business-dashboard-skeleton__grid {
+  display: grid;
+  min-width: 0;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.business-dashboard-skeleton__card {
+  padding: clamp(1.1rem, 2.25vw, 1.4rem);
+}
+
+.business-dashboard-skeleton__progress { width: 100%; height: 0.65rem; }
+
+.business-dashboard-skeleton__checklist,
+.business-dashboard-skeleton__detail-grid,
+.business-dashboard-skeleton__tile-grid,
+.business-dashboard-skeleton__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.business-dashboard-skeleton__checklist span { height: 1rem; }
+.business-dashboard-skeleton__detail-grid span { height: 3.25rem; border-radius: 0.65rem; }
+.business-dashboard-skeleton__tile-grid span { height: 4rem; border-radius: 0.75rem; }
+.business-dashboard-skeleton__metrics span { height: 5rem; border-radius: 0.8rem; }
+
+.business-dashboard-skeleton__stack {
+  display: grid;
+  min-width: 0;
+  gap: 0.9rem;
+}
+
+.business-dashboard-skeleton__card--actions {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.business-dashboard-skeleton__button {
+  width: 8rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+}
+
+.business-dashboard-skeleton__card--insights {
+  gap: 1rem;
+}
+
 .business-dashboard__card > h2 {
   margin: 1rem 0 0;
   color: var(--brand-navy);
@@ -3390,7 +3515,6 @@
   min-width: 0;
   min-height: calc(100vh - var(--site-header-height));
   min-height: calc(100svh - var(--site-header-height));
-  min-height: calc(100dvh - var(--site-header-height));
   box-sizing: border-box;
   margin: 0;
   background:
@@ -3484,14 +3608,6 @@
 
 .marketing-hero__title-line {
   display: block;
-}
-
-.marketing-hero__lead {
-  max-width: 38rem;
-  margin: 1.35rem 0 0;
-  color: #475569;
-  font-size: clamp(1rem, 2vw, 1.2rem);
-  line-height: 1.7;
 }
 
 .marketing-hero__search {
@@ -6459,13 +6575,36 @@
   }
 
   .business-dashboard__card--completion,
-  .business-dashboard__card--coverage {
-    grid-column: span 7;
+  .business-dashboard__card--coverage,
+  .business-dashboard-skeleton__card--completion,
+  .business-dashboard-skeleton__card--details {
+    grid-column: span 6;
   }
 
   .business-dashboard__status-stack,
+  .business-dashboard__card--account-summary,
+  .business-dashboard-skeleton__stack {
+    grid-column: span 6;
+  }
+
+  .business-dashboard__card--completion,
+  .business-dashboard__card--coverage,
   .business-dashboard__card--account-summary {
-    grid-column: span 5;
+    align-self: stretch;
+  }
+
+  .business-dashboard__card--coverage .business-dashboard__details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1rem;
+  }
+
+  .business-dashboard__card--coverage .business-dashboard__details div:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .business-dashboard__card--account-summary .business-account-chips {
+    flex: 1;
+    grid-auto-rows: minmax(min-content, 1fr);
   }
 
   .business-dashboard__card--actions {
@@ -6481,6 +6620,43 @@
 
   .business-dashboard__actions .button {
     width: auto;
+  }
+
+  .business-dashboard-skeleton__summary {
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: start;
+  }
+
+  .business-dashboard-skeleton__logo {
+    width: 7.5rem;
+    height: 7.5rem;
+  }
+
+  .business-dashboard-skeleton__identity {
+    align-content: center;
+    justify-items: start;
+  }
+
+  .business-dashboard-skeleton__badges {
+    justify-content: flex-start;
+  }
+
+  .business-dashboard-skeleton__grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .business-dashboard-skeleton__card--actions,
+  .business-dashboard-skeleton__card--insights {
+    grid-column: 1 / -1;
+  }
+
+  .business-dashboard-skeleton__card--actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .business-dashboard-skeleton__metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .homepage-how__list {
@@ -6719,8 +6895,7 @@
     text-align: center;
   }
 
-  .marketing-hero h1,
-  .marketing-hero__lead {
+  .marketing-hero h1 {
     margin-inline: auto;
   }
 

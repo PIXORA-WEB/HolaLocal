@@ -162,7 +162,6 @@ function HomePage() {
               {' '}
               <span className="marketing-hero__title-line">{t('marketing.homepage.hero.titleSecondLine')}</span>
             </h1>
-            <p className="marketing-hero__lead">{t('marketing.homepage.hero.description')}</p>
           </div>
           <form
             aria-label={t('marketing.homepage.hero.searchFormLabel')}
@@ -206,7 +205,6 @@ function HomePage() {
         <div className="section-heading">
           <p className="marketing-eyebrow">{t('marketing.homepage.services.eyebrow')}</p>
           <h2>{t('marketing.homepage.services.title')}</h2>
-          <p>{t('marketing.homepage.services.description')}</p>
         </div>
         <nav className="homepage-service-groups" aria-label={t('marketing.homepage.services.title')}>
           {SERVICE_TAXONOMY_GROUPS.map((group) => (
@@ -336,7 +334,6 @@ function HomePage() {
         <div className="section-heading">
           <p className="marketing-eyebrow">{t('marketing.how.eyebrow')}</p>
           <h2>{t('marketing.how.title')}</h2>
-          <p>{t('marketing.how.description')}</p>
         </div>
         <ol className="homepage-how__list">
           {howItWorksCards.map(({ accent, icon, key }, index) => (
