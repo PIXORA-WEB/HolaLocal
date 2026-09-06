@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import LoadingScreen from '../../components/common/LoadingScreen.jsx'
 import BusinessInsightsPanel from '../../components/business/BusinessInsightsPanel.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { ImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
@@ -23,6 +22,64 @@ import {
   getRecoveryActionTranslationKey,
 } from '../../utils/frontendErrors.js'
 import { loadOwnerSubscriptionProjection } from '../../utils/subscriptionProjection.js'
+
+function BusinessDashboardSkeleton({ message }) {
+  return (
+    <section className="business-dashboard-skeleton" aria-busy="true" aria-live="polite" role="status">
+      <p className="visually-hidden">{message}</p>
+      <div className="business-dashboard-skeleton__summary" aria-hidden="true">
+        <span className="business-dashboard-skeleton__logo" />
+        <div className="business-dashboard-skeleton__identity">
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--eyebrow" />
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--title" />
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--description" />
+          <div className="business-dashboard-skeleton__badges">
+            <span /><span /><span /><span />
+          </div>
+        </div>
+      </div>
+      <div className="business-dashboard-skeleton__grid" aria-hidden="true">
+        <div className="business-dashboard-skeleton__card business-dashboard-skeleton__card--completion">
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--eyebrow" />
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--heading" />
+          <span className="business-dashboard-skeleton__progress" />
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--copy" />
+          <div className="business-dashboard-skeleton__checklist"><span /><span /><span /><span /></div>
+        </div>
+        <div className="business-dashboard-skeleton__stack">
+          <div className="business-dashboard-skeleton__card business-dashboard-skeleton__card--compact">
+            <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--eyebrow" />
+            <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--heading" />
+            <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--copy" />
+          </div>
+          <div className="business-dashboard-skeleton__card business-dashboard-skeleton__card--compact">
+            <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--eyebrow" />
+            <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--heading" />
+            <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--copy" />
+          </div>
+        </div>
+        <div className="business-dashboard-skeleton__card business-dashboard-skeleton__card--details">
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--eyebrow" />
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--heading" />
+          <div className="business-dashboard-skeleton__detail-grid"><span /><span /><span /><span /></div>
+        </div>
+        <div className="business-dashboard-skeleton__card business-dashboard-skeleton__card--details">
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--eyebrow" />
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--heading" />
+          <div className="business-dashboard-skeleton__tile-grid"><span /><span /><span /><span /></div>
+        </div>
+        <div className="business-dashboard-skeleton__card business-dashboard-skeleton__card--actions">
+          <div><span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--heading" /><span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--copy" /></div>
+          <span className="business-dashboard-skeleton__button" />
+        </div>
+        <div className="business-dashboard-skeleton__card business-dashboard-skeleton__card--insights">
+          <span className="business-dashboard-skeleton__line business-dashboard-skeleton__line--heading" />
+          <div className="business-dashboard-skeleton__metrics"><span /><span /><span /></div>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 function BusinessDashboardPage() {
   const { t } = useTranslation()
@@ -140,7 +197,7 @@ function BusinessDashboardPage() {
     }
   }
 
-  if (loading) return <LoadingScreen message={t('business.control.loading')} />
+  if (loading) return <BusinessDashboardSkeleton message={t('business.control.loading')} />
   if (error) {
     const handleAccountRecovery = async () => {
       setRecoveryPending(true)
