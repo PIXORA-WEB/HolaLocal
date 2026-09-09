@@ -79,7 +79,9 @@ test('mobile registration, verified email, save/reload and validation feedback',
   await page.evaluate(async () => {
     const { getFirebaseAuth } = await import('/src/firebase/auth.js')
     const business = await import('/src/services/businessService.js')
-    const saved = await business.getBusinessByOwnerId(getFirebaseAuth().currentUser.uid)
+    const { getUserProfile } = await import('/src/services/userService.js')
+    const profile = await getUserProfile(getFirebaseAuth().currentUser.uid)
+    const saved = await business.getBusinessById(profile.businessId)
     await business.submitBusinessForReview(saved.businessId)
   })
   await page.locator('#business-description').fill('This forbidden edit must remain available locally.')
