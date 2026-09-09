@@ -1,3 +1,4 @@
+import { verifyIndependentBusinessDisplay } from './onboardingDisplayChecks.js'
 import { test, expect } from '@playwright/test'
 import { TEST_PROJECT_ID } from './fixtures.js'
 
@@ -14,6 +15,13 @@ test.beforeAll(async () => {
 })
 test('mobile registration, verified email, save/reload and validation feedback', async ({ page }) => {
   await page.route(/^https:\/\//, route => route.abort())
+  // Warm the real Firestore rules engine before timing registration navigation.
+  await page.goto('/tests/browser/integration.html')
+  const denied = await page.evaluate(async () => {
+    const { getBusinessById } = await import('/src/services/businessService.js')
+    try { await getBusinessById('anonymous-warmup'); return null } catch (error) { return error.code }
+  })
+  expect(denied).toBe('permission-denied')
   await page.goto('/register')
   await page.locator('#register-email').fill('onboarding-regression@example.test')
   await page.locator('#register-password').fill('Onboarding!23456')
@@ -149,4 +157,7 @@ test('real location removal, replacement, save/reload and review without images'
   }, id)
   expect(pending).toEqual({ status: 'pending_review', publishedAt: null })
   console.log('PASS: real mobile location removal/save/reload and review submission without images')
+  await test.step('independent browser display using attached synthetic fixtures', async () => {
+    await verifyIndependentBusinessDisplay(page, id)
+  })
 })

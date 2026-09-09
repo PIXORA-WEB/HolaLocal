@@ -1623,7 +1623,7 @@
   text-align: center;
 }
 
-.image-avatar--business-logo {
+.image-avatar.image-avatar--business-logo {
   width: 7.5rem;
   height: 7.5rem;
   border: 1px solid #d8e3ef;
@@ -4383,14 +4383,16 @@
   justify-content: center;
   padding: 0.45rem;
   color: #ffffff;
-  background: linear-gradient(transparent, rgb(7 29 53 / 88%));
+  background: #173653;
   font-size: 0.7rem;
   font-weight: 800;
-  opacity: 0.82;
+  line-height: 1.25;
+  opacity: 1;
   transition: opacity 160ms ease, background-color 160ms ease;
 }
 
 .editable-image-avatar__overlay svg {
+  flex-shrink: 0;
   width: 1rem;
   height: 1rem;
   fill: none;
@@ -4402,7 +4404,7 @@
 
 .editable-image-avatar:hover .editable-image-avatar__overlay,
 .editable-image-avatar:focus-within .editable-image-avatar__overlay {
-  background-color: rgb(7 29 53 / 35%);
+  background-color: #071d35;
   opacity: 1;
 }
 
@@ -6443,7 +6445,7 @@
   }
 
   .profile-summary .image-avatar--profile,
-  .image-avatar--business-logo {
+  .image-avatar.image-avatar--business-logo {
     width: 7rem;
     height: 7rem;
   }
