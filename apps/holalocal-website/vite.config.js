@@ -7,7 +7,7 @@ import {
   validateBrowserTestSafety,
 } from './src/firebase/browserTestSafety.js'
 
-const browserTestVariableNames = Object.freeze(Object.values(BROWSER_TEST_ENVIRONMENT_KEYS))
+const browserTestVariableNames = Object.freeze([...Object.values(BROWSER_TEST_ENVIRONMENT_KEYS), 'VITE_ONBOARDING_REGRESSION'])
 
 export default defineConfig(({ command, mode }) => {
   if (mode === BROWSER_TEST_MODE) {

@@ -372,6 +372,7 @@ function BusinessDashboardPage() {
                     item: t(`business.control.checklist.${completion.nextRecommendation}`),
                   })}
           </p>
+          <p>{t('business.control.statusExplanation')}</p>
           {submitError && (
             <RecoveryMessage
               actionLabel={t(getRecoveryActionTranslationKey(submitError.recovery) ?? 'common.retry')}

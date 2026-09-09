@@ -349,7 +349,13 @@ export async function updateBusinessProfile(businessId, updates) {
     })
     transaction.set(privateRef, privateUpdates, { merge: true })
   })
-  return getManagedBusinessById(businessId)
+  try {
+    return await getManagedBusinessById(businessId)
+  } catch (cause) {
+    const error = createApplicationError('business-save-refresh-failed')
+    error.cause = cause
+    throw error
+  }
 }
 
 export async function submitBusinessForReview(businessId) {
@@ -392,11 +398,13 @@ export async function uploadBusinessLogo(businessId, file, dependencies = {}) {
   const prepare = dependencies.prepare ?? finalizeBusinessMedia
   const finalize = dependencies.finalize ?? finalizeBusinessMedia
   const remove = dependencies.remove ?? deleteImageFile
-  const onCommitted = dependencies.onCommitted
+  const onCommitted = async (file) => {
+    clearBusinessMediaPresentationCache()
+    await dependencies.onCommitted?.(file)
+  }
   const result = await runBusinessLogoUpload(
     businessId, file, { getBusiness, upload, prepare, finalize, remove, onCommitted },
   )
-  clearBusinessMediaPresentationCache()
   return result
 }
 
@@ -405,11 +413,13 @@ export async function uploadBusinessGalleryImages(businessId, files, dependencie
   const upload = dependencies.upload ?? uploadCanonicalImageFile
   const prepare = dependencies.prepare ?? finalizeBusinessMedia
   const finalize = dependencies.finalize ?? finalizeBusinessMedia
-  const onCommitted = dependencies.onCommitted
+  const onCommitted = async (file) => {
+    clearBusinessMediaPresentationCache()
+    await dependencies.onCommitted?.(file)
+  }
   const result = await runBusinessGalleryUploads(
     businessId, files, { getBusiness, upload, prepare, finalize, onCommitted },
   )
-  clearBusinessMediaPresentationCache()
   return result
 }
 

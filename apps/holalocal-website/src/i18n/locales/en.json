@@ -286,7 +286,7 @@
         "deleted": "Deleted"
       },
       "verification": {
-        "unverified": "Not verified",
+        "unverified": "Business not verified",
         "pending": "Verification pending",
         "verified": "Verified",
         "rejected": "Verification declined"
@@ -294,6 +294,7 @@
       "planBadge": "{{plan}} plan",
       "ready": "Profile ready",
       "needsWork": "Setup required",
+      "statusExplanation": "Email verification confirms your account email. Business verification is a separate review by HolaLocal. A draft is saved but not public; submit it for review when ready. It becomes public only after approval. Logo and work images are recommended, not required.",
       "completionEyebrow": "Profile completion",
       "missingCount_one": "{{count}} recommended item remaining",
       "missingCount_other": "{{count}} recommended items remaining",
@@ -376,7 +377,7 @@
       "leave": "Leave without saving",
       "unsavedTitle": "Unsaved changes",
       "unsavedDescription": "Save your profile changes before leaving this page.",
-      "savedTitle": "Profile details saved",
+      "savedTitle": "No unsaved profile changes",
       "savedDescription": "Make another change whenever you need to update your profile.",
       "saveSuccess": "Business profile saved successfully.",
       "media": {

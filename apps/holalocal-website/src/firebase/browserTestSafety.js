@@ -42,7 +42,9 @@ function validatedEndpoint(environment, service) {
     throw safetyError(name, 'must be a valid absolute URL')
   }
 
-  const expectedPort = String(ENDPOINT_REQUIREMENTS[service].port)
+  // A separate fixed port set keeps onboarding regressions isolated from other local demos.
+  const offset = environment.VITE_ONBOARDING_REGRESSION === 'true' ? 10000 : 0
+  const expectedPort = String(ENDPOINT_REQUIREMENTS[service].port + offset)
   if (
     url.protocol !== 'http:'
     || url.hostname !== '127.0.0.1'

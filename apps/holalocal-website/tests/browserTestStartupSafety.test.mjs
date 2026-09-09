@@ -238,3 +238,19 @@ test('runner validates arguments before environments and uses fixed-array child 
   assert.doesNotMatch(innerSource, /exec\(|execFile\(|&&/)
   assert.equal(JSON.parse(packageSource).scripts['test:admin-browser'], 'node tests/browser/runAdminBrowserSmoke.mjs')
 })
+
+test('onboarding test ports are isolated and remain restricted to loopback demo development', () => {
+  const environment = {
+    ...approvedEnvironment,
+    VITE_ONBOARDING_REGRESSION: 'true',
+    VITE_FIREBASE_AUTH_EMULATOR_URL: 'http://127.0.0.1:19099',
+    VITE_FIRESTORE_EMULATOR_URL: 'http://127.0.0.1:18080',
+    VITE_FUNCTIONS_EMULATOR_URL: 'http://127.0.0.1:15001',
+    VITE_STORAGE_EMULATOR_URL: 'http://127.0.0.1:19199',
+  }
+  assert.equal(validate(environment).endpoints.storage.port, 19199)
+  assert.throws(() => validate(environment, { production: true }))
+  assert.throws(() => validate({ ...environment, VITE_FIREBASE_PROJECT_ID: 'holalocal-491c9' }))
+  assert.throws(() => validate({ ...environment, VITE_STORAGE_EMULATOR_URL: 'http://example.com:19199' }))
+  assert.throws(() => validate({ ...environment, VITE_STORAGE_EMULATOR_URL: 'http://127.0.0.1:9199' }))
+})

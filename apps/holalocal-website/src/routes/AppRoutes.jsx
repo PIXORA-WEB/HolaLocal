@@ -119,7 +119,7 @@ function AppRoutes() {
           </Route>
         </Route>
 
-        <Route element={<ProtectedRoute allowIncompleteProfile />}>
+        <Route element={<ProtectedRoute allowIncompleteProfile allowIncompleteOnboarding />}>
           <Route element={<AuthLayout />}>
             <Route path="complete-profile" element={<CompleteProfilePage />} />
           </Route>
