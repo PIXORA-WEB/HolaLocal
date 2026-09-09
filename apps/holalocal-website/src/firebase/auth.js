@@ -113,6 +113,9 @@ export async function resendEmailVerification(user) {
 export async function reloadAuthenticationUser(user) {
   if (!user) return false
   await reload(user)
+  // Callable authorization reads the ID token, not the reloaded User object.
+  // Refresh its email_verified claim before allowing onboarding to continue.
+  if (user.emailVerified === true) await user.getIdToken(true)
   return user.emailVerified === true
 }
 

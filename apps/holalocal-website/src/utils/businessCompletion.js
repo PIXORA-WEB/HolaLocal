@@ -1,3 +1,4 @@
+import { hasCompletePublicBusinessProfile } from '@holalocal/firebase-contract'
 import { validateBusinessLocation } from './locations.js'
 
 const completionDefinitions = [
@@ -6,9 +7,10 @@ const completionDefinitions = [
   ['category', (business) => Boolean(business?.primaryCategoryId)],
   ['serviceArea', (_business, _options, locationValidation) => locationValidation.valid],
   ['language', (business) => (business?.languages?.length ?? 0) > 0],
-  ['logo', (business) => Boolean(business?.logoUrl ?? business?.profilePhoto?.downloadUrl)],
+  ['logo', (business) => Boolean(business?.logoStoragePath || business?.logoUrl || business?.profilePhoto?.downloadUrl)],
   ['images', (business) => (
-    (business?.galleryEntries?.length ?? business?.galleryImages?.length ?? business?.galleryImageURLs?.length ?? 0) > 0
+    (business?.galleryStoragePaths?.length ?? 0) > 0
+    || (business?.galleryEntries?.length ?? business?.galleryImages?.length ?? business?.galleryImageURLs?.length ?? 0) > 0
   )],
   ['contact', (business) => Boolean(business?.contact?.preferredContactMethod)],
 ]
@@ -28,8 +30,7 @@ export function getBusinessProfileCompletion(business, options = {}) {
     remainingItems,
     nextRecommendation: remainingItems[0]?.key ?? null,
     percentage: Math.round((completedItems.length / items.length) * 100),
-    ready: remainingItems.length <= 1
-      && items.find(({ key }) => key === 'serviceArea')?.complete === true,
+    ready: hasCompletePublicBusinessProfile(business) && locationValidation.valid,
     locationValidation,
   }
 }

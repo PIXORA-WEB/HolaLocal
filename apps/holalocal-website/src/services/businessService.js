@@ -349,7 +349,13 @@ export async function updateBusinessProfile(businessId, updates) {
     })
     transaction.set(privateRef, privateUpdates, { merge: true })
   })
-  return getManagedBusinessById(businessId)
+  try {
+    return await getManagedBusinessById(businessId)
+  } catch (cause) {
+    const error = createApplicationError('business-save-refresh-failed')
+    error.cause = cause
+    throw error
+  }
 }
 
 export async function submitBusinessForReview(businessId) {

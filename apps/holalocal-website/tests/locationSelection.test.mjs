@@ -139,3 +139,40 @@ test('editor uses the accessible combobox and the submission service uses the sh
   assert.match(editor, /selectedPrimaryLocationId: form\.primaryLocationId/)
   assert.match(service, /validateBusinessLocation\(business\)/)
 })
+
+test('reported unresolved chip values can each be removed without changing other selections', () => {
+  let values = ['santa-margarita', 'duquesa', 'Remote', 'marbella']
+  for (const unresolved of ['santa-margarita', 'duquesa', 'Remote']) {
+    assert.equal(resolveLaunchLocation(unresolved), null)
+    const before = [...values]
+    values = toggleServiceAreaSelection(values, unresolved)
+    assert.deepEqual(values, before.filter(value => value !== unresolved))
+  }
+  values = toggleServiceAreaSelection(values, 'santa-margarita-la-linea')
+  assert.deepEqual(values, ['marbella', 'santa-margarita-la-linea'])
+  assert.equal(validateBusinessLocation(completeBusiness({ serviceAreas: values })).valid, true)
+})
+
+test('recommended media does not gate review submission and cannot substitute for core fields', () => {
+  const business = completeBusiness({ ownerId: 'owner', managerIds: ['owner'], profilePhoto: null, galleryImages: [] })
+  assert.equal(getBusinessProfileCompletion(business).percentage, 75)
+  assert.equal(getBusinessProfileCompletion(business).ready, true)
+  for (const overrides of [{ name: '' }, { description: '' }, { categoryIds: [] }, { languages: [] }]) {
+    assert.equal(getBusinessProfileCompletion({ ...business, ...overrides }).ready, false)
+  }
+  assert.equal(getBusinessProfileCompletion({ ...business, logoStoragePath: 'businesses/id/logos/logo/a',
+    galleryStoragePaths: ['businesses/id/photos/0/a'] }).percentage, 100)
+})
+
+test('managed-view normalization round trip cannot resurrect explicitly removed coverage', async () => {
+  const { toManagedBusinessView } = await import('../src/services/firebaseCompatibility.js')
+  const raw = completeBusiness({ ownerId: 'owner', managerIds: ['owner'],
+    serviceAreas: ['santa-margarita', 'duquesa', 'Remote', 'marbella'] })
+  const { normalizeServiceAreaId } = await import('../src/utils/locations.js')
+  let values = toManagedBusinessView('existing', raw).serviceAreas.map(normalizeServiceAreaId)
+  for (const label of ['santa-margarita', 'duquesa', 'Remote']) values = toggleServiceAreaSelection(values, label)
+  values = toggleServiceAreaSelection(values, 'la-duquesa')
+  const saved = { ...raw, serviceAreas: values }
+  const reopened = toManagedBusinessView('existing', saved).serviceAreas.map(normalizeServiceAreaId)
+  assert.deepEqual(reopened, ['marbella', 'la-duquesa'])
+})

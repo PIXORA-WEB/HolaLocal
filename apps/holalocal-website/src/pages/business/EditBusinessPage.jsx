@@ -665,6 +665,7 @@ function EditBusinessPage() {
     setError('')
     setSaveSuccess(false)
     setFieldErrors({})
+    if (submitting) return
 
     const name = form.name.trim()
     const description = form.description.trim()
@@ -730,7 +731,11 @@ function EditBusinessPage() {
     }
     const firstInvalidField = Object.keys(fieldIds).find((field) => nextErrors[field])
     if (firstInvalidField) {
-      document.getElementById(fieldIds[firstInvalidField])?.focus()
+      requestAnimationFrame(() => {
+        const field = document.getElementById(fieldIds[firstInvalidField])
+        field?.focus()
+        field?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      })
       return
     }
 
@@ -783,6 +788,11 @@ function EditBusinessPage() {
       setInitialDraftSignature(draftSignature(form, customLanguage, savedTaxonomy, false))
       setSaveSuccess(true)
     } catch (saveError) {
+      if (saveError.reason === 'business-save-refresh-failed') {
+        setInitialDraftSignature(draftSignature(form, customLanguage, taxonomy, taxonomyDirty))
+        setError(t('business.form.errors.savedRefreshFailed'))
+        return
+      }
       const classifiedError = classifyFrontendError(saveError, {
         domain: 'business-save',
         fallbackType: 'BUSINESS_SAVE_FAILED',
@@ -990,7 +1000,7 @@ function EditBusinessPage() {
         )}
       </section>
 
-      <form className="auth-form business-form" id="business-profile-form" onSubmit={handleSubmit}>
+      <form className="auth-form business-form" id="business-profile-form" noValidate onSubmit={handleSubmit}>
         <section className="business-form__section" aria-labelledby="business-identity-title">
           <header>
             <h2 id="business-identity-title">{t('business.form.identity.title')}</h2>
@@ -1352,7 +1362,10 @@ function EditBusinessPage() {
 
         <footer className={`business-form__save${isDirty ? ' is-dirty' : ''}`}>
           <div>
-            <strong>{isDirty ? t('business.form.unsavedTitle') : t('business.form.savedTitle')}</strong>
+            <strong role="status">{submitting ? t('business.saving') : saveSuccess && !isDirty
+              ? t('business.form.saveSuccess')
+              : isDirty ? t('business.form.unsavedTitle') : t('business.form.savedTitle')}</strong>
+            {error && <p role="alert">{error}</p>}
             {isDirty && <p>{t('business.form.unsavedDescription')}</p>}
           </div>
           <button className="button button--primary" disabled={submitting || !isDirty} type="submit">

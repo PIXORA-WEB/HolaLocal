@@ -79,6 +79,8 @@ export function primaryLocationSelectionState(location) {
 }
 
 export function toggleServiceAreaSelection(values, value) {
+  // Stored legacy values must remain removable even when the catalogue cannot resolve them.
+  if (values.includes(value)) return values.filter((candidate) => candidate !== value)
   const canonicalId = resolveLaunchLocation(value)?.id
   if (!canonicalId) return [...values]
   return values.includes(canonicalId)
