@@ -340,7 +340,8 @@ export async function manageBusinessMedia({
     return publicResult({ action: safeAction, storagePath: safeStoragePath, idempotent })
   }
 
-  const parsedSlot = safeAction.includes('gallery') ? Number(safeStoragePath.split('/').at(-1)) : null
+  // The parsed logical slot remains numeric for both /photos/0 and /photos/0/a.
+  const parsedSlot = parsedInput?.kind === 'gallery' ? parsedInput.slot : null
   const stagingPath = parsedSlot == null
     ? buildStagingBusinessLogoPath(safeBusinessId)
     : buildStagingBusinessGalleryPath(safeBusinessId, parsedSlot)

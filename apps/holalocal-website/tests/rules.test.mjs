@@ -1055,10 +1055,63 @@ describe('business documents', () => {
       'businesses/canonical-draft-business/photos/3',
     ])
   })
+  test('legacy deletion preserves server-established A/B media and rejects unrelated writers', async () => {
+    const id = 'rejected-business'
+    const canonical = [`businesses/${id}/photos/0/a`, `businesses/${id}/photos/1/b`]
+    const legacy = ['one.png', 'two.png'].map(name => ({storagePath:`businesses/${id}/photos/${name}`,downloadUrl:`https://example.invalid/${name}`}))
+    await environment.withSecurityRulesDisabled(async context => {
+      await updateDoc(doc(context.firestore(), 'businesses', id), {
+        logoStoragePath:`businesses/${id}/logos/logo/b`, galleryStoragePaths:canonical,
+        galleryImages:legacy, galleryImageURLs:legacy.map(x => x.downloadUrl),
+      })
+    })
+    const changes = {galleryImages:legacy.slice(1),galleryImageURLs:[legacy[1].downloadUrl],updatedAt:serverTimestamp()}
+    await assertFails(updateDoc(doc(environment.authenticatedContext('unrelated').firestore(),'businesses',id),changes))
+    const ref = doc(environment.authenticatedContext('owner').firestore(),'businesses',id)
+    await assertSucceeds(updateDoc(ref,changes))
+    const reloaded = (await getDoc(ref)).data()
+    assert.deepEqual(reloaded.galleryStoragePaths,canonical)
+    assert.deepEqual(reloaded.galleryImages,legacy.slice(1))
+    for (const forged of [
+      {galleryStoragePaths:[canonical[1]]},
+      {galleryStoragePaths:[`businesses/${id}/photos/0/b`,canonical[1]]},
+      {galleryStoragePaths:[...canonical,`businesses/${id}/photos/2/a`]},
+      {galleryStoragePaths:['businesses/another/photos/0/a']},
+      {logoStoragePath:`businesses/${id}/logos/logo/a`},
+    ]) await assertFails(updateDoc(ref,{...forged,updatedAt:serverTimestamp()}))
+  })
+  test('A/B media never permits legacy deletion by unauthorized accounts or in locked lifecycle states', async () => {
+    for (const status of ['draft','rejected','pending_review','active','suspended','archived','deleted']) {
+      const id = `versioned-lifecycle-${status}`
+      const paths = [`businesses/${id}/photos/0/a`,`businesses/${id}/photos/1/b`]
+      await environment.withSecurityRulesDisabled(async context => {
+        await setDoc(doc(context.firestore(),'businesses',id),business({
+          status, managerIds:['owner'], logoStoragePath:`businesses/${id}/logos/logo/a`,
+          galleryStoragePaths:paths,galleryImages:[{storagePath:`businesses/${id}/photos/old.png`,downloadUrl:'https://example.invalid/old.png'}],
+          galleryImageURLs:['https://example.invalid/old.png'],
+        }))
+      })
+      const changes = {galleryImages:[],galleryImageURLs:[],updatedAt:serverTimestamp()}
+      for (const uid of ['other-owner','unrelated','suspended','deleted']) {
+        await assertFails(updateDoc(doc(environment.authenticatedContext(uid).firestore(),'businesses',id),changes))
+      }
+      await assertFails(updateDoc(doc(environment.unauthenticatedContext().firestore(),'businesses',id),changes))
+      const ownerRef = doc(environment.authenticatedContext('owner').firestore(),'businesses',id)
+      if (['draft','rejected'].includes(status)) await assertSucceeds(updateDoc(ownerRef,changes))
+      else await assertFails(updateDoc(ownerRef,changes))
+      await environment.withSecurityRulesDisabled(async context => {
+        const stored = (await getDoc(doc(context.firestore(),'businesses',id))).data()
+        assert.deepEqual(stored.galleryStoragePaths,paths)
+        assert.equal(stored.galleryImages.length,['draft','rejected'].includes(status) ? 0 : 1)
+      })
+    }
+  })
   test('browser clients cannot establish or mutate canonical business media manifests', async () => {
     const draft = doc(environment.authenticatedContext('owner').firestore(), 'businesses', 'draft-business')
     for (const update of [
       { logoStoragePath: 'businesses/draft-business/logos/logo' },
+      { logoStoragePath: 'businesses/draft-business/logos/logo/a' },
+      { galleryStoragePaths: ['businesses/draft-business/photos/0/a'] },
       { logoStoragePath: 'businesses/other-business/logos/logo' },
       { logoStoragePath: 'https://example.invalid/logo.png' },
       { galleryStoragePaths: ['businesses/draft-business/photos/0'] },
@@ -1073,6 +1126,10 @@ describe('business documents', () => {
   })
   test('malformed server-established canonical media blocks subsequent owner writes', async () => {
     const malformedCases = [
+      id => ({galleryStoragePaths:[`businesses/${id}/photos/0/a`,`businesses/${id}/photos/0/b`]}),
+      id => ({galleryStoragePaths:[`businesses/${id}/photos/0`,`businesses/${id}/photos/0/a`]}),
+      id => ({galleryStoragePaths:[`businesses/${id}/photos/0/c`]}),
+      () => ({galleryStoragePaths:['businesses/other/photos/0/a']}),
       (businessId) => ({ logoStoragePath: 'businesses/wrong/logos/logo' }),
       (businessId) => ({ logoStoragePath: `businesses/${businessId}/logos/custom.png` }),
       (businessId) => ({ galleryStoragePaths: [`businesses/${businessId}/photos/8`] }),

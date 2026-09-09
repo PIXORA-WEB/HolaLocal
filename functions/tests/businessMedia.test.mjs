@@ -376,3 +376,46 @@ test('removal depublishes before origin deletion and legacy projection remains s
   assert.equal(projected.logoUrl, null)
   assert.deepEqual(projected.galleryUrls, [])
 })
+
+for (const suffix of ['a', 'b']) {
+  test(`A/B deletion ${suffix} removes only the selected reference before exact object cleanup`, async () => {
+    const path = `${PHOTO(0)}/${suffix}`
+    const keep = `${PHOTO(1)}/b`
+    const db = dbWith({ status: 'rejected', galleryStoragePaths: [path, keep] })
+    const deleted = []
+    const result = await manageBusinessMedia({ ...prepareArgs({ db, bucket: bucketWith('19') }),
+      action: BUSINESS_MEDIA_ACTIONS.REMOVE_GALLERY, storagePath: path,
+      deleteObject: async (target, generation) => {
+        assert.deepEqual(db.data(`businesses/${BUSINESS_ID}`).galleryStoragePaths, [keep])
+        deleted.push([target, generation]); return 'deleted'
+      },
+    })
+    assert.deepEqual(deleted, [[path, '19']])
+    assert.equal(result.objectDeletion, 'deleted')
+    assert.deepEqual(db.data(`businesses/${BUSINESS_ID}`).galleryStoragePaths, [keep])
+    await assert.rejects(manageBusinessMedia({ ...prepareArgs({db, uid:'other'}),
+      action:BUSINESS_MEDIA_ACTIONS.REMOVE_GALLERY,storagePath:keep }), /business-management-required/)
+  })
+}
+
+for (const status of ['pending_review','active','suspended','archived','deleted']) {
+  test(`gallery deletion preserves lifecycle restriction: ${status}`, async () => {
+    const path = `${PHOTO(0)}/a`
+    const db = dbWith({status,galleryStoragePaths:[path]})
+    await assert.rejects(manageBusinessMedia({...prepareArgs({db}),action:BUSINESS_MEDIA_ACTIONS.REMOVE_GALLERY,storagePath:path}),/business-media-not-editable/)
+    assert.deepEqual(db.data(`businesses/${BUSINESS_ID}`).galleryStoragePaths,[path])
+  })
+}
+test('gallery removal reports post-commit cleanup failure and idempotent repeat preserves other images', async () => {
+  const path = `${PHOTO(0)}/a`, keep = `${PHOTO(1)}/b`
+  const db = dbWith({galleryStoragePaths:[path,keep]})
+  const args = {...prepareArgs({db,uid:'manager',bucket:bucketWith('19')}),action:BUSINESS_MEDIA_ACTIONS.REMOVE_GALLERY,storagePath:path}
+  const first = await manageBusinessMedia({...args,deleteObject:async()=>{throw new Error('transient cleanup failure')}})
+  assert.equal(first.objectDeletion,'failed')
+  assert.deepEqual(db.data(`businesses/${BUSINESS_ID}`).galleryStoragePaths,[keep])
+  const second = await manageBusinessMedia({...args,deleteObject:async()=> 'deleted'})
+  assert.equal(second.idempotent,true)
+  assert.equal(second.objectDeletion,'deleted')
+  assert.deepEqual(db.data(`businesses/${BUSINESS_ID}`).galleryStoragePaths,[keep])
+  await assert.rejects(manageBusinessMedia({...args,storagePath:'businesses/other/photos/0/a'}),/invalid-canonical-business-media-path/)
+})
