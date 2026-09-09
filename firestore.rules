@@ -349,8 +349,40 @@ service cloud.firestore {
         );
     }
 
-    function validCanonicalBusinessMedia(data, businessId) {
-      let allowedGalleryPaths = [
+    function uniqueBusinessGallerySlot(paths, businessId, slot) {
+      let base = 'businesses/' + businessId + '/photos/' + slot;
+      return paths.toSet().intersection([base, base + '/a', base + '/b'].toSet()).size() <= 1;
+    }
+
+    function validCanonicalBusinessMedia(data, businessId, allowVersioned) {
+      // A/B references are established by the trusted media callable. Client
+      // updates still cannot change either canonical manifest field.
+      let allowedGalleryPaths = allowVersioned ? [
+        'businesses/' + businessId + '/photos/0',
+        'businesses/' + businessId + '/photos/0/a',
+        'businesses/' + businessId + '/photos/0/b',
+        'businesses/' + businessId + '/photos/1',
+        'businesses/' + businessId + '/photos/1/a',
+        'businesses/' + businessId + '/photos/1/b',
+        'businesses/' + businessId + '/photos/2',
+        'businesses/' + businessId + '/photos/2/a',
+        'businesses/' + businessId + '/photos/2/b',
+        'businesses/' + businessId + '/photos/3',
+        'businesses/' + businessId + '/photos/3/a',
+        'businesses/' + businessId + '/photos/3/b',
+        'businesses/' + businessId + '/photos/4',
+        'businesses/' + businessId + '/photos/4/a',
+        'businesses/' + businessId + '/photos/4/b',
+        'businesses/' + businessId + '/photos/5',
+        'businesses/' + businessId + '/photos/5/a',
+        'businesses/' + businessId + '/photos/5/b',
+        'businesses/' + businessId + '/photos/6',
+        'businesses/' + businessId + '/photos/6/a',
+        'businesses/' + businessId + '/photos/6/b',
+        'businesses/' + businessId + '/photos/7',
+        'businesses/' + businessId + '/photos/7/a',
+        'businesses/' + businessId + '/photos/7/b'
+      ] : [
         'businesses/' + businessId + '/photos/0',
         'businesses/' + businessId + '/photos/1',
         'businesses/' + businessId + '/photos/2',
@@ -360,20 +392,31 @@ service cloud.firestore {
         'businesses/' + businessId + '/photos/6',
         'businesses/' + businessId + '/photos/7'
       ];
+      let logoBase = 'businesses/' + businessId + '/logos/logo';
       return (!data.keys().hasAny(['logoStoragePath'])
           || data.logoStoragePath == null
           || (data.logoStoragePath is string
-            && data.logoStoragePath == 'businesses/' + businessId + '/logos/logo'))
+            && (data.logoStoragePath == logoBase
+              || (allowVersioned && data.logoStoragePath in [logoBase + '/a', logoBase + '/b']))))
         && (!data.keys().hasAny(['galleryStoragePaths'])
           || (data.galleryStoragePaths is list
             && data.galleryStoragePaths.size() <= 8
             && data.galleryStoragePaths.hasOnly(allowedGalleryPaths)
-            && data.galleryStoragePaths.toSet().size() == data.galleryStoragePaths.size()));
+            && data.galleryStoragePaths.toSet().size() == data.galleryStoragePaths.size()
+            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '0')
+            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '1')
+            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '2')
+            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '3')
+            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '4')
+            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '5')
+            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '6')
+            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '7')
+          ));
     }
 
     function validBusinessCreate(businessId) {
       return validBusinessKeys(request.resource.data)
-        && validCanonicalBusinessMedia(request.resource.data, businessId)
+        && validCanonicalBusinessMedia(request.resource.data, businessId, false)
         && request.resource.data.keys().hasAll([
           'ownerId', 'managerIds', 'name', 'nameNormalized', 'slug', 'tagline',
           'description', 'primaryCategoryId', 'categoryIds', 'serviceAreas',
@@ -416,7 +459,7 @@ service cloud.firestore {
           'updatedAt'
         ])
         && validBusinessKeys(request.resource.data)
-        && validCanonicalBusinessMedia(request.resource.data, businessId)
+        && validCanonicalBusinessMedia(request.resource.data, businessId, true)
         && immutableBusinessIdentity()
         && resource.data.status in ['draft', 'rejected']
         && request.resource.data.status == resource.data.status
@@ -443,7 +486,7 @@ service cloud.firestore {
           'status', 'submittedAt', 'updatedAt'
         ])
         && validBusinessKeys(request.resource.data)
-        && validCanonicalBusinessMedia(request.resource.data, businessId)
+        && validCanonicalBusinessMedia(request.resource.data, businessId, true)
         && immutableBusinessIdentity()
         && resource.data.status in ['draft', 'rejected']
         && request.resource.data.status == 'pending_review'

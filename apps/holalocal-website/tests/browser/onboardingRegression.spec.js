@@ -1,3 +1,4 @@
+import { verifyBusinessDeletion } from './onboardingDeletionChecks.js'
 import { verifyIndependentBusinessDisplay } from './onboardingDisplayChecks.js'
 import { test, expect } from '@playwright/test'
 import { TEST_PROJECT_ID } from './fixtures.js'
@@ -161,5 +162,8 @@ test('real location removal, replacement, save/reload and review without images'
   console.log('PASS: real mobile location removal/save/reload and review submission without images')
   await test.step('independent browser display using attached synthetic fixtures', async () => {
     await verifyIndependentBusinessDisplay(page, id)
+  })
+  await test.step('real canonical and legacy deletion, reload and unauthorized rejection', async () => {
+    await verifyBusinessDeletion(page, id)
   })
 })
