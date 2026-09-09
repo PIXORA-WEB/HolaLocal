@@ -8,6 +8,7 @@ const { environment, isolatedRoot } = await createProtectedBrowserTestEnvironmen
   cache: process.env.FIREBASE_EMULATORS_PATH ?? join(process.env.HOME, '.cache/firebase/emulators'),
   playwrightBrowsersPath: process.env.PLAYWRIGHT_BROWSERS_PATH ?? join(process.env.HOME, '.cache/ms-playwright'),
 })
+const servicesOnly = process.argv.includes('--services-only')
 const rulesOnly = process.argv.includes('--rules-only')
 const infrastructureOnly = rulesOnly
 const projectId = rulesOnly ? 'demo-holalocal-rules' : TEST_PROJECT_ID
@@ -32,6 +33,6 @@ await writeFile(config, JSON.stringify({
 }))
 const child = spawn('firebase', ['emulators:exec', '--config', config, '--project', projectId,
   ...(infrastructureOnly ? [] : ['--inspect-functions=19229']), '--only', infrastructureOnly ? 'firestore,storage' : 'auth,firestore,storage,functions',
-  rulesOnly ? 'node --test tests/rules.test.mjs' : 'playwright test --config playwright.onboarding.config.js'],
+  rulesOnly ? 'node --test tests/rules.test.mjs' : servicesOnly ? 'playwright test --config playwright.services.config.js' : 'playwright test --config playwright.onboarding.config.js'],
 { env: environment, stdio: 'inherit' })
 child.on('exit', code => { process.exitCode = code ?? 1 })
