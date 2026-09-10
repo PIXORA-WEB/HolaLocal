@@ -124,3 +124,11 @@ test('report retries retain the original request timestamp; expiry requires a de
  assert.deepEqual(calls[0],calls[1]);assert.equal(calls[1].submittedAt,1000)
  await c.execute('report',{reasonCode:'other'});assert.equal(calls[2].submittedAt,2000)
 })
+
+
+test('production website requires explicit flag, correct project and no emulator configuration',()=>{
+ const environment={PROD:true,MODE:'production',VITE_FIREBASE_PROJECT_ID:'holalocal-491c9'}
+ assert.equal(isCustomerReviewsEnabled(environment),false)
+ assert.equal(isCustomerReviewsEnabled({...environment,VITE_CUSTOMER_REVIEWS_ENABLED:'true'}),true)
+ for(const change of [{MODE:'development'},{VITE_FIREBASE_PROJECT_ID:'other-project'},{VITE_USE_FIREBASE_EMULATORS:'true'},{VITE_FUNCTIONS_EMULATOR_URL:'http://localhost:5001'}])assert.equal(isCustomerReviewsEnabled({...environment,VITE_CUSTOMER_REVIEWS_ENABLED:'true',...change}),false)
+})

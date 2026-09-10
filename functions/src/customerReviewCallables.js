@@ -28,6 +28,14 @@ export function customerReviewGate(env) {
   if (env.CUSTOMER_REVIEWS_ENABLED !== 'true') throw new HttpsError('failed-precondition','customer-reviews-disabled')
   let config
   try { config = JSON.parse(env.FIREBASE_CONFIG ?? '{}') } catch { config = {} }
+  // Production is explicit, project-scoped and remains OFF unless the server flag is true.
+  const production = 'holalocal-491c9'
+  const emulatorKeys = ['FUNCTIONS_EMULATOR','FIRESTORE_EMULATOR_HOST','FIREBASE_AUTH_EMULATOR_HOST','FIREBASE_EMULATOR_HUB','HOLALOCAL_CALLABLE_BOUNDARY']
+  if (env.GCLOUD_PROJECT === production && config.projectId === production
+    && [env.GOOGLE_CLOUD_PROJECT, env.GCP_PROJECT].every(value => !value || value === production)
+    && emulatorKeys.every(key => !env[key])) {
+    return {quotaPolicy: customerReviewQuotaPolicy, reportQuotaPolicy: customerReviewReportQuotaPolicy}
+  }
   const demo = 'demo-holalocal-functions'
   if (env.GCLOUD_PROJECT !== demo || env.GOOGLE_CLOUD_PROJECT !== demo
     || (env.GCP_PROJECT && env.GCP_PROJECT !== demo) || config.projectId !== demo

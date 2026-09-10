@@ -56,3 +56,14 @@ test('public translation uses the same closed gate and ignores forged caller ide
  const handler=createCustomerReviewCallableHandler('translatePublishedCustomerReview',{env:demoReviewEnv,createServices:()=>({translation:{translate:async input=>input}})})
  assert.deepEqual(await handler({data:payload}),payload)
 })
+
+
+test('production opt-in is default-off, exact-project and incompatible with emulator configuration',async()=>{
+ const production={GCLOUD_PROJECT:'holalocal-491c9',FIREBASE_CONFIG:JSON.stringify({projectId:'holalocal-491c9'})}
+ assert.throws(()=>customerReviewGate(production),/customer-reviews-disabled/)
+ const enabled={...production,CUSTOMER_REVIEWS_ENABLED:'true'}
+ assert.equal(customerReviewGate(enabled).quotaPolicy,customerReviewGate(demoReviewEnv).quotaPolicy)
+ for(const change of [{GCLOUD_PROJECT:'other-project'},{FIREBASE_CONFIG:'{}'},{GOOGLE_CLOUD_PROJECT:'other-project'},{FUNCTIONS_EMULATOR:'true'},{FIRESTORE_EMULATOR_HOST:'localhost:8080'},{HOLALOCAL_CALLABLE_BOUNDARY:'1'}])assert.throws(()=>customerReviewGate({...enabled,...change}))
+ const submit=createCustomerReviewCallableHandler('submitCustomerReview',{env:enabled,createServices:()=>{throw new Error('must not construct without auth')}})
+ await assert.rejects(submit({data:{uid:'forged'}}),error=>error.code==='unauthenticated')
+})
