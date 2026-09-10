@@ -338,5 +338,26 @@ test('late canonical completion creates no object URL after timeout', async () =
 
 test('route replacement and application unmount revoke cached canonical business object URLs', async () => {
   const routes = await readFile(new URL('../src/routes/AppRoutes.jsx', import.meta.url), 'utf8')
-  assert.match(routes, /useEffect\(\(\) => \(\) => clearBusinessMediaPresentationCache\(\), \[pathname\]\)/)
+  assert.match(routes, /useLayoutEffect\(\(\) => \(\) => clearBusinessMediaPresentationCache\(\), \[pathname\]\)/)
+})
+
+
+test('in-place cache refresh retains displayed URLs until route disposal', async () => {
+  clearBusinessMediaPresentationCache()
+  const revoked = []
+  let revision = 0
+  const business = { logoStoragePath: `businesses/${businessId}/logos/logo/a` }
+  const options = { resolveCanonicalUrl: async () => {
+    const url = `blob:revision-${++revision}`
+    return { url, revoke: () => revoked.push(url) }
+  } }
+  const before = await resolveBusinessMediaPresentation(businessId, business, options)
+  clearBusinessMediaPresentationCache({ deferRevocation: true })
+  await Promise.resolve()
+  assert.deepEqual(revoked, [])
+  const after = await resolveBusinessMediaPresentation(businessId, business, options)
+  assert.notEqual(before.logoUrl, after.logoUrl)
+  clearBusinessMediaPresentationCache()
+  await Promise.resolve()
+  assert.deepEqual(revoked.sort(), ['blob:revision-1', 'blob:revision-2'])
 })

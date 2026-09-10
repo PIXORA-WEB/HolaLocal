@@ -13,6 +13,7 @@ import SelectField from '../../components/common/SelectField.jsx'
 import LocationCombobox from '../../components/business/LocationCombobox.jsx'
 import ServiceAreaSelector from '../../components/business/ServiceAreaSelector.jsx'
 import AccessibleDialog from '../../components/common/AccessibleDialog.jsx'
+import useMediaSelectionPreview from '../../hooks/useMediaSelectionPreview.js'
 import LoadingScreen from '../../components/common/LoadingScreen.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { EditableImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
@@ -160,6 +161,9 @@ function EditBusinessPage() {
   const [customLanguage, setCustomLanguage] = useState('')
   const [mediaError, setMediaError] = useState(null)
   const [logoUploading, setLogoUploading] = useState(false)
+  const logoPreview = useMediaSelectionPreview()
+  const galleryPreview = useMediaSelectionPreview()
+  const [gallerySaved, setGallerySaved] = useState(false)
   const [galleryUploading, setGalleryUploading] = useState(false)
   const [deletingImage, setDeletingImage] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -539,14 +543,19 @@ function EditBusinessPage() {
     setLogoUploading(true)
 
     try {
+      logoPreview.select([file])
       const [pendingFile] = await submission.pendingFiles([file])
-      if (!pendingFile) return
+      if (!pendingFile) { logoPreview.committed(file); return }
       setBusinessProfile(await uploadBusinessLogo(businessProfile.businessId, pendingFile, {
-        onCommitted: () => submission.markSuccessful(pendingFile),
+        onCommitted: async () => {
+          await submission.markSuccessful(pendingFile)
+          logoPreview.committed(pendingFile)
+        },
       }))
       mediaRetryRef.current = null
       setMediaRetryAvailable(false)
     } catch (uploadError) {
+      logoPreview.failed()
       await getBusinessById(businessProfile.businessId)
         .then((latestBusiness) => latestBusiness && setBusinessProfile(latestBusiness))
         .catch(() => undefined)
@@ -578,6 +587,7 @@ function EditBusinessPage() {
     mediaRetryRef.current = null
     setMediaRetryAvailable(false)
     setGalleryUploading(true)
+    setGallerySaved(false)
 
     try {
       const pendingFiles = await submission.pendingFiles(selectedFiles)
@@ -602,11 +612,15 @@ function EditBusinessPage() {
             recovery: 'choose-file',
           }
         : null)
+      galleryPreview.select(pendingFiles.slice(0, remainingSlots))
       setBusinessProfile(
         await uploadBusinessGalleryImages(
           businessProfile.businessId,
           pendingFiles.slice(0, remainingSlots),
-          { onCommitted: (file) => submission.markSuccessful(file) },
+          { onCommitted: async (file) => {
+            await submission.markSuccessful(file)
+            setGallerySaved(true)
+          } },
         ),
       )
       mediaRetryRef.current = null
@@ -626,6 +640,7 @@ function EditBusinessPage() {
       setMediaError(classifiedError)
     } finally {
       submission.release()
+      galleryPreview.clear()
       setGalleryUploading(false)
     }
   }
@@ -931,13 +946,14 @@ function EditBusinessPage() {
                 inputLabel={t(businessProfile.logoUrl ? 'business.form.media.changeLogo' : 'business.form.media.uploadLogo')}
                 name={form.name || t('business.control.yourBusiness')}
                 onChange={handleLogoUpload}
-                src={businessProfile.logoUrl}
+                src={logoPreview.items[0]?.url ?? businessProfile.logoUrl}
                 uploading={logoUploading}
               />
               <div className="business-logo-editor__content">
                 <h3>{t('business.form.media.logoTitle')}</h3>
                 <p>{t('business.form.media.logoDescription')}</p>
                 <span>{t('business.form.media.logoHelp')}</span>
+                <p role="status">{logoUploading ? t('common.uploading') : !mediaError && logoPreview.items[0]?.committed ? t('mediaFeedback.saved') : ''}</p>
               </div>
             </div>
 
@@ -959,8 +975,15 @@ function EditBusinessPage() {
                 </label>
               </div>
 
-              {galleryImages.length > 0 ? (
+              <p role="status">{galleryUploading ? t('common.uploading') : gallerySaved ? t('mediaFeedback.saved') : ''}</p>
+              {galleryImages.length > 0 || galleryPreview.items.length > 0 ? (
                 <div className="business-gallery-grid">
+                  {galleryPreview.items.map(({ url }) => (
+                    <figure key={url}>
+                      <img alt={t('business.form.media.workImageAlt')} src={url} />
+                      <figcaption>{t('common.uploading')}</figcaption>
+                    </figure>
+                  ))}
                   {galleryImages.map((image) => (
                     <figure key={image.storagePath || image.downloadUrl}>
                       <img

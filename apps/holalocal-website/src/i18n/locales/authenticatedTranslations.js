@@ -21,6 +21,7 @@ function createPack(d) {
       delete: d.delete, uploading: d.uploading, close: d.close, other: d.other,
       change: d.editProfile, changeImage: d.changeImage, loadingAccount: d.loading,
     },
+    mediaFeedback: { immediate: d.mediaImmediate, saved: d.saved },
     language: { saveError: retryError },
     profile: {
       title: d.profile, edit: d.editProfile, businessTools: d.businessTools,

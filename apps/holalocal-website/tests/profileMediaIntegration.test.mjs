@@ -108,7 +108,7 @@ test('profile page synchronously guards submissions, suppresses committed files,
   assert.ok(upload.indexOf('tryAcquire()') < upload.indexOf('setPhotoUploading(true)'))
   assert.match(upload, /photoRetryRef\.current = null/)
   assert.match(upload, /submission\.pendingFiles\(\[file\]\)/)
-  assert.match(upload, /onCommitted: \(\) => submission\.markSuccessful\(pendingFile\)/)
+  assert.match(upload, /onCommitted: async \(\) => \{\s*await submission\.markSuccessful\(pendingFile\)\s*photoPreview\.committed\(pendingFile\)/)
   assert.match(upload, /finally \{\s*submission\.release\(\)/)
   assert.match(source, /actionPending=\{photoUploading\}/)
   assert.match(source, /<EditableImageAvatar[\s\S]*?iconOnly[\s\S]*?onChange=\{handleProfilePhotoChange\}/)

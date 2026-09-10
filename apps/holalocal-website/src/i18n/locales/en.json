@@ -1123,5 +1123,9 @@
     "account": "Account",
     "accountLabel": "Account links",
     "poweredBy": "Powered by PIXORA"
+  },
+  "mediaFeedback": {
+    "immediate": "Image changes save immediately. Save and Cancel apply to the other profile details.",
+    "saved": "Image saved."
   }
 }

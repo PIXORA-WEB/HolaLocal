@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { installMediaFeedbackControls, profileMediaFeedbackJourney, businessMediaFeedbackJourney } from './profileMediaFeedbackJourney.js'
 import {test,expect} from '@playwright/test'
 import {initializeApp,deleteApp} from 'firebase-admin/app'
 import {getAuth} from 'firebase-admin/auth'
@@ -22,8 +23,11 @@ test('business profile save: legacy preservation, service replacement, reload an
     const privateContact={...contact,email:'private@example.test',phone:'+34000000000',whatsappNumber:'+34000000001'}
     await database.doc(`businessPrivate/${id}`).set({ownerId:uid,managerIds:[uid],contact:privateContact,currentRejection:{reasonCode:'incomplete_profile',guidance:'Please explain the services you offer before submitting again.'},createdAt:stamp(),updatedAt:stamp()})
     await page.route(/^https:\/\//,route=>route.abort())
+    await installMediaFeedbackControls(page)
     await page.goto('/tests/browser/integration.html')
     await page.evaluate(async()=>{const auth=await import('/src/firebase/auth.js');await auth.loginUser('profile-save@example.test','ProfileSave!23456')})
+    await profileMediaFeedbackJourney({page,app,database,uid,projectId:TEST_PROJECT_ID})
+    await businessMediaFeedbackJourney({page,app,database,id,projectId:TEST_PROJECT_ID,media})
     for (const width of [390, 1440]) {
       await page.setViewportSize({width,height:1000})
       await page.goto('/profile')
@@ -50,6 +54,7 @@ test('business profile save: legacy preservation, service replacement, reload an
       await expect(page.locator('#business-name')).toBeVisible()
       await page.locator('.business-form-page__back').click()
       await expect(page.locator('.business-summary')).toBeVisible()
+      await expect.poll(()=>page.locator('.business-summary img').evaluate(img=>img.naturalWidth)).toBe(180)
       await page.screenshot({path:`test-results/onboarding/business-overview-${width}.png`,fullPage:true})
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
     }
