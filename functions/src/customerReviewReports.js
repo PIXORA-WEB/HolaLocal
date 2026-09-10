@@ -48,7 +48,8 @@ export function createCustomerReviewReportServices({database,readDatabase,auth,r
     check(!projection||(projection.businessId===locator.businessId&&projection.publicReviewId===publicReviewId
       &&projection.publishedRevision===slot.publishedRevision),'invalid-report-target')
     return {state:!isPublicBusinessEligible(business)?'unavailable':!projection?'unpublished':'published',
-      projection,locator,slot}
+      projection,locator,slot,
+      businessContext:isPublicBusinessEligible(business)?{businessId:locator.businessId,name:typeof business.name==='string'?business.name:null}:null}
   }
   async function submit(context,input) {
     exact(input,['publicReviewId','observedPublishedRevision','reasonCode','details','requestId','submittedAt'])
@@ -142,6 +143,7 @@ export function createCustomerReviewReportServices({database,readDatabase,auth,r
       const resolution=row.resolutionAuditId?await tx.get(`customerReviewReportAudits/${id(row.resolutionAuditId)}`):null
       const matches=current.state==='published'&&current.projection.publishedRevision===row.observedPublishedRevision
       return {...summary(row),details:current.state==='erased'?null:row.details,targetState:current.state,
+        businessContext:current.businessContext??null,
         observedRevisionIsCurrent:matches,
         resolution:current.state==='erased'||!resolution?null:{reason:resolution.resolutionReason,moderationNote:resolution.moderationNote},
         currentReview:current.state==='published'?{publicReviewId:row.publicReviewId,publishedRevision:current.projection.publishedRevision,

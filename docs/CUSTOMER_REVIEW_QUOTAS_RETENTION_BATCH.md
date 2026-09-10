@@ -41,7 +41,7 @@ Rollback: disable customer-review website/callable access before rolling back co
 ## Remaining gaps
 
 - Deployed review activation, index availability and scheduler operation are unverified; no production review flow is claimed.
-- The inherited admin report-case heading currently falls back to “Not provided”: its private response omits `businessId` although the stored report contains it. Handling, overdue indication, target revision checks and privacy were tested, but adding business context through the authoritative admin projection is a small follow-up before activation.
+- Admin report business context is now corrected in the readiness follow-up; see CUSTOMER_REVIEWS_RELEASE_READINESS.md for current evidence and release instructions.
 - Native-language editorial review remains pending. Automated locale parity and UI checks do not replace it.
 - Original gallery upload/finalization/retry investigation, cloud media harness portability and approved-business maintenance remain separate, unmerged work. Ordinary successful uploads are not evidence of failure recovery.
 - Real approved-business Services visual feedback remains pending an available listing; released Services/onboarding/media fixes are preserved.

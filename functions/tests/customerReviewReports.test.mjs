@@ -162,3 +162,23 @@ test('overdue indicator and retention reads use exact time boundaries; stale pru
  await assert.rejects(service.submit('reporter',s.payload),/report-request-expired/)
  assert.equal([...s.db.data.keys()].some(p=>p.startsWith('customerReviewReports/')),false)
 })
+
+test('admin report business context is an allowlist of currently public data only',async()=>{
+ const s=setup();const report=await s.service.submit('reporter',s.payload)
+ const business=s.db.data.get(`businesses/${s.businessId}`)
+ Object.assign(business,{name:'<img src=x> Synthetic business',privateNotes:'secret'})
+ const detail=()=>s.service.detail('admin',{reportId:report.reportId})
+ assert.deepEqual((await detail()).businessContext,{businessId:s.businessId,name:business.name})
+ assert.equal(JSON.stringify(await detail()).includes('private@example.test'),false)
+ assert.equal(JSON.stringify(await detail()).includes('secret'),false)
+ business.email='private@example.test'
+ assert.equal((await detail()).businessContext,null,'unsafe contact data makes the business unavailable')
+ delete business.email
+ business.status='suspended'
+ assert.equal((await detail()).businessContext,null)
+ s.db.data.delete(`businesses/${s.businessId}`)
+ assert.equal((await detail()).businessContext,null)
+ s.db.data.delete(`customerReviewIds/${s.review.publicReviewId}`)
+ assert.equal((await detail()).businessContext,null)
+ await assert.rejects(s.service.detail('owner',{reportId:report.reportId}),/admin-required/)
+})

@@ -7,7 +7,7 @@ import {createCustomerReviewFirestoreDatabase,readCustomerReviewFirestoreEligibi
 import {createCustomerReviewReadFirestore} from '../src/customerReviewReadFirestore.js'
 import {createCustomerReviewReportServices,customerReviewReportQuotaId} from '../src/customerReviewReports.js'
 import {customerReviewQuotaPolicy,customerReviewReportQuotaPolicy,CUSTOMER_REVIEW_WINDOW_MS as day} from '../src/customerReviewQuotas.js'
-import {sweepResolvedCustomerReviewReports,CUSTOMER_REVIEW_REPORT_RETENTION_MS as retention} from '../src/customerReviewRetention.js'
+import {runCustomerReviewRetention,sweepResolvedCustomerReviewReports,CUSTOMER_REVIEW_REPORT_RETENTION_MS as retention} from '../src/customerReviewRetention.js'
 import {cleanupAccountCustomerReviews} from '../src/customerReviewDeletion.js'
 import {fixtureData,helpers} from './customerReviewReadFixtures.mjs'
 if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1')test('policy emulator gate',{skip:'Use protected emulator suite'},()=>{})
@@ -44,6 +44,17 @@ else {
   const resolve=row=>reports.resolve('admin',{reportId:row.reportId,expectedVersion:row.version,expectedGeneration:row.generation,disposition:'resolved',resolutionReason:'Synthetic resolution',moderationNote:'Private synthetic note',requestId:randomUUID()})
   return {uid,admin,core,reports,target,submit,report,resolve,time:()=>now,advance:ms=>{now+=ms}}
  }
+ test('scheduled worker wrapper is inert while disabled and deletes expired records when enabled',async()=>{
+  let created=0
+  assert.deepEqual(await runCustomerReviewRetention({env:{},createDatabase:()=>{created++;return db}}),{disabled:true})
+  assert.equal(created,0)
+  const ref=db.doc(`customerReviewReportAudits/scheduler-${randomUUID()}`)
+  await ref.set({expiresAt:Timestamp.fromMillis(1000),moderationNote:'Synthetic private note'})
+  const result=await runCustomerReviewRetention({env:{CUSTOMER_REVIEW_RETENTION_ENABLED:'true'},createDatabase:()=>{created++;return db},now:1000})
+  assert.equal(created,1);assert.ok(result.deleted>=1)
+  assert.equal((await ref.get()).exists,false)
+  assert.deepEqual(Object.keys(result).sort(),['deleted','pageLimitReached'])
+ })
  test('real transaction concurrency: 5 combined review operations across businesses, one slot, retry and unrestricted withdrawal',async()=>{
   const s=await setup(),targets=[];for(let i=0;i<6;i++)targets.push(await s.target())
   const results=await Promise.allSettled(targets.map(t=>s.submit(t.businessId)))
