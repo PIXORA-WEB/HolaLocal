@@ -1,3 +1,5 @@
+> Current update, 10 September 2026: EUR30/month net Translation actual-spend alert is configured at 100% for hello@holalocal.es; it is not a cap. Daily/minute quotas remain unapproved. Isolated erasure-recovery and retention safeguards plus expanded offline monitoring are prepared, not deployed. See [UNATTENDED_SAFEGUARDS_RELEASE.md](UNATTENDED_SAFEGUARDS_RELEASE.md), which supersedes older budget and safeguard-preparation statements below. Reviews, retention and recovery remain disabled; upload/retry and maintenance proposals remain separate.
+
 # Activation preparation update
 
 Separate prepare/reviews-production-activation branch now prepares project-scoped default-off production gate support. PR33/34 heads are preserved; none merged. See REVIEWS_LAUNCH_CHECKLIST.md for coordinated launch, missing recipient/budget/access permissions, cloud acceptance, actual privacy-disclosure gap and rollback. Business registration/submission/approval are independent of review gates. Native editorial polish is not a blanket launch blocker. No flags, IAM, notifications or production records changed.

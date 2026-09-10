@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {prepare,callables} from './prepare.mjs'
 test('offline artifacts cannot activate alerts or create channels; explicit scoped inputs',()=>{
  assert.throws(()=>prepare());assert.throws(()=>prepare({projectId:'holalocal-491c9',notificationChannels:['name@example.test']}));assert.throws(()=>prepare({projectId:'holalocal-491c9',notificationChannels:['projects/other-project/notificationChannels/123']}))
- const p=prepare({projectId:'holalocal-491c9'});assert.equal(p.readyToNotify,false);assert.equal(p.policies.length,8);assert.equal(p.metrics.length,2)
+ const p=prepare({projectId:'holalocal-491c9'});assert.equal(p.readyToNotify,false);assert.equal(p.policies.length,12);assert.equal(p.metrics.length,3)
  for(const a of p.policies){assert.equal(a.enabled,false);assert.deepEqual(a.notificationChannels,[]);assert.equal(a.conditions.length,1)}
  assert.equal(new Set(callables).size,17)
 })
@@ -32,4 +32,11 @@ test('no staffing promise or routine duplicate email channels in the offline pla
  for(const policy of p.policies){if(policy.conditions[0].conditionMatchedLog)assert.equal(policy.alertStrategy.notificationRateLimit.period,'86400s');assert.equal(policy.alertStrategy.notificationChannelStrategy,undefined)}
  for(const name of ['callable-server-errors','callable-latency'])assert.deepEqual(p.policies.find(p=>p.displayName.endsWith(name)).notificationChannels,[])
  assert.ok(!p.policies.find(p=>p.displayName.endsWith('runtime-error')).conditions[0].conditionMatchedLog.filter.includes('sweepresolvedcustomerreviewreports'))
+})
+
+test('unattended recovery and partial retention failures get counts-only, disabled coverage',()=>{
+ const p=prepare({projectId:'holalocal-491c9'})
+ for(const id of ['retention-record-failure','recovery-action-required','recovery-scheduler-failure','recovery-missing-completion'])assert.equal(p.policies.find(v=>v.displayName.endsWith(id)).enabled,false)
+ assert.match(p.metrics[2].filter,/account-deletion-recovery/)
+ assert.match(p.policies.find(v=>v.displayName.endsWith('retention-record-failure')).conditions[0].conditionMatchedLog.filter,/failedRecords>0/)
 })

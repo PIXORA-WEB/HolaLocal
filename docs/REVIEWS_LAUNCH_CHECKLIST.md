@@ -1,3 +1,5 @@
+> Current update, 10 September 2026: EUR30/month net Translation actual-spend alert is configured at 100% for hello@holalocal.es; it is not a cap. Daily/minute quotas remain unapproved. Isolated erasure-recovery and retention safeguards plus expanded offline monitoring are prepared, not deployed. See [UNATTENDED_SAFEGUARDS_RELEASE.md](UNATTENDED_SAFEGUARDS_RELEASE.md), which supersedes older budget and safeguard-preparation statements below. Reviews, retention and recovery remain disabled; upload/retry and maintenance proposals remain separate.
+
 # Monitoring decision update — authoritative
 
 Craig, hello@holalocal.es, Europe/Madrid; checks when available while working full time. No fixed staffed hours, guaranteed response time or backup. Do not publish a response-time promise. Destination and one labelled test authorised; no operational alerts, gates or spending limits authorised. Translation limits remain UNDECIDED. See UNATTENDED_REVIEW_OPERATIONS.md for safeguards that replace reliance on prompt human response. Older requests for staffed hours below are superseded, not outstanding decisions.

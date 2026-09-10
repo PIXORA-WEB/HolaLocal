@@ -1,3 +1,5 @@
+> Current update, 10 September 2026: EUR30/month net Translation actual-spend alert is configured at 100% for hello@holalocal.es; it is not a cap. Daily/minute quotas remain unapproved. Isolated erasure-recovery and retention safeguards plus expanded offline monitoring are prepared, not deployed. See [UNATTENDED_SAFEGUARDS_RELEASE.md](UNATTENDED_SAFEGUARDS_RELEASE.md), which supersedes older budget and safeguard-preparation statements below. Reviews, retention and recovery remain disabled; upload/retry and maintenance proposals remain separate.
+
 # Unattended operations assessment — no response-time promise
 
 Craig works full time and checks hello@holalocal.es when available, Europe/Madrid. No fixed hours, guaranteed response time or backup. Important actionable alerts only. Destination configured; one unique TEST ONLY synthetic log event submitted through a temporary alert policy. Inbox receipt is separate from API acceptance. No resend is authorised. Operational alert policies remain offline; translation spending limits undecided.

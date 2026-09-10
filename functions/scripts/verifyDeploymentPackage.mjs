@@ -38,6 +38,8 @@ const REQUIRED_FUNCTION_FILES = [
   'src/accountDeletion.js',
   'src/accountDeletionPrimitives.js',
   'src/accountDeletionFinalizer.js',
+  'src/accountDeletionRecovery.js',
+  'src/customerReviewRetention.js',
   'src/adminAccountDeletion.js',
   'src/businessMedia.js',
   'src/canonicalMediaStorage.js',

@@ -53,7 +53,7 @@ else {
   const result=await runCustomerReviewRetention({env:{CUSTOMER_REVIEW_RETENTION_ENABLED:'true'},createDatabase:()=>{created++;return db},now:1000})
   assert.equal(created,1);assert.ok(result.deleted>=1)
   assert.equal((await ref.get()).exists,false)
-  assert.deepEqual(Object.keys(result).sort(),['deleted','pageLimitReached'])
+  assert.deepEqual(Object.keys(result).sort(),['deleted','failedCollections','failedRecords','pageLimitReached'])
  })
  test('real transaction concurrency: 5 combined review operations across businesses, one slot, retry and unrestricted withdrawal',async()=>{
   const s=await setup(),targets=[];for(let i=0;i<6;i++)targets.push(await s.target())
@@ -118,7 +118,7 @@ else {
  test('retention candidate/new report race rereads expiry and preserves newly open report',async()=>{
   const s=await setup(),t=await s.target(),filed=await s.report(t);await s.resolve(filed);s.advance(retention)
   let raced=false
-  const wrapped={collection:name=>db.collection(name),runTransaction:async callback=>{
+  const wrapped={doc:path=>db.doc(path),collection:name=>db.collection(name),runTransaction:async callback=>{
    if(!raced){raced=true;await s.report(t)}
    return db.runTransaction(callback)
   }}
@@ -130,7 +130,7 @@ else {
  test('newly resolved report survives an older retention candidate while old-cycle copies expire',async()=>{
   const s=await setup(),t=await s.target(),filed=await s.report(t);await s.resolve(filed);s.advance(retention)
   let raced=false
-  const wrapped={collection:name=>db.collection(name),runTransaction:async callback=>{
+  const wrapped={doc:path=>db.doc(path),collection:name=>db.collection(name),runTransaction:async callback=>{
    if(!raced){raced=true;await s.resolve(await s.report(t))}
    return db.runTransaction(callback)
   }}
