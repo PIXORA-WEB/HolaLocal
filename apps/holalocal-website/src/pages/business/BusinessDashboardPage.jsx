@@ -322,7 +322,6 @@ function BusinessDashboardPage() {
         <div className="business-summary__badges">
           <span className={status === 'active' ? 'is-complete' : ''}>{t(`business.control.status.${status}`)}</span>
           <span className={verificationStatus === 'verified' ? 'is-verified' : ''}>{t(`business.control.verification.${verificationStatus}`)}</span>
-          {canEditBusiness && <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>}
         </div>
       </header>
 
@@ -336,13 +335,15 @@ function BusinessDashboardPage() {
             <p><strong>{t('rejection.owner.category')}:</strong> {t(`rejection.reason.${businessProfile.currentRejection.reasonCode}`)}</p>
             <p className="business-rejection-feedback__guidance">{businessProfile.currentRejection.guidance}</p>
             <p>{t('rejection.owner.nextStep')}</p>
-            <Link className="button button--primary" to="/business/edit">{t('rejection.owner.edit')}</Link>
           </section>
         )}
         <article className="account-card business-dashboard__card business-dashboard__card--completion">
-          <header className="account-card__header">
-            <p className="account-card__eyebrow">{t('business.control.completionEyebrow')}</p>
-            <h2>{t('business.completion', { percent: completion.percentage })}</h2>
+          <header className="account-card__header account-details-header">
+            <div>
+              <p className="account-card__eyebrow">{t('business.control.completionEyebrow')}</p>
+              <h2>{t('business.completion', { percent: completion.percentage })}</h2>
+            </div>
+            {canEditBusiness && <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>}
           </header>
           <progress max="100" value={completion.percentage}>{completion.percentage}%</progress>
           <p>{t('business.control.missingCount', { count: completion.remainingItems.length })}</p>
@@ -389,8 +390,6 @@ function BusinessDashboardPage() {
             >
               {submittingForReview ? t('common.loading') : t('business.control.submitForReview')}
             </button>
-          ) : canEditBusiness ? (
-            <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>
           ) : null}
           </article>
 
@@ -453,7 +452,6 @@ function BusinessDashboardPage() {
           <div className="business-dashboard__actions">
             {canEditBusiness && (
               <>
-                <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>
                 <Link className="button button--secondary" to="/business/edit#business-contact-title">{t('business.control.contactSettings')}</Link>
               </>
             )}

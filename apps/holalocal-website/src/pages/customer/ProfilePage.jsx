@@ -313,7 +313,7 @@ function ProfilePage() {
 
       <div className="profile-dashboard">
         <section className="account-card profile-dashboard__card profile-dashboard__card--personal" aria-labelledby="personal-details-title">
-          <header className="account-card__header profile-personal-header">
+          <header className="account-card__header account-details-header">
             <div>
               <p className="account-card__eyebrow">{t('account.profile')}</p>
               <h2 id="personal-details-title">{t('profile.personalDetails')}</h2>

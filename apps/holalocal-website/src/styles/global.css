@@ -1220,7 +1220,8 @@
   padding: clamp(1.5rem, 4vw, 3rem) 0 4rem;
 }
 
-.profile-summary {
+.profile-summary,
+.business-summary {
   display: grid;
   width: 100%;
   min-width: 0;
@@ -1249,7 +1250,8 @@
 }
 
 .profile-summary .image-avatar--profile,
-.profile-photo-editor .image-avatar--profile {
+.profile-photo-editor .image-avatar--profile,
+.business-summary .image-avatar--business-logo {
   width: 5.5rem;
   height: 5.5rem;
   border-radius: 1.5rem;
@@ -1412,7 +1414,7 @@
   border-left: 0.2rem solid var(--profile-card-accent);
 }
 
-.profile-personal-header {
+.account-details-header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1420,7 +1422,7 @@
   gap: 0.75rem;
 }
 
-.profile-personal-header .button {
+.account-details-header .button {
   min-height: 2.75rem;
   margin: 0;
   padding: 0.5rem 0.75rem;
@@ -2529,28 +2531,7 @@
   margin: 0;
 }
 
-.business-summary {
-  display: grid;
-  width: 100%;
-  min-width: 0;
-  gap: 0.75rem;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  justify-items: start;
-  padding: clamp(1rem, 3vw, 1.75rem);
-  border: 1px solid color-mix(in srgb, var(--brand-blue) 18%, var(--line));
-  border-radius: 1.5rem;
-  background: #ffffff;
-  box-shadow: inset 0.2rem 0 0 color-mix(in srgb, var(--brand-blue) 58%, var(--brand-purple)), var(--shadow-sm);
-  text-align: left;
-}
 
-.business-summary .image-avatar--business-logo {
-  width: 5.5rem;
-  height: 5.5rem;
-  border-radius: 1.35rem;
-  --avatar-image-fit: contain;
-}
 
 .business-summary__identity {
   min-width: 0;
@@ -4410,8 +4391,6 @@
 }
 
 
-
-
 .public-business-card__verified {
   color: #147a32;
   font-size: 0.7rem;
@@ -5982,7 +5961,8 @@
     box-shadow: 0 1rem 3rem rgb(31 41 51 / 8%);
   }
 
-  .profile-summary {
+  .profile-summary,
+  .business-summary {
     column-gap: 1.4rem;
   }
 
@@ -5991,7 +5971,8 @@
     align-self: center;
   }
 
-  .profile-summary .image-avatar--profile {
+  .profile-summary .image-avatar--profile,
+  .business-summary .image-avatar--business-logo {
     width: 9rem;
     height: 9rem;
   }
@@ -6061,11 +6042,6 @@
   .business-summary__badges {
     grid-column: 2;
     justify-content: flex-start;
-  }
-
-  .business-summary .image-avatar--business-logo {
-    width: 9.5rem;
-    height: 9.5rem;
   }
 
   .business-insights__grid {
