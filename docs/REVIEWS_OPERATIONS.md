@@ -1,3 +1,7 @@
+# Translation monitoring update
+
+Offline generator now covers17 review callables including translatePublishedCustomerReview, two count metrics and eight disabled policies. The new warning policy matches structured or text google_translation_failure records on only that service; safe unavailable responses need not produce HTTP5xx. No sensitive label extraction. Actual recipient email/channel and staffed hours remain unknown; Craig, Europe/Madrid, no backup. No alerts/channels/notifications configured. Cloud filter validation and delivery remain approval-gated.
+
 # Reviews monitoring and activation readiness
 
 Current main at preparation: `428cdbc08617d53e3498ffb5593e7200807dfa7c`. Website and disabled backend are deployed; PR32 routes and the16 invoker checks are verified. This is LOCAL preparation, not authorization to create resources, notify anyone or activate either gate. See PAUSED_WORK_STATUS.md for current backlog authority; earlier readiness deployment steps are historical.

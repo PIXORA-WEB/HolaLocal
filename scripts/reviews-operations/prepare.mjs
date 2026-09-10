@@ -2,7 +2,7 @@
 import {mkdir,writeFile} from 'node:fs/promises'
 import {resolve} from 'node:path'
 import {pathToFileURL} from 'node:url'
-export const callables='approveCustomerReview editCustomerReview getCustomerReviewModerationCase getCustomerReviewRatingSummaries getCustomerReviewReport getOwnCustomerReview listCustomerReviewModerationQueue listCustomerReviewReports listOwnCustomerReviews listPublishedCustomerReviews rejectCustomerReview removeCustomerReview resolveCustomerReviewReport submitCustomerReview submitCustomerReviewReport withdrawCustomerReview'.split(' ')
+export const callables='approveCustomerReview editCustomerReview getCustomerReviewModerationCase getCustomerReviewRatingSummaries getCustomerReviewReport getOwnCustomerReview listCustomerReviewModerationQueue listCustomerReviewReports listOwnCustomerReviews listPublishedCustomerReviews rejectCustomerReview removeCustomerReview resolveCustomerReviewReport submitCustomerReview submitCustomerReviewReport translatePublishedCustomerReview withdrawCustomerReview'.split(' ')
 export function prepare({projectId,notificationChannels=[]}={}) {
  if(!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId??''))throw new Error('Explicit valid project ID required')
  if(!Array.isArray(notificationChannels)||notificationChannels.some(c=>!new RegExp(`^projects/${projectId}/notificationChannels/[0-9]+$`).test(c)))throw new Error('Use existing same-project numeric channel resource names only')
@@ -28,6 +28,7 @@ export function prepare({projectId,notificationChannels=[]}={}) {
   log('retention-capacity',`${worker} AND jsonPayload.message="customer-review-retention" AND jsonPayload.pageLimitReached=true`,'Early warning on one full page. Responder checks next natural run; two consecutive full-page runs require capacity investigation. This alert alone does not establish consecutive backlog or justify deleting open reports.'),
   policy('callable-server-errors',{conditionThreshold:{filter:`${requestFilter} AND metric.type="run.googleapis.com/request_count" AND metric.labels.response_code_class="5xx"`,comparison:'COMPARISON_GT',thresholdValue:4,duration:'0s',aggregations:[{alignmentPeriod:'300s',perSeriesAligner:'ALIGN_SUM',crossSeriesReducer:'REDUCE_SUM'}],trigger:{count:1}}},'At least5 server errors in5min across review callables. Log error alert also covers low traffic. Investigate; do not include expected4xx.'),
   policy('callable-latency',{conditionThreshold:{filter:`${requestFilter} AND metric.type="run.googleapis.com/request_latencies"`,comparison:'COMPARISON_GT',thresholdValue:10000,duration:'300s',aggregations:[{alignmentPeriod:'300s',perSeriesAligner:'ALIGN_PERCENTILE_99'}],trigger:{count:1}}},'p99 above10000ms for5min per revision. Validate descriptor unit ms before creating. Low traffic percentiles require context.'),
+  log('translation-failure',`resource.type="cloud_run_revision" AND resource.labels.project_id="${projectId}" AND resource.labels.location="europe-west1" AND resource.labels.service_name="translatepublishedcustomerreview" AND (jsonPayload.message="google_translation_failure" OR textPayload:"google_translation_failure")`,'Translation returned a safe unavailable result; HTTP5xx alerts may not fire. Inspect only sanitized phase/code/status/endpoint/languages. Check permissions, quota and provider health; never attach review text or automatically retry paid requests.'),
  ]
  return {projectId,phase:'offline-preparation-only',readyToNotify:false,metrics,policies,manualChecks:['Daily: open reports older than7days; no automatic close/visibility changes.','Daily: account deletion requests stuck/failed; caught domain failures may not emit ERROR. Use existing private admin queue, no new broad data projection.','Confirm primary email/channel, response hours, backup limitation, budget and delivery before arming alerts.']}
 }
@@ -37,5 +38,5 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).hr
  const plan=prepare({projectId,notificationChannels});await mkdir(directory,{recursive:true});await writeFile(resolve(directory,'monitoring-plan.json'),JSON.stringify(plan,null,2)+'\n')
  for(const [i,p] of plan.policies.entries())await writeFile(resolve(directory,`policy-${i+1}.json`),JSON.stringify(p,null,2)+'\n')
  for(const m of plan.metrics)await writeFile(resolve(directory,m.name+'.json'),JSON.stringify(m,null,2)+'\n')
- console.log('Prepared two log metrics and seven DISABLED policies locally. Nothing created or notified; cloud validation still required.')
+ console.log('Prepared two log metrics and eight DISABLED policies locally. Nothing created or notified; cloud validation still required.')
 }
