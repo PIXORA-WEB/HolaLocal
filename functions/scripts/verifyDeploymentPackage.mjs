@@ -53,7 +53,7 @@ const REQUIRED_FUNCTION_FILES = [
   'src/ownerSubscriptionStatus.js',
   'src/publicBusinessDirectory.js',
   'src/savedBusinesses.js',
-  ...['Bounded', 'Callables', 'Commands', 'Deletion', 'Firestore', 'Moderation', 'ReadFirestore', 'Reads', 'Reports', 'Time'].map(name => `src/customerReview${name}.js`),
+  ...['Bounded', 'Callables', 'Commands', 'Deletion', 'Firestore', 'Moderation', 'ReadFirestore', 'Reads', 'Reports', 'Time', 'Translation'].map(name => `src/customerReview${name}.js`),
 ]
 
 const FORBIDDEN_SEGMENTS = new Set([

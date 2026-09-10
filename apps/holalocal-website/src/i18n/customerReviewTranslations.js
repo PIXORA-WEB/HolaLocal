@@ -450,3 +450,25 @@ export const customerReviewTranslations=Object.fromEntries(Object.entries(rows).
   for(const reason of ['spam','abusive_content','personal_information','irrelevant_content','conflict_of_interest'])result[`rejection_${reason}`]=`${rejectionCopy[code][0]} ${result[reason]}. ${rejectionCopy[code][1]}`
   return [code,result]
 }))
+
+// Machine-translation controls; public display names and source text are never overwritten.
+const translationRows={
+en:['Translating review…','Translation unavailable. Showing the original.','Machine translation','Original text','Show original','Show translation'],
+es:['Traduciendo reseña…','Traducción no disponible. Se muestra el original.','Traducción automática','Texto original','Mostrar original','Mostrar traducción'],
+fr:['Traduction de l’avis…','Traduction indisponible. Le texte original est affiché.','Traduction automatique','Texte original','Afficher l’original','Afficher la traduction'],
+de:['Bewertung wird übersetzt…','Übersetzung nicht verfügbar. Das Original wird angezeigt.','Maschinelle Übersetzung','Originaltext','Original anzeigen','Übersetzung anzeigen'],
+it:['Traduzione della recensione…','Traduzione non disponibile. Viene mostrato l’originale.','Traduzione automatica','Testo originale','Mostra originale','Mostra traduzione'],
+pt:['A traduzir a avaliação…','Tradução indisponível. É apresentado o original.','Tradução automática','Texto original','Mostrar original','Mostrar tradução'],
+nl:['Beoordeling wordt vertaald…','Vertaling niet beschikbaar. Het origineel wordt getoond.','Automatische vertaling','Oorspronkelijke tekst','Origineel tonen','Vertaling tonen'],
+sv:['Översätter recensionen…','Översättning saknas. Originalet visas.','Maskinöversättning','Originaltext','Visa original','Visa översättning'],
+no:['Oversetter anmeldelsen…','Oversettelse er utilgjengelig. Originalen vises.','Maskinoversettelse','Originaltekst','Vis original','Vis oversettelse'],
+da:['Oversætter anmeldelsen…','Oversættelse er ikke tilgængelig. Originalen vises.','Maskinoversættelse','Originaltekst','Vis original','Vis oversættelse'],
+fi:['Arvostelua käännetään…','Käännös ei ole saatavilla. Alkuperäinen teksti näytetään.','Konekäännös','Alkuperäinen teksti','Näytä alkuperäinen','Näytä käännös'],
+pl:['Tłumaczenie opinii…','Tłumaczenie jest niedostępne. Wyświetlono oryginał.','Tłumaczenie automatyczne','Tekst oryginalny','Pokaż oryginał','Pokaż tłumaczenie'],
+cs:['Překládání recenze…','Překlad není dostupný. Zobrazuje se originál.','Strojový překlad','Původní text','Zobrazit originál','Zobrazit překlad'],
+sk:['Preklad recenzie…','Preklad nie je dostupný. Zobrazuje sa originál.','Strojový preklad','Pôvodný text','Zobraziť originál','Zobraziť preklad'],
+hu:['Értékelés fordítása…','A fordítás nem érhető el. Az eredeti szöveg látható.','Gépi fordítás','Eredeti szöveg','Eredeti megjelenítése','Fordítás megjelenítése'],
+ro:['Se traduce recenzia…','Traducerea nu este disponibilă. Se afișează originalul.','Traducere automată','Text original','Arată originalul','Arată traducerea'],
+uk:['Переклад відгуку…','Переклад недоступний. Показано оригінал.','Машинний переклад','Оригінальний текст','Показати оригінал','Показати переклад'],
+}
+for(const [language,values] of Object.entries(translationRows))Object.assign(customerReviewTranslations[language],Object.fromEntries(['translationLoading','translationUnavailable','machineTranslation','originalText','showOriginal','showTranslation'].map((key,index)=>[key,values[index]])))

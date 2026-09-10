@@ -1,3 +1,11 @@
+# Combined PR33/34 status — current authority
+
+Main verified428cdbc08617d53e3498ffb5593e7200807dfa7c. PR33 monitoring head4a74c0d5012d6c31946156f3eb6318fd1501c7e0 is incorporated into PR34 locally; only this inventory conflicted and was consolidated. Merge PR33 first using a merge commit (not squash/rebase), then PR34 using a merge commit, after final approval. Verify final source tree matches the combined candidate before Firebase deployment. No runtime conflict or policy change.
+
+Monitoring now covers17 callables/two count metrics/eight disabled policies, including text/structured sanitized translation warnings. No recipients configured: Craig, Europe/Madrid; actual email and staffed hours needed; no backup. Translation EU provider synthetic probe16/16 passed,1,184 characters. Runtime access is separate: deployed shared account1097633279895-compute@developer.gserviceaccount.com lacks direct Translation roles; effective access not established (troubleshooter403). Conditional minimum access proposal is in REVIEW_TRANSLATION_RUNTIME_ACCESS.md. No grants made.
+
+Reviews, retention and provider selection remain disabled. Upload/retry incident and maintenance proposal remain separate; original recovery and provider evidence preserved. The sections below retain the detailed file inventory; earlier claims that translation is unimplemented are superseded by this update and REVIEW_TRANSLATION_EU_RELEASE.md.
+
 # Paused work — current authority
 
 Updated10September2026 against freshly fetched main `428cdbc08617d53e3498ffb5593e7200807dfa7c` (PR32), deployed READY to both HolaLocal domains. This branch contains local operations preparation/documentation only; no activation or cloud-resource creation authorized. Recheck main before any later integration.
@@ -17,7 +25,7 @@ Original mixed workspace remains at d9c776f on fix/my-business-dashboard-layout.
 | Review route rewrites | Integrated/deployedPR32 | All3 real direct/reload checks passed390/1440. |
 | Callable transport IAM | Scoped16-service correction applied, code unchanged | Normal browser preflight/disabled/auth-denial checks passed; future deployment drift checks required. Scheduler authenticated. |
 | Scheduled retention | Deployed, cleanup gate closed | Natural Scheduler200 verified; actual enabled cloud cleanup + alerts/recipient/operational ownership remain pending. |
-| Review UI languages |17 locale controls integrated, source/automated checks passed | Native editorial review pending. Automatic review-text translation is NOT implemented and remains an original-requirement gap. |
+| Review UI languages |17 locale controls integrated, source/automated checks passed | Native editorial review pending. Automatic public review-text translation is implemented in combined PR34 with explicit EU endpoint, same-language bypass and safe diagnostics; production remains disabled. Native editorial/provider runtime checks remain outstanding. |
 | Admin visual work | Main already contains administration workspace redesign (1aea9ee ancestor), current AdminLayout matches mixed version | No distinct uncommitted admin-layout visual patch remains to integrate. Fictional AdminReviewPreview is backup-only; do not treat it as approved runtime. |
 | Broad upload/retry improvements | Useful hypotheses, unverified, excluded | See UPLOAD_RETRY_DISPOSITION.md individual changes/evidence requirements. |
 | Cloud gallery harness/portable bucket binding | Retained historical branch3111da9, not integrated | Fresh extraction needed for real cloud tests; do not merge stale runtime or enable resources without scoped approval. |

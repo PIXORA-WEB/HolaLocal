@@ -1,3 +1,5 @@
+import {createCustomerReviewTranslationService,REVIEW_TRANSLATION_PROVIDER_OPTIONS,reviewTranslationProviderVersion} from './customerReviewTranslation.js'
+import {createTranslationProvider} from './providers/providerFactory.js'
 import { customerReviewQuotaPolicy, customerReviewReportQuotaPolicy } from './customerReviewQuotas.js'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
@@ -12,6 +14,7 @@ import { createCustomerReviewFirestoreDatabase, createCustomerReviewAuthAdapter,
 import { createCustomerReviewReadFirestore } from './customerReviewReadFirestore.js'
 
 export const CUSTOMER_REVIEW_CALLABLES = Object.freeze({
+  translatePublishedCustomerReview: ['translation','translate'],
   getCustomerReviewRatingSummaries: ['read','readRatingSummaries'],
   submitCustomerReviewReport: ['report','submit'], listCustomerReviewReports: ['report','queue'],
   getCustomerReviewReport: ['report','detail'], resolveCustomerReviewReport: ['report','resolve'],
@@ -37,7 +40,7 @@ export function customerReviewGate(env) {
   return {quotaPolicy: customerReviewQuotaPolicy, reportQuotaPolicy: customerReviewReportQuotaPolicy}
 }
 
-const publicOperation = name => ['listPublishedCustomerReviews','getCustomerReviewRatingSummaries'].includes(name)
+const publicOperation = name => ['listPublishedCustomerReviews','getCustomerReviewRatingSummaries','translatePublishedCustomerReview'].includes(name)
 function servicesForRequest(request, policies) {
   const nativeAuth = createCustomerReviewAuthAdapter(getAuth())
   const auth = {
@@ -50,7 +53,11 @@ function servicesForRequest(request, policies) {
   }
   const firestore = getFirestore()
   const helpers = {...contracts,...lifecycle}
+  const providerName=process.env.CUSTOMER_REVIEW_TRANSLATION_PROVIDER ?? 'disabled'
   return {
+    translation:createCustomerReviewTranslationService({database:createCustomerReviewFirestoreDatabase(firestore),
+      provider:createTranslationProvider({providerName,projectId:process.env.GCLOUD_PROJECT,...REVIEW_TRANSLATION_PROVIDER_OPTIONS}),
+      providerVersion:reviewTranslationProviderVersion(providerName),configured:['mock','google_cloud'].includes(providerName)}),
     report: createCustomerReviewReportServices({database:createCustomerReviewFirestoreDatabase(firestore),
       readDatabase:createCustomerReviewReadFirestore(firestore),auth,reportQuotaPolicy:policies.reportQuotaPolicy}),
     command: createCustomerReviewCommands({helpers, database:createCustomerReviewFirestoreDatabase(firestore), auth,
@@ -61,7 +68,7 @@ function servicesForRequest(request, policies) {
 
 // Only explicitly reviewed domain errors cross this boundary. No arbitrary exception message/details.
 const errorGroups = {
-  'invalid-argument': ['invalid-payload','unsupported-field','invalid-request-id','invalid-expected-version','invalid-target',
+  'invalid-argument': ['invalid-translation-target','invalid-payload','unsupported-field','invalid-request-id','invalid-expected-version','invalid-target',
     'invalid-report-submitted-at','invalid-display-name','invalid-rejection-reason','invalid-rating','invalid-text','text-length','invalid-source-language','invalid-moderation-note','invalid-id',
     'invalid-report-text','invalid-report-reason','invalid-report-disposition','invalid-page-size','invalid-cursor','restart-pagination','invalid-batch-size'],
   'unauthenticated': ['authentication-required','auth/id-token-expired','auth/id-token-revoked','auth/invalid-id-token',

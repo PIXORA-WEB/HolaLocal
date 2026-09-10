@@ -194,3 +194,54 @@ test('demo projects cannot activate the Google provider', async () => {
   )
   assert.equal(calls.length, 0)
 })
+
+
+test('EU probe pins endpoint region and NMT model with bounded RPC and no retries', async () => {
+  const calls = []
+  const translator = createGoogleCloudTranslator({
+    projectId: 'holalocal-491c9', location: 'europe-west1', apiEndpoint: 'translate-eu.googleapis.com', requestTimeoutMs: 10000,
+    client: { async translateText(request, options) { calls.push({request, options}); return [{translations:[{translatedText:'Hola'}]}] } },
+  })
+  await translator.translateText({text:'Hello', targetLanguage:'es', sourceLanguageHint:'en'})
+  assert.equal(calls[0].request.parent, 'projects/holalocal-491c9/locations/europe-west1')
+  assert.equal(calls[0].request.model, 'projects/holalocal-491c9/locations/europe-west1/models/general/base')
+  assert.deepEqual(calls[0].options, {timeout:10000, retry:null})
+})
+
+test('EU configuration fails closed for global or unsupported regions and arbitrary hosts', () => {
+  for (const options of [
+    {apiEndpoint:'translate-eu.googleapis.com'},
+    {apiEndpoint:'translate-eu.googleapis.com', location:'us-central1'},
+    {apiEndpoint:'untrusted.example', location:'europe-west1'},
+  ]) assert.throws(() => createGoogleCloudTranslator({projectId:'holalocal-491c9', ...options}), error => error.safeCategory === 'terminal_provider_configuration')
+})
+
+test('EU provider failure does not retry or fall back to global', async () => {
+  let calls = 0
+  const translator = createGoogleCloudTranslator({projectId:'holalocal-491c9', location:'europe-west1', apiEndpoint:'translate-eu.googleapis.com', requestTimeoutMs:10000,
+    client:{async translateText(){calls++; throw Object.assign(new Error('private detail'), {code:14})}}})
+  await assert.rejects(()=>translator.translateText({text:'Hello', targetLanguage:'es'}), error => error.safeCategory === 'retryable_service_unavailable')
+  assert.equal(calls, 1)
+})
+
+
+test('same-language normalization returns exact original without SDK call', async () => {
+ const provider=createGoogleCloudTranslator({projectId:'holalocal-491c9',client:{translateText:()=>assert.fail('must not call Google')}})
+ for(const sourceLanguageHint of ['en','en-US']) assert.deepEqual(await provider.translateText({text:'  Original text.  ',sourceLanguageHint,targetLanguage:'en'}),{translatedText:'  Original text.  ',sourceLanguage:'en',targetLanguage:'en'})
+})
+
+test('internal diagnostics distinguish RPC rejection from response validation without sensitive strings', async () => {
+ for(const [client,phase] of [
+  [{translateText:async()=>{throw Object.assign(new Error('SECRET review text'),{code:3,details:'SECRET',metadata:{authorization:'SECRET'}})}},'provider_rpc'],
+  [{translateText:async()=>[{translations:[]}]},'response_validation'],
+ ]) {
+  const provider=createGoogleCloudTranslator({projectId:'holalocal-491c9',client})
+  await assert.rejects(()=>provider.translateText({text:'SECRET',targetLanguage:'es',sourceLanguageHint:'en'}),error=>{
+   assert.equal(error.providerDiagnostics.phase,phase)
+   if(phase==='provider_rpc'){assert.equal(error.providerDiagnostics.code,3);assert.equal(error.providerDiagnostics.status,'INVALID_ARGUMENT')}
+   assert.ok(!JSON.stringify(error.providerDiagnostics).includes('SECRET'))
+   assert.ok(!JSON.stringify(error).includes('providerDiagnostics'))
+   assert.equal(error.message,'Translation provider failed safely.');return true
+  })
+ }
+})

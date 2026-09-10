@@ -9,12 +9,16 @@ const { TranslationServiceClient } = translate.v3
 export const GOOGLE_TRANSLATION_LOCATION = 'global'
 export const GOOGLE_TRANSLATION_MIME_TYPE = 'text/plain'
 
-let sharedClient = null
+export const GOOGLE_TRANSLATION_EU_ENDPOINT = 'translate-eu.googleapis.com'
+export const GOOGLE_TRANSLATION_EU_LOCATION = 'europe-west1'
+const sharedClients = new Map()
 
 export function createGoogleCloudTranslator({
   projectId,
   location = GOOGLE_TRANSLATION_LOCATION,
   client = null,
+  apiEndpoint = 'translate.googleapis.com',
+  requestTimeoutMs = null,
 } = {}) {
   const safeProjectId = normalizeProjectId(projectId)
   if (!safeProjectId || isDemoProjectId(safeProjectId)) {
@@ -25,7 +29,10 @@ export function createGoogleCloudTranslator({
     })
   }
 
-  const translationClient = client ?? getSharedClient()
+  if (!['translate.googleapis.com', GOOGLE_TRANSLATION_EU_ENDPOINT].includes(apiEndpoint)
+    || (apiEndpoint === GOOGLE_TRANSLATION_EU_ENDPOINT && location !== GOOGLE_TRANSLATION_EU_LOCATION)) {
+    throw createProviderError({ category: 'terminal_provider_configuration', safeReason: 'provider_unavailable', retryable: false })
+  }
 
   return {
     async translateText({
@@ -44,19 +51,27 @@ export function createGoogleCloudTranslator({
       }
 
       const source = normalizeSupportedLanguage(sourceLanguageHint)
+      if (source === target) return { translatedText: text, sourceLanguage: source, targetLanguage: target }
+      const translationClient = client ?? getSharedClient(apiEndpoint)
       const request = {
         parent: `projects/${safeProjectId}/locations/${location}`,
         contents: [text],
         mimeType: GOOGLE_TRANSLATION_MIME_TYPE,
         targetLanguageCode: target,
       }
+      if (apiEndpoint === GOOGLE_TRANSLATION_EU_ENDPOINT) request.model = `${request.parent}/models/general/base`
       if (source) request.sourceLanguageCode = source
 
       let response
       try {
-        ;[response] = await translationClient.translateText(request)
+        ;[response] = await translationClient.translateText(request, requestTimeoutMs == null ? undefined : { timeout: requestTimeoutMs, retry: null })
       } catch (error) {
-        throw mapGoogleCloudTranslationError(error)
+        const mapped = mapGoogleCloudTranslationError(error)
+        Object.defineProperty(mapped, 'providerDiagnostics', { value: Object.freeze({
+          phase: 'provider_rpc', ...sanitizeGoogleTranslationError(error), apiEndpoint, location, sourceLanguage: source, targetLanguage: target,
+        }) })
+        console.warn('google_translation_failure', mapped.providerDiagnostics)
+        throw mapped
       }
 
       const translation = response?.translations?.[0]
@@ -64,11 +79,14 @@ export function createGoogleCloudTranslator({
         ? translation.translatedText.trim()
         : ''
       if (!translatedText) {
-        throw createProviderError({
+        const invalid = createProviderError({
           category: 'terminal_invalid_request',
           safeReason: 'provider_rejected',
           retryable: false,
         })
+        Object.defineProperty(invalid, 'providerDiagnostics', { value: Object.freeze({phase:'response_validation', reason:'missing_translated_text', apiEndpoint, location, sourceLanguage:source, targetLanguage:target}) })
+        console.warn('google_translation_failure', invalid.providerDiagnostics)
+        throw invalid
       }
 
       const detected = normalizeSupportedLanguage(translation.detectedLanguageCode)
@@ -122,9 +140,9 @@ export function mapGoogleCloudTranslationError(error = {}) {
   })
 }
 
-function getSharedClient() {
-  if (!sharedClient) sharedClient = new TranslationServiceClient()
-  return sharedClient
+function getSharedClient(apiEndpoint) {
+  if (!sharedClients.has(apiEndpoint)) sharedClients.set(apiEndpoint, new TranslationServiceClient({ apiEndpoint }))
+  return sharedClients.get(apiEndpoint)
 }
 
 function normalizeSupportedLanguage(value) {
@@ -146,4 +164,11 @@ function createProviderError({ category, safeReason, retryable }) {
   error.safeReason = safeReason
   error.retryable = retryable
   return error
+}
+
+// Never copy message, details, metadata, headers or arbitrary provider strings.
+export function sanitizeGoogleTranslationError(error = {}) {
+  const statuses = ['OK','CANCELLED','UNKNOWN','INVALID_ARGUMENT','DEADLINE_EXCEEDED','NOT_FOUND','ALREADY_EXISTS','PERMISSION_DENIED','RESOURCE_EXHAUSTED','FAILED_PRECONDITION','ABORTED','OUT_OF_RANGE','UNIMPLEMENTED','INTERNAL','UNAVAILABLE','DATA_LOSS','UNAUTHENTICATED']
+  const code = Number.isInteger(error.code) && error.code >= 0 && error.code <= 16 ? error.code : null
+  return { code, status: code === null ? 'UNKNOWN' : statuses[code] }
 }

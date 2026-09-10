@@ -1,3 +1,4 @@
+import ReviewText from './ReviewText.jsx'
 import { useEffect, useMemo, useState, useSyncExternalStore, useRef, useId } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -123,7 +124,7 @@ export default function CustomerReviews({api,businessId,user,profile,ownOnly=fal
     <Feedback state={state} controller={controller}/>{(state.loading||!state.ready)&&<p role="status">{t('common.loading')}</p>}
     {!state.loading&&state.error&&state.error!=='refresh'&&!state.uncertain&&<button className="button button--secondary" onClick={()=>void controller.load()}>{t('common.retry')}</button>}
     {state.ready&&!state.loading&&!state.error&&state.items.length===0&&<p>{t('customerReviews.empty')}</p>}
-    {state.items.map(review=>ownOnly?<OwnListItem key={`${user?.uid}:${review.publicReviewId}`} review={review} state={state} controller={controller} user={user} profile={profile}/>:<article key={review.publicReviewId}><h3>{review.reviewerAlias||t('customerReviews.reviewer')}</h3><p className="customer-reviews__rating" aria-label={t('customerReviews.rating')}><span aria-hidden="true">★ </span>{new Intl.NumberFormat(i18n.resolvedLanguage).format(review.rating)} / 5</p><ReviewDates review={review}/><p className="customer-reviews__text">{review.originalText}</p><button className="button button--text customer-reviews__report" onClick={()=>{setReport(review);setReportOpen(true)}}>{t('customerReviews.report')}</button></article>)}
+    {state.items.map(review=>ownOnly?<OwnListItem key={`${user?.uid}:${review.publicReviewId}`} review={review} state={state} controller={controller} user={user} profile={profile}/>:<article key={review.publicReviewId}><h3>{review.reviewerAlias||t('customerReviews.reviewer')}</h3><p className="customer-reviews__rating" aria-label={t('customerReviews.rating')}><span aria-hidden="true">★ </span>{new Intl.NumberFormat(i18n.resolvedLanguage).format(review.rating)} / 5</p><ReviewDates review={review}/><ReviewText review={review} api={api}/><button className="button button--text customer-reviews__report" onClick={()=>{setReport(review);setReportOpen(true)}}>{t('customerReviews.report')}</button></article>)}
     {state.cursor&&<button className="button button--secondary" disabled={state.loading||state.busy||state.uncertain} onClick={()=>void controller.load(true)}>{t('customerReviews.more')}</button>}
     {report&&<ReportDialog key={`${user?.uid??'anonymous'}:${report.publicReviewId}:${report.publishedRevision}`} open={reportOpen} review={report} api={api} user={user} profile={profile} onClose={()=>setReportOpen(false)} onRefresh={()=>{setReport(null);setReportOpen(false);void controller.load()}}/>}
   </section>
