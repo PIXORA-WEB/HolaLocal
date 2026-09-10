@@ -9,12 +9,15 @@ const { TranslationServiceClient } = translate.v3
 export const GOOGLE_TRANSLATION_LOCATION = 'global'
 export const GOOGLE_TRANSLATION_MIME_TYPE = 'text/plain'
 
-let sharedClient = null
+export const GOOGLE_TRANSLATION_EU_ENDPOINT = 'translate-eu.googleapis.com'
+export const GOOGLE_TRANSLATION_EU_LOCATION = 'europe-west1'
+const sharedClients = new Map()
 
 export function createGoogleCloudTranslator({
   projectId,
   location = GOOGLE_TRANSLATION_LOCATION,
   client = null,
+  apiEndpoint = 'translate.googleapis.com',
   requestTimeoutMs = null,
 } = {}) {
   const safeProjectId = normalizeProjectId(projectId)
@@ -26,7 +29,11 @@ export function createGoogleCloudTranslator({
     })
   }
 
-  const translationClient = client ?? getSharedClient()
+  if (!['translate.googleapis.com', GOOGLE_TRANSLATION_EU_ENDPOINT].includes(apiEndpoint)
+    || (apiEndpoint === GOOGLE_TRANSLATION_EU_ENDPOINT && location !== GOOGLE_TRANSLATION_EU_LOCATION)) {
+    throw createProviderError({ category: 'terminal_provider_configuration', safeReason: 'provider_unavailable', retryable: false })
+  }
+  const translationClient = client ?? getSharedClient(apiEndpoint)
 
   return {
     async translateText({
@@ -51,6 +58,7 @@ export function createGoogleCloudTranslator({
         mimeType: GOOGLE_TRANSLATION_MIME_TYPE,
         targetLanguageCode: target,
       }
+      if (apiEndpoint === GOOGLE_TRANSLATION_EU_ENDPOINT) request.model = `${request.parent}/models/general/base`
       if (source) request.sourceLanguageCode = source
 
       let response
@@ -123,9 +131,9 @@ export function mapGoogleCloudTranslationError(error = {}) {
   })
 }
 
-function getSharedClient() {
-  if (!sharedClient) sharedClient = new TranslationServiceClient()
-  return sharedClient
+function getSharedClient(apiEndpoint) {
+  if (!sharedClients.has(apiEndpoint)) sharedClients.set(apiEndpoint, new TranslationServiceClient({ apiEndpoint }))
+  return sharedClients.get(apiEndpoint)
 }
 
 function normalizeSupportedLanguage(value) {
