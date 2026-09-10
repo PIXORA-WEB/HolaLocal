@@ -1,3 +1,17 @@
+# Revised probe — new execution approval required
+
+This revision supersedes the historical approval below. The first run stopped after one74-character en-to-en attempt. Its category could mean RPC INVALID_ARGUMENT or response validation; the raw reason was not retained. Same-language rejection remains a hypothesis. Other invalid-argument causes include model/location mismatch; our EU parent and model match the documented region. See https://docs.cloud.google.com/translate/docs/reference/rest/v3/projects.locations/translateText and https://docs.cloud.google.com/translate/docs/advanced/endpoints .
+
+New bounds: 16 genuine translations from English, 74 characters each =1,184 maximum characters, USD0.02368 estimated before credits/tax/conversion. EU endpoint and europe-west1 unchanged; sequential, no retries, stop first failure,10-second RPC and210-second process deadlines. Proposed next run starts en-to-es and continues only on success. No paid requests during this correction.
+
+Public service already bypasses matching declared language after visibility/revision checks. UI now checks same-language before requiring API availability. Adapter returns exact original text for normalized matching languages before SDK client creation. Harness excludes English-to-English.
+
+Internal structured warnings and non-enumerable error diagnostics now retain phase, numeric gRPC code/fixed status, endpoint/region and normalized source/target language. Missing translated output has a separate fixed response-validation reason. No raw messages, details, headers, credentials, identifiers or review text are copied. Public errors remain safe; probe diagnostics are internal evidence. These changes are not deployed.
+
+Local verification:22 adapter/service/harness tests, including same-language zero calls, sequential16 requests, first-failure stop, revision/cache/privacy, and diagnostic safety. Offline plan confirms1,184 characters. Chromium checks pass at390/1440 across17 languages, including same-language zero transport calls, original display, keyboard, stale responses and failure fallback. Focused Functions/website lint passes. No real-provider or native quality verification claimed.
+
+---
+
 # EU translation probe — approval pending
 
 Prepared 2026-09-10 on a separate branch from PR #34 head abd621f14414adc245983ebbb276c2b5393e23ea. No provider execution, API enablement, IAM changes, deployment, merge or gate activation is authorised by this document.

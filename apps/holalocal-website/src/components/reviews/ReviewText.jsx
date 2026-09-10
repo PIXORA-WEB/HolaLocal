@@ -13,8 +13,8 @@ export default function ReviewText({review,api}) {
   const input={publicReviewId:review.publicReviewId,publishedRevision:review.publishedRevision,targetLanguage}
   const update=value=>{if(current)setResult({key,...value})}
   async function load(){
-   if(!supportedUILanguages.some(value=>value.code===targetLanguage)||typeof api?.translate!=='function'){update({status:'unavailable'});return}
    if(review.declaredSourceLanguage===targetLanguage){update({status:'original'});return}
+   if(!supportedUILanguages.some(value=>value.code===targetLanguage)||typeof api?.translate!=='function'){update({status:'unavailable'});return}
    update({status:'loading'})
    try{
     const response=await withTimeout(()=>api.translate(input),15000)

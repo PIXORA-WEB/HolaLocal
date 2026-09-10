@@ -223,3 +223,25 @@ test('EU provider failure does not retry or fall back to global', async () => {
   await assert.rejects(()=>translator.translateText({text:'Hello', targetLanguage:'es'}), error => error.safeCategory === 'retryable_service_unavailable')
   assert.equal(calls, 1)
 })
+
+
+test('same-language normalization returns exact original without SDK call', async () => {
+ const provider=createGoogleCloudTranslator({projectId:'holalocal-491c9',client:{translateText:()=>assert.fail('must not call Google')}})
+ for(const sourceLanguageHint of ['en','en-US']) assert.deepEqual(await provider.translateText({text:'  Original text.  ',sourceLanguageHint,targetLanguage:'en'}),{translatedText:'  Original text.  ',sourceLanguage:'en',targetLanguage:'en'})
+})
+
+test('internal diagnostics distinguish RPC rejection from response validation without sensitive strings', async () => {
+ for(const [client,phase] of [
+  [{translateText:async()=>{throw Object.assign(new Error('SECRET review text'),{code:3,details:'SECRET',metadata:{authorization:'SECRET'}})}},'provider_rpc'],
+  [{translateText:async()=>[{translations:[]}]},'response_validation'],
+ ]) {
+  const provider=createGoogleCloudTranslator({projectId:'holalocal-491c9',client})
+  await assert.rejects(()=>provider.translateText({text:'SECRET',targetLanguage:'es',sourceLanguageHint:'en'}),error=>{
+   assert.equal(error.providerDiagnostics.phase,phase)
+   if(phase==='provider_rpc'){assert.equal(error.providerDiagnostics.code,3);assert.equal(error.providerDiagnostics.status,'INVALID_ARGUMENT')}
+   assert.ok(!JSON.stringify(error.providerDiagnostics).includes('SECRET'))
+   assert.ok(!JSON.stringify(error).includes('providerDiagnostics'))
+   assert.equal(error.message,'Translation provider failed safely.');return true
+  })
+ }
+})
