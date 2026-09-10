@@ -1,7 +1,11 @@
+import {GOOGLE_TRANSLATION_EU_ENDPOINT,GOOGLE_TRANSLATION_EU_LOCATION} from './providers/googleCloudTranslator.js'
 import {randomUUID} from 'node:crypto'
 import {customerReviewTranslationCacheKey} from '@holalocal/firebase-contract/customerReviewTranslation'
 import {validateCustomerReviewSubmission} from '@holalocal/firebase-contract/customerReviewContracts'
 import {isPublicBusinessEligible} from '@holalocal/firebase-contract'
+
+export const REVIEW_TRANSLATION_PROVIDER_OPTIONS=Object.freeze({apiEndpoint:GOOGLE_TRANSLATION_EU_ENDPOINT,location:GOOGLE_TRANSLATION_EU_LOCATION,requestTimeoutMs:10000})
+export const reviewTranslationProviderVersion=name=>name==='google_cloud'?'google_cloud-eu-europe-west1-nmt-v2':`${name}-v1`
 
 const fail=code=>{const error=new Error(code);error.code=code;throw error}
 // Cache lives inside the authoritative public projection: publication replaces it,

@@ -58,3 +58,16 @@ test('transient failure recovers after cooldown; provider version change never r
  const updated=createCustomerReviewTranslationService({database:s.database,providerVersion:'test-v2',configured:true,provider:{translateText:async()=>({translatedText:'New provider version translation'})}})
  assert.equal((await updated.translate(s.input)).translatedText,'New provider version translation');assert.equal(s.database.data.get(s.path).translationCache.providerVersion,'test-v2')
 })
+
+
+test('authoritative review runtime pins EU and changes namespace from global caches',async()=>{
+ const {REVIEW_TRANSLATION_PROVIDER_OPTIONS,reviewTranslationProviderVersion}=await import('../src/customerReviewTranslation.js')
+ const {createTranslationProvider}=await import('../src/providers/providerFactory.js')
+ assert.deepEqual(REVIEW_TRANSLATION_PROVIDER_OPTIONS,{apiEndpoint:'translate-eu.googleapis.com',location:'europe-west1',requestTimeoutMs:10000})
+ assert.equal(reviewTranslationProviderVersion('google_cloud'),'google_cloud-eu-europe-west1-nmt-v2')
+ const calls=[];const provider=createTranslationProvider({providerName:'google_cloud',projectId:'synthetic-provider-test',...REVIEW_TRANSLATION_PROVIDER_OPTIONS,googleClient:{translateText:async(request,options)=>{calls.push({request,options});return [{translations:[{translatedText:'EU result'}]}]}}})
+ const s=setup();await s.service.translate(s.input)
+ const service=createCustomerReviewTranslationService({database:s.database,provider,providerVersion:reviewTranslationProviderVersion('google_cloud'),configured:true})
+ assert.equal((await service.translate(s.input)).translatedText,'EU result');await service.translate(s.input);assert.equal(calls.length,1)
+ assert.equal(calls[0].request.parent,'projects/synthetic-provider-test/locations/europe-west1');assert.match(calls[0].request.model,/europe-west1\/models\/general\/base$/);assert.deepEqual(calls[0].options,{timeout:10000,retry:null})
+})

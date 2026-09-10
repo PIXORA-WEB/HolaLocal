@@ -1,4 +1,4 @@
-import {createCustomerReviewTranslationService} from './customerReviewTranslation.js'
+import {createCustomerReviewTranslationService,REVIEW_TRANSLATION_PROVIDER_OPTIONS,reviewTranslationProviderVersion} from './customerReviewTranslation.js'
 import {createTranslationProvider} from './providers/providerFactory.js'
 import { customerReviewQuotaPolicy, customerReviewReportQuotaPolicy } from './customerReviewQuotas.js'
 import { HttpsError } from 'firebase-functions/v2/https'
@@ -56,8 +56,8 @@ function servicesForRequest(request, policies) {
   const providerName=process.env.CUSTOMER_REVIEW_TRANSLATION_PROVIDER ?? 'disabled'
   return {
     translation:createCustomerReviewTranslationService({database:createCustomerReviewFirestoreDatabase(firestore),
-      provider:createTranslationProvider({providerName,projectId:process.env.GCLOUD_PROJECT,requestTimeoutMs:10000}),
-      providerVersion:`${providerName}-v1`,configured:['mock','google_cloud'].includes(providerName)}),
+      provider:createTranslationProvider({providerName,projectId:process.env.GCLOUD_PROJECT,...REVIEW_TRANSLATION_PROVIDER_OPTIONS}),
+      providerVersion:reviewTranslationProviderVersion(providerName),configured:['mock','google_cloud'].includes(providerName)}),
     report: createCustomerReviewReportServices({database:createCustomerReviewFirestoreDatabase(firestore),
       readDatabase:createCustomerReviewReadFirestore(firestore),auth,reportQuotaPolicy:policies.reportQuotaPolicy}),
     command: createCustomerReviewCommands({helpers, database:createCustomerReviewFirestoreDatabase(firestore), auth,

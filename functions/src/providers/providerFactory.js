@@ -13,6 +13,8 @@ export function createTranslationProvider({
   env = process.env,
   googleClient = null,
   requestTimeoutMs = null,
+  apiEndpoint = undefined,
+  location = undefined,
 } = {}) {
   const provider = normalizeProviderName(providerName)
 
@@ -24,7 +26,7 @@ export function createTranslationProvider({
 
   if (provider === TRANSLATION_PROVIDER_GOOGLE_CLOUD) {
     if (isDemoProjectId(projectId)) return createDisabledTranslator()
-    return createGoogleCloudTranslator({ projectId, client: googleClient, requestTimeoutMs })
+    return createGoogleCloudTranslator({ projectId, client: googleClient, requestTimeoutMs, apiEndpoint, location })
   }
 
   return createDisabledTranslator()

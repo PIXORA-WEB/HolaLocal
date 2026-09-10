@@ -1,3 +1,15 @@
+# Current update — EU review translation integration
+
+This update supersedes older stage-specific pending/merged statements below. Main verified428cdbc; PR28–32 are merged with reviews/retention disabled. PR33 remains the separate offline monitoring/backlog preparation. PR34 now integrates the tested EU adapter, explicit review runtime endpoint/region, same-language bypass, safe diagnostics and revision/provider cache namespace. Neither PR is merged by this work.
+
+Real EU synthetic provider success:16 requests/1,184 characters; native-language quality remains unreviewed. Runtime service-account permission is NOT established: direct project roles lack Translation permission; effective Policy Troubleshooter returned403. Provider activation blocked pending administrator verification of cloudtranslate.generalModels.predict and serviceusage.services.use, production spend/quota approval and monitoring readiness.
+
+PR33 monitoring must include the17th callable and sanitized translation-failure warnings before activation; Craig's email and staffed hours remain placeholders and no backup responder is available. No notifications configured. Approved-business maintenance remains a proposal. Original upload incident/retry improvements remain separate and unverified; ordinary successful uploads are not retry evidence. Original recovery snapshot and synthetic provider evidence preserved. No temporary Services preview or pending policy implementation imported.
+
+See REVIEW_TRANSLATION_EU_RELEASE.md for exact release gates. Historical sections follow.
+
+---
+
 # Paused work — current integration status
 
 Updated 10 September 2026. Baseline: remote main `33d7ea7a4d12f42d2bda466cee4c5a3fcd1f6074` (PR #27). No production merge or Firebase deployment authorized for this batch.
