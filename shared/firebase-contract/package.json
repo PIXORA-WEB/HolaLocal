@@ -6,7 +6,8 @@
   "exports": {
     ".": "./index.js",
     "./customerReviewContracts": "./customerReviewContracts.js",
-    "./customerReviewLifecycle": "./customerReviewLifecycle.js"
+    "./customerReviewLifecycle": "./customerReviewLifecycle.js",
+    "./customerReviewTranslation": "./customerReviewTranslation.js"
   },
   "files": [
     "*.js",

@@ -50,3 +50,9 @@ test('authoritative summary callable is anonymous, bounded by read service, and 
   assert.deepEqual(await handler({data:payload}),[{businessId:'synthetic-business',available:true,average:null,count:0}])
   assert.deepEqual(seen,payload)
 })
+
+test('public translation uses the same closed gate and ignores forged caller identity',async()=>{
+ const payload={publicReviewId:'synthetic-public-review',publishedRevision:1,targetLanguage:'es'}
+ const handler=createCustomerReviewCallableHandler('translatePublishedCustomerReview',{env:demoReviewEnv,createServices:()=>({translation:{translate:async input=>input}})})
+ assert.deepEqual(await handler({data:payload}),payload)
+})

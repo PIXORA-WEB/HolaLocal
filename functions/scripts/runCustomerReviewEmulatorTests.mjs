@@ -3,6 +3,8 @@ import {buildIsolatedEnv,parseProjectId} from './runIsolatedEmulatorTests.mjs'
 // Same credential/project/network fences as the callable suite. Heavy test files run sequentially.
 const projectId=parseProjectId()
 const env=await buildIsolatedEnv(projectId)
+// Mock provider is confined by the existing protected demo environment and production gate.
+env.CUSTOMER_REVIEW_TRANSLATION_PROVIDER='mock'
 const child=spawn('firebase',['emulators:exec','--config','../firebase.json','--project',projectId,
  '--only','auth,firestore,functions,storage','node --test --test-concurrency=1 tests/customerReview*Emulator.test.mjs'],{stdio:'inherit',env})
 child.on('error',()=>{process.exitCode=1})

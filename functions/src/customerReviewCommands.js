@@ -172,7 +172,9 @@ export function createCustomerReviewCommands({ helpers: h, database, auth, readE
         rejection: command === 'reject' ? { revision: before.pendingRevision, reasonCode: payload.rejectionReasonCode } : null })
       if (!record) tx.create(mappingPath, locator)
       if (submitting) tx.create(`customerReviewSlots/${pair}/revisions/${after.pendingRevision}`, { ...revisions.at(-1), submittedAt: commandTime })
-      if (projection) tx.set(publicPath, { ...projection, reviewerAlias: alias, publishedAt: dates.firstPublishedAt, updatedAt: dates.publishedVersionAt })
+      if (projection) tx.set(publicPath, { ...projection, reviewerAlias: alias, publishedAt: dates.firstPublishedAt, updatedAt: dates.publishedVersionAt,
+        ...(existingPublic?.publishedRevision===projection.publishedRevision && existingPublic.originalText===projection.originalText && existingPublic.translationCache
+          ? {translationCache:existingPublic.translationCache} : {}) })
       else tx.delete(publicPath)
       tx.set(statsPath, nextStats)
       if (submitting) tx.set(quotaPath, nextQuota)

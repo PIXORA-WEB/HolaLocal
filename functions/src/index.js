@@ -460,3 +460,5 @@ export const getCustomerReviewReport = onCall(PUBLIC_CALLABLE_OPTIONS, createCus
 export const resolveCustomerReviewReport = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('resolveCustomerReviewReport'))
 
 export const getCustomerReviewRatingSummaries = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('getCustomerReviewRatingSummaries'))
+
+export const translatePublishedCustomerReview = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('translatePublishedCustomerReview'))

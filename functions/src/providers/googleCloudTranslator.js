@@ -15,6 +15,7 @@ export function createGoogleCloudTranslator({
   projectId,
   location = GOOGLE_TRANSLATION_LOCATION,
   client = null,
+  requestTimeoutMs = null,
 } = {}) {
   const safeProjectId = normalizeProjectId(projectId)
   if (!safeProjectId || isDemoProjectId(safeProjectId)) {
@@ -54,7 +55,7 @@ export function createGoogleCloudTranslator({
 
       let response
       try {
-        ;[response] = await translationClient.translateText(request)
+        ;[response] = await translationClient.translateText(request, requestTimeoutMs == null ? undefined : { timeout: requestTimeoutMs, retry: null })
       } catch (error) {
         throw mapGoogleCloudTranslationError(error)
       }

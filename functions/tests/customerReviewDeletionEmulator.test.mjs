@@ -67,8 +67,10 @@ if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1') {
       `customerReviewStats/${review.businessId}`,`customerReviewRequests/${review.businessId}`,`customerReviewAudits/${review.businessId}`,
       ...review.slot.revisions.map(revision=>`customerReviewSlots/${review.pair}/revisions/${revision.revision}`),
     ]).map(async path=>{const doc=await db.doc(path).get();return {path,exists:doc.exists,data:doc.data()}}))
+
+    const first=reviews[0];await db.doc(`customerReviewsPublic/${first.publicReviewId}`).update({translationCache:{providerVersion:'test-v1',publishedRevision:1,entries:{es:{status:'translated',translatedText:'Synthetic cached translation'}}}})
+    const before=(await db.doc(`customerReviewsPublic/${first.publicReviewId}`).get()).data()
     const allBefore=await reviewSnapshot()
-    const first=reviews[0];const before=(await db.doc(`customerReviewsPublic/${first.publicReviewId}`).get()).data()
     const revisionBefore=(await db.doc(`customerReviewSlots/${first.pair}/revisions/1`).get()).data()
     await call('requestAccountDeletion',{},token)
     const core=commandCore(uid)
