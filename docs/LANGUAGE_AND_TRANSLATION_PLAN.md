@@ -109,3 +109,8 @@ Hungarian, Ukrainian, Italian, Swedish, Danish, Finnish, and Norwegian. This
 prevents missing keys while the interface is developed, but it does not count
 as a completed translation. Every newly added locale requires native-speaker
 review, terminology review, layout testing, and approval before public launch.
+
+
+## Customer review requirement — reconciliation10September2026
+
+Interface copy is present for17 languages. A fresh local rendering diagnostic using actual OwnStatus, i18next and those resources confirmed labels change on language selection while the original synthetic review remains unchanged. This is SSR/component evidence, not a native-speaker review or full browser acceptance. Public CustomerReviews also directly renders originalText; the shared translation cache-key contract is not connected to a provider/runtime. Automatic translation of published review text when the website language changes remains unfinished, not waived. See PAUSED_WORK_STATUS.md for the required implementation/privacy/cache boundaries and REVIEWS_OPERATIONS.md for activation blockers. Existing messaging Google provider code may be reused as an adapter, but its private-message permissions and cache must not be reused for public reviews. No provider activation was performed.

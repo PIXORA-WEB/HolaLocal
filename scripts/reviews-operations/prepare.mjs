@@ -1,0 +1,41 @@
+// Offline only: emits disabled Monitoring API request bodies; never calls Google Cloud.
+import {mkdir,writeFile} from 'node:fs/promises'
+import {resolve} from 'node:path'
+import {pathToFileURL} from 'node:url'
+export const callables='approveCustomerReview editCustomerReview getCustomerReviewModerationCase getCustomerReviewRatingSummaries getCustomerReviewReport getOwnCustomerReview listCustomerReviewModerationQueue listCustomerReviewReports listOwnCustomerReviews listPublishedCustomerReviews rejectCustomerReview removeCustomerReview resolveCustomerReviewReport submitCustomerReview submitCustomerReviewReport withdrawCustomerReview'.split(' ')
+export function prepare({projectId,notificationChannels=[]}={}) {
+ if(!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId??''))throw new Error('Explicit valid project ID required')
+ if(!Array.isArray(notificationChannels)||notificationChannels.some(c=>!new RegExp(`^projects/${projectId}/notificationChannels/[0-9]+$`).test(c)))throw new Error('Use existing same-project numeric channel resource names only')
+ const job='firebase-schedule-sweepResolvedCustomerReviewReports-europe-west1'
+ const scheduler=`resource.type="cloud_scheduler_job" AND resource.labels.project_id="${projectId}" AND resource.labels.location="europe-west1" AND resource.labels.job_id="${job}"`
+ const worker=`resource.type="cloud_run_revision" AND resource.labels.project_id="${projectId}" AND resource.labels.location="europe-west1" AND resource.labels.service_name="sweepresolvedcustomerreviewreports"`
+ const services=callables.map(v=>v.toLowerCase())
+ const selection=services.map(v=>`resource.labels.service_name="${v}"`).join(' OR ')
+ const runtime=`resource.type="cloud_run_revision" AND resource.labels.project_id="${projectId}" AND resource.labels.location="europe-west1" AND (${selection} OR resource.labels.service_name="finalizeaccountdeletion" OR resource.labels.service_name="sweepresolvedcustomerreviewreports")`
+ const metrics=[
+  {name:'holalocal_review_scheduler_success',description:'Successful natural or manual Scheduler deliveries; bootstrap with a natural run before arming.',filter:`${scheduler} AND jsonPayload."@type"="type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished" AND httpRequest.status>=200 AND httpRequest.status<300`},
+  {name:'holalocal_review_retention_completion',description:'Enabled retention finished, counts only. Disabled worker intentionally emits no completion.',filter:`${worker} AND jsonPayload.message="customer-review-retention" AND jsonPayload.deleted:* AND jsonPayload.pageLimitReached:*`},
+ ].map(m=>({...m,metricDescriptor:{metricKind:'DELTA',valueType:'INT64',unit:'1'}}))
+ function policy(id,condition,notes,log=false){return {displayName:`HolaLocal reviews: ${id}`,enabled:false,combiner:'OR',notificationChannels:[...notificationChannels],documentation:{content:notes+' No review text, account IDs, tokens or private notes belong in incident labels. See docs/REVIEWS_OPERATIONS.md.',mimeType:'text/markdown'},conditions:[{displayName:id,...condition}],alertStrategy:{autoClose:'604800s',...(log?{notificationRateLimit:{period:'3600s'}}:{})},userLabels:{feature:'customer-reviews',managed_by:'reviewed-local-plan'}}}
+ const log=(id,filter,notes)=>policy(id,{conditionMatchedLog:{filter}},notes,true)
+ const heartbeat=(id,index,notes)=>policy(id,{conditionThreshold:{filter:`resource.type="${index===0?'cloud_scheduler_job':'cloud_run_revision'}" AND metric.type="logging.googleapis.com/user/${metrics[index].name}"`,comparison:'COMPARISON_LT',thresholdValue:1,duration:'300s',evaluationMissingData:'EVALUATION_MISSING_DATA_ACTIVE',aggregations:[{alignmentPeriod:'7200s',perSeriesAligner:'ALIGN_SUM',crossSeriesReducer:'REDUCE_SUM'}],trigger:{count:1}}},notes)
+ const requestFilter=`resource.type="cloud_run_revision" AND resource.labels.location="europe-west1" AND (${selection})`
+ const policies=[
+  log('scheduler-failure',`${scheduler} AND jsonPayload."@type"="type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished" AND (severity>=ERROR OR httpRequest.status>=300 OR jsonPayload.status:*)`,'Respond within one staffed hour. Inspect target/IAM and worker logs; never open the retention gate to cure delivery failure.'),
+  log('runtime-error',`${runtime} AND severity>=ERROR`,'Inspect review worker/callable/finalizer failure. Preserve resumable account erasure. Closed-gate400 and expected auth401 are not service errors.'),
+  heartbeat('scheduler-missing-success',0,'No success in rolling120min for5min. First establish a real metric series; no-series-from-birth is not a proven absence alarm. Check next natural run, then controlled isolated notification delivery test.'),
+  heartbeat('retention-missing-completion',1,'ONLY arm after separately approved retention activation and first completion series. Remain disabled now. A Scheduler200 does not prove enabled cleanup.'),
+  log('retention-capacity',`${worker} AND jsonPayload.message="customer-review-retention" AND jsonPayload.pageLimitReached=true`,'Early warning on one full page. Responder checks next natural run; two consecutive full-page runs require capacity investigation. This alert alone does not establish consecutive backlog or justify deleting open reports.'),
+  policy('callable-server-errors',{conditionThreshold:{filter:`${requestFilter} AND metric.type="run.googleapis.com/request_count" AND metric.labels.response_code_class="5xx"`,comparison:'COMPARISON_GT',thresholdValue:4,duration:'0s',aggregations:[{alignmentPeriod:'300s',perSeriesAligner:'ALIGN_SUM',crossSeriesReducer:'REDUCE_SUM'}],trigger:{count:1}}},'At least5 server errors in5min across review callables. Log error alert also covers low traffic. Investigate; do not include expected4xx.'),
+  policy('callable-latency',{conditionThreshold:{filter:`${requestFilter} AND metric.type="run.googleapis.com/request_latencies"`,comparison:'COMPARISON_GT',thresholdValue:10000,duration:'300s',aggregations:[{alignmentPeriod:'300s',perSeriesAligner:'ALIGN_PERCENTILE_99'}],trigger:{count:1}}},'p99 above10000ms for5min per revision. Validate descriptor unit ms before creating. Low traffic percentiles require context.'),
+ ]
+ return {projectId,phase:'offline-preparation-only',readyToNotify:false,metrics,policies,manualChecks:['Daily: open reports older than7days; no automatic close/visibility changes.','Daily: account deletion requests stuck/failed; caught domain failures may not emit ERROR. Use existing private admin queue, no new broad data projection.','Confirm primary email/channel, response hours, backup limitation, budget and delivery before arming alerts.']}
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
+ const [projectId,directory,...notificationChannels]=process.argv.slice(2)
+ if(!directory)throw new Error('Usage: node scripts/reviews-operations/prepare.mjs PROJECT OUTPUT_DIRECTORY [EXISTING_CHANNEL_RESOURCE ...]')
+ const plan=prepare({projectId,notificationChannels});await mkdir(directory,{recursive:true});await writeFile(resolve(directory,'monitoring-plan.json'),JSON.stringify(plan,null,2)+'\n')
+ for(const [i,p] of plan.policies.entries())await writeFile(resolve(directory,`policy-${i+1}.json`),JSON.stringify(p,null,2)+'\n')
+ for(const m of plan.metrics)await writeFile(resolve(directory,m.name+'.json'),JSON.stringify(m,null,2)+'\n')
+ console.log('Prepared two log metrics and seven DISABLED policies locally. Nothing created or notified; cloud validation still required.')
+}
