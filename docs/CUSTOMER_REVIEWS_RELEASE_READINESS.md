@@ -1,5 +1,7 @@
 # Combined reviews release readiness
 
+> Historical batch evidence. PR28–32 and the scoped disabled cloud rollout are now complete. Current authority: [paused-work status](PAUSED_WORK_STATUS.md) and [operations readiness](REVIEWS_OPERATIONS.md). Do not replay the old merge/deployment instructions or infer activation approval.
+
 Current successor to PR #28 backend, #29 chosen names/UI and #30 quotas/retention. Production remains disabled. Historical batch results are not substituted for fresh results on this branch.
 
 ## Response and privacy correction

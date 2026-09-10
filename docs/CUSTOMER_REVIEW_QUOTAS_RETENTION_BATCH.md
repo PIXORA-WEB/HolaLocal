@@ -1,5 +1,7 @@
 # Customer review quotas and report retention
 
+> Historical batch evidence. PR28–32 and the scoped disabled cloud rollout are now complete. Current authority: [paused-work status](PAUSED_WORK_STATUS.md) and [operations readiness](REVIEWS_OPERATIONS.md). Do not replay the old merge/deployment instructions or infer activation approval.
+
 This batch is stacked on PR #29 and PR #28. Main was rechecked at `33d7ea7a4d12f42d2bda466cee4c5a3fcd1f6074`. Nothing has been merged or deployed to Firebase. Website and callable review activation still reject production. No credentials, seeds, media changes, or paused admin visual changes are included.
 
 ## Approved behaviour and implementation

@@ -1,5 +1,7 @@
 # Customer-review backend foundation — review candidate
 
+> Historical batch evidence. PR28–32 and the scoped disabled cloud rollout are now complete. Current authority: [paused-work status](PAUSED_WORK_STATUS.md) and [operations readiness](REVIEWS_OPERATIONS.md). Do not replay the old merge/deployment instructions or infer activation approval.
+
 This batch reconstructs the paused backend/shared review work on PR #27's main baseline. It does not enable customer reviews in production, add website review UI, change reviewer policy or deploy Firebase. The original workspace and durable recovery backup remain untouched.
 
 ## Scope and authoritative ownership

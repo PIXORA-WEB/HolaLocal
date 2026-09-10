@@ -1,0 +1,734 @@
+{
+  "baseline": "428cdbc08617d53e3498ffb5593e7200807dfa7c",
+  "backupReadable": true,
+  "verifiedOriginalHashes": 598,
+  "trackedModified": 45,
+  "untrackedFiles": 99,
+  "comparisons": {
+    "identical-to-main": 57,
+    "different-from-main": 50,
+    "absent-from-main": 37
+  },
+  "files": [
+    {
+      "path": "apps/holalocal-website/scripts/checkLocales.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/components/common/BusinessDetailPanel.jsx",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/components/common/PublicBusinessCard.jsx",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/components/layout/AdminLayout.jsx",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/components/layout/SiteHeader.jsx",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/firebase/auth.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/firebase/browserTestSafety.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/firebase/functionsClient.js",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/firebase/storageClient.js",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/englishAuthenticatedResidual.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/index.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/locales/authenticatedTranslations.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/locales/en.json",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/locales/serviceBrowseTranslations.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/serviceBrowseEnglishTranslations.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/pages/ServicesPage.jsx",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/pages/business/BusinessDashboardPage.jsx",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/pages/business/EditBusinessPage.jsx",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/routes/AppRoutes.jsx",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/services/businessMediaPresentation.js",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/services/businessMediaWorkflow.js",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/services/businessService.js",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/styles/global.css",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/utils/businessCompletion.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/utils/frontendErrors.js",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/utils/locations.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/browserTestStartupSafety.test.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/businessMediaIntegration.test.mjs",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/locationSelection.test.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/mediaErrors.test.mjs",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/vite.config.js",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "firestore.indexes.json",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/package-lock.json",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/scripts/runIsolatedEmulatorTests.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/src/accountDeletionFinalizer.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/src/accountDeletionPrimitives.js",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/src/index.js",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/tests/accountDeletionFinalizer.test.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/accountDeletionPrimitives.test.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/accountDeletionPrimitivesEmulator.test.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/callableBoundary.test.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/emulatorIsolation.test.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/fakeFirestore.mjs",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/vendor/holalocal-firebase-contract-1.0.0.tgz",
+      "originalStatus": " M",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "shared/firebase-contract/package.json",
+      "originalStatus": " M",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/ADMIN_CUSTOMER_REVIEWS_WEBSITE.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/BUSINESS_ONBOARDING_FIX.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/CUSTOMER_REVIEWS_WEBSITE.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/CUSTOMER_REVIEW_MODERATION_CONTRACTS.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/CUSTOMER_REVIEW_REAL_APP_DEMO.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/AdminReviewPreview.jsx",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/FutureFeatures.jsx",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/OptionACard.jsx",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/Preview.jsx",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/README.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/ReviewPreview.jsx",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/assets/gallery-a.svg",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/assets/gallery-b.svg",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/assets/logo.svg",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/check.mjs",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/design-preview.html",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/fixtures.js",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/futureMetadata.js",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/main.jsx",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/mockAdminReviewService.js",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/mockReviewService.js",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/preview.css",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/productionGuard.mjs",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/translations.js",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/design-preview/vite.config.mjs",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/playwright.onboarding.config.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/scripts/runCustomerReviewDemo.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/components/admin/CustomerReviewModeration.jsx",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/components/admin/ReviewReasonSelect.jsx",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/components/common/BusinessMetadataIcon.jsx",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/components/reviews/CustomerReviews.jsx",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/firebase/customerReviewClient.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/hooks/useReviewSummaries.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/adminCustomerReviewNavigation.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/adminCustomerReviewTranslations.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/customerReviewTranslations.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/i18n/registerAdminCustomerReviewTranslations.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/pages/admin/AdminCustomerReviewsPage.jsx",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/pages/customer/MyReviewsPage.jsx",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/services/adminCustomerReviewService.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/services/customerReviewService.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/styles/adminCustomerReviews.css",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/styles/customerReviews.css",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/styles/servicesPresentation.css",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/utils/adminCustomerReviewModel.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/utils/customerReviewModel.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/utils/customerReviewsFlag.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/src/utils/servicesTarget.js",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/adminCustomerReviewClient.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/adminCustomerReviewComponents.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/adminCustomerReviewLocale.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/browser/integration.html",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/browser/onboardingRegression.spec.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/browser/runOnboardingRegression.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/customerReviewClient.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/customerReviewComponents.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "apps/holalocal-website/tests/servicesPresentation.test.mjs",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/CUSTOMER_REVIEWS_ACCOUNT_DELETION.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/CUSTOMER_REVIEWS_BATCH2A.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/CUSTOMER_REVIEWS_BATCH2B.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/CUSTOMER_REVIEWS_BUSINESS_LIFECYCLE.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/CUSTOMER_REVIEWS_CALLABLES.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/CUSTOMER_REVIEWS_READS.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/CUSTOMER_REVIEWS_TIMESTAMPS.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/CUSTOMER_REVIEW_REPORTS.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/scripts/checkCustomerReviewDemoReady.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/scripts/customerReviewDemoSetup.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/scripts/seedCustomerReviewDemo.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/scripts/verifyCustomerReviewOfflinePackage.mjs",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "functions/src/customerReviewBounded.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/src/customerReviewCallables.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/src/customerReviewCommands.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/src/customerReviewDeletion.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/src/customerReviewFirestore.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/src/customerReviewModeration.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/src/customerReviewReadFirestore.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/src/customerReviewReads.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/src/customerReviewReports.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/src/customerReviewTime.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/customerReviewCallableEmulator.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/tests/customerReviewCallables.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/tests/customerReviewCommands.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/tests/customerReviewDeletion.test.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/customerReviewDeletionEmulator.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/tests/customerReviewDemoReadiness.test.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/customerReviewDemoSeed.test.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/customerReviewEmulator.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/tests/customerReviewFakeDatabase.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/customerReviewFirestore.test.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/customerReviewReadFixtures.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/tests/customerReviewReads.test.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/customerReviewReadsEmulator.test.mjs",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "functions/tests/customerReviewReports.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "functions/tests/customerReviewReportsEmulator.test.mjs",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "shared/firebase-contract/CUSTOMER_REVIEWS_BATCH1.md",
+      "originalStatus": "??",
+      "comparison": "absent-from-main"
+    },
+    {
+      "path": "shared/firebase-contract/customerReviewContracts.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "shared/firebase-contract/customerReviewLifecycle.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    },
+    {
+      "path": "shared/firebase-contract/customerReviewTranslation.js",
+      "originalStatus": "??",
+      "comparison": "identical-to-main"
+    },
+    {
+      "path": "shared/firebase-contract/tests/customerReview.test.js",
+      "originalStatus": "??",
+      "comparison": "different-from-main"
+    }
+  ]
+}

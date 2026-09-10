@@ -1,5 +1,7 @@
 # Customer-chosen review names and coordinated UI
 
+> Historical batch evidence. PR28–32 and the scoped disabled cloud rollout are now complete. Current authority: [paused-work status](PAUSED_WORK_STATUS.md) and [operations readiness](REVIEWS_OPERATIONS.md). Do not replay the old merge/deployment instructions or infer activation approval.
+
 Stacked on unmerged PR #28 (`758c1be3d8a3c37b62dc1e89efd9d26025f00733`). Neither PR may merge or deploy without approval. Production reviews remain disabled in both website and server gates.
 
 ## Approved identity behaviour
