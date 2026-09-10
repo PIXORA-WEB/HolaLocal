@@ -328,13 +328,16 @@ service cloud.firestore {
     }
 
     function validCanonicalBusinessTaxonomy(data) {
+      // Cache the allowlist: rebuilding it for each membership check can exhaust
+      // the rules expression budget during a full profile/media transaction.
+      let serviceIds = canonicalServiceIds();
       return data.keys().hasAll(['primaryCategoryId', 'categoryIds'])
         && data.primaryCategoryId is string
-        && data.primaryCategoryId in canonicalServiceIds()
+        && data.primaryCategoryId in serviceIds
         && data.categoryIds is list
         && data.categoryIds.size() >= 1
         && data.categoryIds.size() <= 6
-        && data.categoryIds.hasOnly(canonicalServiceIds())
+        && data.categoryIds.hasOnly(serviceIds)
         && data.categoryIds.toSet().size() == data.categoryIds.size()
         && data.primaryCategoryId in data.categoryIds
         && (
@@ -349,48 +352,51 @@ service cloud.firestore {
         );
     }
 
-    function uniqueBusinessGallerySlot(paths, businessId, slot) {
-      let base = 'businesses/' + businessId + '/photos/' + slot;
-      return paths.toSet().intersection([base, base + '/a', base + '/b'].toSet()).size() <= 1;
+    function uniqueBusinessGallerySlot(paths, photoBase, slot) {
+      let base = photoBase + slot;
+      return paths.intersection([base, base + '/a', base + '/b'].toSet()).size() <= 1;
     }
 
     function validCanonicalBusinessMedia(data, businessId, allowVersioned) {
       // A/B references are established by the trusted media callable. Client
       // updates still cannot change either canonical manifest field.
+      let photoBase = 'businesses/' + businessId + '/photos/';
+      let galleryPaths = data.get('galleryStoragePaths', []);
+      let gallerySet = galleryPaths is list ? galleryPaths.toSet() : [].toSet();
       let allowedGalleryPaths = allowVersioned ? [
-        'businesses/' + businessId + '/photos/0',
-        'businesses/' + businessId + '/photos/0/a',
-        'businesses/' + businessId + '/photos/0/b',
-        'businesses/' + businessId + '/photos/1',
-        'businesses/' + businessId + '/photos/1/a',
-        'businesses/' + businessId + '/photos/1/b',
-        'businesses/' + businessId + '/photos/2',
-        'businesses/' + businessId + '/photos/2/a',
-        'businesses/' + businessId + '/photos/2/b',
-        'businesses/' + businessId + '/photos/3',
-        'businesses/' + businessId + '/photos/3/a',
-        'businesses/' + businessId + '/photos/3/b',
-        'businesses/' + businessId + '/photos/4',
-        'businesses/' + businessId + '/photos/4/a',
-        'businesses/' + businessId + '/photos/4/b',
-        'businesses/' + businessId + '/photos/5',
-        'businesses/' + businessId + '/photos/5/a',
-        'businesses/' + businessId + '/photos/5/b',
-        'businesses/' + businessId + '/photos/6',
-        'businesses/' + businessId + '/photos/6/a',
-        'businesses/' + businessId + '/photos/6/b',
-        'businesses/' + businessId + '/photos/7',
-        'businesses/' + businessId + '/photos/7/a',
-        'businesses/' + businessId + '/photos/7/b'
+        photoBase + '0',
+        photoBase + '0/a',
+        photoBase + '0/b',
+        photoBase + '1',
+        photoBase + '1/a',
+        photoBase + '1/b',
+        photoBase + '2',
+        photoBase + '2/a',
+        photoBase + '2/b',
+        photoBase + '3',
+        photoBase + '3/a',
+        photoBase + '3/b',
+        photoBase + '4',
+        photoBase + '4/a',
+        photoBase + '4/b',
+        photoBase + '5',
+        photoBase + '5/a',
+        photoBase + '5/b',
+        photoBase + '6',
+        photoBase + '6/a',
+        photoBase + '6/b',
+        photoBase + '7',
+        photoBase + '7/a',
+        photoBase + '7/b'
       ] : [
-        'businesses/' + businessId + '/photos/0',
-        'businesses/' + businessId + '/photos/1',
-        'businesses/' + businessId + '/photos/2',
-        'businesses/' + businessId + '/photos/3',
-        'businesses/' + businessId + '/photos/4',
-        'businesses/' + businessId + '/photos/5',
-        'businesses/' + businessId + '/photos/6',
-        'businesses/' + businessId + '/photos/7'
+        photoBase + '0',
+        photoBase + '1',
+        photoBase + '2',
+        photoBase + '3',
+        photoBase + '4',
+        photoBase + '5',
+        photoBase + '6',
+        photoBase + '7'
       ];
       let logoBase = 'businesses/' + businessId + '/logos/logo';
       return (!data.keys().hasAny(['logoStoragePath'])
@@ -402,15 +408,15 @@ service cloud.firestore {
           || (data.galleryStoragePaths is list
             && data.galleryStoragePaths.size() <= 8
             && data.galleryStoragePaths.hasOnly(allowedGalleryPaths)
-            && data.galleryStoragePaths.toSet().size() == data.galleryStoragePaths.size()
-            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '0')
-            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '1')
-            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '2')
-            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '3')
-            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '4')
-            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '5')
-            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '6')
-            && uniqueBusinessGallerySlot(data.galleryStoragePaths, businessId, '7')
+            && gallerySet.size() == data.galleryStoragePaths.size()
+            && uniqueBusinessGallerySlot(gallerySet, photoBase, '0')
+            && uniqueBusinessGallerySlot(gallerySet, photoBase, '1')
+            && uniqueBusinessGallerySlot(gallerySet, photoBase, '2')
+            && uniqueBusinessGallerySlot(gallerySet, photoBase, '3')
+            && uniqueBusinessGallerySlot(gallerySet, photoBase, '4')
+            && uniqueBusinessGallerySlot(gallerySet, photoBase, '5')
+            && uniqueBusinessGallerySlot(gallerySet, photoBase, '6')
+            && uniqueBusinessGallerySlot(gallerySet, photoBase, '7')
           ));
     }
 
@@ -451,34 +457,36 @@ service cloud.firestore {
     }
 
     function validBusinessDraftEdit(businessId) {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+      let next = request.resource.data;
+      let previous = resource.data;
+      return next.diff(previous).affectedKeys().hasOnly([
           'name', 'tagline', 'description', 'primaryCategoryId', 'categoryIds',
           'customServiceDescription',
           'serviceAreas', 'serviceRadiusKm', 'location', 'contact', 'languages',
           'primaryLanguage', 'profilePhoto', 'galleryImageURLs', 'galleryImages',
           'updatedAt'
         ])
-        && validBusinessKeys(request.resource.data)
-        && validCanonicalBusinessMedia(request.resource.data, businessId, true)
+        && validBusinessKeys(next)
+        && validCanonicalBusinessMedia(next, businessId, true)
         && immutableBusinessIdentity()
-        && resource.data.status in ['draft', 'rejected']
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.verificationStatus == resource.data.verificationStatus
-        && request.resource.data.verifiedAt == resource.data.verifiedAt
-        && request.resource.data.subscription == resource.data.subscription
-        && request.resource.data.profileCompleted == resource.data.profileCompleted
-        && request.resource.data.galleryCount == resource.data.galleryCount
-        && request.resource.data.ratingAverage == resource.data.ratingAverage
-        && request.resource.data.ratingCount == resource.data.ratingCount
-        && request.resource.data.publishedAt == resource.data.publishedAt
-        && request.resource.data.submittedAt == resource.data.submittedAt
-        && request.resource.data.deletionRequestedAt == resource.data.deletionRequestedAt
-        && request.resource.data.deletedAt == resource.data.deletedAt
-        && request.resource.data.updatedAt == request.time
-        && safePublicContact(request.resource.data.contact)
+        && previous.status in ['draft', 'rejected']
+        && next.status == previous.status
+        && next.verificationStatus == previous.verificationStatus
+        && next.verifiedAt == previous.verifiedAt
+        && next.subscription == previous.subscription
+        && next.profileCompleted == previous.profileCompleted
+        && next.galleryCount == previous.galleryCount
+        && next.ratingAverage == previous.ratingAverage
+        && next.ratingCount == previous.ratingCount
+        && next.publishedAt == previous.publishedAt
+        && next.submittedAt == previous.submittedAt
+        && next.deletionRequestedAt == previous.deletionRequestedAt
+        && next.deletedAt == previous.deletedAt
+        && next.updatedAt == request.time
+        && safePublicContact(next.contact)
         && (!businessTaxonomyChanged()
-          || validCanonicalBusinessTaxonomy(request.resource.data))
-        && (request.resource.data.status != 'active' || hasSafePublicBusinessData(request.resource.data));
+          || validCanonicalBusinessTaxonomy(next))
+        && (next.status != 'active' || hasSafePublicBusinessData(next));
     }
 
     function validBusinessSubmitForReview(businessId) {

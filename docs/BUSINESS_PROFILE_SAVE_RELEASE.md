@@ -1,0 +1,45 @@
+# Business profile Save: focused release, not deployed
+
+Current production/main baseline verified read-only: `30edcec0757b5909e737c224f8010625aa38e252`; Vercel deployment `dpl_G2rAaPUVNGMaMUNAQLtGPcZ3kY9R` is READY and serves holalocal.es. Deployed Firestore rules are byte-identical to baseline: SHA256 `9b36dedfcd227e6390b7cc4c232ef5d0bba2b51788a77dfec28c8668bbc47ded`, ruleset `6831ba4e-6e01-4a60-9bd2-003234377f18`, release updated 9 September 2026 21:18:40 UTC. No production data/configuration changes, deployment or merge during this investigation. Reviews activation is paused; translation evidence, upload investigation and original recovery snapshot remain separate.
+
+## Confirmed findings and limits
+
+The matching legacy business is Needs changes (`rejected`), with matching public/private owner and manager references, an active account with no deletion request, an enabled Auth account and verified email. Auth reports a recent refresh. These server records do not prove the exact identity/token attached to the failed browser request. No denied Firestore request was found in available logs. Minimal sanitized capture is prepared in PROFILE_SAVE_CAPTURE.md; request/time/error/update masks are still needed to conclusively correlate the reported attempt. No request body, tokens or private contact values belong in that capture or this report.
+
+The screenshot's account-access message is the website's generic mapping for business-save `permission-denied`, not an account diagnosis. Legacy-service warning is informational: `prepareBusinessTaxonomyUpdate` omits all taxonomy fields when untouched; deliberate changes send validated canonical IDs. The existing `sanitizeBusinessData` retains omissions, deletes an explicitly cleared custom description and never includes media fields in the editor's ordinary payload. No duplicate save handler or service implementation is added.
+
+Confirmed isolated reproduction against the EXACT deployed rules: an active owner in an editable status can save an unrelated edit while retaining legacy services, but a complete public/private profile transaction changing services with three trusted versioned gallery references is denied: `permission-denied`, `maximum of 1000 expressions to evaluate has been reached`. The emulator identifies evaluation exhaustion in taxonomy validation after media checks. Google documents a 1,000-expression request limit: https://firebase.google.com/docs/firestore/quotas . This is a confirmed release defect with the production data shape, not yet a captured diagnosis of that individual browser request.
+
+The A/B deletion fix in `2ec11ef` correctly added recognition of trusted versioned references and slot uniqueness to the shared validator used by BOTH ordinary saves and submission. It added repeated path/set evaluation; the previous deletion-focused checks did not exercise the full taxonomy-changing profile transaction at this limit. Preserve that security fix. The recent review merges did not change the editor/save implementation. The production business's three /a gallery paths are valid; the problem reproduced is evaluation cost, not an invalid path or required migration.
+
+`updateBusinessProfile` reads public and private documents and writes both in ONE Firestore transaction, including public-contact projection and private-contact preservation. A rejected commit cannot partly save either document. The emulator tests verify atomic rejection with differing private updates; the browser also verifies unchanged private timestamps. Production partial-success claims remain conditional on identifying the actual failed request. A post-save read failure has a separate already-saved message and is not the screenshot's error path.
+
+Lifecycle is intentional: Draft and Needs changes are editable; Pending review, Active and other restricted states hide the editor and Save after loading. An already-open editor can become stale after moderation, and its transaction remains denied. The browser verifies this race and the guard after reload. The approved-business maintenance proposal is not implemented here.
+
+## Focused correction
+
+- `firestore.rules`: cache the service allowlist, common photo prefix and gallery set; reuse `next`/`previous` document bindings in draft-edit validation. Four existing helpers are updated. All field allowlists, taxonomy constraints, canonical manifest immutability, per-slot uniqueness, public/private contact validation, ownership and lifecycle checks remain. No rules are bypassed and no data is migrated.
+- `englishAuthenticatedResidual.js` and existing `locales/authenticatedTranslations.js`: all 17 business-save permission messages state that the update was not permitted, preserve the edits and suggest support if it persists. They no longer assert account access is unavailable. Profile-account messages are outside this scope. Locale parity is automated; wording is not native-speaker editorial certification.
+- Existing rules suite: full transaction regression with legacy preservation/replacement, Draft/Needs changes, 3/8 mixed A/B references, B logo, six services and an 80-character custom service; additional atomic denial cases for unauthorized/anonymous/suspended users, restricted states, forged service/media/owner fields and private leakage.
+- Browser regression and existing onboarding runner/config: dedicated profile-save mode uses real isolated Auth/Firestore/Storage emulators without unnecessary Functions. Actual editor/service at 390px and 1440px: legacy preservation, canonical replacement, private contacts, reference persistence, reload and stale-status rejection. No mocked Save responses or production uploads. Media references are asserted in storage documents; this does not retest media upload/finalization or object display.
+
+## Verification of final source
+
+- Real Firestore/Storage rules suite: **97 passed, 0 failed**.
+- Real Auth/Firestore browser journey: **passed**, mobile and desktop, including save/reload and status-race denial. Synthetic accounts only.
+- Website lint: passed. Locale parity: **17 passed**. Fresh website build: passed. `git diff --check`: passed.
+- Bundle budget: **fails on both unchanged main and this fix**, against the unchanged 200 kB gzip limit. Main: **210,184 bytes (205.26 kB)**; fix: **210,209 bytes (205.28 kB)**; difference **25 bytes**. Both fresh builds used Node20.20.2 and identical resolved dependency targets, with each worktree using its own identical tracked shared-contract source. Both have 12 initial static chunks. Baseline is clean at `30edcec0757b5909e737c224f8010625aa38e252`. This establishes a pre-existing budget overage, not a passing budget check. No limit increase or unrelated optimisation is included. Baseline/fix build and budget logs plus `bundle-comparison.json` are preserved in the evidence directory.
+- Before-fix failing evidence, intermediate diagnostic runs and final logs are retained outside the repository under `../review-evidence/business-profile-save/`. Initial browser-fixture/account and styled-checkbox selector issues were corrected; they were test setup issues, not production findings. No lost/previous-session test result is claimed.
+
+## Deployment after explicit approval only
+
+1. Recheck approved commit, clean isolated source, current production rules release and main; stop on drift. Preserve the current rules source/release and website rollback deployment above.
+2. From the approved source deploy **only Firestore rules**:
+   `firebase deploy --project holalocal-491c9 --only firestore:rules`
+3. Release the same source through the existing Vercel project with a fresh website build to deliver corrected wording. Preserve environment settings and closed review/retention/recovery/provider controls. The rules fix works with the current website; the wording update alone does not fix denied saves.
+4. No Functions, Storage rules, indexes, IAM, quotas, media handlers, migrations or business-status changes are required.
+5. With the owner's consent, save only intended changes; verify successful commit, reload/reopen, unrelated service/media/private-contact preservation. Record actual request/result. Do not call the reported production incident resolved before this check.
+
+Rollback: restore the captured prior Firestore ruleset/source and prior Vercel deployment only after approval. Restoring the old rules reintroduces the expression-limit failure; it is not a workaround. There is no data migration to undo. Keep the A/B security restrictions and all unrelated resources intact.
+
+Release recommendation: the narrowly scoped rules optimization and neutral error wording are locally verified and reviewable. Prioritise the rules-only correction after explicit approval; it is compatible with the currently deployed website and does not depend on resolving the pre-existing website bundle overage. Website wording release must carry the failed-budget disclosure for review; this change does not waive that check. Production request correlation remains open pending the requested sanitized capture. No merge/deployment is authorised by this document.

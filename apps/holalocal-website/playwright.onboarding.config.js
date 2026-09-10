@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test'
 export default defineConfig({
-  testDir: './tests/browser', testMatch: 'onboardingRegression.spec.js',
+  testDir: './tests/browser', testMatch: ['onboardingRegression.spec.js', 'businessProfileSave.spec.js'],
   workers: 1, retries: 0, timeout: 420000,
   expect: { timeout: 60000 },
   outputDir: 'test-results/onboarding',

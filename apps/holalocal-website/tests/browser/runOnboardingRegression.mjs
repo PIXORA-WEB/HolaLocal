@@ -10,6 +10,7 @@ const { environment, isolatedRoot } = await createProtectedBrowserTestEnvironmen
 })
 const servicesOnly = process.argv.includes('--services-only')
 const rulesOnly = process.argv.includes('--rules-only')
+const profileSaveOnly = process.argv.includes('--profile-save-only')
 const infrastructureOnly = rulesOnly
 const projectId = rulesOnly ? 'demo-holalocal-rules' : TEST_PROJECT_ID
 const ports = { auth: 19099, firestore: 18080, storage: 19199, functions: 15001 }
@@ -32,7 +33,7 @@ await writeFile(config, JSON.stringify({
     hub: { port: 14400 }, logging: { port: 14500 }, ui: { enabled: false }, singleProjectMode: true },
 }))
 const child = spawn('firebase', ['emulators:exec', '--config', config, '--project', projectId,
-  ...(infrastructureOnly ? [] : ['--inspect-functions=19229']), '--only', infrastructureOnly ? 'firestore,storage' : 'auth,firestore,storage,functions',
-  rulesOnly ? 'node --test tests/rules.test.mjs' : servicesOnly ? 'playwright test --config playwright.services.config.js' : 'playwright test --config playwright.onboarding.config.js'],
+  ...(infrastructureOnly || profileSaveOnly ? [] : ['--inspect-functions=19229']), '--only', infrastructureOnly ? 'firestore,storage' : profileSaveOnly ? 'auth,firestore,storage' : 'auth,firestore,storage,functions',
+  rulesOnly ? 'node --test tests/rules.test.mjs' : profileSaveOnly ? 'playwright test --config playwright.onboarding.config.js --grep "business profile save"' : servicesOnly ? 'playwright test --config playwright.services.config.js' : 'playwright test --config playwright.onboarding.config.js'],
 { env: environment, stdio: 'inherit' })
 child.on('exit', code => { process.exitCode = code ?? 1 })
