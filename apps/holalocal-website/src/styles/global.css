@@ -1248,12 +1248,14 @@
   justify-items: center;
 }
 
-.profile-summary .image-avatar--profile {
-  width: 3.75rem;
-  height: 3.75rem;
+.profile-summary .image-avatar--profile,
+.profile-photo-editor .image-avatar--profile {
+  width: 5.5rem;
+  height: 5.5rem;
   border-radius: 1.5rem;
   font-size: 1.35rem;
   box-shadow: 0 0.75rem 2rem rgb(8 125 242 / 20%);
+  --avatar-image-fit: contain;
 }
 
 .profile-photo-editor .editable-image-avatar--icon-only {
@@ -1348,28 +1350,6 @@
   justify-content: center;
 }
 
-.profile-summary__actions {
-  grid-column: 1 / -1;
-  display: flex;
-  width: 100%;
-  flex-flow: row wrap;
-  gap: 0.65rem;
-}
-
-.profile-summary__actions .button {
-  width: auto;
-  min-height: 2.5rem;
-  margin: 0;
-  padding: 0.55rem 0.8rem;
-}
-
-.profile-summary__actions .button--text {
-  width: fit-content;
-  min-height: 2.75rem;
-  align-self: center;
-  color: #a33a31;
-}
-
 .profile-summary__badge {
   display: inline-flex;
   min-height: 2rem;
@@ -1430,6 +1410,20 @@
   padding: 0 0 0.7rem 0.7rem;
   border-bottom: 1px solid #edf1f5;
   border-left: 0.2rem solid var(--profile-card-accent);
+}
+
+.profile-personal-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.profile-personal-header .button {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
 }
 
 .account-card__header--row {
@@ -2552,9 +2546,10 @@
 }
 
 .business-summary .image-avatar--business-logo {
-  width: 3.75rem;
-  height: 3.75rem;
+  width: 5.5rem;
+  height: 5.5rem;
   border-radius: 1.35rem;
+  --avatar-image-fit: contain;
 }
 
 .business-summary__identity {
@@ -4410,7 +4405,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: var(--avatar-image-fit, cover);
   background: #ffffff;
 }
 
@@ -5992,11 +5987,15 @@
   }
 
   .profile-summary__media {
-    grid-row: 1 / 4;
+    grid-row: 1 / 3;
     align-self: center;
   }
 
-  .profile-summary .image-avatar--profile,
+  .profile-summary .image-avatar--profile {
+    width: 9rem;
+    height: 9rem;
+  }
+
   .image-avatar.image-avatar--business-logo {
     width: 7rem;
     height: 7rem;
@@ -6005,16 +6004,6 @@
   .profile-summary__badges {
     grid-column: 2;
     justify-content: flex-start;
-  }
-
-  .profile-summary__actions {
-    grid-column: 2;
-    width: auto;
-    flex-flow: row wrap;
-  }
-
-  .profile-summary__actions .button--text {
-    align-self: auto;
   }
 
   .profile-dashboard {
@@ -6075,8 +6064,8 @@
   }
 
   .business-summary .image-avatar--business-logo {
-    width: 7.5rem;
-    height: 7.5rem;
+    width: 9.5rem;
+    height: 9.5rem;
   }
 
   .business-insights__grid {

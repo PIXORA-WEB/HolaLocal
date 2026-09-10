@@ -300,21 +300,6 @@ function ProfilePage() {
             {t(profileIsComplete ? 'profile.complete' : 'profile.incomplete')}
           </span>
         </div>
-        <div className="profile-summary__actions">
-          {!editing && (
-            <button className="button button--primary" onClick={startEditing} type="button">
-              {t('profile.edit')}
-            </button>
-          )}
-          {hasBusinessAccess && (
-            <Link className="button button--secondary" to="/business/dashboard">
-              {t('account.business')}
-            </Link>
-          )}
-          <button className="button button--text" disabled={submitting} onClick={handleLogout} type="button">
-            {submitting ? t('common.loading') : t('auth.logout')}
-          </button>
-        </div>
       </header>
 
       {error && (
@@ -328,9 +313,14 @@ function ProfilePage() {
 
       <div className="profile-dashboard">
         <section className="account-card profile-dashboard__card profile-dashboard__card--personal" aria-labelledby="personal-details-title">
-          <header className="account-card__header">
-            <p className="account-card__eyebrow">{t('account.profile')}</p>
-            <h2 id="personal-details-title">{t('profile.personalDetails')}</h2>
+          <header className="account-card__header profile-personal-header">
+            <div>
+              <p className="account-card__eyebrow">{t('account.profile')}</p>
+              <h2 id="personal-details-title">{t('profile.personalDetails')}</h2>
+            </div>
+            <button className="button button--primary" onClick={startEditing} type="button">
+              {t('profile.edit')}
+            </button>
           </header>
           <dl className="profile-details">
             <div>
