@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useLayoutEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import AuthLayout from '../components/layout/AuthLayout.jsx'
@@ -55,7 +55,7 @@ function RouteLoadingFallback() {
 
 function BusinessMediaPresentationCleanup() {
   const { pathname } = useLocation()
-  useEffect(() => () => clearBusinessMediaPresentationCache(), [pathname])
+  useLayoutEffect(() => () => clearBusinessMediaPresentationCache(), [pathname])
   return null
 }
 

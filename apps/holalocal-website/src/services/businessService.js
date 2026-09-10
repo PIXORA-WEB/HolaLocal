@@ -399,7 +399,7 @@ export async function uploadBusinessLogo(businessId, file, dependencies = {}) {
   const finalize = dependencies.finalize ?? finalizeBusinessMedia
   const remove = dependencies.remove ?? deleteImageFile
   const onCommitted = async (file) => {
-    clearBusinessMediaPresentationCache()
+    clearBusinessMediaPresentationCache({ deferRevocation: true })
     await dependencies.onCommitted?.(file)
   }
   const result = await runBusinessLogoUpload(
@@ -414,7 +414,7 @@ export async function uploadBusinessGalleryImages(businessId, files, dependencie
   const prepare = dependencies.prepare ?? finalizeBusinessMedia
   const finalize = dependencies.finalize ?? finalizeBusinessMedia
   const onCommitted = async (file) => {
-    clearBusinessMediaPresentationCache()
+    clearBusinessMediaPresentationCache({ deferRevocation: true })
     await dependencies.onCommitted?.(file)
   }
   const result = await runBusinessGalleryUploads(

@@ -8,6 +8,7 @@ import FormFieldError from '../../components/common/FormFieldError.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { getAuthenticationErrorMessage, reauthenticateUserWithPassword } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
+import useMediaSelectionPreview from '../../hooks/useMediaSelectionPreview.js'
 import { uploadUserProfilePhoto } from '../../services/userService.js'
 import { accountDeletionErrorReason, requestAccountDeletion } from '../../services/accountDeletionService.js'
 import { loadProfileMediaPresentation } from '../../services/profileMediaPresentation.js'
@@ -49,7 +50,9 @@ function ProfilePage() {
   const [submitting, setSubmitting] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState(null)
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState(null)
+  const [profilePresentation, setProfilePresentation] = useState(null)
+  const photoPreview = useMediaSelectionPreview()
+  const profilePhotoUrl = photoPreview.items[0]?.url ?? profilePresentation?.url ?? null
   const [profilePhotoRevision, setProfilePhotoRevision] = useState(0)
   const [businessUpgradeError, setBusinessUpgradeError] = useState(null)
   const [businessUpgradeSubmitting, setBusinessUpgradeSubmitting] = useState(false)
@@ -67,7 +70,6 @@ function ProfilePage() {
 
   useEffect(() => {
     let cancelled = false
-    let revoke = null
 
     void loadProfileMediaPresentation(user?.uid, userProfile)
       .then((presentation) => {
@@ -75,18 +77,16 @@ function ProfilePage() {
           presentation?.revoke?.()
           return
         }
-        revoke = presentation?.revoke ?? null
-        setProfilePhotoUrl(presentation?.url ?? null)
+        setProfilePresentation(presentation)
       })
-      .catch(() => {
-        if (!cancelled) setProfilePhotoUrl(null)
-      })
+      .catch(() => { /* Keep the last displayed saved image if refresh fails. */ })
 
     return () => {
       cancelled = true
-      revoke?.()
     }
   }, [profilePhotoRevision, user?.uid, userProfile])
+
+  useEffect(() => () => profilePresentation?.revoke?.(), [profilePresentation])
 
   function resetForm() {
     setFirstName(userProfile?.firstName ?? '')
@@ -116,19 +116,25 @@ function ProfilePage() {
     if (!submission.tryAcquire()) return
     photoRetryRef.current = null
     setPhotoError(null)
+    setSuccess('')
     setPhotoUploading(true)
 
     try {
+      photoPreview.select([file])
       const [pendingFile] = await submission.pendingFiles([file])
-      if (!pendingFile) return
+      if (!pendingFile) { photoPreview.committed(file); return }
       await uploadUserProfilePhoto(user.uid, pendingFile, {
-        onCommitted: () => submission.markSuccessful(pendingFile),
+        onCommitted: async () => {
+          await submission.markSuccessful(pendingFile)
+          photoPreview.committed(pendingFile)
+        },
       })
       setProfilePhotoRevision((revision) => revision + 1)
       photoRetryRef.current = null
       setSuccess(t('profile.imageUpdated'))
-      await refreshUserProfile(user).catch(() => undefined)
+      await refreshUserProfile(user, { background: true }).catch(() => undefined)
     } catch (uploadError) {
+      photoPreview.failed()
       const classifiedError = classifyFrontendError(uploadError, {
         domain: 'media',
         fallbackType: 'MEDIA_UPLOAD_FAILED',
@@ -313,7 +319,7 @@ function ProfilePage() {
 
       <div className="profile-dashboard">
         <section className="account-card profile-dashboard__card profile-dashboard__card--personal" aria-labelledby="personal-details-title">
-          <header className="account-card__header profile-personal-header">
+          <header className="account-card__header account-details-header">
             <div>
               <p className="account-card__eyebrow">{t('account.profile')}</p>
               <h2 id="personal-details-title">{t('profile.personalDetails')}</h2>
@@ -516,7 +522,11 @@ function ProfilePage() {
                 onRetry={photoErrorAction}
               />
             )}
-            <span>{t('profile.changeImage')}</span>
+            <div>
+              <span>{t('profile.changeImage')}</span>
+              <p>{t('mediaFeedback.immediate')}</p>
+              <p role="status">{photoUploading ? t('common.uploading') : !photoError && photoPreview.items[0]?.committed ? t('mediaFeedback.saved') : ''}</p>
+            </div>
           </div>
 
           <form className="auth-form profile-edit-form" onSubmit={handleProfileUpdate}>

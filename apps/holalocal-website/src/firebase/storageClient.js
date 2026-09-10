@@ -26,14 +26,13 @@ export function validateImageFile(file, maxSizeBytes = 5 * 1024 * 1024) {
   if (!file || !allowedImageTypes.has(file.type)) {
     throw createApplicationError('media-invalid-type')
   }
-  if (file.size > maxSizeBytes) {
+  if (file.size >= maxSizeBytes) {
     throw createApplicationError('media-too-large')
   }
 }
 
 export async function uploadCanonicalImageFile(storagePath, file, uploadSessionId) {
   validateImageFile(file)
-  if (file.size >= 5 * 1024 * 1024) throw createApplicationError('media-too-large')
   const reference = storageReference(storage, storagePath)
   if (typeof uploadSessionId !== 'string' || !uploadSessionId) {
     throw createApplicationError('media-upload-session-invalid')

@@ -6,6 +6,7 @@ import {
 import { loadCanonicalBlobPresentation } from './canonicalMediaPresentation.js'
 
 const canonicalUrlCache = new Map()
+const retiredPresentations = new Set()
 
 async function defaultCanonicalUrlResolver(storagePath) {
   return loadCanonicalBlobPresentation(storagePath)
@@ -102,9 +103,15 @@ export async function resolveBusinessMediaPresentation(
   }
 }
 
-export function clearBusinessMediaPresentationCache() {
-  for (const entry of canonicalUrlCache.values()) {
-    Promise.resolve(entry).then((presentation) => presentation?.revoke?.()).catch(() => undefined)
-  }
+// In-place refreshes may still display prior URLs until new metadata arrives.
+// Retire them now; the route layout cleanup releases them after that view leaves.
+export function clearBusinessMediaPresentationCache({ deferRevocation = false } = {}) {
+  for (const entry of canonicalUrlCache.values()) retiredPresentations.add(entry)
   canonicalUrlCache.clear()
+  if (!deferRevocation) {
+    for (const entry of retiredPresentations) {
+      Promise.resolve(entry).then((presentation) => presentation?.revoke?.()).catch(() => undefined)
+    }
+    retiredPresentations.clear()
+  }
 }
