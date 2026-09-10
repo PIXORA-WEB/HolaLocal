@@ -5,7 +5,7 @@ export const normalizedReviewText = value => value.trim().normalize('NFC')
 export const reviewTextCount = value => [...normalizedReviewText(value)].length
 export function reviewError(error) {
   const message=String(error?.message??'')
-  if (/version-conflict|refresh-required|restart-pagination|invalid-cursor/.test(message)) return 'refresh'
+  if (/version-conflict|refresh-required|restart-pagination|invalid-cursor|report-request-expired/.test(message)) return 'refresh'
   if (/report-already-open/.test(message)) return 'duplicate'
   if (/verified-email/.test(message)) return 'verify'
   if (/self-review/.test(message)) return 'self'
@@ -30,7 +30,7 @@ export function reviewActions(own) {
     edit:own?.published!=null&&['published','rejected'].includes(status),
     withdraw:!!own&&['pending','published','rejected'].includes(status)}
 }
-export function createReviewController({api,businessId,ownOnly=false,authenticated=false,reloadAfter=true,requestId=()=>crypto.randomUUID()}) {
+export function createReviewController({api,businessId,ownOnly=false,authenticated=false,reloadAfter=true,requestId=()=>crypto.randomUUID(),clock=Date.now}) {
   let active=true,epoch=0,operation=null
   let state={ready:false,items:[],cursor:null,own:null,loading:false,busy:false,error:'',feedback:'',uncertain:false}
   const listeners=new Set()
@@ -50,7 +50,7 @@ export function createReviewController({api,businessId,ownOnly=false,authenticat
   }
   async function execute(name,payload) {
     if(state.busy||state.loading)return
-    if(!operation)operation={name,payload:Object.freeze({...structuredClone(payload),requestId:requestId()})}
+    if(!operation)operation={name,payload:Object.freeze({...structuredClone(payload),...(name==='report'?{submittedAt:clock()}:{}),requestId:requestId()})}
     const e=epoch;emit({busy:true,error:'',feedback:'',uncertain:false})
     try {
       await api[operation.name](operation.payload)

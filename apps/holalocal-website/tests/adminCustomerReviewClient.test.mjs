@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {createAdminReviewService,createAdminReviewController,adminActionPayload,authorizeAdminReviewUser} from '../src/utils/adminCustomerReviewModel.js'
 const wait=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {resolve,promise}}
 const pending={publicReviewId:'review',businessAvailable:true,version:7,pending:{revision:3},published:{revision:2}}
-const report={reportId:'report',publicReviewId:'review',version:2,targetState:'published',observedPublishedRevision:3,observedRevisionIsCurrent:true,currentReview:{publishedRevision:3,version:9}}
+const report={reportId:'report',generation:'synthetic-generation',publicReviewId:'review',version:2,targetState:'published',observedPublishedRevision:3,observedRevisionIsCurrent:true,currentReview:{publishedRevision:3,version:9}}
 test('default-off and actual admin checks precede callable invocation',async()=>{
  let claims=0,calls=[]
  const disabled=createAdminReviewService({enabled:false,authorize:()=>{claims++;return true},invoke:(...args)=>calls.push(args)})
@@ -19,7 +19,7 @@ test('default-off and actual admin checks precede callable invocation',async()=>
 test('payloads keep approval/removal/resolution separate and block stale reports and unsupported rejection',()=>{
  assert.deepEqual(adminActionPayload('approve',pending),{publicReviewId:'review',expectedVersion:7})
  assert.deepEqual(adminActionPayload('remove',report),{publicReviewId:'review',expectedVersion:9})
- assert.deepEqual(adminActionPayload('resolved',report,' Checked '),{reportId:'report',expectedVersion:2,disposition:'resolved',resolutionReason:'Checked'})
+ assert.deepEqual(adminActionPayload('resolved',report,' Checked '),{reportId:'report',expectedVersion:2,expectedGeneration:'synthetic-generation',disposition:'resolved',resolutionReason:'Checked'})
  for(const patch of [{observedRevisionIsCurrent:false},{targetState:'erased'},{currentReview:null},{observedPublishedRevision:2}])assert.throws(()=>adminActionPayload('remove',{...report,...patch}),/refresh/)
  assert.throws(()=>adminActionPayload('reject',pending),/invalid-rejection-reason/)
  assert.throws(()=>adminActionPayload('dismissed',report,' '),/reason/)

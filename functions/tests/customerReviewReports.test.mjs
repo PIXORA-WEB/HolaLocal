@@ -24,8 +24,8 @@ function setup() {
   const dependencies={database:db,readDatabase,auth:{resolveActor:async token=>identities[token]},clock:()=>1000,
     reportQuotaPolicy:{reserve:({current})=>{if((current?.used??0)>=2)throw new Error('report-quota-exceeded');return {used:(current?.used??0)+1}}}}
   const service=createCustomerReviewReportServices(dependencies)
-  const payload={publicReviewId:review.publicReviewId,observedPublishedRevision:1,reasonCode:'spam',details:'Fictional sensitive report details',requestId:'request'}
-  const resolve=(report,extra={})=>service.resolve('admin',{reportId:report.reportId,expectedVersion:report.version,
+  const payload={publicReviewId:review.publicReviewId,observedPublishedRevision:1,submittedAt:1000,reasonCode:'spam',details:'Fictional sensitive report details',requestId:'request'}
+  const resolve=(report,extra={})=>service.resolve('admin',{reportId:report.reportId,expectedVersion:report.version,expectedGeneration:report.generation,
     requestId:`resolve-${report.version}`,disposition:'dismissed',resolutionReason:'No policy violation in this synthetic example.',moderationNote:'Internal synthetic note',...extra})
   return {...f,review,db,identities,service,payload,resolve,dependencies}
 }
@@ -40,10 +40,10 @@ test('report auth, exact payload and reasons; owner can report but cannot modera
   for(const patch of [{reporterUid:'forged'},{reasonCode:'negative_rating'},{observedPublishedRevision:1.5},{details:null},{details:42},{details:'x'.repeat(2001)}])
     await assert.rejects(s.service.submit('reporter',{...s.payload,...patch}))
   const result=await s.service.submit('owner',s.payload)
-  assert.deepEqual(Object.keys(result).sort(),['reportId','status','version'])
+  assert.deepEqual(Object.keys(result).sort(),['generation','reportId','status','version'])
   await assert.rejects(s.service.queue('owner',{}),/admin-required/)
   await assert.rejects(s.service.detail('owner',{reportId:result.reportId}),/admin-required/)
-  await assert.rejects(s.service.resolve('owner',{reportId:result.reportId,expectedVersion:1,requestId:'x',disposition:'resolved',resolutionReason:'Handled'}),/admin-required/)
+  await assert.rejects(s.service.resolve('owner',{reportId:result.reportId,expectedVersion:1,expectedGeneration:result.generation,requestId:'x',disposition:'resolved',resolutionReason:'Handled'}),/admin-required/)
 })
 
 test('deterministic open slot, request binding, retry-safe quota and explicit resolution',async()=>{
@@ -129,4 +129,36 @@ test('resolution retry cannot write notes after reporter or admin cleanup starts
     await assert.rejects(s.resolve(report),/active-account-required/)
     assert.deepEqual([...s.db.data].filter(([path])=>path.startsWith('customerReviewReport')),before)
   }
+})
+
+
+test('resolution expiry covers every sensitive copy; explicit new report preserves old expiry',async()=>{
+ const s=setup();const first=await s.service.submit('reporter',s.payload)
+ await s.resolve(first)
+ const copies=[...s.db.data].filter(([p])=>/^customerReviewReport(s|Requests|Audits)\//.test(p))
+ assert.equal(copies.length,5)
+ for(const [,row] of copies)assert.deepEqual(row.expiresAt,s.db.timestampFromMillis(1000+90*86400000))
+ assert.deepEqual(await s.service.submit('reporter',s.payload),first,'old receipt never reopens resolved report')
+ const opened=await s.service.submit('reporter',{...s.payload,requestId:'explicit-new'})
+ assert.equal(opened.status,'open')
+ assert.equal(s.db.data.get(`customerReviewReports/${first.reportId}`).expiresAt,undefined)
+ for(const [path,row] of copies.filter(([p])=>!p.startsWith('customerReviewReports/')))assert.deepEqual(s.db.data.get(path),row)
+})
+test('overdue indicator and retention reads use exact time boundaries; stale pruned retries cannot reopen',async()=>{
+ const s=setup();let now=1000
+ const service=createCustomerReviewReportServices({...s.dependencies,clock:()=>now})
+ const filed=await service.submit('reporter',s.payload)
+ now=1000+7*86400000-1
+ assert.equal((await service.queue('admin',{})).items[0].overdue,false)
+ now++
+ assert.equal((await service.detail('admin',{reportId:filed.reportId})).overdue,true)
+ assert.equal(s.db.data.get(`customerReviewReports/${filed.reportId}`).status,'open')
+ await service.resolve('admin',{reportId:filed.reportId,expectedVersion:1,expectedGeneration:filed.generation,requestId:'close',disposition:'resolved',resolutionReason:'Handled'})
+ now+=90*86400000-1
+ assert.notEqual(await service.detail('admin',{reportId:filed.reportId}),null)
+ now++
+ assert.equal(await service.detail('admin',{reportId:filed.reportId}),null)
+ for(const path of [...s.db.data.keys()])if(/^customerReviewReport(s|Requests|Audits)\//.test(path))s.db.data.delete(path)
+ await assert.rejects(service.submit('reporter',s.payload),/report-request-expired/)
+ assert.equal([...s.db.data.keys()].some(p=>p.startsWith('customerReviewReports/')),false)
 })

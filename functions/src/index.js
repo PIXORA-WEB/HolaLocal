@@ -1,3 +1,4 @@
+import { runCustomerReviewRetention } from './customerReviewRetention.js'
 import { createCustomerReviewCallableHandler } from './customerReviewCallables.js'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
@@ -377,6 +378,11 @@ export const finalizeProfileMedia = onCall(
 export const cleanStagingMediaObject = onObjectFinalized(
   { bucket: HOLALOCAL_FIREBASE_STORAGE_BUCKET, region: MESSAGE_TRANSLATION_REGION, maxInstances: 5, concurrency: 10 },
   async (event) => cleanFinalizedStagingObject({ object: event.data, db: getFirestore() }),
+)
+
+export const sweepResolvedCustomerReviewReports = onSchedule(
+  { region: MESSAGE_TRANSLATION_REGION, schedule: 'every 60 minutes', maxInstances: 1 },
+  async () => runCustomerReviewRetention({ createDatabase: getFirestore }),
 )
 
 export const sweepStagingMedia = onSchedule(
