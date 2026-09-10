@@ -72,7 +72,7 @@ if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1') {
     const revisionBefore=(await db.doc(`customerReviewSlots/${first.pair}/revisions/1`).get()).data()
     await call('requestAccountDeletion',{},token)
     const core=commandCore(uid)
-    await assert.rejects(core.submit('author',{businessId:first.businessId,expectedVersion:first.slot.version,requestId:'blocked',rating:5,originalText:'Synthetic attempt during pending deletion.'}),/active-account-required/)
+    await assert.rejects(core.submit('author',{businessId:first.businessId,expectedVersion:first.slot.version,requestId:'blocked',rating:5,displayName:'Test reviewer',originalText:'Synthetic attempt during pending deletion.'}),/active-account-required/)
     const pending=reviews[1]
     await assert.rejects(core.approve('admin',{publicReviewId:pending.publicReviewId,expectedVersion:pending.slot.version,requestId:'blocked-approval'}),/active-account-required/)
     await call('cancelAccountDeletion',{},token)

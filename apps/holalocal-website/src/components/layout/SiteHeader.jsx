@@ -1,3 +1,4 @@
+import { customerReviewsEnabled } from '../../utils/customerReviewsFlag.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -14,6 +15,7 @@ const publicNavigationLinks = [
 ]
 
 const accountNavigationLinks = [
+  ...(customerReviewsEnabled?[{labelKey:'customerReviews.myReviews',to:'/my-reviews'}]:[]),
   { labelKey: 'account.profile', to: '/profile' },
   { labelKey: 'savedBusinesses.page.navigation', to: '/favourites', requiresCustomerAccess: true },
   { labelKey: 'account.business', to: '/business/dashboard', requiresBusinessAccess: true },

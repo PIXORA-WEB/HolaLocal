@@ -14,7 +14,7 @@ No website, onboarding, Services presentation, business-media transport/retry/se
 
 ## Production policies remain unresolved
 
-Reviewer identity, abuse quotas and report retention have no recorded approval. The server gate requires both an explicit enable flag and the exact protected local demo configuration; non-demo activation is rejected before Auth/Firestore service construction. The fictional alias/cumulative quota values are demo-only, not proposed production defaults.
+Historical PR #28 baseline had no approved identity, quota or retention policies. The subsequent identity/UI batch implements the approved customer-chosen public name; 5 review submissions/edits and 10 reports per rolling 24h plus 90-day resolved-report retention are now approved but await their separate implementation. The server gate requires both an explicit enable flag and the exact protected local demo configuration; non-demo activation is rejected before Auth/Firestore service construction. The alias chooser is superseded by revision-bound customer names. Remaining cumulative quota values are demo-only, not approved launch enforcement.
 
 A production launch needs a separate reviewed policy implementation, author/customer and admin website flows, mobile/keyboard/privacy verification, copy/translation review and operational decisions. This batch makes no claim that ordinary successful image uploads establish failure/retry correctness; that incident remains separate.
 

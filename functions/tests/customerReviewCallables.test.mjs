@@ -12,7 +12,7 @@ test('every callable defaults disabled before service construction, even with cl
   }
 })
 test('synthetic policies cannot activate in production or incomplete emulator environments',()=>{
-  assert.equal(customerReviewGate(demoReviewEnv).aliasPolicy.choose({}),'Fictional demo reviewer')
+  assert.equal(customerReviewGate(demoReviewEnv).aliasPolicy,undefined)
   for(const change of [{GCLOUD_PROJECT:'holalocal-491c9'},{GOOGLE_CLOUD_PROJECT:'holalocal-491c9'},
     {FUNCTIONS_EMULATOR:'false'},{HOLALOCAL_CALLABLE_BOUNDARY:'0'},{FIRESTORE_EMULATOR_HOST:'external:8080'},
     {GOOGLE_APPLICATION_CREDENTIALS:'synthetic-do-not-read'},{FIREBASE_CONFIG:'{}'}]) {

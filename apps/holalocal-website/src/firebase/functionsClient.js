@@ -34,3 +34,6 @@ export const updateAccountRoleCallable = httpsCallable(functions, 'updateAccount
 export const recordBusinessInsightCallable = httpsCallable(functions, 'recordBusinessInsight')
 export const getOwnerBusinessInsightsCallable = httpsCallable(functions, 'getOwnerBusinessInsights')
 export const listSavedBusinessesCallable = httpsCallable(functions, 'listSavedBusinesses')
+
+// Constructed only after the review feature gate permits a request.
+export const customerReviewCallable = name => httpsCallable(functions, name)

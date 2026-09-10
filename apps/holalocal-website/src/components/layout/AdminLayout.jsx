@@ -1,3 +1,4 @@
+import {customerReviewsEnabled} from '../../utils/customerReviewsFlag.js'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -25,6 +26,7 @@ function AdminNavigation({ adminOnly, onNavigate }) {
   return (
     <nav aria-label={t('admin.navigation.label')} className="admin-navigation">
       <p className="admin-navigation__label">{t('admin.navigation.workspace')}</p>
+      {customerReviewsEnabled&&adminOnly&&<><NavLink to="/admin/customer-reviews" onClick={onNavigate}>{t('adminCustomerReviews.title')}</NavLink><NavLink to="/admin/customer-review-reports" onClick={onNavigate}>{t('adminCustomerReviews.reports')}</NavLink></>}
       {navigationItems.filter((item) => item.key !== 'deletions' || adminOnly).map((item) => (
         <NavLink end={item.end} key={item.key} onClick={onNavigate} to={item.to}>
           <AdminNavigationIcon name={item.icon} />

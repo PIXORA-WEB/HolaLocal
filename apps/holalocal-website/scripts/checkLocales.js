@@ -1,3 +1,5 @@
+import {adminCustomerReviewTranslations} from '../src/i18n/adminCustomerReviewTranslations.js'
+import { customerReviewTranslations } from '../src/i18n/customerReviewTranslations.js'
 import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import i18next from 'i18next'
@@ -258,6 +260,10 @@ for (const { code } of supportedUILanguages) {
     serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
   })
   resources[code] = { translation: resource }
+  resource.adminCustomerReviews = adminCustomerReviewTranslations[code]
+    resource.customerReviews = customerReviewTranslations[code]
+  englishResource.adminCustomerReviews = adminCustomerReviewTranslations.en
+  englishResource.customerReviews = customerReviewTranslations.en
   const resourceIssues = compare(englishResource, resource, code)
   for (const issue of [...authenticatedIssues, ...resourceIssues]) failures.push(`${code}: ${issue}`)
   failures.push(...nonEmptyLeafIssues(resource, code))

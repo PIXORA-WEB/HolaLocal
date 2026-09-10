@@ -25,6 +25,8 @@ function BusinessDetailPanel({
   onMessage,
   onReport,
   onSavedToggle,
+  reviews = null,
+  ratingSummary = null,
   saveError = '',
   saveState = null,
 }) {
@@ -189,7 +191,7 @@ function BusinessDetailPanel({
         />
         <div className="business-detail__identity">
           <p>{categoryLabel}</p>
-          <h1 id="business-detail-title">{business.name}</h1>
+          <h1 id="business-detail-title">{business.name}</h1>{ratingSummary}
           <span>{business.serviceArea || t('publicBusinessDetail.serviceAreaNotSpecified')}</span>
         </div>
         <div className="business-detail__badges">
@@ -209,7 +211,7 @@ function BusinessDetailPanel({
 
       {<div className="business-detail__columns">
         {contact}
-        <div className="business-detail__information">{navigation}{information}</div>
+        <div className="business-detail__information">{navigation}{information}{reviews}</div>
       </div>}
     </article>
   )

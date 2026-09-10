@@ -85,7 +85,7 @@ export function validateBrowserTestSafety({ mode, production = false, environmen
   const projectId = requiredExactValue(
     environment,
     BROWSER_TEST_ENVIRONMENT_KEYS.projectId,
-    BROWSER_TEST_PROJECT_ID,
+    environment.VITE_CUSTOMER_REVIEWS_ENABLED === 'true' ? 'demo-holalocal-functions' : BROWSER_TEST_PROJECT_ID,
   )
 
   return Object.freeze({

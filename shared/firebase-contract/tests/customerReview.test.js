@@ -24,8 +24,8 @@ const business = {
 }
 const identity = { uid: 'customer', emailVerified: true }
 const account = { uid:'customer',accountStatus:'active',roles:['customer'],deletionRequestedAt:null }
-const original = { rating: 4, originalText: 'A helpful and carefully explained service.', declaredSourceLanguage: 'en' }
-const edited = { rating: 2, originalText: 'An amended account of the service received.', declaredSourceLanguage: null }
+const original = { rating: 4, displayName:'Test reviewer',originalText: 'A helpful and carefully explained service.', declaredSourceLanguage: 'en' }
+const edited = { rating: 2, displayName:'Test reviewer',originalText: 'An amended account of the service received.', declaredSourceLanguage: null }
 const admin = { uid:'admin',admin:true }
 const empty = () => createCustomerReviewSlot({ businessId:'business',authorUid:'customer',publicReviewId:'opaque-public-review-01' })
 const step = (slot, action, overrides={}) => transitionCustomerReview(slot, {
@@ -37,14 +37,14 @@ const published = () => step(pending(),'approve')
 const expectCode = (fn, code) => assert.throws(fn, error => error.code === code)
 
 test('submission enforces inclusive configurable bounds after trim/NFC by Unicode code points', () => {
-  for(const length of [20,2000]) assert.equal(validateCustomerReviewSubmission({...original,originalText:'a'.repeat(length)}).valid,true)
-  for(const length of [0,19,2001]) assert.equal(validateCustomerReviewSubmission({...original,originalText:'a'.repeat(length)}).valid,false)
-  const result=validateCustomerReviewSubmission({...original,originalText:' \n'+'e\u0301'.repeat(20)+'\t '})
+  for(const length of [20,2000]) assert.equal(validateCustomerReviewSubmission({...original,displayName:'Test reviewer',originalText:'a'.repeat(length)}).valid,true)
+  for(const length of [0,19,2001]) assert.equal(validateCustomerReviewSubmission({...original,displayName:'Test reviewer',originalText:'a'.repeat(length)}).valid,false)
+  const result=validateCustomerReviewSubmission({...original,displayName:'Test reviewer',originalText:' \n'+'e\u0301'.repeat(20)+'\t '})
   assert.equal(result.value.originalText,'é'.repeat(20))
   assert.equal(customerReviewCodePointLength(result.value.originalText),20)
-  assert.equal(validateCustomerReviewSubmission({...original,originalText:'😀'.repeat(20)}).valid,true)
-  assert.equal(validateCustomerReviewSubmission({...original,originalText:'😀'.repeat(19)}).valid,false)
-  assert.equal(validateCustomerReviewSubmission({...original,originalText:' a '},{min:1,max:1}).value.originalText,'a')
+  assert.equal(validateCustomerReviewSubmission({...original,displayName:'Test reviewer',originalText:'😀'.repeat(20)}).valid,true)
+  assert.equal(validateCustomerReviewSubmission({...original,displayName:'Test reviewer',originalText:'😀'.repeat(19)}).valid,false)
+  assert.equal(validateCustomerReviewSubmission({...original,displayName:'Test reviewer',originalText:' a '},{min:1,max:1}).value.originalText,'a')
   for(const bounds of [{min:0,max:20},{min:30,max:20},{min:1.5,max:20},null]) expectCode(()=>validateCustomerReviewSubmission(original,bounds),'invalid-text-bounds')
 })
 
@@ -55,7 +55,7 @@ test('submission rejects malformed types, extra fields, surrogates and invalid l
   for(const field of ['authorUid','translatedText','status','interfaceLanguage','detectedSourceLanguage']) assert.equal(validateCustomerReviewSubmission({...original,[field]:'injected'}).valid,false)
   for(const language of ['',42,{},'not a language']) assert.equal(validateCustomerReviewSubmission({...original,declaredSourceLanguage:language}).valid,false)
   assert.equal(validateCustomerReviewSubmission({...original,declaredSourceLanguage:'zh-Hant'}).valid,true)
-  const payload=Object.freeze({...original,originalText:'  '+original.originalText+'  '})
+  const payload=Object.freeze({...original,displayName:'Test reviewer',originalText:'  '+original.originalText+'  '})
   const accepted=validateCustomerReviewSubmission(payload).value
   assert.equal(payload.originalText,'  '+original.originalText+'  ')
   assert.ok(Object.isFrozen(accepted))
@@ -193,4 +193,13 @@ test('translation keys include revision, target, public identity and provider ve
   assert.deepEqual(customerReviewSourceLanguages(),{declared:null,detected:null})
   assert.deepEqual(customerReviewSourceLanguages({declared:'es',detected:'zh-Hant'}),{declared:'es',detected:'zh-Hant'})
   expectCode(()=>customerReviewSourceLanguages({detected:'invalid value'}),'invalid-source-language')
+})
+
+
+test('names are explicit normalized Unicode and bounded without account defaults',()=>{
+ const validate=displayName=>validateCustomerReviewSubmission({...original,displayName})
+ for(const name of [undefined,null,12,'','  ','a'.repeat(81),'bad\nname','bad\u202ename','bad\ud800'])assert.equal(validate(name).valid,false)
+ assert.equal(validate('  E\u0301loise  ').value.displayName,'Éloise')
+ assert.equal(validate('😀'.repeat(80)).valid,true);assert.equal(validate('😀'.repeat(81)).valid,false)
+ assert.equal(validateCustomerReviewSubmission({...original,displayName:undefined,accountName:'Private',email:'private@example.invalid'}).valid,false)
 })

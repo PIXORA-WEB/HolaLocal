@@ -38,7 +38,7 @@ if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1') {
       name:'Fictional reporting business',description:'Synthetic business for report tests',primaryCategoryId:'home',categoryIds:['home'],
       serviceAreas:['Madrid'],languages:['en'],primaryLanguage:'en',status:'active',publishedAt:Timestamp.now(),
       location:{locality:'Madrid',region:'Madrid',countryCode:'ES'}})
-    const payload={businessId,expectedVersion:0,requestId:'initial',rating:4,originalText:'Fictional review describing this synthetic service.'}
+    const payload={businessId,expectedVersion:0,requestId:'initial',rating:4,displayName:'Test reviewer',originalText:'Fictional review describing this synthetic service.'}
     const pending=ok(await invoke('submitCustomerReview',payload,author))
     const approved=ok(await invoke('approveCustomerReview',{publicReviewId:pending.publicReviewId,expectedVersion:pending.version,requestId:'approval'},admin))
     const report={publicReviewId:approved.publicReviewId,observedPublishedRevision:1,reasonCode:'personal_information',details:'Fictional sensitive details',requestId:'report-first'}

@@ -33,7 +33,7 @@ function setup() {
   }
   const core = createCustomerReviewCommands(dependencies)
   const submit = (overrides = {}) => core.submit('customer', { businessId: 'business', requestId: 'submit1',
-    expectedVersion: 0, rating: 4, originalText, ...overrides })
+    expectedVersion: 0, rating: 4, displayName: 'Test reviewer', originalText, ...overrides })
   const command = (name, result, extra = {}, actor = 'admin') => core[name](actor, {
     publicReviewId: result.publicReviewId, expectedVersion: result.version, requestId: `${name}${result.version}`, ...(name==='reject'?{rejectionReasonCode:'spam'}:{}), ...extra })
   return { db, identities, account, business, core, dependencies, submit, command, allocations: () => allocations }
@@ -42,12 +42,12 @@ const rejectsCode = (promise, code) => assert.rejects(promise, error => error.co
 const stats = s => s.db.data.get('customerReviewStats/business')
 const docs = (s, prefix) => [...s.db.data].filter(([path]) => path.startsWith(prefix)).map(([, value]) => value)
 const edit = (s, current, overrides = {}) => s.core.edit('customer', { businessId: 'business', expectedVersion: current.version,
-  requestId: `edit${current.version}`, rating: 2, originalText: 'A revised account of this fictional service.', ...overrides })
+  requestId: `edit${current.version}`, rating: 2, displayName:'Test reviewer',originalText: 'A revised account of this fictional service.', ...overrides })
 async function published(s) { return s.command('approve', await s.submit()) }
 
 test('required dependency boundary and unambiguous private pair identity', () => {
   const s = setup()
-  for (const key of ['aliasPolicy', 'quotaPolicy', 'helpers', 'auth', 'readEligibility', 'database']) {
+  for (const key of ['quotaPolicy', 'helpers', 'auth', 'readEligibility', 'database']) {
     assert.throws(() => createCustomerReviewCommands({ ...s.dependencies, [key]: undefined }))
   }
   assert.equal(customerReviewPairKey('ab', 'c'), customerReviewPairKey('ab', 'c'))
@@ -75,10 +75,10 @@ test('trusted identity, current account and public-business submission eligibili
 
 test('exact payloads, normalized fingerprints and safe expected versions', async () => {
   for (const overrides of [{ authorUid: 'admin' }, { expectedVersion: 0.5 }, { expectedVersion: '0' },
-    { expectedVersion: -1 }, { rating: 6 }, { originalText: 'short' }, { businessId: '../secret' }]) {
+    { expectedVersion: -1 }, { rating: 6 }, { displayName:'Test reviewer',originalText: 'short' }, { businessId: '../secret' }]) {
     const s = setup(); await assert.rejects(s.submit(overrides)); assert.equal(docs(s, 'customerReview').length, 0)
   }
-  const s = setup(); const one = await s.submit({ originalText: `  ${originalText}  ` })
+  const s = setup(); const one = await s.submit({ displayName:'Test reviewer',originalText: `  ${originalText}  ` })
   assert.deepEqual(await s.submit(), one)
   await rejectsCode(s.submit({ rating: 3 }), 'request-id-conflict')
 })
@@ -229,7 +229,7 @@ test('two independent customers contribute separately; retries and removals pres
   s.identities.second = { uid: 'second', emailVerified: true }
   s.db.data.set('accounts/second', { ...s.account, uid: 'second' })
   const pending = await s.core.submit('second', { businessId: 'business', requestId: 'submit1', expectedVersion: 0,
-    rating: 5, originalText })
+    rating: 5, displayName:'Test reviewer', originalText })
   const second = await s.command('approve', pending, { requestId: 'approve-second' })
   assert.notEqual(first.publicReviewId, second.publicReviewId)
   assert.deepEqual(stats(s), { sum: 9, count: 2 })
@@ -287,7 +287,7 @@ test('Firestore-style property ordering does not break locators; invalid state p
 test('server timestamps preserve immutable originals, public dates, retries and resubmission history',async()=>{
   const s=setup();let time=1000
   s.core=createCustomerReviewCommands({...s.dependencies,clock:()=>time})
-  const submit=(version,requestId)=>s.core.submit('customer',{businessId:'business',expectedVersion:version,requestId,rating:4,originalText})
+  const submit=(version,requestId)=>s.core.submit('customer',{businessId:'business',expectedVersion:version,requestId,rating:4,displayName:'Test reviewer',originalText})
   const act=(name,current,requestId)=>s.core[name](name==='withdraw'?'customer':'admin',{
     publicReviewId:current.publicReviewId,expectedVersion:current.version,requestId,...(name==='reject'?{rejectionReasonCode:'spam'}:{})})
   const pending=await submit(0,'first')
@@ -315,7 +315,7 @@ test('server timestamps preserve immutable originals, public dates, retries and 
   assert.deepEqual(s.db.data.get(`${slotPath}/revisions/1`).submittedAt,first)
   assert.deepEqual(s.db.data.get(slotPath).firstSubmittedAt,{seconds:1,nanoseconds:0})
   await assert.rejects(s.core.submit('customer',{businessId:'business',requestId:'forged-date',expectedVersion:0,
-    rating:4,originalText,firstSubmittedAt:123}),/unsupported-field/)
+    rating:4,displayName:'Test reviewer',originalText,firstSubmittedAt:123}),/unsupported-field/)
 })
 
 test('deletion cleanup marker fences even stored moderation/withdrawal receipts',async()=>{
@@ -364,4 +364,25 @@ test('rejection requires explicit structured public guidance; revisions, public 
  await rejectsCode(s.core.reject('admin',{...payload,requestId:'stale-rejection'}),'review-version-conflict')
  await edit(s,result)
  assert.equal(s.db.data.get(path).rejection,null)
+})
+
+
+test('chosen names are moderated per revision and bound to request identity',async()=>{
+ const s=setup()
+ for(const displayName of [undefined,'','  ','x'.repeat(81),'Hidden\u202ename'])await rejectsCode(s.submit({displayName}),'invalid-display-name')
+ const pending=await s.submit({displayName:'  Éloise  '})
+ assert.deepEqual(await s.submit({displayName:'Éloise'}),pending)
+ await rejectsCode(s.submit({displayName:'Different name'}),'request-id-conflict')
+ assert.equal(docs(s,'customerReviewsPublic/').length,0)
+ const approved=await s.command('approve',pending)
+ assert.equal(docs(s,'customerReviewsPublic/')[0].reviewerAlias,'Éloise')
+ const changed=await edit(s,approved,{displayName:'New name'})
+ assert.equal(docs(s,'customerReviewsPublic/')[0].reviewerAlias,'Éloise')
+ const rejected=await s.command('reject',changed)
+ assert.equal(docs(s,'customerReviewsPublic/')[0].reviewerAlias,'Éloise')
+ await s.command('approve',await edit(s,rejected,{displayName:'Approved replacement'}))
+ const projection=docs(s,'customerReviewsPublic/')[0]
+ assert.equal(projection.reviewerAlias,'Approved replacement')
+ assert.equal(projection.authorUid,undefined);assert.equal(projection.email,undefined)
+ assert.equal(docs(s,'customerReviewSlots/').find(v=>v.authorUid)?.authorUid,'customer')
 })

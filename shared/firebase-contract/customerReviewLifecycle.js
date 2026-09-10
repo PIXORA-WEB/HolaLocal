@@ -44,6 +44,7 @@ export function transitionCustomerReview(slot, {
   const revisions = slot.revisions.map(revision => Object.freeze({
     revision: revision.revision, rating: revision.rating, originalText: revision.originalText,
     declaredSourceLanguage: revision.declaredSourceLanguage,
+    ...(revision.displayName === undefined ? {} : { displayName: revision.displayName }),
   }))
   let pendingRevision = slot.pendingRevision
   let publishedRevision = slot.publishedRevision
