@@ -25,6 +25,7 @@
     { "source": "/onboarding", "destination": "/index.html" },
 
     { "source": "/profile", "destination": "/index.html" },
+    { "source": "/my-reviews", "destination": "/index.html" },
     { "source": "/favourites", "destination": "/index.html" },
     { "source": "/subscription", "destination": "/index.html" },
     { "source": "/messages", "destination": "/index.html" },
@@ -38,6 +39,8 @@
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/admin/businesses", "destination": "/index.html" },
     { "source": "/admin/businesses/:businessId", "destination": "/index.html" },
+    { "source": "/admin/customer-reviews", "destination": "/index.html" },
+    { "source": "/admin/customer-review-reports", "destination": "/index.html" },
     { "source": "/admin/account-deletions", "destination": "/index.html" }
   ]
 }
