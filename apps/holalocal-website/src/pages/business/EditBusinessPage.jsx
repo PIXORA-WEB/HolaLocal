@@ -879,7 +879,7 @@ function EditBusinessPage() {
   return (
     <section className="business-form-page">
       <div className="business-form-page__heading">
-        <p className="placeholder-page__eyebrow">{t('business.form.eyebrow')}</p>
+        <Link className="business-form-page__back" to="/business/dashboard">← {t('account.business')}</Link>
         <h1>{t(businessProfile?.profileCompleted ? 'business.form.editTitle' : 'business.form.setupTitle')}</h1>
         <p>{t('business.form.description')}</p>
         <div className="business-profile-completion">
@@ -1385,12 +1385,12 @@ function EditBusinessPage() {
             <h2 id="unsaved-business-title">{t('business.form.unsavedDialogTitle')}</h2>
             <button aria-label={t('common.close')} onClick={cancelPendingNavigation} type="button">×</button>
           </header>
-          <p id="unsaved-business-description">{t('business.form.unsavedWarning')}</p>
-          <div className="profile-edit-form__actions">
-            <button className="button button--secondary" onClick={cancelPendingNavigation} type="button">{t('business.form.keepEditing')}</button>
+          <p className="confirmation-dialog__description" id="unsaved-business-description">{t('business.form.unsavedWarning')}</p>
+          <div className="confirmation-dialog__actions">
+            <button className="button button--primary" onClick={cancelPendingNavigation} type="button">{t('business.form.keepEditing')}</button>
             <button
               aria-busy={historyRestoring || undefined}
-              className="button button--primary"
+              className="button button--secondary"
               disabled={historyRestoring}
               onClick={() => void leaveWithoutSaving()}
               type="button"

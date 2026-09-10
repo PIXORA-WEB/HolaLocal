@@ -322,8 +322,7 @@ function BusinessDashboardPage() {
         <div className="business-summary__badges">
           <span className={status === 'active' ? 'is-complete' : ''}>{t(`business.control.status.${status}`)}</span>
           <span className={verificationStatus === 'verified' ? 'is-verified' : ''}>{t(`business.control.verification.${verificationStatus}`)}</span>
-          <span>{t('business.control.planBadge', { plan: t(`subscription.plans.${subscriptionTier}`, { defaultValue: subscriptionTier }) })}</span>
-          <span className={completion.ready ? 'is-complete' : 'is-incomplete'}>{t(completion.ready ? 'business.control.ready' : 'business.control.needsWork')}</span>
+          {canEditBusiness && <Link className="button button--primary" to="/business/edit">{t('business.edit')}</Link>}
         </div>
       </header>
 

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import SelectField from '../../components/common/SelectField.jsx'
 import AccessibleDialog from '../../components/common/AccessibleDialog.jsx'
-import { EditableImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
+import { EditableImageAvatar, ImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
 import FormFieldError from '../../components/common/FormFieldError.jsx'
 import RecoveryMessage from '../../components/common/RecoveryMessage.jsx'
 import { getAuthenticationErrorMessage, reauthenticateUserWithPassword } from '../../firebase/auth.js'
@@ -217,7 +217,7 @@ function ProfilePage() {
       (field) => nextErrors[field],
     )
     if (firstInvalidField) {
-      document.getElementById(`edit-${firstInvalidField.replace('preferredLocale', 'language')}`)?.focus()
+      document.getElementById({ firstName: 'edit-first-name', lastName: 'edit-last-name', preferredLocale: 'edit-language', city: 'edit-city' }[firstInvalidField])?.focus()
       return
     }
 
@@ -286,29 +286,11 @@ function ProfilePage() {
     <section className="profile-card">
       <header className="profile-summary">
         <div className="profile-summary__media">
-          <EditableImageAvatar
-            className="image-avatar--profile"
-            disabled={photoUploading}
-            iconOnly
-            inputLabel={t('profile.changeImage')}
-            name={displayName}
-            onChange={handleProfilePhotoChange}
-            src={profilePhotoUrl}
-            uploading={photoUploading}
-          />
-          {photoError && (
-            <RecoveryMessage
-              actionPending={photoUploading}
-              actionLabel={photoError.recovery === 'sign-in' ? t('account.signIn') : undefined}
-              message={t(photoError.translationKey)}
-              onRetry={photoErrorAction}
-            />
-          )}
+          <ImageAvatar className="image-avatar--profile" name={displayName} src={profilePhotoUrl} />
         </div>
         <div className="profile-summary__identity">
           <p className="placeholder-page__eyebrow">{t('profile.yourAccount')}</p>
           <h1>{displayName}</h1>
-          <p>{userProfile?.email || user?.email}</p>
         </div>
         <div className="profile-summary__badges">
           <span className="profile-summary__badge">
@@ -320,7 +302,7 @@ function ProfilePage() {
         </div>
         <div className="profile-summary__actions">
           {!editing && (
-            <button className="button button--secondary" onClick={startEditing} type="button">
+            <button className="button button--primary" onClick={startEditing} type="button">
               {t('profile.edit')}
             </button>
           )}
@@ -524,6 +506,28 @@ function ProfilePage() {
               ×
             </button>
           </header>
+
+          <div className="profile-photo-editor">
+            <EditableImageAvatar
+              className="image-avatar--profile"
+              disabled={photoUploading}
+              iconOnly
+              inputLabel={t('profile.changeImage')}
+              name={displayName}
+              onChange={handleProfilePhotoChange}
+              src={profilePhotoUrl}
+              uploading={photoUploading}
+            />
+            {photoError && (
+              <RecoveryMessage
+                actionPending={photoUploading}
+                actionLabel={photoError.recovery === 'sign-in' ? t('account.signIn') : undefined}
+                message={t(photoError.translationKey)}
+                onRetry={photoErrorAction}
+              />
+            )}
+            <span>{t('profile.changeImage')}</span>
+          </div>
 
           <form className="auth-form profile-edit-form" onSubmit={handleProfileUpdate}>
             {error && <p className="form-message form-message--error" role="alert">{error}</p>}

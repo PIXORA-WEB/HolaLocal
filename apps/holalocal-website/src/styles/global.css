@@ -834,10 +834,7 @@
   text-transform: uppercase;
 }
 
-.auth-card h1,
-.profile-card h1,
-.business-dashboard h1,
-.business-form-page h1 {
+.auth-card h1 {
   margin: 0;
   color: #16201d;
   font-size: clamp(1.75rem, 7vw, 2.75rem);
@@ -1227,14 +1224,16 @@
   display: grid;
   width: 100%;
   min-width: 0;
-  gap: 0.8rem;
-  justify-items: center;
-  padding: clamp(1.25rem, 3vw, 1.75rem);
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-items: start;
+  padding: clamp(1rem, 3vw, 1.75rem);
   border: 1px solid color-mix(in srgb, var(--brand-blue) 18%, var(--line));
   border-radius: 1.5rem;
   background: #ffffff;
   box-shadow: inset 0.2rem 0 0 color-mix(in srgb, var(--brand-purple) 48%, var(--brand-blue)), var(--shadow-sm);
-  text-align: center;
+  text-align: left;
 }
 
 .profile-summary__media {
@@ -1250,18 +1249,18 @@
 }
 
 .profile-summary .image-avatar--profile {
-  width: 6rem;
-  height: 6rem;
+  width: 3.75rem;
+  height: 3.75rem;
   border-radius: 1.5rem;
   font-size: 1.35rem;
   box-shadow: 0 0.75rem 2rem rgb(8 125 242 / 20%);
 }
 
-.profile-summary .editable-image-avatar--icon-only {
+.profile-photo-editor .editable-image-avatar--icon-only {
   overflow: visible;
 }
 
-.profile-summary .editable-image-avatar--icon-only .editable-image-avatar__overlay {
+.profile-photo-editor .editable-image-avatar--icon-only .editable-image-avatar__overlay {
   right: -0.25rem;
   bottom: -0.25rem;
   left: auto;
@@ -1274,7 +1273,7 @@
   opacity: 1;
 }
 
-.profile-summary .editable-image-avatar--icon-only .editable-image-avatar__overlay svg {
+.profile-photo-editor .editable-image-avatar--icon-only .editable-image-avatar__overlay svg {
   width: 1.15rem;
   height: 1.15rem;
 }
@@ -1333,18 +1332,16 @@
 }
 
 .profile-summary__identity h1 {
+  color: #16201d;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-size: clamp(1.35rem, 4vw, 2rem);
   margin-bottom: 0;
   overflow-wrap: anywhere;
 }
 
-.profile-summary__identity > p:last-child {
-  margin: 0.45rem 0 0;
-  color: #64748b;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
 .profile-summary__badges {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -1352,14 +1349,15 @@
 }
 
 .profile-summary__actions {
+  grid-column: 1 / -1;
   display: flex;
   width: 100%;
-  flex-direction: column;
+  flex-flow: row wrap;
   gap: 0.65rem;
 }
 
 .profile-summary__actions .button {
-  width: 100%;
+  width: auto;
   min-height: 2.5rem;
   margin: 0;
   padding: 0.55rem 0.8rem;
@@ -1879,6 +1877,31 @@
 
 .report-dialog__success .button {
   margin-top: 0.5rem;
+}
+
+.profile-photo-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.confirmation-dialog__description {
+  margin: 0;
+  padding: 1.25rem 1.5rem;
+}
+
+.confirmation-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.confirmation-dialog__actions .button {
+  flex: 1 1 10rem;
+  margin: 0;
 }
 
 .profile-edit-form {
@@ -2516,19 +2539,21 @@
   display: grid;
   width: 100%;
   min-width: 0;
-  gap: 0.8rem;
-  justify-items: center;
-  padding: clamp(1.25rem, 3vw, 1.75rem);
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-items: start;
+  padding: clamp(1rem, 3vw, 1.75rem);
   border: 1px solid color-mix(in srgb, var(--brand-blue) 18%, var(--line));
   border-radius: 1.5rem;
   background: #ffffff;
   box-shadow: inset 0.2rem 0 0 color-mix(in srgb, var(--brand-blue) 58%, var(--brand-purple)), var(--shadow-sm);
-  text-align: center;
+  text-align: left;
 }
 
 .business-summary .image-avatar--business-logo {
-  width: 6rem;
-  height: 6rem;
+  width: 3.75rem;
+  height: 3.75rem;
   border-radius: 1.35rem;
 }
 
@@ -2537,6 +2562,11 @@
 }
 
 .business-summary__identity h1 {
+  color: #16201d;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-size: clamp(1.35rem, 4vw, 2rem);
+  margin-bottom: 0;
   overflow-wrap: anywhere;
 }
 
@@ -2548,6 +2578,7 @@
 }
 
 .business-summary__badges {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -2570,26 +2601,15 @@
 }
 
 .business-summary__badges span:first-child,
-.business-summary__badges span:nth-child(2),
-.business-summary__badges .is-incomplete {
+.business-summary__badges span:nth-child(2) {
   color: #9a5200;
   background: rgb(255 122 26 / 10%);
-}
-
-.business-summary__badges span:nth-child(3) {
-  color: #075fba;
-  background: rgb(8 125 242 / 10%);
 }
 
 .business-summary__badges .is-complete,
 .business-summary__badges .is-verified {
   color: #147a32;
   background: rgb(37 189 73 / 11%);
-}
-
-.business-summary__badges .is-incomplete {
-  color: #9a5b00;
-  background: #fff6dd;
 }
 
 .business-dashboard__grid {
@@ -3377,6 +3397,22 @@
 .business-form-page__heading {
   max-width: 44rem;
   margin-bottom: 1.25rem;
+}
+
+.business-form-page__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.business-form-page__heading h1 {
+  color: #16201d;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
 }
 
 .business-page-heading h1 {
@@ -4377,8 +4413,6 @@
   object-fit: cover;
   background: #ffffff;
 }
-
-
 
 
 
@@ -5954,10 +5988,7 @@
   }
 
   .profile-summary {
-    grid-template-columns: auto minmax(0, 1fr);
     column-gap: 1.4rem;
-    justify-items: start;
-    text-align: left;
   }
 
   .profile-summary__media {
@@ -5980,10 +6011,6 @@
     grid-column: 2;
     width: auto;
     flex-flow: row wrap;
-  }
-
-  .profile-summary__actions .button {
-    width: auto;
   }
 
   .profile-summary__actions .button--text {
@@ -6035,12 +6062,6 @@
   .service-area-selector__controls {
     grid-template-columns: minmax(0, 1.7fr) minmax(10rem, 0.7fr);
     align-items: start;
-  }
-
-  .business-summary {
-    grid-template-columns: auto minmax(0, 1fr);
-    justify-items: start;
-    text-align: left;
   }
 
   .business-summary__media {
