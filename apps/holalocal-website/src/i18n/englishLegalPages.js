@@ -1,3 +1,4 @@
+import { reviewPrivacySection } from './reviewDisclosureTranslations.js'
 import { deletionDisclosureEnglishTranslations } from './deletionDisclosureEnglishTranslations.js'
 
 const termsSections = [
@@ -14,6 +15,7 @@ const termsSections = [
 ]
 
 const privacySections = [
+  reviewPrivacySection('en'),
   { key: 'audience', title: 'Who HolaLocal is for', paragraphs: ['HolaLocal is being developed for customers looking for local services and for businesses and self-employed professionals offering services across Spain. HolaLocal lets people create real accounts, manage profiles and connect through the local marketplace.'] },
   { key: 'information', title: 'Information we may collect', items: ['Account details, such as your name, email address, account role and login information.', 'Customer profile details, including your preferred language and general location.', 'Business profile details, including business name, services, service areas, languages and description.', 'Contact preferences and optional business phone, email and WhatsApp details.', 'Business logos, profile images and work images where uploads are supported.', 'Messages, reports and information you choose to submit through platform features.', 'Technical and security data, such as device, browser, authentication, error and activity information.'], paragraphs: ['We do not ask you to provide information that is not reasonably needed for the service.'] },
   { key: 'purpose', title: 'Why we use information', paragraphs: ['We use information to create and protect accounts, provide profile and messaging features, prepare business listings, remember language and location preferences, respond to support requests, prevent abuse, investigate reports and improve the HolaLocal experience.'] },

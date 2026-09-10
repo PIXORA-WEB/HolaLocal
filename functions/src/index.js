@@ -1,3 +1,4 @@
+import {runAccountDeletionRecovery} from './accountDeletionRecovery.js'
 import { runCustomerReviewRetention } from './customerReviewRetention.js'
 import { createCustomerReviewCallableHandler } from './customerReviewCallables.js'
 import { initializeApp } from 'firebase-admin/app'
@@ -380,8 +381,13 @@ export const cleanStagingMediaObject = onObjectFinalized(
   async (event) => cleanFinalizedStagingObject({ object: event.data, db: getFirestore() }),
 )
 
+export const recoverAccountDeletions = onSchedule(
+  {region: MESSAGE_TRANSLATION_REGION, schedule: 'every 60 minutes', maxInstances: 1, timeoutSeconds:540},
+  async () => runAccountDeletionRecovery({createDatabase:getFirestore}),
+)
+
 export const sweepResolvedCustomerReviewReports = onSchedule(
-  { region: MESSAGE_TRANSLATION_REGION, schedule: 'every 60 minutes', maxInstances: 1 },
+  { region: MESSAGE_TRANSLATION_REGION, schedule: 'every 60 minutes', maxInstances: 1, timeoutSeconds:540 },
   async () => runCustomerReviewRetention({ createDatabase: getFirestore }),
 )
 

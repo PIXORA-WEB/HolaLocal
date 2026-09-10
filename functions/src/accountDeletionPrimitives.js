@@ -47,7 +47,17 @@ export async function assertNoAuthoritativeOwnedBusinesses({ uid, db, profile })
   return { blocked: false, ownedBusinessCount: 0 }
 }
 
-export async function acquireAccountDeletionLease({ uid, adminUid, expectedRequestVersion, db, now = Timestamp.now(), leaseIdFactory = randomUUID }) {
+export function isAutomaticErasureEligible(request, now = Timestamp.now()) {
+  const attempts = request?.retryCount ?? 0
+  if (!Number.isInteger(attempts) || attempts < 0 || attempts >= 5) return false
+  if (!['failed_retryable','finalizing'].includes(request?.state)
+    || typeof request.finalizedBy !== 'string' || !request.finalizedBy
+    || !(request.finalizationStartedAt instanceof Timestamp)) return false
+  if (!(request.updatedAt instanceof Timestamp) || request.updatedAt.toMillis() + Math.min(3600000, 300000 * 2 ** attempts) > now.toMillis()) return false
+  return getAccountDeletionFinalizationEligibility(request, now).canFinalize
+}
+
+export async function acquireAccountDeletionLease({ uid, adminUid, expectedRequestVersion, db, recovery = false, now = Timestamp.now(), leaseIdFactory = randomUUID }) {
   const safeUid = requireTrustedUid(uid); const safeAdminUid = requireTrustedUid(adminUid)
   if (!Number.isSafeInteger(expectedRequestVersion) || expectedRequestVersion < 1) throw new HttpsError('invalid-argument', 'invalid-request-version')
   const ref = db.doc(`accountDeletionRequests/${safeUid}`)
@@ -57,6 +67,7 @@ export async function acquireAccountDeletionLease({ uid, adminUid, expectedReque
     const request = snapshot.data()
     if (request.requestVersion !== expectedRequestVersion) throw new HttpsError('aborted', 'stale-request-version')
     if (request.state === 'completed') return { acquired: false, completed: true, requestVersion: request.requestVersion }
+    if (recovery && (!isAutomaticErasureEligible(request, now) || request.finalizedBy !== safeAdminUid)) throw integrityError('automatic-erasure-ineligible')
     const eligibility = getAccountDeletionFinalizationEligibility(request, now)
     if (!eligibility.canFinalize) {
       if (eligibility.actionReason === 'finalization-in-progress') {
@@ -70,7 +81,7 @@ export async function acquireAccountDeletionLease({ uid, adminUid, expectedReque
     transaction.update(ref, { state: 'finalizing', finalizationStartedAt: request.finalizationStartedAt ?? now,
       finalizedBy: safeAdminUid, failureCode: null, leaseId,
       leaseExpiresAt: Timestamp.fromMillis(now.toMillis() + ACCOUNT_DELETION_FINALIZER_LEASE_SECONDS * 1000),
-      retryCount: request.state === 'failed_retryable' ? (request.retryCount ?? 0) + 1 : (request.retryCount ?? 0),
+      retryCount: recovery || request.state === 'failed_retryable' ? (request.retryCount ?? 0) + 1 : (request.retryCount ?? 0),
       requestVersion, updatedAt: now })
     return { acquired: true, completed: false, leaseId, requestVersion }
   })

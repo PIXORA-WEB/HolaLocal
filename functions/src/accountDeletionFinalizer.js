@@ -72,6 +72,7 @@ export async function finalizeAccountDeletion({
   expectedRequestVersion,
   db,
   primitives = {},
+  recovery = false,
 }) {
   requireAdmin(adminUid, claims)
   const safeUid = requireUid(uid)
@@ -122,7 +123,7 @@ export async function finalizeAccountDeletion({
   }
 
   const lease = await deps.acquireLease({
-    uid: safeUid, adminUid, expectedRequestVersion: safeVersion, db,
+    uid: safeUid, adminUid, expectedRequestVersion: safeVersion, db, recovery,
   })
   if (lease.completed) return operationalResponse(initialRequest, {
     state: 'completed', requestVersion: lease.requestVersion, idempotent: true,

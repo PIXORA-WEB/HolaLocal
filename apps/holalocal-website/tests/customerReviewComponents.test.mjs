@@ -17,7 +17,7 @@ await build({root,configFile:false,envDir:false,publicDir:false,logLevel:'silent
   },load(id){
     if(id==='\0hooks')return `let states=[],saved=[],refs=[],refIndex=0;export const changes=[],effects=[];export const setStates=value=>{states=[...value];saved=[];refs=[];refIndex=0;changes.length=0;effects.length=0};export const rerender=()=>{states=[...saved];saved=[];refIndex=0;effects.length=0};export const useState=value=>{const index=saved.length,current=states.length?states.shift():value;saved.push(current);return [current,value=>{saved[index]=typeof value==='function'?value(saved[index]):value;changes.push(saved[index])}]};export const useRef=value=>refs[refIndex++]??(refs[refIndex-1]={current:value});export const useId=()=> 'review-test';export const useMemo=fn=>fn();export const useEffect=fn=>effects.push(fn);export const useSyncExternalStore=(a,get)=>get();`
     if(id==='\0translation')return `export const useTranslation=()=>({t:(key)=>key,i18n:{resolvedLanguage:'en'}})`
-    if(id==='\0review-harness')return `export * from '${root}/src/components/reviews/CustomerReviews.jsx';export {setStates,changes,rerender,effects} from 'review-test-hooks';export {createElement} from 'react';export {renderToStaticMarkup} from 'react-dom/server';`
+    if(id==='\0review-harness')return `export * from '${root}/src/components/reviews/CustomerReviews.jsx';export {setStates,changes,rerender,effects} from 'review-test-hooks';export {createElement} from 'react';import {createElement as h} from 'react';import {MemoryRouter} from 'react-router-dom';import {renderToStaticMarkup as render} from 'react-dom/server';export const renderToStaticMarkup=tree=>render(h(MemoryRouter,null,tree));`
   }
 },react()],ssr:{noExternal:true},build:{ssr:'review-harness',outDir:output,emptyOutDir:false,rolldownOptions:{output:{entryFileNames:'harness.mjs'}}}})
 const {AuthorForm,OwnStatus,ReportDialog,ReviewRatingSummary,setStates,changes,rerender,effects,createElement,renderToStaticMarkup}=await import(pathToFileURL(resolve(output,'harness.mjs')))
@@ -34,7 +34,7 @@ test('actual form escapes originals and wires edit/withdraw to expected versions
   const html=renderToStaticMarkup(tree)
   assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'))
   assert.equal((html.match(/type="radio"/g)||[]).length,5)
-  assert.ok(html.includes('aria-describedby="review-test-count"'))
+  assert.ok(html.includes('aria-describedby="review-test-count review-test-translation-notice"'))
 })
 test('pending edits retain approved text and withdrawal; summaries cannot use legacy fields',()=>{
   const pending={...own,status:'pending',pending:{revision:4,rating:5,displayName:'Test reviewer',originalText:'Pending original'},lastSubmitted:{revision:4,rating:5,displayName:'Test reviewer',originalText:'Pending original'}}

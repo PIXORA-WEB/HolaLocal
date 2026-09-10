@@ -1,3 +1,9 @@
+> Disclosure integration complete locally: authoritative privacy content and review submission notice cover approved review/EU handling in all17 languages; affected tests/browser/lint/build pass. Cloud launch checks and notification receipt remain pending. No new policy, consent-version change, production configuration or activation. See REVIEWS_FINAL_LAUNCH_PACKAGE.md.
+
+> Current coordinated authority: [REVIEWS_FINAL_LAUNCH_PACKAGE.md](REVIEWS_FINAL_LAUNCH_PACKAGE.md). Earlier isolated deployment scopes and unresolved contact/budget placeholders below are historical where superseded. PR33–36 remain unmerged; operational deployment and activation remain unapproved.
+
+> Current update, 10 September 2026: EUR30/month net Translation actual-spend alert is configured at 100% for hello@holalocal.es; it is not a cap. Daily/minute quotas remain unapproved. Isolated erasure-recovery and retention safeguards plus expanded offline monitoring are prepared, not deployed. See [UNATTENDED_SAFEGUARDS_RELEASE.md](UNATTENDED_SAFEGUARDS_RELEASE.md), which supersedes older budget and safeguard-preparation statements below. Reviews, retention and recovery remain disabled; upload/retry and maintenance proposals remain separate.
+
 # Activation preparation update
 
 Separate prepare/reviews-production-activation branch now prepares project-scoped default-off production gate support. PR33/34 heads are preserved; none merged. See REVIEWS_LAUNCH_CHECKLIST.md for coordinated launch, missing recipient/budget/access permissions, cloud acceptance, actual privacy-disclosure gap and rollback. Business registration/submission/approval are independent of review gates. Native editorial polish is not a blanket launch blocker. No flags, IAM, notifications or production records changed.
