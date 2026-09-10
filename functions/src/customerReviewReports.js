@@ -1,4 +1,6 @@
-import { createHash } from 'node:crypto'
+import { CUSTOMER_REVIEW_WINDOW_MS } from './customerReviewQuotas.js'
+import { CUSTOMER_REVIEW_REPORT_RETENTION_MS } from './customerReviewRetention.js'
+import { createHash, randomUUID } from 'node:crypto'
 import { isCustomerReviewId, isCustomerReviewRecord } from '@holalocal/firebase-contract/customerReviewContracts'
 import { isPublicBusinessEligible } from '@holalocal/firebase-contract'
 import { customerReviewPairKey } from './customerReviewCommands.js'
@@ -18,7 +20,7 @@ function text(value, max, required=false) {
   check([...normalized].length<=max&&(!required||normalized.length>0),'invalid-report-text')
   return normalized // Plain text only: never interpreted as HTML or instructions.
 }
-const safe = row => ({reportId:row.reportId,version:row.version,status:row.status})
+const safe = row => ({reportId:row.reportId,version:row.version,status:row.status,generation:row.generation})
 const terminalDeletion = row => ['finalizing','failed_retryable','completed'].includes(row?.state)
 
 export function createCustomerReviewReportServices({database,readDatabase,auth,reportQuotaPolicy,clock=Date.now}) {
@@ -49,15 +51,17 @@ export function createCustomerReviewReportServices({database,readDatabase,auth,r
       projection,locator,slot}
   }
   async function submit(context,input) {
-    exact(input,['publicReviewId','observedPublishedRevision','reasonCode','details','requestId'])
+    exact(input,['publicReviewId','observedPublishedRevision','reasonCode','details','requestId','submittedAt'])
     const payload={publicReviewId:id(input.publicReviewId),observedPublishedRevision:version(input.observedPublishedRevision),
-      reasonCode:input.reasonCode,details:text(input.details===undefined?'':input.details,2000),requestId:id(input.requestId)}
+      submittedAt:input.submittedAt,reasonCode:input.reasonCode,details:text(input.details===undefined?'':input.details,2000),requestId:id(input.requestId)}
     check(CUSTOMER_REVIEW_REPORT_REASONS.includes(payload.reasonCode),'invalid-report-reason')
+    check(Number.isSafeInteger(payload.submittedAt)&&payload.submittedAt>=0,'invalid-report-submitted-at')
     const identity=await actor(context);check(identity.emailVerified===true,'verified-email-required')
     const reportId=customerReviewReportId(identity.uid,payload.publicReviewId)
     const receiptId=hash(['customerReviewReportRequest',1,identity.uid,payload.requestId])
     const fingerprint=hash(['submit',payload]);const now=clock();check(Number.isSafeInteger(now)&&now>=0,'invalid-clock')
     const timestamp=database.timestampFromMillis(now)
+    const generation=randomUUID() // Server entropy outside transaction retries; independent of reusable client request IDs.
     return database.runTransaction(async tx=>{
       const account=await tx.get(`users/${identity.uid}`)
       check(account?.accountStatus==='active'&&account.deletionRequestedAt==null,'active-account-required')
@@ -68,17 +72,19 @@ export function createCustomerReviewReportServices({database,readDatabase,auth,r
       check(current.projection.publishedRevision===payload.observedPublishedRevision,'review-refresh-required')
       const receipt=await tx.get(`customerReviewReportRequests/${receiptId}`)
       if(receipt){check(receipt.fingerprint===fingerprint&&receipt.actorUid===identity.uid,'request-id-conflict');return safe(receipt.outcome)}
+      // A lost response can replay its receipt, but an expired, pruned request cannot create a new report.
+      check(payload.submittedAt<=now+5*60*1000&&payload.submittedAt>now-CUSTOMER_REVIEW_WINDOW_MS,'report-request-expired')
       const prior=await tx.get(`customerReviewReports/${reportId}`)
       check(prior?.status!=='open','report-already-open')
       if(prior)check(prior.reporterUid===identity.uid&&prior.publicReviewId===payload.publicReviewId
         &&['resolved','dismissed'].includes(prior.status)&&Number.isSafeInteger(prior.version)&&prior.version>=1,'invalid-report-state')
       const quotaPath=`customerReviewReportQuotas/${customerReviewReportQuotaId(identity.uid)}`
       const quota=await tx.get(quotaPath)
-      const nextQuota=reportQuotaPolicy.reserve({current:quota,actorUid:identity.uid,now})
+      const nextQuota=reportQuotaPolicy.reserve({current:quota,actorUid:identity.uid,now:clock()})
       check(isCustomerReviewRecord(nextQuota),'invalid-report-quota')
       const row={reportId,reporterUid:identity.uid,publicReviewId:payload.publicReviewId,businessId:current.locator.businessId,
         observedPublishedRevision:payload.observedPublishedRevision,reasonCode:payload.reasonCode,details:payload.details,
-        status:'open',version:(prior?.version??0)+1,createdAt:timestamp,updatedAt:timestamp}
+        generation,submissionRequestId:receiptId,status:'open',version:(prior?.version??0)+1,createdAt:timestamp,updatedAt:timestamp}
       version(row.version)
       const outcome=safe(row)
       tx.set(`customerReviewReports/${reportId}`,row);tx.set(quotaPath,nextQuota)
@@ -88,8 +94,8 @@ export function createCustomerReviewReportServices({database,readDatabase,auth,r
     })
   }
   async function resolve(context,input) {
-    exact(input,['reportId','expectedVersion','requestId','disposition','resolutionReason','moderationNote'])
-    const payload={reportId:id(input.reportId),expectedVersion:version(input.expectedVersion),requestId:id(input.requestId),
+    exact(input,['reportId','expectedVersion','expectedGeneration','requestId','disposition','resolutionReason','moderationNote'])
+    const payload={reportId:id(input.reportId),expectedVersion:version(input.expectedVersion),expectedGeneration:id(input.expectedGeneration),requestId:id(input.requestId),
       disposition:input.disposition,resolutionReason:text(input.resolutionReason,500,true),moderationNote:text(input.moderationNote===undefined?'':input.moderationNote,2000)}
     check(['resolved','dismissed'].includes(payload.disposition),'invalid-report-disposition')
     const identity=await actor(context,true)
@@ -103,24 +109,35 @@ export function createCustomerReviewReportServices({database,readDatabase,auth,r
       if(current.locator)await fence(tx,current.locator.authorUid)
       const receipt=await tx.get(`customerReviewReportRequests/${receiptId}`)
       if(receipt){check(receipt.fingerprint===fingerprint&&receipt.actorUid===identity.uid,'request-id-conflict');return safe(receipt.outcome)}
-      check(row.version===payload.expectedVersion,'report-version-conflict');check(row.status==='open','report-not-open')
-      const updated={...row,status:payload.disposition,version:version(row.version+1),updatedAt:timestamp,resolutionAuditId:receiptId}
+      check(row.version===payload.expectedVersion&&row.generation===payload.expectedGeneration,'report-version-conflict');check(row.status==='open','report-not-open')
+      const submissionId=id(row.submissionRequestId)
+      const submissionReceipt=await tx.get(`customerReviewReportRequests/${submissionId}`)
+      const submissionAudit=await tx.get(`customerReviewReportAudits/${submissionId}`)
+      check(submissionReceipt?.reportId===row.reportId&&submissionReceipt.actorUid===row.reporterUid
+        &&submissionReceipt.outcome?.version===row.version&&submissionAudit?.version===row.version
+        &&submissionAudit.reportId===row.reportId&&submissionAudit.actorUid===row.reporterUid,'invalid-report-state')
+      const expiresAt=database.timestampFromMillis(now+CUSTOMER_REVIEW_REPORT_RETENTION_MS)
+      const updated={...row,status:payload.disposition,version:version(row.version+1),updatedAt:timestamp,resolvedAt:timestamp,expiresAt,resolutionAuditId:receiptId}
       const outcome=safe(updated)
       tx.set(`customerReviewReports/${payload.reportId}`,updated)
+      tx.set(`customerReviewReportRequests/${submissionId}`,{...submissionReceipt,expiresAt})
+      tx.set(`customerReviewReportAudits/${submissionId}`,{...submissionAudit,expiresAt})
       tx.create(`customerReviewReportRequests/${receiptId}`,{actorUid:identity.uid,reporterUid:row.reporterUid,
-        publicReviewId:row.publicReviewId,reportId:row.reportId,fingerprint,outcome})
+        publicReviewId:row.publicReviewId,reportId:row.reportId,fingerprint,outcome,expiresAt})
       tx.create(`customerReviewReportAudits/${receiptId}`,{actorUid:identity.uid,reporterUid:row.reporterUid,publicReviewId:row.publicReviewId,
         reportId:row.reportId,action:payload.disposition,version:updated.version,at:timestamp,
-        resolutionReason:payload.resolutionReason,moderationNote:payload.moderationNote})
+        resolutionReason:payload.resolutionReason,moderationNote:payload.moderationNote,expiresAt})
       return outcome // Does NOT call review removal. Separate intentional version-checked removal is required.
     })
   }
   const summary=row=>({ ...safe(row),publicReviewId:row.publicReviewId,observedPublishedRevision:row.observedPublishedRevision,
-    reasonCode:row.reasonCode,createdAt:reviewTime(row.createdAt) })
+    reasonCode:row.reasonCode,createdAt:reviewTime(row.createdAt),
+    overdue:row.status==='open'&&clock()-(reviewTime(row.createdAt).seconds*1000+reviewTime(row.createdAt).nanoseconds/1000000)>=7*24*60*60*1000 })
   async function detail(context,input) {
     exact(input,['reportId']);id(input.reportId);await actor(context,true)
     return readDatabase.readSnapshot(async tx=>{
       const row=await tx.get(`customerReviewReports/${input.reportId}`);if(!row)return null
+      if(row.expiresAt&&(reviewTime(row.expiresAt).seconds*1000+reviewTime(row.expiresAt).nanoseconds/1000000)<=clock())return null
       const current=await target(tx,row.publicReviewId)
       const resolution=row.resolutionAuditId?await tx.get(`customerReviewReportAudits/${id(row.resolutionAuditId)}`):null
       const matches=current.state==='published'&&current.projection.publishedRevision===row.observedPublishedRevision

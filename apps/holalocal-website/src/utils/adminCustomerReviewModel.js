@@ -34,7 +34,8 @@ export function adminActionPayload(action,item,reason='',internalNote=''){
   if(['resolved','dismissed'].includes(action)){
     const value=reason.trim().normalize('NFC')
     if(!value||[...value].length>500||/[\uD800-\uDFFF]/u.test(value))throw new Error('invalid-resolution-reason')
-    return {reportId:item.reportId,expectedVersion:item.version,disposition:action,resolutionReason:value}
+    if(typeof item.generation!=='string'||!item.generation)throw new Error('review-refresh-required')
+    return {reportId:item.reportId,expectedVersion:item.version,expectedGeneration:item.generation,disposition:action,resolutionReason:value}
   }
   throw new Error('invalid-action')
 }

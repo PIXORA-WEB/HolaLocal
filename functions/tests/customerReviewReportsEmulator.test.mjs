@@ -41,7 +41,7 @@ if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1') {
     const payload={businessId,expectedVersion:0,requestId:'initial',rating:4,displayName:'Test reviewer',originalText:'Fictional review describing this synthetic service.'}
     const pending=ok(await invoke('submitCustomerReview',payload,author))
     const approved=ok(await invoke('approveCustomerReview',{publicReviewId:pending.publicReviewId,expectedVersion:pending.version,requestId:'approval'},admin))
-    const report={publicReviewId:approved.publicReviewId,observedPublishedRevision:1,reasonCode:'personal_information',details:'Fictional sensitive details',requestId:'report-first'}
+    const report={publicReviewId:approved.publicReviewId,observedPublishedRevision:1,submittedAt:Date.now(),reasonCode:'personal_information',details:'Fictional sensitive details',requestId:'report-first'}
     return {author,reporter,admin,businessId,payload,approved,report}
   }
   test('HTTP reports: authorization, owner/manager reporting, idempotency, admin handling and target revision checks',async()=>{
@@ -57,7 +57,7 @@ if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1') {
     const [a,b]=await Promise.all([invoke('submitCustomerReviewReport',report,reporter),invoke('submitCustomerReviewReport',report,reporter)])
     const filed=ok(a);assert.deepEqual(ok(b),filed)
     const reportIds=[filed.reportId]
-    assert.equal((await db.doc(`customerReviewReportQuotas/${customerReviewReportQuotaId(reporter.uid)}`).get()).data().used,1)
+    assert.equal((await db.doc(`customerReviewReportQuotas/${customerReviewReportQuotaId(reporter.uid)}`).get()).data().acceptedAt.length,1)
     assert.equal((await db.collection('customerReviewReportAudits').where('reportId','==',filed.reportId).get()).size,1)
     denied(await invoke('submitCustomerReviewReport',{...report,details:'different'},reporter),'ALREADY_EXISTS')
     denied(await invoke('submitCustomerReviewReport',{...report,requestId:'duplicate-open'},reporter),'ALREADY_EXISTS')
@@ -85,7 +85,7 @@ if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1') {
     const decoded=JSON.parse(Buffer.from(first.nextCursor,'base64url').toString())
     assert.deepEqual(decoded.position[0],{seconds:1,nanoseconds:1000})
     denied(await invoke('listCustomerReviewReports',{pageSize:21},admin),'INVALID_ARGUMENT')
-    const resolution={reportId:filed.reportId,expectedVersion:1,requestId:'resolve',disposition:'dismissed',resolutionReason:'No violation in this fictional case.',moderationNote:'Private fictional note'}
+    const resolution={reportId:filed.reportId,expectedVersion:1,expectedGeneration:filed.generation,requestId:'resolve',disposition:'dismissed',resolutionReason:'No violation in this fictional case.',moderationNote:'Private fictional note'}
     denied(await invoke('resolveCustomerReviewReport',resolution,reporter),'PERMISSION_DENIED')
     const closed=ok(await invoke('resolveCustomerReviewReport',resolution,admin))
     assert.deepEqual(ok(await invoke('resolveCustomerReviewReport',resolution,admin)),closed)
@@ -96,8 +96,8 @@ if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1') {
     const updated=ok(await invoke('approveCustomerReview',{publicReviewId:edit.publicReviewId,expectedVersion:edit.version,requestId:'approve-edit'},admin))
     denied(await invoke('submitCustomerReviewReport',report,reporter),'FAILED_PRECONDITION')
     assert.equal(ok(await invoke('getCustomerReviewReport',{reportId:filed.reportId},admin)).observedRevisionIsCurrent,false)
-    const fresh={...report,observedPublishedRevision:2,requestId:'new-revision'}
-    await db.doc(`customerReviewReportQuotas/${customerReviewReportQuotaId(reporter.uid)}`).set({used:20})
+    const fresh={...report,observedPublishedRevision:2,submittedAt:Date.now(),requestId:'new-revision'}
+    await db.doc(`customerReviewReportQuotas/${customerReviewReportQuotaId(reporter.uid)}`).set({schemaVersion:1,acceptedAt:Array(10).fill(Date.now())})
     denied(await invoke('submitCustomerReviewReport',fresh,reporter),'RESOURCE_EXHAUSTED')
     // Removal is an independent explicit current-version command, never a report resolution side effect.
     ok(await invoke('removeCustomerReview',{publicReviewId:updated.publicReviewId,expectedVersion:updated.version,requestId:'explicit-removal'},admin))

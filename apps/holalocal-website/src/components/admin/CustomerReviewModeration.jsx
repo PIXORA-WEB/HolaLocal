@@ -19,7 +19,7 @@ export function ReviewModerationCase({item,reports,onAction,blocked}){
   return <div>
     <header className="admin-customer-reviews__identity"><h2>{copy('business')}: <span>{item.businessId??copy('notProvided')}</span></h2></header>
     {reports?<>
-      {item.createdAt&&<p>{new Intl.DateTimeFormat(i18n.resolvedLanguage,{dateStyle:'medium',timeStyle:'short'}).format(item.createdAt.seconds*1000)}</p>}<p>{t(`customerReviews.${item.reasonCode}`)} · {copy(item.targetState)}</p>
+      {item.overdue&&<p role="status">{copy('overdue')}</p>}{item.createdAt&&<p>{new Intl.DateTimeFormat(i18n.resolvedLanguage,{dateStyle:'medium',timeStyle:'short'}).format(item.createdAt.seconds*1000)}</p>}<p>{t(`customerReviews.${item.reasonCode}`)} · {copy(item.targetState)}</p>
       <p>{copy('observed')}: {item.observedPublishedRevision} · {copy('current')}: {item.currentReview?.publishedRevision??copy('notProvided')}</p>
       {!item.observedRevisionIsCurrent&&<p role="status">{copy('changed')}</p>}
       {item.details&&<p className="customer-reviews__text">{item.details}</p>}
@@ -61,7 +61,7 @@ export default function CustomerReviewModeration({api,reports=false}){
     {state.success&&<p role="status">{copy(`success_${state.success}`)}</p>}
     {state.selected&&!state.denied&&<button className="button button--secondary" disabled={state.busy||state.uncertain} onClick={()=>void controller.read()}>{copy('back')}</button>}
     {!state.selected&&!state.loading&&!state.error&&state.items.length===0&&<p>{copy('empty')}</p>}
-    {state.items.map(item=><article key={item.reportId??item.publicReviewId}><h2>{reports?t(`customerReviews.${item.reasonCode}`):`${copy('business')}: ${item.businessId}`}</h2><p>{reports?copy('targetOnOpen'):copy(item.published?'edit':'new')}</p>{!reports&&<p>★ {item.pending?.rating} / 5</p>}<p>{date(reports?item.createdAt:item.pendingSubmittedAt)}</p><button className="button button--secondary" disabled={blocked} onClick={()=>void controller.read(item.reportId??item.publicReviewId)}>{copy('open')}</button></article>)}
+    {state.items.map(item=><article key={item.reportId??item.publicReviewId}><h2>{reports?t(`customerReviews.${item.reasonCode}`):`${copy('business')}: ${item.businessId}`}</h2><p>{reports?copy('targetOnOpen'):copy(item.published?'edit':'new')}</p>{reports&&item.overdue&&<p role="status">{copy('overdue')}</p>}{!reports&&<p>★ {item.pending?.rating} / 5</p>}<p>{date(reports?item.createdAt:item.pendingSubmittedAt)}</p><button className="button button--secondary" disabled={blocked} onClick={()=>void controller.read(item.reportId??item.publicReviewId)}>{copy('open')}</button></article>)}
     {state.item&&<ReviewModerationCase key={`${state.item.reportId??state.item.publicReviewId}:${state.item.version}`} item={state.item} reports={reports} onAction={controller.execute} blocked={blocked}/>}
     {state.cursor&&!state.selected&&<button className="button button--secondary" disabled={blocked} onClick={()=>void controller.read(null,true)}>{t('customerReviews.more')}</button>}
   </section>

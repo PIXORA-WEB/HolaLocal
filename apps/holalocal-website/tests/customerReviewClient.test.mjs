@@ -115,3 +115,12 @@ test('success-only dismissal preserves authoritative status and all unresolved r
   reject=false;await c.retry()
   assert.deepEqual(calls.at(-1),original)
 })
+
+
+test('report retries retain the original request timestamp; expiry requires a deliberate fresh operation',async()=>{
+ let now=1000,first=true;const calls=[]
+ const c=createReviewController({api:service({report:async payload=>{calls.push(payload);if(first){first=false;throw new Error('network')}}}),reloadAfter:false,clock:()=>now,requestId:()=>String(now)})
+ await c.execute('report',{reasonCode:'spam'});now=2000;await c.retry()
+ assert.deepEqual(calls[0],calls[1]);assert.equal(calls[1].submittedAt,1000)
+ await c.execute('report',{reasonCode:'other'});assert.equal(calls[2].submittedAt,2000)
+})

@@ -1,3 +1,4 @@
+import { customerReviewQuotaPolicy, customerReviewReportQuotaPolicy } from './customerReviewQuotas.js'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { getFirestore } from 'firebase-admin/firestore'
 import { getAuth } from 'firebase-admin/auth'
@@ -32,21 +33,8 @@ export function customerReviewGate(env) {
     || env.GOOGLE_APPLICATION_CREDENTIALS || env.FIREBASE_TOKEN || env.GOOGLE_OAUTH_ACCESS_TOKEN) {
     throw new HttpsError('failed-precondition','customer-reviews-production-policies-unavailable')
   }
-  // Explicitly synthetic; available only after the complete demo gate. No production policy defaults.
-  return {
-    reportQuotaPolicy: { reserve: ({current}) => {
-      const used=current?.used??0
-      if(!Number.isSafeInteger(used)||used<0)throw new Error('invalid-report-quota')
-      if(used>=20)throw new Error('report-quota-exceeded')
-      return {used:used+1}
-    } },
-    quotaPolicy: { reserve: ({current}) => {
-      const used = current?.used ?? 0
-      if (!Number.isSafeInteger(used) || used < 0) throw new Error('invalid-review-quota')
-      if (used >= 100) throw new Error('review-quota-exceeded')
-      return { used: used + 1 }
-    } },
-  }
+  // Approved policies; production activation still requires a separately reviewed gate change.
+  return {quotaPolicy: customerReviewQuotaPolicy, reportQuotaPolicy: customerReviewReportQuotaPolicy}
 }
 
 const publicOperation = name => ['listPublishedCustomerReviews','getCustomerReviewRatingSummaries'].includes(name)
@@ -74,13 +62,13 @@ function servicesForRequest(request, policies) {
 // Only explicitly reviewed domain errors cross this boundary. No arbitrary exception message/details.
 const errorGroups = {
   'invalid-argument': ['invalid-payload','unsupported-field','invalid-request-id','invalid-expected-version','invalid-target',
-    'invalid-display-name','invalid-rejection-reason','invalid-rating','invalid-text','text-length','invalid-source-language','invalid-moderation-note','invalid-id',
+    'invalid-report-submitted-at','invalid-display-name','invalid-rejection-reason','invalid-rating','invalid-text','text-length','invalid-source-language','invalid-moderation-note','invalid-id',
     'invalid-report-text','invalid-report-reason','invalid-report-disposition','invalid-page-size','invalid-cursor','restart-pagination','invalid-batch-size'],
   'unauthenticated': ['authentication-required','auth/id-token-expired','auth/id-token-revoked','auth/invalid-id-token',
     'auth/user-disabled','auth/user-not-found','auth/argument-error'],
   'permission-denied': ['admin-required','author-required','self-review-forbidden','customer-role-required'],
   'failed-precondition': ['verified-email-required','active-account-required','public-business-required','business-unavailable',
-    'report-target-unavailable','review-refresh-required','report-not-open','invalid-review-transition','published-review-required'],
+    'report-request-expired','report-target-unavailable','review-refresh-required','report-not-open','invalid-review-transition','published-review-required'],
   'aborted': ['review-version-conflict','report-version-conflict'],
   'already-exists': ['request-id-conflict','report-already-open'],
   'not-found': ['review-not-found','report-not-found'],

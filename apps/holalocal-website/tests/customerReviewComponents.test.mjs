@@ -176,3 +176,11 @@ test('new name field is blank despite private account values and discloses publi
  assert.ok(html.includes('customerReviews.displayNameNotice'))
  assert.ok(!html.includes('PRIVATE ACCOUNT'));assert.ok(!html.includes('PRIVATE PROFILE'));assert.ok(!html.includes('private@example.invalid'))
 })
+
+
+test('quota exhaustion does not disable withdrawal of the current review',()=>{
+ setStates([null,false,false,false])
+ const tree=AuthorForm({own,state:{...state,error:'quota'},controller:{execute(){}},user:{uid:'u',emailVerified:true},profile:{accountStatus:'active',roles:['customer']},businessId:'b'})
+ const button=nodes(tree).find(n=>n.type==='button'&&n.props.children==='customerReviews.withdraw')
+ assert.ok(button);assert.equal(button.props.disabled,false)
+})

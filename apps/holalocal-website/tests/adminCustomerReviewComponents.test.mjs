@@ -23,7 +23,7 @@ await build({root,configFile:false,envDir:false,publicDir:false,logLevel:'silent
 const {ReviewModerationCase,ReviewReasonSelect,setStates,changes,rerender,effects,renderToStaticMarkup}=await import(pathToFileURL(resolve(output,'harness.mjs')))
 const nodes=(tree,out=[])=>{if(!tree||typeof tree!=='object')return out;if(tree.type)out.push(tree);for(const child of [tree.props?.children].flat(Infinity))nodes(child,out);return out}
 const pending={publicReviewId:'r',businessId:'fictional-business',version:7,pending:{revision:3,rating:4,displayName:'Test reviewer',originalText:'<script>plain customer text</script>'},published:{revision:2,rating:3,displayName:'Test reviewer',originalText:'Previous original text'},businessAvailable:true}
-const report={reportId:'report',publicReviewId:'r',version:2,status:'open',observedPublishedRevision:3,observedRevisionIsCurrent:true,targetState:'published',currentReview:{publishedRevision:3,version:9,rating:4,displayName:'Test reviewer',originalText:'Current original text'},reasonCode:'spam',details:'Details for moderation',reporterUid:'DO-NOT-DISPLAY',resolution:{moderationNote:'INTERNAL-NOTE'}}
+const report={reportId:'report',generation:'synthetic-generation',publicReviewId:'r',version:2,status:'open',observedPublishedRevision:3,observedRevisionIsCurrent:true,targetState:'published',currentReview:{publishedRevision:3,version:9,rating:4,displayName:'Test reviewer',originalText:'Current original text'},reasonCode:'spam',details:'Details for moderation',reporterUid:'DO-NOT-DISPLAY',resolution:{moderationNote:'INTERNAL-NOTE'}}
 test('actual pending case escapes originals, shows both revisions and requires a rejection reason',()=>{
  setStates([])
  const tree=ReviewModerationCase({item:pending,reports:false,onAction(){},blocked:false})
@@ -49,7 +49,7 @@ test('resolution and removal are separately confirmed; private identity and inte
  nodes(tree).find(n=>n.type==='button'&&n.props.children==='adminCustomerReviews.resolve').props.onClick()
  rerender();tree=ReviewModerationCase(props)
  nodes(tree).find(n=>n.type==='button'&&n.props.children==='adminCustomerReviews.confirm').props.onClick()
- assert.deepEqual(calls,[['resolved',{reportId:'report',expectedVersion:2,disposition:'resolved',resolutionReason:'A checked resolution reason'}]])
+ assert.deepEqual(calls,[['resolved',{reportId:'report',expectedVersion:2,expectedGeneration:'synthetic-generation',disposition:'resolved',resolutionReason:'A checked resolution reason'}]])
  for(const item of [{...report,observedRevisionIsCurrent:false},{...report,targetState:'erased',currentReview:null,observedRevisionIsCurrent:false}]){
   setStates([]);const tree=ReviewModerationCase({...props,item})
   assert.equal(nodes(tree).find(n=>n.type==='button'&&n.props.children==='adminCustomerReviews.remove').props.disabled,true)

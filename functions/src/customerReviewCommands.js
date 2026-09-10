@@ -154,7 +154,8 @@ export function createCustomerReviewCommands({ helpers: h, database, auth, readE
       requireValue(record ? same(mapping, locator) : mapping == null, 'public-id-conflict')
       const quotaPath = `customerReviewQuotas/${customerReviewQuotaKey(actor.uid)}`
       const quota = submitting ? await read(quotaPath) : null
-      const nextQuota = submitting ? quotaPolicy.reserve({ current: quota, actorUid: actor.uid, businessId: locator.businessId, now }) : null
+      // Sample quota time after its transactional read: another request may have committed since command start.
+      const nextQuota = submitting ? quotaPolicy.reserve({ current: quota, actorUid: actor.uid, businessId: locator.businessId, now: clock() }) : null
       requireValue(!submitting || h.isCustomerReviewRecord(nextQuota), 'invalid-quota-policy-result')
       const projection = h.projectPublishedCustomerReview(after)
       // Name travels with the moderated revision. Pending edits retain the approved name.

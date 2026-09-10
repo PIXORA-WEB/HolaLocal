@@ -72,6 +72,7 @@ export function AuthorForm({own,state,controller,user,profile,businessId,heading
   const permission=own?.businessAvailable===false?'unavailable':reviewPermission(user,profile,businessId)
   const actions=reviewActions(own)
   const blocked=state.busy||state.loading||state.uncertain||!!state.error
+  const withdrawalBlocked=state.busy||state.loading||state.uncertain||(!!state.error&&state.error!=='quota')
   const submit=event=>{
     event.preventDefault()
     const validation=validateCustomerReviewSubmission({rating:Number(rating),displayName,originalText:text,declaredSourceLanguage:source?.declaredSourceLanguage??null})
@@ -91,7 +92,7 @@ export function AuthorForm({own,state,controller,user,profile,businessId,heading
     {invalid&&<p id={`${id}-error`} role="alert">{t('customerReviews.validation')}</p>}<button className="button button--primary" disabled={blocked} type="submit">{t(actions.edit?'customerReviews.edit':'customerReviews.submit')}</button>
   </form>}
     <button className="button button--secondary" type="button" disabled={state.busy} onClick={()=>setExpanded(false)}>{t('common.cancel')}</button></div>
-  {actions.withdraw&&<button className="button button--secondary" type="button" disabled={blocked} onClick={()=>setConfirm(true)}>{t('customerReviews.withdraw')}</button>}
+  {actions.withdraw&&<button className="button button--secondary" type="button" disabled={withdrawalBlocked} onClick={()=>setConfirm(true)}>{t('customerReviews.withdraw')}</button>}
   <AccessibleDialog open={confirm} onClose={()=>setConfirm(false)} className="customer-reviews-modal" ariaLabelledBy={`${id}-withdraw-title`}><div className="customer-reviews__dialog"><h2 id={`${id}-withdraw-title`}>{t('customerReviews.withdraw')}</h2><p>{t(`customerReviews.${withdrawalCopy(own)}`)}</p><button className="button button--secondary" onClick={()=>{setConfirm(false);void controller.execute('withdraw',{publicReviewId:own.publicReviewId,expectedVersion:own.version})}}>{t('customerReviews.withdraw')}</button><button className="button button--secondary" onClick={()=>setConfirm(false)}>{t('common.cancel')}</button></div></AccessibleDialog></>
 }
 export function ReportDialog({review,api,user,profile,onClose,open,onRefresh}) {
