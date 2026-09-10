@@ -14,8 +14,8 @@ Original mixed workspace is untouched: 45 modified tracked files and 99 untracke
 | Image display and gallery deletion | Integrated through PR #25/#26 | Canonical deletion remains emulator-verified; production legacy removal/reopen previously confirmed |
 | Services deep links and approved design | Integrated through PR #27 | Real-listing visual feedback pending an approved business; owner accepted preview/automated checks |
 | Customer-review backend/shared/moderation/reporting/account erasure | Prepared and locally verified; awaiting batch review/merge approval | Package, unit and protected emulator results must refer to this exact source |
-| Review production identity, quotas, report retention | Awaiting product decisions | No choice approved; first identity question presented, others to follow individually |
-| Customer/admin website review UI and translations | Pending coordinated follow-up | Integrate into current Services/routes; do not replace with stale paused versions; browser/mobile/accessibility tests required |
+| Review production identity, quotas, report retention | Identity, quotas and retention approved | Customer-chosen public name; 5 submissions/edits and 10 reports per rolling 24h. Quota and 90-day resolved-report cleanup implementation remain a separate batch |
+| Customer/admin website review UI and translations | Integrated locally; verified locally | Real browser submit/retry/moderation/display checks and released Services/onboarding regressions passed |
 | Review demo test infrastructure | Included only where needed by backend tests | No production seed/preview activation; complete actual browser flow in website batch |
 | Duplicate offline package verifier | Superseded in this extraction | Existing verifyDeploymentPackage now checks review modules/exports/default-off gate and archive/lock consistency |
 | Broad upload/retry/session candidate | Separate, unmerged | Ordinary successful uploads do not prove failure/retry recovery; require meaningful controlled evidence |
@@ -29,7 +29,7 @@ Backend review commands, reads and moderation are callable-only: default-deny cl
 
 The existing package tarball name/version is unchanged. A fresh generic npm install initially reused the old lock integrity and lacked review subpath exports; explicitly installing the freshly packed archive corrected the lock. The authoritative verifier now rejects that mismatch rather than silently accepting cached code.
 
-Pending identity is a generated per-review alias versus customer-selected display name. Quotas and retention are not approved. Demo aliases/limits MUST NOT become production defaults. Review-text translation/provider activation and business-maintenance policy are outside this batch.
+Approved identity is a separately chosen public name, moderated with each review revision; account name/email are never copied. Approved quotas are 5 review submissions/edits and 10 reports per rolling 24h, with free exact retries and withdrawal; implementation remains a separate batch. Open reports stay until handled; resolved-report text, identity and notes must be removed after 90 days, with earlier account erasure. Retention implementation is a separate batch. Old generated alias and cumulative demo quota policies are not launch defaults. Review-text translation/provider activation and business-maintenance policy are outside this batch.
 
 Historical CUSTOMER_REVIEWS_BATCH*, *_WEBSITE and report/deletion handovers remain in the original backup. Their stage-specific “not run”, missing-contract and launch instructions do not supersede this current status. Only fresh results recorded for the final batch commit establish readiness.
 
@@ -41,3 +41,11 @@ Historical CUSTOMER_REVIEWS_BATCH*, *_WEBSITE and report/deletion handovers rema
 - Clean deployment artifact imports the installed review package exports; all 16 callables reject while disabled. Archive/lock mismatch negative check passed and original lock restored.
 - About 13 GB free after sequential tests; no duplicate website dependency install. All 598 original source hashes still match the durable recovery manifest.
 - No website browser result or production review activation is claimed. No Firebase resources created/deployed.
+
+## Display-name/UI batch
+
+Stacked on unmerged PR #28. Restored customer/admin services/components, routes and 17-locale interface copy into current main's released Services presentation. Removed the synthetic alias chooser from the command boundary: new submissions require an explicit trimmed/NFC-normalized 1–80 code-point name without control/bidi override characters. The moderated revision publishes that name through the existing reviewerAlias field for compatibility. Legacy revisions remain readable, but no new review may omit its name. Pending/rejected edits retain the approved name.
+
+The website stays production-disabled. Retired only paused tests that referenced the superseded servicesTarget helper or the unshipped preview mock; current deep-link/browser and backend summary tests remain authoritative. No design-preview runtime, global CSS overrides, upload/retry/session changes or maintenance policy were imported.
+
+Fresh identity/UI evidence: 57 emulator tests, 329 backend unit passes (26 emulator-only skips), 112 shared-contract passes, 39 customer/admin UI tests, Functions/website lint, 17-locale checks and clean package verification. Real browser: explicit blank name despite private account details, invalid-field focus, drop-after-commit retry with one revision, admin approval, escaping, reload, pending-name preservation and approved rename; mobile/desktop screenshots inspected. Released regression suites: three Services tests and two onboarding/display/deletion tests passed. Full native-language editorial review remains unverified. No production activation or deployment.

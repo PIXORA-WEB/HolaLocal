@@ -40,7 +40,6 @@ export function customerReviewGate(env) {
       if(used>=20)throw new Error('report-quota-exceeded')
       return {used:used+1}
     } },
-    aliasPolicy: { choose: () => 'Fictional demo reviewer' },
     quotaPolicy: { reserve: ({current}) => {
       const used = current?.used ?? 0
       if (!Number.isSafeInteger(used) || used < 0) throw new Error('invalid-review-quota')
@@ -75,7 +74,7 @@ function servicesForRequest(request, policies) {
 // Only explicitly reviewed domain errors cross this boundary. No arbitrary exception message/details.
 const errorGroups = {
   'invalid-argument': ['invalid-payload','unsupported-field','invalid-request-id','invalid-expected-version','invalid-target',
-    'invalid-rejection-reason','invalid-rating','invalid-text','text-length','invalid-source-language','invalid-moderation-note','invalid-id',
+    'invalid-display-name','invalid-rejection-reason','invalid-rating','invalid-text','text-length','invalid-source-language','invalid-moderation-note','invalid-id',
     'invalid-report-text','invalid-report-reason','invalid-report-disposition','invalid-page-size','invalid-cursor','restart-pagination','invalid-batch-size'],
   'unauthenticated': ['authentication-required','auth/id-token-expired','auth/id-token-revoked','auth/invalid-id-token',
     'auth/user-disabled','auth/user-not-found','auth/argument-error'],

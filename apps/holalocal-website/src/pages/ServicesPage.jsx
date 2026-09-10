@@ -1,3 +1,7 @@
+import CustomerReviews, { ReviewRatingSummary } from '../components/reviews/CustomerReviews.jsx'
+import { customerReviewsEnabled } from '../utils/customerReviewsFlag.js'
+import { customerReviewService } from '../services/customerReviewService.js'
+import useReviewSummaries from '../hooks/useReviewSummaries.js'
 import '../styles/servicesPresentation.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -47,6 +51,9 @@ function ServicesPage() {
   const { businessId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const [businesses, setBusinesses] = useState([])
+  const [summaryAttempt, setSummaryAttempt] = useState(0)
+  const refreshSummaries = useCallback(() => setSummaryAttempt(value => value + 1), [])
+  const summaries = useReviewSummaries(businessId ? [businessId] : businesses.map(row => row.businessId), summaryAttempt)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
@@ -422,6 +429,8 @@ function ServicesPage() {
           <>
             {messagingError && <p className="form-message form-message--error" role="alert">{messagingError}</p>}
             <BusinessDetailPanel
+              ratingSummary={customerReviewsEnabled ? <ReviewRatingSummary summary={summaries[businessId]} /> : null}
+              reviews={customerReviewsEnabled ? <CustomerReviews key={`${businessId}:${user?.uid ?? "anonymous"}:${currentLocation.key}`} api={customerReviewService} businessId={businessId} user={user} profile={userProfile} onMutation={refreshSummaries} /> : null}
               business={selectedBusiness}
               messaging={messaging}
               onBack={closeBusiness}
@@ -610,6 +619,7 @@ function ServicesPage() {
           <div className="services-results__grid">
             {filteredBusinesses.map((business) => (
               <PublicBusinessCard
+                ratingSummary={customerReviewsEnabled ? <ReviewRatingSummary summary={summaries[business.businessId]} /> : null}
                 business={{
                   ...business,
                   category: getPublicBusinessPrimaryServiceLabel(business, taxonomyLabel),

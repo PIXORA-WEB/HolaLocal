@@ -17,7 +17,7 @@ const same = isDeepStrictEqual
 
 /** Adapter/policy contracts and trust requirements: ../CUSTOMER_REVIEWS_BATCH2A.md. */
 export function createCustomerReviewCommands({ helpers: h, database, auth, readEligibility,
-  aliasPolicy, quotaPolicy, clock = Date.now, allocatePublicId = () => randomBytes(24).toString('hex'), textBounds } = {}) {
+  quotaPolicy, clock = Date.now, allocatePublicId = () => randomBytes(24).toString('hex'), textBounds } = {}) {
   for (const name of ['isCustomerReviewRecord', 'isCustomerReviewId', 'validateCustomerReviewSubmission',
     'customerReviewAssert', 'createCustomerReviewSlot', 'assertCustomerReviewSlot', 'transitionCustomerReview',
     'evaluateCustomerReviewEligibility', 'projectPublishedCustomerReview', 'customerReviewRatingContribution',
@@ -26,7 +26,7 @@ export function createCustomerReviewCommands({ helpers: h, database, auth, readE
   }
   requireValue(typeof database?.timestampFromMillis === 'function' && typeof database?.get === 'function' && typeof database?.runTransaction === 'function'
     && typeof auth?.resolveActor === 'function' && typeof auth?.loadAuthorIdentity === 'function'
-    && typeof readEligibility === 'function' && typeof aliasPolicy?.choose === 'function'
+    && typeof readEligibility === 'function'
     && typeof quotaPolicy?.reserve === 'function', 'missing-dependency')
 
   h = createBoundedCustomerReviewHelpers(h)
@@ -35,7 +35,7 @@ export function createCustomerReviewCommands({ helpers: h, database, auth, readE
     requireValue(h.isCustomerReviewRecord(input), 'invalid-payload')
     const isSubmission = submissionCommands.includes(command)
     const keys = ['requestId', 'expectedVersion', isSubmission ? 'businessId' : 'publicReviewId',
-      ...(isSubmission ? ['rating', 'originalText', 'declaredSourceLanguage'] : []),
+      ...(isSubmission ? ['rating', 'originalText', 'declaredSourceLanguage', 'displayName'] : []),
       ...(moderationCommands.includes(command) ? ['moderationNote'] : []),
       ...(command === 'reject' ? ['rejectionReasonCode'] : [])]
     requireValue(Reflect.ownKeys(input).every(key => keys.includes(key)), 'unsupported-field')
@@ -46,7 +46,7 @@ export function createCustomerReviewCommands({ helpers: h, database, auth, readE
     const value = { requestId: input.requestId, expectedVersion: input.expectedVersion, [target]: input[target] }
     if (isSubmission) {
       const result = h.validateCustomerReviewSubmission({ rating: input.rating, originalText: input.originalText,
-        declaredSourceLanguage: input.declaredSourceLanguage }, textBounds)
+        declaredSourceLanguage: input.declaredSourceLanguage, displayName: input.displayName }, textBounds)
       requireValue(result.valid, result.issues[0])
       Object.assign(value, result.value)
     }
@@ -127,7 +127,7 @@ export function createCustomerReviewCommands({ helpers: h, database, auth, readE
       // submit also permits Batch 1 resubmission after rejection/withdrawal. edit requires an approved version.
       const after = h.transitionCustomerReview(before, { action: submitting ? 'submit' : command,
         expectedVersion: payload.expectedVersion, submission: submitting ? {
-          rating: payload.rating, originalText: payload.originalText, declaredSourceLanguage: payload.declaredSourceLanguage,
+          rating: payload.rating, originalText: payload.originalText, declaredSourceLanguage: payload.declaredSourceLanguage, displayName: payload.displayName,
         } : undefined, actor, authorIdentity: identity, authorAccount: eligibility?.account, business: eligibility?.business }, textBounds)
       const publicPath = `customerReviewsPublic/${before.publicReviewId}`
       const existingPublic = await read(publicPath)
@@ -157,8 +157,8 @@ export function createCustomerReviewCommands({ helpers: h, database, auth, readE
       const nextQuota = submitting ? quotaPolicy.reserve({ current: quota, actorUid: actor.uid, businessId: locator.businessId, now }) : null
       requireValue(!submitting || h.isCustomerReviewRecord(nextQuota), 'invalid-quota-policy-result')
       const projection = h.projectPublishedCustomerReview(after)
-      const alias = projection ? (oldProjection ? existingPublic.reviewerAlias
-        : aliasPolicy.choose({ publicReviewId: before.publicReviewId })) : null
+      // Name travels with the moderated revision. Pending edits retain the approved name.
+      const alias = projection ? (projection.reviewerAlias ?? (oldProjection ? existingPublic.reviewerAlias : null)) : null
       requireValue(!projection || (typeof alias === 'string' && alias.trim().length > 0
         && [...alias].length <= 80 && !/[\uD800-\uDFFF]/u.test(alias)), 'invalid-public-alias')
       // All reads are complete. Policies above are synchronous, pure and must be retry-safe.

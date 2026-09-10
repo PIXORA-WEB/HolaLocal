@@ -49,7 +49,7 @@ if (process.env.HOLALOCAL_CALLABLE_BOUNDARY !== '1') {
       quotaPolicy: { reserve: ({ current }) => ({ used: (current?.used ?? 0) + 1 }) },
     })
     const payload = { businessId, requestId: randomUUID(), expectedVersion: 0, rating: 4,
-      originalText: 'Synthetic customer review for isolated emulator tests.' }
+      displayName:'Test reviewer',originalText: 'Synthetic customer review for isolated emulator tests.' }
     const submit = overrides => core.submit('author', { ...payload, ...overrides })
     const act = (command, current, extra = {}) => core[command](command === 'withdraw' ? 'author' : 'admin', {
       publicReviewId: current.publicReviewId, expectedVersion: current.version, requestId: randomUUID(), ...(command==='reject'?{rejectionReasonCode:'spam'}:{}), ...extra })

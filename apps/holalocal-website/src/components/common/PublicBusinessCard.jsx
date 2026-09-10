@@ -79,6 +79,7 @@ function PublicBusinessCard({
   selected = false,
   to,
   variant = 'directory',
+  ratingSummary = null,
 }) {
   const { i18n, t } = useTranslation()
   const isHero = variant === 'hero'
@@ -120,7 +121,7 @@ function PublicBusinessCard({
     return <CardElement className={`directory-business-card${selected ? ' is-selected' : ''}`} {...selectionProps}>
       <div className="directory-business-card__identity">
         <ImageAvatar name={business.name} src={business.logoUrl} />
-        <div><h3>{business.name}</h3><p className="directory-business-card__category">{categoryLabel}</p></div>
+        <div><h3>{business.name}</h3>{ratingSummary}<p className="directory-business-card__category">{categoryLabel}</p></div>
       </div>
       <p className="directory-business-card__excerpt">{business.description || t('publicBusinessDetail.noDescription')}</p>
       <dl className="directory-business-card__facts">

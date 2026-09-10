@@ -15,6 +15,8 @@ import AdminOnlyRoute from './AdminOnlyRoute.jsx'
 import ScrollToTopOnNavigation from './ScrollToTopOnNavigation.jsx'
 import { clearBusinessMediaPresentationCache } from '../services/businessMediaPresentation.js'
 
+const AdminCustomerReviewsPage = lazy(() => import('../pages/admin/AdminCustomerReviewsPage.jsx'))
+const MyReviewsPage = lazy(() => import('../pages/customer/MyReviewsPage.jsx'))
 const CompleteProfilePage = lazy(() => import('../pages/auth/CompleteProfilePage.jsx'))
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage.jsx'))
 const LoginPage = lazy(() => import('../pages/auth/LoginPage.jsx'))
@@ -84,6 +86,7 @@ function AppRoutes() {
           <Route index element={<HomePage />} />
           <Route path="events" element={<EventsPage />} />
           <Route path="community" element={<CommunityPage />} />
+          <Route path="my-reviews" element={<MyReviewsPage />} />
           <Route path="services" element={<ServicesPage />} />
           <Route path="services/:businessId" element={<ServicesPage />} />
           <Route path="businesses" element={<LegacyBusinessRedirect />} />
@@ -154,6 +157,8 @@ function AppRoutes() {
               <Route path="businesses" element={<AdminBusinessesPage />} />
               <Route path="businesses/:businessId" element={<AdminBusinessReviewPage />} />
               <Route element={<AdminOnlyRoute />}>
+                <Route path="customer-reviews" element={<AdminCustomerReviewsPage />} />
+                <Route path="customer-review-reports" element={<AdminCustomerReviewsPage reports />} />
                 <Route path="account-deletions" element={<AdminAccountDeletionsPage />} />
               </Route>
             </Route>

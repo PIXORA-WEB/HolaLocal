@@ -50,7 +50,7 @@ if(process.env.HOLALOCAL_CALLABLE_BOUNDARY!=='1') {
       name:'Fictional callable service',description:'Synthetic isolated test business',primaryCategoryId:'home',categoryIds:['home'],
       serviceAreas:['Madrid'],languages:['en'],primaryLanguage:'en',status:'active',publishedAt:1,
       location:{locality:'Madrid',region:'Madrid',countryCode:'ES'}})
-    const payload={businessId,requestId:'first',expectedVersion:0,rating:4,originalText:'Fictional review describing thoughtful and helpful service.'}
+    const payload={businessId,requestId:'first',expectedVersion:0,rating:4,displayName:'Test reviewer',originalText:'Fictional review describing thoughtful and helpful service.'}
     assert.equal(ok(await invoke('listPublishedCustomerReviews',{businessId})).items.length,0)
     denied(await invoke('submitCustomerReview',payload),'UNAUTHENTICATED')
     for(const role of ['unverified','inactive'])denied(await invoke('submitCustomerReview',payload,role),'FAILED_PRECONDITION')

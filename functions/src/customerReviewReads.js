@@ -43,6 +43,7 @@ export function createCustomerReviewReadServices({ helpers, database, auth, isPu
     return { limit, position, scope }
   }
   const original = revision => revision && ({ revision: revision.revision, rating: revision.rating,
+    ...(revision.displayName === undefined ? {} : { displayName: revision.displayName }),
     originalText: revision.originalText, declaredSourceLanguage: revision.declaredSourceLanguage })
   function publicProjection(row, businessId) {
     const value = row.data
@@ -50,7 +51,7 @@ export function createCustomerReviewReadServices({ helpers, database, auth, isPu
       && h.isCustomerReviewId(row.id) && row.id.length >= 16
       && Number.isSafeInteger(value.publishedRevision) && value.publishedRevision >= 1, 'invalid-public-review')
     const validated = h.validateCustomerReviewSubmission({ rating: value.rating, originalText: value.originalText,
-      declaredSourceLanguage: value.declaredSourceLanguage }, { min: 1, max: Number.MAX_SAFE_INTEGER })
+      declaredSourceLanguage: value.declaredSourceLanguage }, { min: 1, max: Number.MAX_SAFE_INTEGER }, { allowLegacyDisplayName: true })
     check(validated.valid && validated.value.originalText === value.originalText, 'invalid-public-review')
     check(value.reviewerAlias == null || (typeof value.reviewerAlias === 'string' && value.reviewerAlias.trim()
       && [...value.reviewerAlias].length <= 80), 'invalid-public-alias')

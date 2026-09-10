@@ -2,8 +2,8 @@
 export const CUSTOMER_REVIEW_SCHEMA_VERSION = 1
 export const CUSTOMER_REVIEW_TEXT_BOUNDS = Object.freeze({ min: 20, max: 2000 })
 export const CUSTOMER_REVIEW_STATUSES = Object.freeze(['empty', 'pending', 'published', 'rejected', 'withdrawn', 'removed'])
-export const CUSTOMER_REVIEW_SUBMISSION_FIELDS = Object.freeze(['rating', 'originalText', 'declaredSourceLanguage'])
-export const CUSTOMER_REVIEW_PUBLIC_FIELDS = Object.freeze(['publicReviewId', 'businessId', 'publishedRevision', 'rating', 'originalText', 'declaredSourceLanguage'])
+export const CUSTOMER_REVIEW_SUBMISSION_FIELDS = Object.freeze(['rating', 'originalText', 'declaredSourceLanguage', 'displayName'])
+export const CUSTOMER_REVIEW_PUBLIC_FIELDS = Object.freeze(['publicReviewId', 'businessId', 'publishedRevision', 'rating', 'originalText', 'declaredSourceLanguage', 'reviewerAlias'])
 
 export class CustomerReviewError extends Error {
   constructor(code) { super(code); this.name = 'CustomerReviewError'; this.code = code }
@@ -30,7 +30,14 @@ export function customerReviewCodePointLength(text) {
   customerReviewAssert(typeof text === 'string' && !/[\uD800-\uDFFF]/u.test(text), 'invalid-text')
   return [...text].length
 }
-export function validateCustomerReviewSubmission(payload, bounds = CUSTOMER_REVIEW_TEXT_BOUNDS) {
+export function validateCustomerReviewDisplayName(value) {
+  if (typeof value !== 'string' || /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\uD800-\uDFFF]/u.test(value)) {
+    return { valid: false, value: null }
+  }
+  const name = value.trim().normalize('NFC')
+  return { valid: [...name].length >= 1 && [...name].length <= 80, value: name }
+}
+export function validateCustomerReviewSubmission(payload, bounds = CUSTOMER_REVIEW_TEXT_BOUNDS, { allowLegacyDisplayName = false } = {}) {
   customerReviewAssert(isCustomerReviewRecord(bounds) && Number.isSafeInteger(bounds.min)
     && Number.isSafeInteger(bounds.max) && bounds.min >= 1 && bounds.max >= bounds.min, 'invalid-text-bounds')
   const issues = []
@@ -44,11 +51,13 @@ export function validateCustomerReviewSubmission(payload, bounds = CUSTOMER_REVI
     const length = customerReviewCodePointLength(originalText)
     if (length < bounds.min || length > bounds.max) issues.push('text-length')
   }
+  const displayName = validateCustomerReviewDisplayName(payload.displayName)
+  if (!(allowLegacyDisplayName && payload.displayName === undefined) && !displayName.valid) issues.push('invalid-display-name')
   const language = payload.declaredSourceLanguage === undefined ? null : payload.declaredSourceLanguage
   if (!isCustomerReviewLanguage(language)) issues.push('invalid-source-language')
   return {
     valid: issues.length === 0,
-    value: issues.length ? null : Object.freeze({ rating: payload.rating, originalText, declaredSourceLanguage: language }),
+    value: issues.length ? null : Object.freeze({ rating: payload.rating, originalText, declaredSourceLanguage: language, ...(payload.displayName === undefined && allowLegacyDisplayName ? {} : { displayName: displayName.value }) }),
     issues,
   }
 }
@@ -76,8 +85,9 @@ export function assertCustomerReviewSlot(slot) {
   slot.revisions.forEach((revision, index) => {
     customerReviewAssert(isCustomerReviewRecord(revision) && revision.revision === index + 1, 'invalid-revision')
     const result = validateCustomerReviewSubmission({ rating: revision.rating, originalText: revision.originalText,
-      declaredSourceLanguage: revision.declaredSourceLanguage }, { min: 1, max: Number.MAX_SAFE_INTEGER })
+      declaredSourceLanguage: revision.declaredSourceLanguage, displayName: revision.displayName }, { min: 1, max: Number.MAX_SAFE_INTEGER }, { allowLegacyDisplayName: true })
     customerReviewAssert(result.valid && result.value.originalText === revision.originalText
+      && (revision.displayName === undefined || result.value.displayName === revision.displayName)
       && revision.declaredSourceLanguage !== undefined, 'invalid-revision')
   })
   const last = slot.revisions.length
@@ -101,5 +111,5 @@ export function projectPublishedCustomerReview(slot) {
   // Explicit allowlist, never spread private slot/revision objects.
   return Object.freeze({ publicReviewId: slot.publicReviewId, businessId: slot.businessId,
     publishedRevision: revision.revision, rating: revision.rating, originalText: revision.originalText,
-    declaredSourceLanguage: revision.declaredSourceLanguage })
+    declaredSourceLanguage: revision.declaredSourceLanguage, ...(revision.displayName === undefined ? {} : { reviewerAlias: revision.displayName }) })
 }

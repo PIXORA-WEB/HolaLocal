@@ -1,3 +1,5 @@
+import {adminCustomerReviewNavigation} from './adminCustomerReviewNavigation.js'
+import { customerReviewTranslations } from './customerReviewTranslations.js'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { supportedUILanguages } from '../utils/languages.js'
@@ -74,6 +76,8 @@ const englishResource = composeEnglishTranslationResource({
   productLandingTranslations: productLandingEnglishTranslations,
   serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
 })
+englishResource.adminCustomerReviews = {...adminCustomerReviewNavigation.en}
+  englishResource.customerReviews = customerReviewTranslations.en
 const loadedLocales = new Set(['en'])
 const localeLoadPromises = new Map()
 let languageChangeSequence = 0
@@ -139,6 +143,8 @@ export async function loadLocale(languageCode) {
       legalPageContent: { legalPages: legalPageContent[code] },
       serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
     })
+    resource.adminCustomerReviews = {...adminCustomerReviewNavigation[code]}
+    resource.customerReviews = customerReviewTranslations[code]
     i18n.addResourceBundle(code, 'translation', resource, true, true)
     loadedLocales.add(code)
     return code

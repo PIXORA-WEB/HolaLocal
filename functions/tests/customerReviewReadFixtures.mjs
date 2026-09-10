@@ -20,7 +20,7 @@ export function fixtureData(prefix = 'read') {
     const act = action => {
       slot = lifecycle.transitionCustomerReview(slot, { ...context, action, expectedVersion: slot.version,
         actor: ['approve','reject','remove'].includes(action) ? { uid: 'admin', admin: true } : { uid: authorUid },
-        submission: { rating: 4, originalText: 'Fictional review with helpful and thoughtful service.', declaredSourceLanguage: 'en' } })
+        submission: { rating: 4, displayName:'Test reviewer',originalText: 'Fictional review with helpful and thoughtful service.', declaredSourceLanguage: 'en' } })
     }
     act('submit')
     if (status !== 'pending' && status !== 'rejected') act('approve')
@@ -38,7 +38,7 @@ export function fixtureData(prefix = 'read') {
     for (const revision of revisions) data.set(`customerReviewSlots/${pair}/revisions/${revision.revision}`, { ...revision, submittedAt: time(revision.revision === 1 ? 100 : 250) })
     data.set(`customerReviewIds/${publicReviewId}`, { businessId, authorUid })
     const projection = contracts.projectPublishedCustomerReview(slot)
-    if (projection) data.set(`customerReviewsPublic/${publicReviewId}`, { ...projection, publishedAt: time(200), updatedAt: time(200), reviewerAlias: 'Fictional alias',
+    if (projection) data.set(`customerReviewsPublic/${publicReviewId}`, { ...projection, publishedAt: time(200), updatedAt: time(200), reviewerAlias: 'Test reviewer',
       authorUid, email: 'private@example.invalid', moderationNote: 'SECRET NOTE' }) // allowlist stress
     return { publicReviewId, pair, slot }
   }
