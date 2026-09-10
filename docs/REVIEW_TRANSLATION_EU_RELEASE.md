@@ -1,3 +1,5 @@
+> Current coordinated authority: [REVIEWS_FINAL_LAUNCH_PACKAGE.md](REVIEWS_FINAL_LAUNCH_PACKAGE.md). Earlier isolated deployment scopes and unresolved contact/budget placeholders below are historical where superseded. PR33–36 remain unmerged; operational deployment and activation remain unapproved.
+
 # EU review translation — disabled release approval package
 
 ## Source and approval boundary

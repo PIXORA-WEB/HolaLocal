@@ -1,3 +1,5 @@
+> Current coordinated authority: [REVIEWS_FINAL_LAUNCH_PACKAGE.md](REVIEWS_FINAL_LAUNCH_PACKAGE.md). Earlier isolated deployment scopes and unresolved contact/budget placeholders below are historical where superseded. PR33–36 remain unmerged; operational deployment and activation remain unapproved.
+
 > Current update, 10 September 2026: EUR30/month net Translation actual-spend alert is configured at 100% for hello@holalocal.es; it is not a cap. Daily/minute quotas remain unapproved. Isolated erasure-recovery and retention safeguards plus expanded offline monitoring are prepared, not deployed. See [UNATTENDED_SAFEGUARDS_RELEASE.md](UNATTENDED_SAFEGUARDS_RELEASE.md), which supersedes older budget and safeguard-preparation statements below. Reviews, retention and recovery remain disabled; upload/retry and maintenance proposals remain separate.
 
 # Activation preparation update

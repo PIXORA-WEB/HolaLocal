@@ -1,0 +1,54 @@
+{
+  "project": "holalocal-491c9",
+  "region": "europe-west1",
+  "baseline": "428cdbc08617d53e3498ffb5593e7200807dfa7c",
+  "dependencyOrder": [
+    33,
+    34,
+    35,
+    36
+  ],
+  "testedRuntimeCommit": "66e228da955eb8360a4d3349b1088f1e73f414ac",
+  "sourceSubtrees": {
+    "apps": "304e7486e41cc3ffa4b6ee253fcee31e580b6159",
+    "functions": "9dc202551ad9f5e9c276b273e9fd092774964531",
+    "shared": "df48c91dd413dc7e084d953724dd30ccee2ec7d3"
+  },
+  "functionExports": [
+    "submitCustomerReview",
+    "editCustomerReview",
+    "withdrawCustomerReview",
+    "approveCustomerReview",
+    "rejectCustomerReview",
+    "removeCustomerReview",
+    "listPublishedCustomerReviews",
+    "getOwnCustomerReview",
+    "listOwnCustomerReviews",
+    "listCustomerReviewModerationQueue",
+    "getCustomerReviewModerationCase",
+    "submitCustomerReviewReport",
+    "listCustomerReviewReports",
+    "getCustomerReviewReport",
+    "resolveCustomerReviewReport",
+    "getCustomerReviewRatingSummaries",
+    "translatePublishedCustomerReview",
+    "finalizeAccountDeletion",
+    "sweepResolvedCustomerReviewReports",
+    "recoverAccountDeletions"
+  ],
+  "excludedDeployments": [
+    "firestore:rules",
+    "firestore:indexes",
+    "storage",
+    "media handlers",
+    "messaging handlers",
+    "business onboarding/moderation"
+  ],
+  "gatesInitiallyClosed": [
+    "CUSTOMER_REVIEWS_ENABLED",
+    "CUSTOMER_REVIEW_RETENTION_ENABLED",
+    "ACCOUNT_DELETION_RECOVERY_ENABLED"
+  ],
+  "providerInitiallyDisabled": true,
+  "quotaChanges": false
+}
