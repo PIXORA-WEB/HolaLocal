@@ -17,10 +17,10 @@ await build({root,configFile:false,envDir:false,publicDir:false,logLevel:'silent
   },load(id){
     if(id==='\0hooks')return `let states=[],saved=[],refs=[],refIndex=0;export const changes=[],effects=[];export const setStates=value=>{states=[...value];saved=[];refs=[];refIndex=0;changes.length=0;effects.length=0};export const rerender=()=>{states=[...saved];saved=[];refIndex=0;effects.length=0};export const useState=value=>{const index=saved.length,current=states.length?states.shift():value;saved.push(current);return [current,value=>{saved[index]=typeof value==='function'?value(saved[index]):value;changes.push(saved[index])}]};export const useRef=value=>refs[refIndex++]??(refs[refIndex-1]={current:value});export const useId=()=> 'review-test';export const useMemo=fn=>fn();export const useEffect=fn=>effects.push(fn);export const useSyncExternalStore=(a,get)=>get();`
     if(id==='\0translation')return `export const useTranslation=()=>({t:(key)=>key,i18n:{resolvedLanguage:'en'}})`
-    if(id==='\0review-harness')return `export * from '${root}/src/components/admin/CustomerReviewModeration.jsx';export {default as ReviewReasonSelect} from '${root}/src/components/admin/ReviewReasonSelect.jsx';export {setStates,changes,rerender,effects} from 'review-test-hooks';export {createElement} from 'react';export {renderToStaticMarkup} from 'react-dom/server';`
+    if(id==='\0review-harness')return `export * from '${root}/src/components/admin/CustomerReviewModeration.jsx';export {default as ReviewReasonSelect} from '${root}/src/components/admin/ReviewReasonSelect.jsx';export {setStates,changes,rerender,effects} from 'review-test-hooks';export {createElement} from 'react';export {MemoryRouter} from 'react-router-dom';export {renderToStaticMarkup} from 'react-dom/server';`
   }
 },react()],ssr:{noExternal:true},build:{ssr:'review-harness',outDir:output,emptyOutDir:false,rolldownOptions:{output:{entryFileNames:'harness.mjs'}}}})
-const {ReviewModerationCase,ReviewReasonSelect,setStates,changes,rerender,effects,renderToStaticMarkup}=await import(pathToFileURL(resolve(output,'harness.mjs')))
+const {MemoryRouter,createElement,ReviewModerationCase,ReviewReasonSelect,setStates,changes,rerender,effects,renderToStaticMarkup}=await import(pathToFileURL(resolve(output,'harness.mjs')))
 const nodes=(tree,out=[])=>{if(!tree||typeof tree!=='object')return out;if(tree.type)out.push(tree);for(const child of [tree.props?.children].flat(Infinity))nodes(child,out);return out}
 const pending={publicReviewId:'r',businessId:'fictional-business',version:7,pending:{revision:3,rating:4,displayName:'Test reviewer',originalText:'<script>plain customer text</script>'},published:{revision:2,rating:3,displayName:'Test reviewer',originalText:'Previous original text'},businessAvailable:true}
 const report={reportId:'report',generation:'synthetic-generation',publicReviewId:'r',version:2,status:'open',observedPublishedRevision:3,observedRevisionIsCurrent:true,targetState:'published',currentReview:{publishedRevision:3,version:9,rating:4,displayName:'Test reviewer',originalText:'Current original text'},reasonCode:'spam',details:'Details for moderation',reporterUid:'DO-NOT-DISPLAY',resolution:{moderationNote:'INTERNAL-NOTE'}}
@@ -135,4 +135,20 @@ test('reason combobox outside click, disabled state and selection callbacks',()=
   const button=nodes(tree).find(n=>n.props.role==='combobox');assert.equal(button.props.disabled,true);assert.equal(button.props['aria-expanded'],false)
   button.props.onKeyDown({key:'Enter',preventDefault(){assert.fail('Disabled')}})
  }finally{globalThis.document=oldDocument;globalThis.window=oldWindow}
+})
+
+test('report context links only the authoritative public business and safely renders unavailable targets',()=>{
+ for(const businessContext of [null,{businessId:'public-business',name:'<script>Public & business</script>'}]){
+  setStates([])
+  const tree=ReviewModerationCase({item:{...report,businessContext,name:'PRIVATE-NAME'},reports:true,onAction(){},blocked:false})
+  const html=renderToStaticMarkup(createElement(MemoryRouter,null,tree))
+  assert.equal(html.includes('PRIVATE-NAME'),false)
+  if(businessContext){
+   assert.ok(html.includes('href="/services/public-business"'))
+   assert.ok(html.includes('&lt;script&gt;Public &amp; business&lt;/script&gt;'))
+  }else{
+   assert.equal(html.includes('href="/services/'),false)
+   assert.ok(html.includes('adminCustomerReviews.unavailable'))
+  }
+ }
 })

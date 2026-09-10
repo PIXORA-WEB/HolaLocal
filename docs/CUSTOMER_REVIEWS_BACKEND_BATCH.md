@@ -14,11 +14,11 @@ No website, onboarding, Services presentation, business-media transport/retry/se
 
 ## Historical production policy boundary at PR #28
 
-This section describes the historical PR #28 baseline, which had no approved identity, quota or retention policies. Current approved implementations and remaining activation requirements are recorded in CUSTOMER_REVIEW_QUOTAS_RETENTION_BATCH.md. The subsequent identity/UI batch implements the approved customer-chosen public name; 5 review submissions/edits and 10 reports per rolling 24h plus 90-day resolved-report retention are now approved but await their separate implementation. The server gate requires both an explicit enable flag and the exact protected local demo configuration; non-demo activation is rejected before Auth/Firestore service construction. The alias chooser is superseded by revision-bound customer names. Remaining cumulative quota values are demo-only, not approved launch enforcement.
+This section describes the historical PR #28 baseline, which had no approved identity, quota or retention policies. Current approved implementations and remaining activation requirements are recorded in CUSTOMER_REVIEW_QUOTAS_RETENTION_BATCH.md. The subsequent identity/UI batch implements the approved customer-chosen public name; 5 review submissions/edits and 10 reports per rolling 24h plus 90-day resolved-report retention are now implemented in PR #30. The server gate requires both an explicit enable flag and the exact protected local demo configuration; non-demo activation is rejected before Auth/Firestore service construction. The alias chooser is superseded by revision-bound customer names. The historical cumulative quotas were superseded by rolling windows in PR #30.
 
 A production launch needs a separate reviewed policy implementation, author/customer and admin website flows, mobile/keyboard/privacy verification, copy/translation review and operational decisions. This batch makes no claim that ordinary successful image uploads establish failure/retry correctness; that incident remains separate.
 
-## Deployment boundary and ordering (not authorization)
+## Historical deployment boundary (superseded by CUSTOMER_REVIEWS_RELEASE_READINESS.md)
 
 A merge may trigger the existing Vercel website build, but this batch changes no website source and cannot enable reviews there. Do not run a blanket Firebase deploy.
 

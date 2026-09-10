@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react'
+import {Link} from 'react-router-dom'
 import {useTranslation} from 'react-i18next'
 import ReviewReasonSelect from './ReviewReasonSelect.jsx'
 import AccessibleDialog from '../common/AccessibleDialog.jsx'
@@ -17,7 +18,7 @@ export function ReviewModerationCase({item,reports,onAction,blocked}){
   const date=value=>value?new Intl.DateTimeFormat(i18n.resolvedLanguage,{dateStyle:'medium',timeStyle:'short'}).format(value.seconds*1000):copy('dateMissing')
   const prepare=action=>{try{const payload=adminActionPayload(action,item,reason,internalNote);setInvalid(false);setConfirmation({action,payload})}catch{setInvalid(true)}}
   return <div>
-    <header className="admin-customer-reviews__identity"><h2>{copy('business')}: <span>{item.businessId??copy('notProvided')}</span></h2></header>
+    <header className="admin-customer-reviews__identity"><h2>{copy(reports?'businessName':'business')}: {reports?(item.businessContext?<Link to={`/services/${encodeURIComponent(item.businessContext.businessId)}`}>{item.businessContext.name||copy('notProvided')}</Link>:<span>{copy('unavailable')}</span>):<span>{item.businessId??copy('notProvided')}</span>}</h2></header>
     {reports?<>
       {item.overdue&&<p role="status">{copy('overdue')}</p>}{item.createdAt&&<p>{new Intl.DateTimeFormat(i18n.resolvedLanguage,{dateStyle:'medium',timeStyle:'short'}).format(item.createdAt.seconds*1000)}</p>}<p>{t(`customerReviews.${item.reasonCode}`)} · {copy(item.targetState)}</p>
       <p>{copy('observed')}: {item.observedPublishedRevision} · {copy('current')}: {item.currentReview?.publishedRevision??copy('notProvided')}</p>

@@ -16,3 +16,13 @@ test('lazy admin registration retains all 17 locales and survives later navigati
   assert.equal(i18n.t('adminCustomerReviews.success_reject',{lng:code}),copy.success_reject)
  }
 })
+
+test('all admin locales have business context and no obsolete rejection-unavailable copy',()=>{
+ const expected=Object.keys(adminCustomerReviewTranslations.en).sort()
+ for(const [code,copy] of Object.entries(adminCustomerReviewTranslations)){
+  assert.deepEqual(Object.keys(copy).sort(),expected,code)
+  for(const [key,value] of Object.entries(copy))assert.ok(typeof value==='string'&&value.trim()&&!value.includes('|'),`${code}.${key}`)
+  assert.ok(copy.businessName)
+  assert.equal(Object.hasOwn(copy,'rejectGap'),false)
+ }
+})
