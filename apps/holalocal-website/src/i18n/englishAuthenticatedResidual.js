@@ -23,7 +23,7 @@ export const englishAuthenticatedResidual = Object.freeze({
         selectedContext: '{{region}} · {{country}}',
       },
       errors: {
-        savePermissionDenied: 'Your business changes were not saved because account access is unavailable.',
+        savePermissionDenied: 'Your business changes were not saved. This update was not permitted. Your edits are still here. Contact support if this continues.',
         saveNetworkUnavailable: 'Your business changes were not saved because of a temporary connection problem.',
         saveFailed: 'Your business changes were not saved. Your entries are still available.',
         savedRefreshFailed: 'Your profile details were saved, but the refreshed profile could not be loaded. Reload to confirm them before making more changes.',

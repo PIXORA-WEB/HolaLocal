@@ -2374,3 +2374,73 @@ describe('storage', () => {
 })
 
 test('test environment was initialized', () => assert.ok(environment))
+
+
+test('complete owner profile transaction preserves legacy services and versioned media', async () => {
+  const {runTransaction} = await import('firebase/firestore')
+  for (const status of ['draft','rejected']) for (const changeServices of [false, true, 'maximum']) {
+    const id = `profile-save-${status}-${changeServices}`
+    const slots = changeServices === 'maximum' ? [0,1,2,3,4,5,6,7] : [0,1,2]
+    const paths = slots.map(slot=>`businesses/${id}/photos/${slot}/${slot % 2 ? 'b' : 'a'}`)
+    const services = changeServices === 'maximum' ? ['handyman','painter-decorator','removals','plumber','cleaner','other-local-service'] : ['handyman','painter-decorator','removals']
+    const privateContact = {...activeContact, email:'private@example.invalid', phone:'+34000000000'}
+    await environment.withSecurityRulesDisabled(async context => {
+      const database=context.firestore()
+      await setDoc(doc(database,'businesses',id),business({
+        managerIds:['owner'],status,primaryCategoryId:'Cleaning',categoryIds:['Handyman'],
+        galleryStoragePaths:paths,logoStoragePath:`businesses/${id}/logos/logo/b`,
+      }))
+      await setDoc(doc(database,'businessPrivate',id),{ownerId:'owner',managerIds:['owner'],contact:privateContact,
+        currentRejection:{reason:'Synthetic changes required'},createdAt:serverTimestamp(),updatedAt:serverTimestamp()})
+    })
+    const database=environment.authenticatedContext('owner').firestore()
+    await assertSucceeds(runTransaction(database,async transaction=>{
+      const ref=doc(database,'businesses',id),privateRef=doc(database,'businessPrivate',id)
+      await transaction.get(ref);await transaction.get(privateRef)
+      transaction.update(ref,{
+        name:'Edited synthetic business',tagline:'Updated',description:'Updated synthetic description',
+        location:{locality:'Marbella',region:'Málaga',countryCode:'ES'},contact:activeContact,
+        serviceAreas:['marbella'],serviceRadiusKm:20,languages:['en'],primaryLanguage:'en',
+        ...(changeServices ? {primaryCategoryId:'handyman',categoryIds:services,customServiceDescription:changeServices === 'maximum' ? 'x'.repeat(80) : deleteField()} : {}),
+        updatedAt:serverTimestamp(),
+      })
+      transaction.set(privateRef,{ownerId:'owner',managerIds:['owner'],contact:privateContact,updatedAt:serverTimestamp()},{merge:true})
+    }))
+    const saved=(await getDoc(doc(database,'businesses',id))).data()
+    assert.deepEqual(saved.categoryIds,changeServices ? services : ['Handyman'])
+    assert.deepEqual(saved.galleryStoragePaths,paths)
+    assert.equal(saved.logoStoragePath,`businesses/${id}/logos/logo/b`)
+    assert.equal(saved.contact.email,'')
+    assert.equal((await getDoc(doc(database,'businessPrivate',id))).data().contact.email,privateContact.email)
+  }
+})
+
+test('complete profile transactions reject unauthorized states and payloads atomically', async () => {
+  const cases=[
+    {uid:'other-owner'}, {uid:null}, {uid:'suspended'},
+    {uid:'owner',status:'pending_review'}, {uid:'owner',status:'active'},
+    {uid:'owner',status:'suspended'}, {uid:'owner',status:'archived'},
+    {uid:'owner',status:'deleted'},
+    {uid:'owner',changes:{primaryCategoryId:'forged-service',categoryIds:['forged-service']}},
+    {uid:'owner',changes:{galleryStoragePaths:['businesses/other/photos/0/a']}},
+    {uid:'owner',changes:{ownerId:'other-owner'}},
+    {uid:'owner',changes:{contact:{...activeContact,email:'private-leak@example.invalid'}}},
+  ]
+  for (const [index,scenario] of cases.entries()) {
+    const id=`denied-profile-save-${index}`
+    const privateContact={...activeContact,email:'preserved@example.invalid'}
+    await environment.withSecurityRulesDisabled(async context=>{
+      await setDoc(doc(context.firestore(),'businesses',id),business({status:scenario.status??'rejected',managerIds:['owner'],galleryStoragePaths:[`businesses/${id}/photos/0/a`]}))
+      await setDoc(doc(context.firestore(),'businessPrivate',id),{ownerId:'owner',managerIds:['owner'],contact:privateContact,createdAt:serverTimestamp(),updatedAt:serverTimestamp()})
+    })
+    const database=(scenario.uid ? environment.authenticatedContext(scenario.uid) : environment.unauthenticatedContext()).firestore()
+    const batch=writeBatch(database)
+    batch.update(doc(database,'businesses',id),{name:'Denied update',primaryCategoryId:'handyman',categoryIds:['handyman'],...scenario.changes,updatedAt:serverTimestamp()})
+    batch.set(doc(database,'businessPrivate',id),{contact:{...privateContact,email:'must-not-persist@example.invalid'},updatedAt:serverTimestamp()},{merge:true})
+    await assertFails(batch.commit())
+    await environment.withSecurityRulesDisabled(async context=>{
+      assert.equal((await getDoc(doc(context.firestore(),'businesses',id))).data().name,'Active business')
+      assert.deepEqual((await getDoc(doc(context.firestore(),'businessPrivate',id))).data().contact,privateContact)
+    })
+  }
+})
