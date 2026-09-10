@@ -55,7 +55,7 @@ test('the complete authentication chain preserves only normalized internal locat
 })
 
 test('canonical save styles retain a wrapping 44px target without movement', async () => {
-  const css = await read('src/styles/global.css')
+  const css = await read('src/styles/servicesPresentation.css')
   const rule = css.match(/\.business-detail__save \{([\s\S]*?)\n\}/)?.[1] ?? ''
   assert.match(css, /\.business-detail__actions \.button \{[\s\S]*?min-height: 2\.75rem/)
   assert.match(rule, /white-space: normal/)

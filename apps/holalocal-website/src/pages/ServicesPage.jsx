@@ -1,3 +1,4 @@
+import '../styles/servicesPresentation.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -13,7 +14,7 @@ import BusinessReportDialog from '../components/common/BusinessReportDialog.jsx'
 import PublicBusinessCard from '../components/common/PublicBusinessCard.jsx'
 import ServiceCategoryIcon from '../components/common/ServiceCategoryIcon.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
-import { getActivePublicBusinesses } from '../services/businessService.js'
+import { getActivePublicBusinesses, getPublicBusinessById } from '../services/businessService.js'
 import { getOrCreateConversationForBusiness } from '../services/conversationService.js'
 import { createBusinessReport } from '../services/reportService.js'
 import { getLanguageNameFromCode } from '../utils/languages.js'
@@ -49,6 +50,9 @@ function ServicesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const [detail, setDetail] = useState({ key: null, business: null, status: 'loading' })
+  const detailKey = `${businessId ?? ''}:${loadAttempt}`
+  const detailStatus = detail.key === detailKey ? detail.status : 'loading'
   const [authPromptReason, setAuthPromptReason] = useState(null)
   const [savedBusinessState, setSavedBusinessState] = useState({
     businessId: null,
@@ -104,6 +108,7 @@ function ServicesPage() {
   }, [derivedBrowseSelection.serviceId, serviceQuery])
 
   useEffect(() => {
+    if (businessId) return undefined
     let isCurrent = true
 
     getActivePublicBusinesses()
@@ -120,7 +125,20 @@ function ServicesPage() {
     return () => {
       isCurrent = false
     }
-  }, [loadAttempt, t])
+  }, [businessId, loadAttempt, t])
+
+  useEffect(() => {
+    if (!businessId) return undefined
+    let isCurrent = true
+    getPublicBusinessById(businessId)
+      .then((business) => {
+        if (isCurrent) setDetail({ key: detailKey, business, status: business ? 'ready' : 'unavailable' })
+      })
+      .catch(() => {
+        if (isCurrent) setDetail({ key: detailKey, business: null, status: 'error' })
+      })
+    return () => { isCurrent = false }
+  }, [businessId, detailKey])
 
   function retryDirectoryLoad() {
     if (loading) return
@@ -148,12 +166,12 @@ function ServicesPage() {
     searchTerm,
   }), [businesses, language, locationFilter, searchTerm, serviceQuery, taxonomyLabel])
   const selectedBusiness = useMemo(() => {
-    const business = businesses.find((candidate) => candidate.businessId === businessId)
+    const business = detail.key === detailKey ? detail.business : null
     return business ? {
       ...business,
       category: getPublicBusinessPrimaryServiceLabel(business, taxonomyLabel),
     } : null
-  }, [businessId, businesses, taxonomyLabel])
+  }, [detail, detailKey, taxonomyLabel])
   const canSaveBusinesses = Boolean(
     user
     && !profileLoading
@@ -371,16 +389,16 @@ function ServicesPage() {
   if (businessId) {
     return (
       <div className="services-page services-detail-page">
-        {loading && <p className="services-state">{t('common.loading')}</p>}
-        {error && (
+        {detailStatus === 'loading' && <p className="services-state">{t('common.loading')}</p>}
+        {detailStatus === 'error' && (
           <div className="services-state services-state--error" role="alert">
-            <p>{error}</p>
+            <p>{t('services.loadError')}</p>
             <div>
               <button
-                aria-busy={loading || undefined}
+                aria-busy={detailStatus === 'loading' || undefined}
                 className="button button--primary"
-                disabled={loading}
-                onClick={retryDirectoryLoad}
+                disabled={detailStatus === 'loading'}
+                onClick={() => setLoadAttempt((attempt) => attempt + 1)}
                 type="button"
               >
                 {t('common.retry')}
@@ -391,7 +409,7 @@ function ServicesPage() {
             </div>
           </div>
         )}
-        {!loading && !error && !selectedBusiness && (
+        {detailStatus === 'unavailable' && (
           <div className="services-state">
             <h1>{t('publicBusinessDetail.unavailableTitle')}</h1>
             <p>{t('publicBusinessDetail.unavailableDescription')}</p>

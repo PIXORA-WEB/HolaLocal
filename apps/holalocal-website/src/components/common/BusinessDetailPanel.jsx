@@ -1,7 +1,8 @@
 import { ImageAvatar } from './PublicBusinessCard.jsx'
 import { useTranslation } from 'react-i18next'
 import { formatLanguageList } from '../../utils/languages.js'
-import { getBusinessCategoryLabel } from '../../utils/business.js'
+import { getPublicBusinessPrimaryServiceLabel } from '../../utils/serviceDiscovery.js'
+import { getServiceAreaLabel } from '../../utils/locations.js'
 
 function externalUrl(value) {
   if (!value) return null
@@ -28,11 +29,13 @@ function BusinessDetailPanel({
   saveState = null,
 }) {
   const { i18n, t } = useTranslation()
-  const categoryLabel = business.category
-    ? getBusinessCategoryLabel(business.category, t)
-    : t('publicBusinessDetail.categoryNotSpecified')
+  const serviceLabel = (value) => getPublicBusinessPrimaryServiceLabel(
+    { category: value },
+    (definition) => t(definition.translationKey, { defaultValue: definition.defaultLabel }),
+  )
+  const categoryLabel = getPublicBusinessPrimaryServiceLabel(business, (definition) => t(definition.translationKey, { defaultValue: definition.defaultLabel })) || t('publicBusinessDetail.categoryNotSpecified')
   const services = business.services.length > 0
-    ? business.services
+    ? business.services.map(serviceLabel)
     : business.category ? [categoryLabel] : []
   const hasContact = Boolean(
     business.contact.phone ||
@@ -55,46 +58,13 @@ function BusinessDetailPanel({
             ? t('savedBusinesses.retry')
             : t('savedBusinesses.save')
 
-  return (
-    <article className="business-detail" aria-labelledby="business-detail-title">
-      <button className="business-detail__back" onClick={onBack} type="button">
-        <span aria-hidden="true">←</span> {t('publicBusinessDetail.backToResults')}
-      </button>
-
-      <header className="business-detail__hero">
-        <ImageAvatar
-          className="image-avatar--business-detail"
-          name={business.name}
-          src={business.logoUrl}
-        />
-        <div className="business-detail__identity">
-          <p>{categoryLabel}</p>
-          <h1 id="business-detail-title">{business.name}</h1>
-          <span>{business.serviceArea || t('publicBusinessDetail.serviceAreaNotSpecified')}</span>
-        </div>
-        <div className="business-detail__badges">
-          <span className="is-active">{t('publicBusinessDetail.activeProfile')}</span>
-          <span>
-            {t('publicBusinessDetail.subscriptionPlan', {
-              plan: t(`subscription.plans.${business.subscriptionTier}`, {
-                defaultValue: business.subscriptionTier,
-              }),
-            })}
-          </span>
-        </div>
-        <p className="business-detail__disclosure">
-          {t('publicBusinessDetail.profileInformationProvided')}
-        </p>
-      </header>
-
-      <nav className="business-detail__navigation" aria-label={t('publicBusinessDetail.sectionsLabel')}>
+  const navigation = (<nav className="business-detail__navigation" aria-label={t('publicBusinessDetail.sectionsLabel')}>
         <a href="#business-overview">{t('publicBusinessDetail.overview')}</a>
         <a href="#business-services">{t('publicBusinessDetail.services')}</a>
         <a href="#business-photos">{t('publicBusinessDetail.photos')}</a>
         <a href="#business-about">{t('publicBusinessDetail.about')}</a>
-      </nav>
-
-      <div className="business-detail__actions">
+      </nav>)
+  const actions = (<div className="business-detail__actions">
         <button
           className="button button--primary"
           disabled={messaging}
@@ -124,9 +94,8 @@ function BusinessDetailPanel({
           {t('publicBusinessDetail.reportBusiness')}
         </button>
         {saveError && <p className="business-detail__save-error" role="alert">{saveError}</p>}
-      </div>
-
-      <section className="business-detail__section" id="business-overview">
+      </div>)
+  const information = (<><section className="business-detail__section" id="business-overview">
         <p className="account-card__eyebrow">{t('publicBusinessDetail.overview')}</p>
         <h2>{t('publicBusinessDetail.aboutBusiness')}</h2>
         <p>{business.description || t('publicBusinessDetail.noDescription')}</p>
@@ -135,7 +104,7 @@ function BusinessDetailPanel({
             <dt>{t('publicBusinessDetail.serviceArea')}</dt>
             <dd>
               {business.serviceAreas.length > 0
-                ? business.serviceAreas.join(' · ')
+                ? business.serviceAreas.map((area) => getServiceAreaLabel(area, t)).join(' · ')
                 : business.serviceArea || t('publicBusinessDetail.notSpecified')}
             </dd>
           </div>
@@ -189,11 +158,9 @@ function BusinessDetailPanel({
             <p>{t('publicBusinessDetail.noPhotos')}</p>
           </div>
         )}
-      </section>
-
-      <section className="business-detail__section" id="business-about">
-        <p className="account-card__eyebrow">{t('publicBusinessDetail.about')}</p>
-        <h2>{t('publicBusinessDetail.contactInformation')}</h2>
+      </section></>)
+  const contact = (<section className="business-detail__section" id="business-about">
+        <h2>{t('publicBusinessDetail.contactThisBusiness')}</h2>
         {hasContact ? (
           <dl className="business-detail__contact">
             {business.contact.phone && <div><dt>{t('publicBusinessDetail.phone')}</dt><dd><a href={`tel:${business.contact.phone}`} onClick={() => onContactAction?.('phone')}>{business.contact.phone}</a></dd></div>}
@@ -205,7 +172,45 @@ function BusinessDetailPanel({
         ) : (
           <p className="business-detail__empty">{t('publicBusinessDetail.noContact')}</p>
         )}
-      </section>
+        {actions}
+      </section>)
+
+  return (
+    <article className="business-detail" aria-labelledby="business-detail-title">
+      <button className="business-detail__back" onClick={onBack} type="button">
+        <span aria-hidden="true">←</span> {t('publicBusinessDetail.backToResults')}
+      </button>
+
+      <header className="business-detail__hero">
+        <ImageAvatar
+          className="image-avatar--business-detail"
+          name={business.name}
+          src={business.logoUrl}
+        />
+        <div className="business-detail__identity">
+          <p>{categoryLabel}</p>
+          <h1 id="business-detail-title">{business.name}</h1>
+          <span>{business.serviceArea || t('publicBusinessDetail.serviceAreaNotSpecified')}</span>
+        </div>
+        <div className="business-detail__badges">
+          <span className="is-active">{t('publicBusinessDetail.activeProfile')}</span>
+          <span>
+            {t('publicBusinessDetail.subscriptionPlan', {
+              plan: t(`subscription.plans.${business.subscriptionTier}`, {
+                defaultValue: business.subscriptionTier,
+              }),
+            })}
+          </span>
+        </div>
+        <p className="business-detail__disclosure">
+          {t('publicBusinessDetail.profileInformationProvided')}
+        </p>
+      </header>
+
+      {<div className="business-detail__columns">
+        {contact}
+        <div className="business-detail__information">{navigation}{information}</div>
+      </div>}
     </article>
   )
 }
