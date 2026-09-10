@@ -1,6 +1,6 @@
 # Translation monitoring update
 
-Offline generator now covers17 review callables including translatePublishedCustomerReview, two count metrics and eight disabled policies. The new warning policy matches structured or text google_translation_failure records on only that service; safe unavailable responses need not produce HTTP5xx. No sensitive label extraction. Actual recipient email/channel and staffed hours remain unknown; Craig, Europe/Madrid, no backup. No alerts/channels/notifications configured. Cloud filter validation and delivery remain approval-gated.
+Offline generator now covers17 review callables including translatePublishedCustomerReview, two count metrics and eight disabled policies. The new warning policy matches structured or text google_translation_failure records on only that service; safe unavailable responses need not produce HTTP5xx. No sensitive label extraction. Recipient is Craig at hello@holalocal.es; no fixed staffed hours or backup. The email destination is configured and one labelled test is authorised; operational policies remain offline. Cloud filter validation and delivery remain approval-gated.
 
 # Reviews monitoring and activation readiness
 
@@ -8,7 +8,7 @@ Current main at preparation: `428cdbc08617d53e3498ffb5593e7200807dfa7c`. Website
 
 ## Ownership and local artifacts
 
-Primary: Craig. Timezone: Europe/Madrid. Backup: none (uncovered absences are a launch limitation). Email supplied as `[your preferred email]` and response hours as `[days and hours I normally check alerts]`: these are placeholders, NOT usable recipient information. Need an actual email or existing same-project channel resource ID, days/hours and an accepted response/escalation arrangement before notification configuration. Recommend one-hour response during staffed hours for delivery/cleanup/erasure failures and next staffed day for latency/capacity warnings. This is a recommendation, not an agreed SLA. Do not put a personal email in source control.
+Primary: Craig, hello@holalocal.es, Europe/Madrid. Checks when available while working full time. No fixed staffed hours, guaranteed response time or backup responder. Do not publish or infer a response-time promise. Email destination configuration and one clearly labelled delivery test are authorised; operational alert activation and spending limits are not. Channel resource is recorded in private durable monitoring-contact evidence.
 
 Run from this isolated source:
 
@@ -29,7 +29,7 @@ The generator has NO network, deployment or notification capability. It creates 
 | Callable server errors | At least5 HTTP5xx in5min across16 services; ERROR alert also catches low-volume incidents. Expected gate400/auth401 are excluded. |
 | Callable latency | Per-revision p99 above10 seconds for5min. Verify metric unit milliseconds and interpret low-traffic results cautiously. |
 
-Daily manual checks: open reports older than7days in the existing private admin queue; stuck/failed account-erasure jobs in their existing queue. Caught domain failures may not emit ERROR, so an error-log alert alone is not complete erasure monitoring. No new private-data projection, automatic report closure or moderation policy. Logs/metrics must not extract review IDs, text, reporter identity, emails, tokens or notes into labels or notification content. Alert filters use existing metadata and counts only.
+Manual checks when Craig is available (not a promised daily schedule): open reports older than7days in the existing private admin queue; stuck/failed account-erasure jobs in their existing queue. Caught domain failures may not emit ERROR, so an error-log alert alone is not complete erasure monitoring. No new private-data projection, automatic report closure or moderation policy. Logs/metrics must not extract review IDs, text, reporter identity, emails, tokens or notes into labels or notification content. Alert filters use existing metadata and counts only.
 
 ## Exact cloud acceptance sequence (requires separate authorization where it creates resources)
 
@@ -54,3 +54,7 @@ A conservative future alert-reference estimate for7 single-condition policies is
 Automatic review translation is unfinished; reusing the existing Google NMT adapter would add translation API usage (currently US$20/million characters after applicable allowance, multiplied by requested target languages), caching reads/writes and privacy/provider disclosure work. No translation API activated or calls made. [Translation pricing](https://cloud.google.com/products/translate/pricing)
 
 Monitoring rollback: disable only newly created policies by recorded resource IDs; keep delivery evidence and unrelated monitoring intact. Review rollback after real data exists: close public access/writes, retain compatible reads, erasure and90-day cleanup. Never restore synthetic quotas or remove active indexes. Transport rollback: only16 `--invoker-iam-check` commands from the approved IAM release record restore the old private boundary; Scheduler excluded. Firebase CLI14.27.0 updates are expected to preserve the service flag, but creation repeats the rejected public grant. Check flag/policy/endpoint drift after every deployment.
+
+## Notification restraint
+
+The offline plan uses24-hour log-alert notification limits, no configured renotification intervals, and no notification channels on overlapping callable5xx/latency diagnostic policies. Runtime-error coverage excludes the retention worker because its failed execution is covered by Scheduler failure; semantic account-erasure failures still require a dedicated automated state check. These settings reduce duplicate emails, but Cloud Monitoring does not provide global cross-policy root-cause deduplication here. Operational policies are not enabled. Reassess separate critical incidents during cooldown when configuring; do not promise exactly-once email delivery. The one authorised test uses one unique event and a temporary policy, with no resend.
