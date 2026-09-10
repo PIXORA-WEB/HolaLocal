@@ -1,3 +1,7 @@
+# Activation preparation update
+
+Separate prepare/reviews-production-activation branch now prepares project-scoped default-off production gate support. PR33/34 heads are preserved; none merged. See REVIEWS_LAUNCH_CHECKLIST.md for coordinated launch, missing recipient/budget/access permissions, cloud acceptance, actual privacy-disclosure gap and rollback. Business registration/submission/approval are independent of review gates. Native editorial polish is not a blanket launch blocker. No flags, IAM, notifications or production records changed.
+
 # Combined PR33/34 status — current authority
 
 Main verified428cdbc08617d53e3498ffb5593e7200807dfa7c. PR33 monitoring head4a74c0d5012d6c31946156f3eb6318fd1501c7e0 is incorporated into PR34 locally; only this inventory conflicted and was consolidated. Merge PR33 first using a merge commit (not squash/rebase), then PR34 using a merge commit, after final approval. Verify final source tree matches the combined candidate before Firebase deployment. No runtime conflict or policy change.
