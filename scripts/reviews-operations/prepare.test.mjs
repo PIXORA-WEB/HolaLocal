@@ -25,3 +25,11 @@ test('translation warning coverage includes text and structured logs without sen
  for(const name of ['callable-server-errors','callable-latency'])assert.match(p.policies.find(p=>p.displayName.endsWith(name)).conditions[0].conditionThreshold.filter,/translatepublishedcustomerreview/)
  assert.equal(warning.enabled,false);assert.deepEqual(warning.notificationChannels,[]);assert.equal(warning.conditions[0].conditionMatchedLog.labelExtractors,undefined)
 })
+
+test('no staffing promise or routine duplicate email channels in the offline plan',()=>{
+ const p=prepare({projectId:'holalocal-491c9',notificationChannels:['projects/holalocal-491c9/notificationChannels/13796860726352907332']})
+ assert.ok(!JSON.stringify(p).includes('within one staffed hour'))
+ for(const policy of p.policies){if(policy.conditions[0].conditionMatchedLog)assert.equal(policy.alertStrategy.notificationRateLimit.period,'86400s');assert.equal(policy.alertStrategy.notificationChannelStrategy,undefined)}
+ for(const name of ['callable-server-errors','callable-latency'])assert.deepEqual(p.policies.find(p=>p.displayName.endsWith(name)).notificationChannels,[])
+ assert.ok(!p.policies.find(p=>p.displayName.endsWith('runtime-error')).conditions[0].conditionMatchedLog.filter.includes('sweepresolvedcustomerreviewreports'))
+})
