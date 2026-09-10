@@ -99,7 +99,7 @@ class FakeCollectionRef {
       ))
     for (const filter of this.filters) {
       documents = documents.filter((snapshot) => {
-        const value = String(filter.field) === '__name__' ? snapshot.id : snapshot.data()?.[filter.field]
+        const value = String(filter.field) === '__name__' ? snapshot.id : String(filter.field).split('.').reduce((value,key) => value?.[key], snapshot.data())
         if (filter.operator === '==') return value === filter.value
         if (filter.operator === '!=') return value !== filter.value
         if (filter.operator === '>=') return value >= filter.value

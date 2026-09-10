@@ -1,5 +1,6 @@
 import { constants } from 'node:fs'
-import { access, cp, lstat, mkdtemp, readdir, rm, stat } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { access, cp, lstat, mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -19,6 +20,9 @@ const REQUIRED_CONTRACT_FILES = [
   'legalConsent.js',
   'deletion.js',
   'savedBusinesses.js',
+  'customerReviewContracts.js',
+  'customerReviewLifecycle.js',
+  'customerReviewTranslation.js',
   'media.js',
   'messaging.js',
   'publication.js',
@@ -49,6 +53,7 @@ const REQUIRED_FUNCTION_FILES = [
   'src/ownerSubscriptionStatus.js',
   'src/publicBusinessDirectory.js',
   'src/savedBusinesses.js',
+  ...['Bounded', 'Callables', 'Commands', 'Deletion', 'Firestore', 'Moderation', 'ReadFirestore', 'Reads', 'Reports', 'Time'].map(name => `src/customerReview${name}.js`),
 ]
 
 const FORBIDDEN_SEGMENTS = new Set([
@@ -73,10 +78,24 @@ async function main() {
     await run('npm', ['install', '--omit=dev'], { cwd: artifactRoot })
     await assertRuntimeDependenciesInstalled(artifactRoot)
     await assertContractInstalledInsideArtifact(artifactRoot)
-    await run('node', ['-e', "import('./src/index.js').then(() => console.log('functions_startup_import_ok'))"], {
+    await run('node', ['--input-type=module', '-e', `
+      import assert from 'node:assert/strict';
+      import * as contracts from '@holalocal/firebase-contract/customerReviewContracts';
+      import * as lifecycle from '@holalocal/firebase-contract/customerReviewLifecycle';
+      assert.equal(typeof contracts.validateCustomerReviewSubmission, 'function');
+      assert.equal(typeof lifecycle.transitionCustomerReview, 'function');
+      const definitions = await import('./src/index.js');
+      const { CUSTOMER_REVIEW_CALLABLES } = await import('./src/customerReviewCallables.js');
+      for (const name of Object.keys(CUSTOMER_REVIEW_CALLABLES)) {
+        assert.equal(typeof definitions[name], 'function', name);
+        await assert.rejects(definitions[name].run({data:{}}), error => error.message === 'customer-reviews-disabled');
+      }
+      console.log('functions_startup_and_review_exports_default_disabled_ok');
+    `], {
       cwd: artifactRoot,
       env: {
         ...process.env,
+        CUSTOMER_REVIEWS_ENABLED: 'false',
         MESSAGE_TRANSLATION_PROVIDER: 'disabled',
         GCLOUD_PROJECT: 'demo-holalocal-package',
         GOOGLE_CLOUD_PROJECT: 'demo-holalocal-package',
@@ -98,6 +117,11 @@ async function main() {
 
 async function assertContractTarball(packagePath) {
   await access(packagePath, constants.R_OK)
+  const lock = JSON.parse(await readFile(join(functionsRoot, 'package-lock.json'), 'utf8'))
+  const integrity = `sha512-${createHash('sha512').update(await readFile(packagePath)).digest('base64')}`
+  if (lock.packages['node_modules/@holalocal/firebase-contract']?.integrity !== integrity) {
+    throw new Error('Contract archive/lock mismatch: run npm install ./vendor/holalocal-firebase-contract-1.0.0.tgz before verification.')
+  }
   const listing = await npmPackList(packagePath)
   for (const file of REQUIRED_CONTRACT_FILES) {
     if (!listing.includes(`package/${file}`)) {

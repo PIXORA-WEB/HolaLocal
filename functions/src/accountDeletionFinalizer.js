@@ -1,3 +1,4 @@
+import { cleanupAccountCustomerReviews } from './customerReviewDeletion.js'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { hasReachedAccountDeletionCheckpoint } from '@holalocal/firebase-contract'
 import {
@@ -81,6 +82,7 @@ export async function finalizeAccountDeletion({
     removeManagerRelationships: primitives.removeManagerRelationships ?? removeUserManagerRelationships,
     tombstoneConversations: primitives.tombstoneConversations ?? tombstoneDeletedUserConversations,
     cleanupSavedBusinesses: primitives.cleanupSavedBusinesses ?? cleanupUserSavedBusinesses,
+    cleanupCustomerReviews: primitives.cleanupCustomerReviews ?? cleanupAccountCustomerReviews,
     cleanupMedia: primitives.cleanupMedia ?? cleanupUserMedia,
     minimizeEvidenceAndRemoveUser: primitives.minimizeEvidenceAndRemoveUser ?? minimizeConsentEvidenceAndRemoveUser,
     deleteAuthUser: primitives.deleteAuthUser ?? deleteFirebaseAuthUser,
@@ -181,8 +183,11 @@ export async function finalizeAccountDeletion({
       savedBusinessesDeleted: cleanupCounts?.savedBusinessesDeleted ?? 0,
     })
 
+    const reviews = await deps.cleanupCustomerReviews({ uid: safeUid, db, leaseId: lease.leaseId, expectedRequestVersion: version })
+    if (!reviews?.complete) return fail('internal_retryable')
+
     const evidenceResult = await deps.minimizeEvidenceAndRemoveUser({
-      uid: safeUid, db, expectedRequestVersion: version,
+      uid: safeUid, db, expectedRequestVersion: version, leaseId: lease.leaseId,
     })
     version = evidenceResult.requestVersion
     lastCompletedStep = 'user_evidence_minimized'

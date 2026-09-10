@@ -177,6 +177,7 @@ test('evidence minimization atomically retains only consent evidence and removes
     'reports/r1': { reporterId: 'u1', detail: 'unchanged' },
   })
   db.store.set('users/u1', { uid: 'u1', email: 'private@example.com', displayName: 'Private', roles: ['customer'], ...currentConsent })
+  db.store.set('accountDeletionRequests/u1/customerReviewCleanup/state', {complete:true})
   const result = await minimizeConsentEvidenceAndRemoveUser({ uid: 'u1', db, expectedRequestVersion: 5 })
   assert.equal(result.removed, true); assert.equal(db.data('users/u1'), undefined)
   const request = db.data('accountDeletionRequests/u1')
@@ -187,6 +188,7 @@ test('evidence minimization atomically retains only consent evidence and removes
 
 test('malformed consent is never fabricated and transaction leaves user intact', async () => {
   const db = new FakeFirestore({ 'users/u1': { termsAccepted: true }, 'accountDeletionRequests/u1': { state: 'finalizing', requestVersion: 1, lastCompletedStep: 'profile_media_cleaned' } })
+  db.store.set('accountDeletionRequests/u1/customerReviewCleanup/state', {complete:true})
   await assert.rejects(() => minimizeConsentEvidenceAndRemoveUser({ uid: 'u1', db, expectedRequestVersion: 1 }), /consent-evidence-invalid/)
   assert.ok(db.data('users/u1')); assert.equal(db.data('accountDeletionRequests/u1').retainedConsentEvidence, undefined)
 })
@@ -215,4 +217,10 @@ test('same email cannot attach a different UID to old workflow/history', async (
   await assert.rejects(() => acquireAccountDeletionLease({ uid: 'newUid', adminUid: 'admin', expectedRequestVersion: 1, db, now }), /request-not-found/)
   assert.equal(db.data('accountDeletionRequests/oldUid').state, 'requested')
   assert.equal(db.data('conversations/c1').customerId, 'oldUid')
+})
+
+test('user removal requires completed customer-review erasure even when prior checkpoints are reached',async()=>{
+  const db=new FakeFirestore({'users/u1':{termsAccepted:true},'accountDeletionRequests/u1':{state:'finalizing',requestVersion:1,lastCompletedStep:'profile_media_cleaned'}})
+  await assert.rejects(minimizeConsentEvidenceAndRemoveUser({uid:'u1',db,expectedRequestVersion:1}),/customer-review-cleanup-incomplete/)
+  assert.equal(db.store.has('users/u1'),true)
 })

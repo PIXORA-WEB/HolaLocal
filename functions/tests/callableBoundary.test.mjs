@@ -10,6 +10,11 @@ if (process.env.HOLALOCAL_CALLABLE_BOUNDARY === '1') {
   await import('./businessInsightsEmulator.test.mjs')
   await import('./businessMediaEmulator.test.mjs')
   await import('./savedBusinessesEmulator.test.mjs')
+  await import('./customerReviewEmulator.test.mjs')
+  await import('./customerReviewReadsEmulator.test.mjs')
+  await import('./customerReviewCallableEmulator.test.mjs')
+  await import('./customerReviewDeletionEmulator.test.mjs')
+  await import('./customerReviewReportsEmulator.test.mjs')
 }
 
 test('callable boundary harness runs only under demo project isolation', () => {
