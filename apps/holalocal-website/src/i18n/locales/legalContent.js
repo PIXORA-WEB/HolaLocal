@@ -1,3 +1,4 @@
+import { reviewPrivacySection } from '../reviewDisclosureTranslations.js'
 import { englishLegalPages } from '../englishLegalPages.js'
 import { deletionDisclosureTranslations } from '../deletionDisclosureTranslations.js'
 
@@ -444,17 +445,17 @@ const baseLegalPageContent = {
   no: translatedCopies.no,
 }
 
-function addDeletionDisclosure(content, code) {
+function addPrivacyDisclosures(content, code) {
   if (code === 'en') return content
   return {
     ...content,
     privacy: {
-      sections: content.privacy.sections.map((section) => section.key === 'deletion'
+      sections: [reviewPrivacySection(code), ...content.privacy.sections.map((section) => section.key === 'deletion'
         ? {
             ...section,
             paragraphs: [section.paragraphs[0], ...deletionDisclosureTranslations[code].privacy],
           }
-        : section),
+        : section)],
     },
   }
 }
@@ -462,6 +463,6 @@ function addDeletionDisclosure(content, code) {
 export const legalPageContent = Object.fromEntries(
   Object.entries(baseLegalPageContent).map(([code, content]) => [
     code,
-    addDeletionDisclosure(content, code),
+    addPrivacyDisclosures(content, code),
   ]),
 )

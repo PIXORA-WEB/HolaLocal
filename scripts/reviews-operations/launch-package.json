@@ -10,7 +10,7 @@
   ],
   "testedRuntimeCommit": "66e228da955eb8360a4d3349b1088f1e73f414ac",
   "sourceSubtrees": {
-    "apps": "304e7486e41cc3ffa4b6ee253fcee31e580b6159",
+    "apps": "1a6cfb6f61f3b6845a1b1b44ffc5642328744822",
     "functions": "9dc202551ad9f5e9c276b273e9fd092774964531",
     "shared": "df48c91dd413dc7e084d953724dd30ccee2ec7d3"
   },
@@ -50,5 +50,6 @@
     "ACCOUNT_DELETION_RECOVERY_ENABLED"
   ],
   "providerInitiallyDisabled": true,
-  "quotaChanges": false
+  "quotaChanges": false,
+  "websiteDisclosureVerification": "17 focused tests; 17 languages at 390/1440; locale parity, lint, fresh build; no provider or cloud changes"
 }

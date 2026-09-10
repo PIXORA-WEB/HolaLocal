@@ -1,3 +1,4 @@
+import { reviewDisclosureTranslations } from './reviewDisclosureTranslations.js'
 // Authored interface translations; customer-written content is never translated here.
 const keys='title|myReviews|myReview|statsUnavailable|count|updated|reviewer|rating|text|counter|validation|submit|edit|withdraw|withdrawConfirm|approval|signIn|signInAction|verify|account|ineligible|self|unavailable|quota|failure|refresh|duplicate|success|empty|more|pending|pendingEdit|rejected|published|withdrawn|removed|submittedText|report|reportNotice|reason|details|submitReport|spam|abusive_content|personal_information|irrelevant_content|conflict_of_interest|other'.split('|')
 const rows={
@@ -443,7 +444,7 @@ export const customerReviewTranslations=Object.fromEntries(Object.entries(rows).
   const [one,few,many,other,characters,minimum]=presentationRows[code]
   const result=Object.fromEntries(keys.map((key,index)=>[key,values[index]]))
   const [displayName,displayNameNotice,nameValidation]=displayNameCopy[code]
-  Object.assign(result,{quota:quotaCopy[code],displayName,displayNameNotice,nameValidation,validation:result.validation+' '+nameValidation})
+  Object.assign(result,{translationNotice:reviewDisclosureTranslations[code][4],privacyLink:reviewDisclosureTranslations[code][5],quota:quotaCopy[code],displayName,displayNameNotice,nameValidation,validation:result.validation+' '+nameValidation})
   Object.assign(result,{counter:`{{number}} / {{maximum}} ${characters}`,minimum,count:`{{count, number}} ${other}`})
   for(const [category,word] of Object.entries({one,two:few,few,many,other}))result[`count_${category}`]=`{{count, number}} ${word}`
   editorKeys.forEach((key,index)=>{result[key]=editorRows[code][index]})
