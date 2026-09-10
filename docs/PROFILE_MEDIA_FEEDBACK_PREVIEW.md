@@ -1,6 +1,6 @@
 # Consistent overview headers and immediate image feedback
 
-Isolated branch: fix/profile-media-feedback, based on main df4bc78ee51083ef4defc88cc8559377117270ef (PR #39). Appearance and functional review pending; no merge, push, deployment, Firebase or activation changes.
+Isolated branch: fix/profile-media-feedback, based on main df4bc78ee51083ef4defc88cc8559377117270ef (PR #39). Appearance and functional preview approved through 1206639ef1980c9d2ddf0fe00e2892f2af221863. PR push and automatic preview authorised; production merge/deployment, Firebase and activation changes remain unauthorised.
 
 ## Separate review scopes
 
@@ -34,4 +34,13 @@ No native-speaker editorial or real-device assistive-technology review claimed. 
 
 Durable screenshot gallery: sibling review-evidence/profile-media-feedback/index.html. Browser final log: sibling review-evidence/profile-media-feedback-browser-final.log. Other final check logs share the profile-media-feedback prefix. Synthetic fixtures and service controls are confined to tests/browser and excluded from the production Vite entry graph; screenshot index is outside source.
 
-Review the preview before release preparation. If later approved, this is a website-only release; no Functions, Firestore/Storage rules, indexes or activation deployment. Preserve original mixed workspace, recovery snapshots, prior preview/release evidence and unrelated work.
+Preview approved; production release requires separate approval. This is a website-only release; no Functions, Firestore/Storage rules, indexes or activation deployment. Preserve original mixed workspace, recovery snapshots, prior preview/release evidence and unrelated work.
+
+
+## Focused PR preparation
+
+Current main reverified at df4bc78ee51083ef4defc88cc8559377117270ef. No integration differences: the two approved commits are retained without rewriting or squashing. This preparation changes documentation only; all runtime source remains identical to 1206639. Reuse its 39 passing targeted tests, final emulator browser run, lint, locale parity and fresh build. Existing dist inspection found none of the synthetic controller/identity markers and no tests directory. Vite production entry graph excludes tests/browser; no test-only runtime configuration is added. The automatic Vercel preview will build from the final PR commit.
+
+Production upload transport/callable finalization remains unverified by these tests. Do not treat the controlled media-service results as resolution of the original upload incident. The 205.42 kB initial-JavaScript result still exceeds the unchanged 200 kB budget; no limit increase or check bypass.
+
+After separate production approval, merge through the existing GitHub/Vercel main workflow and verify the deployed commit, aliases and authenticated Profile/Business interactions. No Firebase deployment is required. Rollback website to the last verified PR #39 deployment for df4bc78 (https://hola-local-g8jhpb8i7-hello-8446s-projects.vercel.app) if rollback is authorised, then prepare a normal source revert. Review activation and unrelated work stay untouched.
