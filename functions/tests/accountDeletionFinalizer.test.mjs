@@ -26,6 +26,7 @@ function successfulPrimitives(order = []) {
     removeManagerRelationships: async () => { order.push('manager-cleanup'); return { removed: 1 } },
     tombstoneConversations: async () => { order.push('conversation-tombstone'); return { tombstoned: 1 } },
     cleanupSavedBusinesses: async () => { order.push('saved-business-cleanup'); return { deleted: 2 } },
+    cleanupCustomerReviews: async () => { order.push('review-cleanup'); return { complete: true } },
     cleanupMedia: async () => { order.push('media-cleanup'); return { ok: true, counts: { attempted: 1, deleted: 1, alreadyMissing: 0, failed: 0 } } },
     minimizeEvidenceAndRemoveUser: async () => { order.push('user-removal'); version += 1; return { requestVersion: version } },
     deleteAuthUser: async () => { order.push('auth-delete'); return { ok: true } },
@@ -48,7 +49,7 @@ test('admin finalizer runs the approved order and Auth is the last external dest
     'manager-cleanup', 'checkpoint:manager_relationships_cleaned',
     'conversation-tombstone', 'checkpoint:conversations_tombstoned',
     'saved-business-cleanup', 'checkpoint:saved_businesses_cleaned',
-    'media-cleanup', 'checkpoint:profile_media_cleaned', 'user-removal',
+    'media-cleanup', 'checkpoint:profile_media_cleaned', 'review-cleanup', 'user-removal',
     'auth-delete', 'checkpoint:firebase_auth_removed', 'complete',
   ])
   assert.ok(order.indexOf('auth-delete') > order.indexOf('user-removal'))
@@ -199,4 +200,15 @@ test('retry after Auth deletion re-verifies idempotent prerequisites and complet
   assert.ok(order.includes('conversation-tombstone'))
   assert.ok(order.includes('media-cleanup'))
   assert.ok(order.includes('auth-delete:user-not-found'))
+})
+
+test('incomplete or failed review cleanup stops user/Auth deletion and remains retryable',async()=>{
+  for(const throws of [false,true]) {
+    const order=[];const primitives=successfulPrimitives(order)
+    primitives.cleanupCustomerReviews=async()=>{order.push('review-cleanup');if(throws)throw new Error('private review text');return {complete:false}}
+    const result=await invoke(database(),primitives)
+    assert.equal(result.state,'failed_retryable');assert.equal(result.failureCode,'internal_retryable')
+    assert.equal(order.includes('user-removal'),false);assert.equal(order.includes('auth-delete'),false)
+    assert.equal(JSON.stringify(result).includes('private review'),false)
+  }
 })

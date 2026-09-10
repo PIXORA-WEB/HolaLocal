@@ -51,6 +51,7 @@ test('real Firestore transaction atomically minimizes consent evidence and remov
       uid, state: 'finalizing', requestVersion: 4, lastCompletedStep: 'profile_media_cleaned',
     }),
   ])
+  await db.doc(`accountDeletionRequests/${uid}/customerReviewCleanup/state`).set({complete:true})
   await minimizeConsentEvidenceAndRemoveUser({ uid, db, expectedRequestVersion: 4 })
   const [user, request] = await Promise.all([
     db.doc(`users/${uid}`).get(), db.doc(`accountDeletionRequests/${uid}`).get(),

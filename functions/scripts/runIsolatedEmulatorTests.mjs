@@ -116,6 +116,7 @@ export async function buildIsolatedEnv(projectId, baseEnv = process.env) {
     FIREBASE_EMULATORS_PATH: emulatorCache,
     MESSAGE_TRANSLATION_PROVIDER: 'disabled',
     HOLALOCAL_CALLABLE_BOUNDARY: '1',
+    CUSTOMER_REVIEWS_ENABLED: 'true',
     FIREBASE_TOOLS_DISABLE_UPDATE_NOTIFIER: 'true',
     NO_UPDATE_NOTIFIER: '1',
     NO_GCE_CHECK: 'true',

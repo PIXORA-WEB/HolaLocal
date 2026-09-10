@@ -1,3 +1,4 @@
+import { createCustomerReviewCallableHandler } from './customerReviewCallables.js'
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { onDocumentCreated } from 'firebase-functions/v2/firestore'
@@ -432,3 +433,24 @@ export const getOwnerBusinessInsights = onCall(
   PUBLIC_CALLABLE_OPTIONS,
   async (request) => handleGetOwnerBusinessInsights(request),
 )
+
+// Registered locally; customer-review gate defaults OFF and refuses non-demo activation.
+export const submitCustomerReview = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('submitCustomerReview'))
+export const editCustomerReview = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('editCustomerReview'))
+export const withdrawCustomerReview = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('withdrawCustomerReview'))
+export const approveCustomerReview = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('approveCustomerReview'))
+export const rejectCustomerReview = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('rejectCustomerReview'))
+export const removeCustomerReview = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('removeCustomerReview'))
+export const listPublishedCustomerReviews = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('listPublishedCustomerReviews'))
+export const getOwnCustomerReview = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('getOwnCustomerReview'))
+export const listOwnCustomerReviews = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('listOwnCustomerReviews'))
+export const listCustomerReviewModerationQueue = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('listCustomerReviewModerationQueue'))
+export const getCustomerReviewModerationCase = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('getCustomerReviewModerationCase'))
+
+// Private customer-review reports share the default-disabled review gate.
+export const submitCustomerReviewReport = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('submitCustomerReviewReport'))
+export const listCustomerReviewReports = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('listCustomerReviewReports'))
+export const getCustomerReviewReport = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('getCustomerReviewReport'))
+export const resolveCustomerReviewReport = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('resolveCustomerReviewReport'))
+
+export const getCustomerReviewRatingSummaries = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('getCustomerReviewRatingSummaries'))

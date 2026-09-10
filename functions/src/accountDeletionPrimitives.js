@@ -1,3 +1,4 @@
+import { customerReviewCleanupPath } from './customerReviewDeletion.js'
 import { randomUUID } from 'node:crypto'
 import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
@@ -188,12 +189,13 @@ export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db
   return { ok: counts.failed === 0, retryable: counts.failed > 0, counts }
 }
 
-export async function minimizeConsentEvidenceAndRemoveUser({ uid, db, expectedRequestVersion }) {
+export async function minimizeConsentEvidenceAndRemoveUser({ uid, db, expectedRequestVersion, leaseId }) {
   const safeUid = requireTrustedUid(uid); const userRef = db.doc(`users/${safeUid}`); const requestRef = db.doc(`accountDeletionRequests/${safeUid}`)
   return db.runTransaction(async (transaction) => {
-    const [userSnapshot, requestSnapshot] = await Promise.all([transaction.get(userRef), transaction.get(requestRef)])
+    const [userSnapshot, requestSnapshot, reviewCleanup] = await Promise.all([transaction.get(userRef), transaction.get(requestRef), transaction.get(db.doc(customerReviewCleanupPath(safeUid)))])
     const request = requestSnapshot.exists ? requestSnapshot.data() : null
-    if (!request || request.state !== 'finalizing' || request.requestVersion !== expectedRequestVersion) throw new HttpsError('aborted', 'account-deletion-workflow-stale')
+    if (!request || request.state !== 'finalizing' || request.requestVersion !== expectedRequestVersion || (leaseId !== undefined && request.leaseId !== leaseId)) throw new HttpsError('aborted', 'account-deletion-workflow-stale')
+    if (reviewCleanup.data()?.complete !== true) throw integrityError('customer-review-cleanup-incomplete')
     if (!userSnapshot.exists) {
       if (hasReachedAccountDeletionCheckpoint(request.lastCompletedStep, 'user_evidence_minimized') && request.retainedConsentEvidence) return { removed: false, idempotent: true, requestVersion: request.requestVersion }
       throw integrityError('profile-not-found')
@@ -230,6 +232,7 @@ export async function completeAccountDeletionWorkflow({ uid, leaseId, expectedRe
       failureCode: null, leaseId: null, leaseExpiresAt: null,
       requestVersion, updatedAt: FieldValue.serverTimestamp(),
     })
+    transaction.delete(db.doc(customerReviewCleanupPath(uid)))
     return { state: 'completed', requestVersion, idempotent: false }
   })
 }
