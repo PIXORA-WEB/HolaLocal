@@ -15,7 +15,7 @@ const termsSections = [
   {"key": "discovery-pricing", "title": "Finding businesses and current pricing", "paragraphs": ["The directory starts with recently published eligible businesses, newest first. Search, service, area and language filters narrow the loaded results without using payment as a ranking score. The loaded directory is limited and is not an exhaustive list of all businesses. Business profiles are free during Early Access. Customers and businesses agree prices and payment for their services directly; creating a profile does not enrol you in a paid subscription."]},
   { key: 'availability', title: 'Availability and responsibility', paragraphs: ['We do not guarantee that HolaLocal will always be available, error-free or launch on a particular date. HolaLocal helps people discover and communicate with independent businesses; it does not employ those businesses or become a party to agreements between users.', 'To the extent permitted by law, HolaLocal is not responsible for indirect losses or for the quality, safety, legality or outcome of services arranged between users. Nothing in these terms excludes rights or liability that cannot legally be excluded, including applicable consumer rights.'] },
   { key: 'law', title: 'Governing law', paragraphs: ['These terms are governed by the laws of Spain. Any mandatory consumer protections and rights to bring a claim in another competent court remain unaffected.'] },
-  { key: 'contact', title: 'Contact', paragraphs: ['Questions about these terms can be sent to <email>hello@holalocal.es</email>.'] },
+  { key: 'contact', title: 'Contact', paragraphs: ["HolaLocal is operated personally by Craig Evans. HolaLocal is the name of the platform.", 'Questions about these terms can be sent to <email>hello@holalocal.es</email>.'] },
 ]
 
 const privacySections = [
@@ -35,7 +35,7 @@ const privacySections = [
   {"key": "cloud-retention", "title": "Cloud backups and logs", "paragraphs": ["Current cloud settings retain daily database backups for 30 days, soft-deleted files for 7 days, ordinary cloud logs for 30 days and required cloud audit logs for 400 days. Removing information from the live service does not immediately remove retained backup or log copies."]},
   { key: 'security', title: 'Security', paragraphs: ['We use reasonable technical and organisational safeguards, including access controls and protected authentication. No online service can promise absolute security, so please use a strong password and contact us if you believe your account has been compromised.'] },
   { key: 'changes', title: 'Policy changes', paragraphs: ['HolaLocal will continue to evolve. We may update this policy when features, providers or legal requirements change. The version and effective date at the top will identify the current policy, and material changes will be communicated where appropriate.'] },
-  { key: 'contact', title: 'Contact', paragraphs: ['Questions about privacy or this policy can be sent to <email>hello@holalocal.es</email>.'] },
+  { key: 'contact', title: 'Contact', paragraphs: ["HolaLocal is operated personally by Craig Evans. HolaLocal is the name of the platform.", 'Questions about privacy or this policy can be sent to <email>hello@holalocal.es</email>.'] },
 ]
 
 export const englishLegalPages = {

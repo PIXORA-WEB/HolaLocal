@@ -35,3 +35,11 @@ test('consent recovery uses the same read-acknowledgment wording as registration
  assert.equal(consent.en.legalConsent.privacyPrefix,'I have read the')
  assert.match(consent.en.legalConsent.description,/accept the Terms and confirm that you have read the Privacy Policy/)
 })
+
+
+test('both legal pages identify the confirmed individual operator in all 17 languages',()=>{
+ for(const [code,content] of Object.entries(legalPageContent))for(const kind of ['privacy','terms']){
+  const contact=content[kind].sections.find(section=>section.key==='contact')
+  assert.ok(contact.paragraphs.some(text=>text.includes('Craig Evans')),code+'/'+kind)
+ }
+})
