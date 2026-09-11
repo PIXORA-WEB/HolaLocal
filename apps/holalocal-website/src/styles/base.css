@@ -25,5 +25,14 @@ body,
 
 html { scroll-behavior: smooth; }
 body { background: var(--canvas); }
+/* Suppress the browser's transient touch overlay, including its paint after a
+   menu closes. Component selected/pressed styles and focus-visible stay intact.
+   any-pointer also covers touch-capable devices with a connected mouse. */
+@media (any-pointer: coarse) {
+  :where(a[href], button, summary, input, select, textarea, label[for], label:has(input), [role="button"], [role="option"]) {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 button, input, select, textarea { font: inherit; }
 a { color: inherit; text-decoration: none; }
