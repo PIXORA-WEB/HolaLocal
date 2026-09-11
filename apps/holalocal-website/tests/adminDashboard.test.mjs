@@ -138,7 +138,7 @@ test('admin fallback translations contain polished search, checklist and verific
   assert.match(translations, /pageSearch: 'Search this page'/)
   assert.match(translations, /searchPlaceholder: 'Search by business name'/)
   assert.match(translations, /pageSearchHelp: 'Searches only the businesses currently loaded on this page\.'/)
-  assert.match(translations, /requirementsPresent: '\{\{complete\}\} of \{\{total\}\} required fields present'/)
+  assert.match(translations, /requirementsPresent: '\{\{complete\}\} of \{\{total\}\} recommended items present'/)
   assert.match(translations, /publishNotVerify: 'Publishing this profile does not mark the business as verified\.'/)
   assert.match(translations, /title: 'Subscription plan'/)
   assert.match(translations, /choosePlan: 'Choose a plan'/)

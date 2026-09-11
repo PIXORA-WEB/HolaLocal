@@ -8,7 +8,7 @@ Inspected the supplied local recording `1000021146.mp4` (6.675 seconds), extract
 
 The authoritative `SiteHeader.jsx` uses a native details/summary hamburger and NavLink links. A link click removes the details `open` attribute; route changes also close the menu. Only Escape explicitly restores focus. No handler paints an overlay, creates a blue element or moves focus on a link tap. Original CSS has rounded hover/active link backgrounds, a summary focus-visible outline, and no explicit `:active` or `-webkit-tap-highlight-color` declaration. The rectangular filled paint remaining after the menu closes is consistent with the browser overlay's lifetime.
 
-The prior Chromium touch emulation did not reproduce the phone's cyan color: Chromium reports its default as rgba(0,0,0,0.18). The supplied recording closes that visual evidence gap. Actual suppression on the recording device still needs a phone check after an approved preview/release; local browser tests do not establish device-specific compositor behavior.
+The prior Chromium touch emulation did not reproduce the phone's cyan color: Chromium reports its default as rgba(0,0,0,0.18). The supplied recording closes that visual evidence gap. The user subsequently confirmed the blue tap-highlight issue resolved on their phone after PR #41. Local browser tests alone did not establish device-specific compositor behavior.
 
 ## Change
 
@@ -35,8 +35,8 @@ There was no existing tap-highlight rule to consolidate. No duplicate selector, 
 
 Evidence: `../review-evidence/tap-highlight/` contains recording frames, computed-style results, keyboard screenshots and build/budget logs. The supplied recording and extracted frames are not committed or bundled. Browser test code is outside the production import graph.
 
-## Phone acceptance (not yet verified)
+## Phone acceptance — user confirmed after PR #41
 
-Once approved code is available on the phone: open Events, tap the hamburger, then tap Services; repeat after a hard refresh. Confirm neither rectangular flash appears, the menu still opens/closes and navigates, the active-page style remains, language/form buttons work, and text can still be selected. If a keyboard is connected, confirm visible Tab focus. No production data changes are needed for these checks.
+User confirmation received: the blue tap-highlight issue is resolved. The release acceptance steps were: open Events, tap the hamburger, then tap Services; repeat after a hard refresh. Confirm neither rectangular flash appears, the menu still opens/closes and navigates, the active-page style remains, language/form buttons work, and text can still be selected. If a keyboard is connected, confirm visible Tab focus. No production data changes are needed for these checks.
 
-Website-only release. No Firebase, IAM, review activation or retention changes. No merge or deployment performed. This fix can be reviewed/released independently of the Admin appearance work.
+Website-only release. No Firebase, IAM, review activation or retention changes. Released independently in PR #41, production commit `34afd18be7fcba89e66c7c1e8e44c653769ddbbe`.

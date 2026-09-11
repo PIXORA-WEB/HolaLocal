@@ -100,7 +100,7 @@ function AdminBusinessesPage() {
 
   return (
     <section className="admin-page" aria-labelledby="admin-businesses-title">
-      <header className="admin-page__heading admin-page__heading--split">
+      <header className="admin-page__heading">
         <div>
           <p className="admin-eyebrow">{t('admin.businesses.eyebrow')}</p>
           <h1 id="admin-businesses-title">{t('admin.businesses.title')}</h1>

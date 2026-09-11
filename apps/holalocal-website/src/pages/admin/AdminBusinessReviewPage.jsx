@@ -391,7 +391,6 @@ function AdminBusinessReviewPage() {
                   {PLAN_ORDER.map((planId) => (
                     <label className="admin-plan-choice" key={planId}>
                       <input checked={selectedPlanId === planId} name="subscription-plan" onChange={(event) => setSelectedPlanId(event.target.value)} type="radio" value={planId} />
-                      <span aria-hidden="true" className="admin-plan-choice__indicator" />
                       <span>{t(`subscription.plans.${planId}`)}</span>
                     </label>
                   ))}

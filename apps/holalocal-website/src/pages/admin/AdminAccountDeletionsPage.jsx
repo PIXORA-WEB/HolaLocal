@@ -87,17 +87,17 @@ function AdminAccountDeletionsPage() {
 
   return (
     <section aria-labelledby="admin-deletions-title" className="admin-page admin-deletions">
-      <header className="admin-page__heading admin-page__heading--split">
+      <header className="admin-page__heading">
         <div><p className="admin-eyebrow">{t('admin.deletions.eyebrow')}</p><h1 id="admin-deletions-title">{t('admin.deletions.title')}</h1><p>{t('admin.deletions.description')}</p></div>
         <button aria-pressed={history} className="button button--secondary" onClick={() => { setView((current) => ({ ...current, status: 'loading' })); setHistory((value) => !value) }} type="button">{t('admin.deletions.history')}</button>
       </header>
 
       {notice && <p aria-live="polite" className={`alert alert--${notice.type}`}>{t(`admin.deletions.notice.${notice.code}`, { defaultValue: t('admin.deletions.notice.generic') })}</p>}
-      {view.status === 'loading' && <p role="status">{t('admin.deletions.loading')}</p>}
-      {view.status === 'error' && <div role="alert"><p>{t(`admin.deletions.notice.${view.error}`)}</p><button className="button button--secondary" onClick={() => void refresh()} type="button">{t('common.retry')}</button></div>}
+      {view.status === 'loading' && <p className="admin-empty" role="status">{t('admin.deletions.loading')}</p>}
+      {view.status === 'error' && <div className="admin-alert" role="alert"><p>{t(`admin.deletions.notice.${view.error}`)}</p><button className="button button--secondary" onClick={() => void refresh()} type="button">{t('common.retry')}</button></div>}
       {view.status === 'loaded' && view.operationalHasMore && <p className="alert alert--warning" role="status">{t('admin.deletions.operationalOverflow')}</p>}
       {view.status === 'loaded' && history && view.historyHasMore && <p className="alert alert--warning" role="status">{t('admin.deletions.historyOverflow')}</p>}
-      {view.status === 'loaded' && view.requests.length === 0 && <p>{t('admin.deletions.empty')}</p>}
+      {view.status === 'loaded' && view.requests.length === 0 && <div className="admin-empty" role="status"><span aria-hidden="true">✓</span><p>{t('admin.deletions.empty')}</p></div>}
       {view.status === 'loaded' && view.requests.length > 0 && (
         <div className="admin-deletion-list">
           {view.requests.map((request) => (
@@ -109,20 +109,23 @@ function AdminAccountDeletionsPage() {
         </div>
       )}
 
-      <AccessibleDialog ariaLabelledBy="deletion-detail-title" className="admin-action-dialog" onClose={() => setSelected(null)} open={Boolean(selected) && !confirming}>
-        {selected && <div className="admin-action-dialog__panel">
+      <AccessibleDialog
+        ariaDescribedBy={confirming ? 'deletion-confirm-description' : undefined}
+        ariaLabelledBy={confirming ? 'deletion-confirm-title' : 'deletion-detail-title'}
+        className="admin-action-dialog"
+        closeDisabled={submitting}
+        onClose={() => confirming ? setConfirming(false) : setSelected(null)}
+        open={Boolean(selected)}
+      >
+        {confirming ? (<div className="admin-action-dialog__panel"><h2 id="deletion-confirm-title">{actionLabel}</h2><p id="deletion-confirm-description">{t('admin.deletions.confirmation')}</p><p>{t('admin.deletions.historyPreserved')}</p><button autoFocus className="button button--secondary" disabled={submitting} onClick={() => setConfirming(false)} type="button">{t('common.cancel')}</button><button className="button button--danger" disabled={submitting} onClick={() => void runFinalization()} type="button">{submitting ? t('admin.deletions.processing') : actionLabel}</button></div>) : selected && (<div className="admin-action-dialog__panel">
           <h2 id="deletion-detail-title">{t('admin.deletions.detail')}</h2>
           <dl><dt>{t('admin.deletions.identifier')}</dt><dd><code>{selected.uid}</code></dd><dt>{t('admin.deletions.status')}</dt><dd>{t(`admin.deletions.state.${selected.state}`)}</dd><dt>{t('admin.deletions.requestedAt')}</dt><dd>{dateText(selected.requestedAt, i18n.language)}</dd><dt>{t('admin.deletions.versionLabel')}</dt><dd>{selected.requestVersion}</dd><dt>{t('admin.deletions.checkpoint')}</dt><dd>{selected.lastCompletedStep ? t(`admin.deletions.checkpoints.${selected.lastCompletedStep}`) : '—'}</dd>{selected.failureCode && <><dt>{t('admin.deletions.failure')}</dt><dd>{t(`admin.deletions.codes.${safeCode(selected.failureCode)}`)}</dd></>}</dl>
           {selected.cleanupCounts && <p>{t('admin.deletions.cleanup', selected.cleanupCounts)}</p>}
           {selected.state === 'finalizing' && !selected.canFinalize && <p role="status">{t('admin.deletions.inProgress')}</p>}
           {selected.actionReason === 'expired-finalizer-lease' && <p role="status">{t('admin.deletions.resumeAvailable')}</p>}
           {selected.canFinalize && <button className="button button--danger" onClick={() => setConfirming(true)} type="button">{actionLabel}</button>}
-          <button className="button button--secondary" onClick={() => setSelected(null)} type="button">{t('common.close')}</button>
-        </div>}
-      </AccessibleDialog>
-
-      <AccessibleDialog ariaDescribedBy="deletion-confirm-description" ariaLabelledBy="deletion-confirm-title" closeDisabled={submitting} className="admin-action-dialog" onClose={() => setConfirming(false)} open={confirming}>
-        <div className="admin-action-dialog__panel"><h2 id="deletion-confirm-title">{actionLabel}</h2><p id="deletion-confirm-description">{t('admin.deletions.confirmation')}</p><p>{t('admin.deletions.historyPreserved')}</p><button autoFocus className="button button--secondary" disabled={submitting} onClick={() => setConfirming(false)} type="button">{t('common.cancel')}</button><button className="button button--danger" disabled={submitting} onClick={() => void runFinalization()} type="button">{submitting ? t('admin.deletions.processing') : actionLabel}</button></div>
+          <button autoFocus className="button button--secondary" onClick={() => setSelected(null)} type="button">{t('common.close')}</button>
+        </div>)}
       </AccessibleDialog>
     </section>
   )

@@ -3,8 +3,8 @@
 .customer-reviews h2,.customer-reviews h3{color:var(--brand-navy);margin:0 0 .5rem;letter-spacing:-.02em}
 .customer-reviews h3{font-size:1rem}
 .customer-reviews p{margin:.4rem 0;line-height:1.6}
-.customer-reviews article,.customer-reviews__own{border-top:1px solid var(--line);padding:1rem 0}
-.customer-reviews article:first-of-type{margin-top:.75rem}
+.customer-reviews article:not(.admin-customer-reviews__queue),.customer-reviews__own{border-top:1px solid var(--line);padding:1rem 0}
+.customer-reviews article:not(.admin-customer-reviews__queue):first-of-type{margin-top:.75rem}
 .customer-reviews__own{margin-top:.75rem}
 .customer-reviews article .customer-reviews__own{margin:0;padding:0;border:0}
 .customer-reviews__text{white-space:pre-wrap;overflow-wrap:anywhere}

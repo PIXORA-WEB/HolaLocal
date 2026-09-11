@@ -9,6 +9,8 @@ import useAuthentication from '../../hooks/useAuthentication.js'
 const navigationItems = [
   { key: 'overview', to: '/admin', end: true, icon: 'grid' },
   { key: 'businesses', to: '/admin/businesses', end: false, icon: 'briefcase' },
+  { key: 'customerReviews', to: '/admin/customer-reviews', end: true, icon: 'review', review: true },
+  { key: 'customerReports', to: '/admin/customer-review-reports', end: true, icon: 'report', review: true },
   { key: 'deletions', to: '/admin/account-deletions', end: false, icon: 'trash' },
 ]
 
@@ -16,6 +18,8 @@ function AdminNavigationIcon({ name }) {
   const paths = {
     grid: <><rect height="7" rx="1" width="7" x="3" y="3" /><rect height="7" rx="1" width="7" x="14" y="3" /><rect height="7" rx="1" width="7" x="3" y="14" /><rect height="7" rx="1" width="7" x="14" y="14" /></>,
     briefcase: <><rect height="13" rx="2" width="18" x="3" y="7" /><path d="M9 7V5h6v2M3 12h18" /></>,
+    review: <><path d="M4 4h16v13H9l-5 4V4Z" /><path d="M8 8h8M8 12h5" /></>,
+    report: <><path d="m12 3 10 18H2L12 3Z" /><path d="M12 9v5M12 17h.01" /></>,
     trash: <><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6" /></>,
   }
   return <svg aria-hidden="true" viewBox="0 0 24 24">{paths[name]}</svg>
@@ -23,14 +27,22 @@ function AdminNavigationIcon({ name }) {
 
 function AdminNavigation({ adminOnly, onNavigate }) {
   const { t } = useTranslation()
+  const [reviewLabelsReady, setReviewLabelsReady] = useState(false)
+  useEffect(() => {
+    if (!customerReviewsEnabled || !adminOnly) return
+    let active = true
+    import('../../i18n/registerAdminCustomerReviewTranslations.js').then(() => {
+      if (active) setReviewLabelsReady(true)
+    })
+    return () => { active = false }
+  }, [adminOnly])
   return (
     <nav aria-label={t('admin.navigation.label')} className="admin-navigation">
       <p className="admin-navigation__label">{t('admin.navigation.workspace')}</p>
-      {customerReviewsEnabled&&adminOnly&&<><NavLink to="/admin/customer-reviews" onClick={onNavigate}>{t('adminCustomerReviews.title')}</NavLink><NavLink to="/admin/customer-review-reports" onClick={onNavigate}>{t('adminCustomerReviews.reports')}</NavLink></>}
-      {navigationItems.filter((item) => item.key !== 'deletions' || adminOnly).map((item) => (
+      {navigationItems.filter((item) => (item.key !== 'deletions' || adminOnly) && (!item.review || (customerReviewsEnabled && adminOnly && reviewLabelsReady))).map((item) => (
         <NavLink end={item.end} key={item.key} onClick={onNavigate} to={item.to}>
           <AdminNavigationIcon name={item.icon} />
-          <span>{t(`admin.navigation.${item.key}`)}</span>
+          <span>{t(item.key === 'customerReviews' ? 'adminCustomerReviews.title' : item.key === 'customerReports' ? 'adminCustomerReviews.reports' : `admin.navigation.${item.key}`)}</span>
         </NavLink>
       ))}
     </nav>
