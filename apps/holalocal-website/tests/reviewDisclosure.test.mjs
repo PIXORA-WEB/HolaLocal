@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {legalPageContent} from '../src/i18n/locales/legalContent.js'
+import {legalPageContent,reviewAvailabilityTranslations} from '../src/i18n/locales/legalContent.js'
 import {englishLegalPages} from '../src/i18n/englishLegalPages.js'
 import {customerReviewTranslations} from '../src/i18n/customerReviewTranslations.js'
-import {reviewDisclosureTranslations,reviewAvailabilityTranslations} from '../src/i18n/reviewDisclosureTranslations.js'
+import {reviewDisclosureTranslations} from '../src/i18n/reviewDisclosureTranslations.js'
 import {CURRENT_PRIVACY_VERSION} from '../../../shared/firebase-contract/legalConsent.js'
 test('all 17 lazy legal locales and review forms have the shared disclosure without duplicated sections',()=>{
  assert.equal(Object.keys(legalPageContent).length,17)

@@ -139,35 +139,15 @@ export const reviewDisclosureTranslations = {
   ]
 }
 
-// Remove this launch-status notice only in the approved activation source.
-export const reviewAvailabilityTranslations = {
-  "en": "Customer reviews and public review translation are not yet available. The review policy below is prepared for launch; scheduled report cleanup is not yet running.",
-  "es": "Las reseñas de clientes y su traducción pública aún no están disponibles. La política siguiente está preparada para el lanzamiento; la limpieza programada de reportes aún no funciona.",
-  "fr": "Les avis clients et leur traduction publique ne sont pas encore disponibles. La politique ci-dessous est préparée pour le lancement ; le nettoyage programmé des signalements ne fonctionne pas encore.",
-  "de": "Kundenbewertungen und ihre öffentliche Übersetzung sind noch nicht verfügbar. Die folgende Richtlinie ist für den Start vorbereitet; die geplante Bereinigung von Meldungen läuft noch nicht.",
-  "nl": "Klantbeoordelingen en openbare vertaling daarvan zijn nog niet beschikbaar. Het onderstaande beleid is voorbereid voor de lancering; de geplande opschoning van meldingen is nog niet actief.",
-  "pt": "As avaliações de clientes e a sua tradução pública ainda não estão disponíveis. A política abaixo está preparada para o lançamento; a limpeza programada de denúncias ainda não está em funcionamento.",
-  "pl": "Opinie klientów i ich publiczne tłumaczenie nie są jeszcze dostępne. Poniższa polityka jest przygotowana na uruchomienie; zaplanowane usuwanie danych zgłoszeń jeszcze nie działa.",
-  "ro": "Recenziile clienților și traducerea lor publică nu sunt încă disponibile. Politica de mai jos este pregătită pentru lansare; curățarea programată a raportărilor nu funcționează încă.",
-  "cs": "Zákaznické recenze a jejich veřejný překlad zatím nejsou dostupné. Níže uvedená pravidla jsou připravena pro spuštění; plánované mazání údajů hlášení zatím neprobíhá.",
-  "sk": "Zákaznícke recenzie a ich verejný preklad zatiaľ nie sú dostupné. Nasledujúce pravidlá sú pripravené na spustenie; plánované mazanie údajov hlásení zatiaľ neprebieha.",
-  "hu": "Az ügyfélértékelések és nyilvános fordításuk még nem érhetők el. Az alábbi szabályzat az indulásra készült; a bejelentések ütemezett adattörlése még nem működik.",
-  "uk": "Відгуки клієнтів та їхній публічний переклад ще недоступні. Наведені нижче правила підготовлено до запуску; планове видалення даних скарг ще не працює.",
-  "it": "Le recensioni dei clienti e la loro traduzione pubblica non sono ancora disponibili. La politica seguente è pronta per il lancio; la pulizia programmata delle segnalazioni non è ancora attiva.",
-  "sv": "Kundrecensioner och offentlig översättning av dem är ännu inte tillgängliga. Policyn nedan är förberedd för lanseringen; schemalagd rensning av anmälningar körs ännu inte.",
-  "da": "Kundeanmeldelser og offentlig oversættelse af dem er endnu ikke tilgængelige. Politikken nedenfor er forberedt til lanceringen; planlagt oprydning i indberetninger kører endnu ikke.",
-  "fi": "Asiakasarviot ja niiden julkinen kääntäminen eivät ole vielä saatavilla. Alla oleva käytäntö on valmisteltu julkaisua varten; ilmoitustietojen ajastettu poisto ei ole vielä käynnissä.",
-  "no": "Kundeanmeldelser og offentlig oversettelse av dem er ennå ikke tilgjengelige. Retningslinjene nedenfor er forberedt for lansering; planlagt opprydding i rapporter kjører ennå ikke."
-}
 
-export function reviewPrivacySection(code) {
+export function reviewPrivacySection(code, availability) {
   const [title, identity, provider, retention] = reviewDisclosureTranslations[code]
-  return { key: 'reviews', title, paragraphs: [reviewAvailabilityTranslations[code], identity, provider, retention] }
+  return { key: 'reviews', title, paragraphs: [availability, identity, provider, retention] }
 }
 
 
-export function reviewTermsSection(code, text) {
+export function reviewTermsSection(code, availability, text) {
   return { key: 'reviews', title: reviewDisclosureTranslations[code][0], paragraphs: [
-    reviewAvailabilityTranslations[code], text, reviewDisclosureTranslations[code][1],
+    availability, text, reviewDisclosureTranslations[code][1],
   ] }
 }
