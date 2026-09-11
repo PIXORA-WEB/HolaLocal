@@ -128,10 +128,9 @@ test('Vite evaluates the fail-closed guard before returning browser-test configu
 })
 
 test('Firebase, Analytics and App Check boundaries remain fail closed without remote fallbacks', async () => {
-  const [config, main, analytics, appCheck, index, ...clients] = await Promise.all([
+  const [config, main, appCheck, index, ...clients] = await Promise.all([
     readFile(new URL('../src/firebase/config.js', import.meta.url), 'utf8'),
     readFile(new URL('../src/main.jsx', import.meta.url), 'utf8'),
-    readFile(new URL('../src/firebase/analyticsClient.js', import.meta.url), 'utf8'),
     readFile(new URL('../src/firebase/appCheckClient.js', import.meta.url), 'utf8'),
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
     ...['auth.js', 'firestoreClient.js', 'functionsClient.js', 'storageClient.js'].map((file) => (
@@ -140,8 +139,7 @@ test('Firebase, Analytics and App Check boundaries remain fail closed without re
   ])
   assert.ok(config.indexOf('assertFirebaseBrowserTestSafety()') < config.indexOf('initializeApp(firebaseConfig)'))
   assert.ok(config.indexOf('assertFirebaseBrowserTestSafety()') < config.indexOf('initializeWebsiteAppCheck(firebaseApp)'))
-  assert.match(main, /MODE !== 'browser-test'/)
-  assert.match(analytics, /MODE === 'browser-test'[\s\S]*?shouldUseFirebaseEmulators\(\)[\s\S]*?return null/)
+  assert.doesNotMatch(main, /analyticsClient|initializeAnalytics|getAnalytics/)
   assert.match(appCheck, /isFirebaseEmulatorMode\(\)/)
   assert.doesNotMatch(index, /googletagmanager|gtag\(|google-analytics/i)
   for (const client of clients) {

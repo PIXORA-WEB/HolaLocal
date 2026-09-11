@@ -13,13 +13,4 @@ void i18nReady.then(() => {
     </StrictMode>,
   )
 
-  if (import.meta.env.MODE !== 'browser-test') {
-    const initializeAnalytics = () => {
-      void import('./firebase/analyticsClient.js')
-        .then((module) => module.initializeAnalytics())
-        .catch(() => null)
-    }
-    if ('requestIdleCallback' in window) window.requestIdleCallback(initializeAnalytics)
-    else window.setTimeout(initializeAnalytics, 1500)
-  }
 })

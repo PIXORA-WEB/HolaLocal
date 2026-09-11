@@ -24,13 +24,8 @@ test('all Firebase product clients use fixed emulator endpoints through the shar
   assert.match(functions, /getFunctions\(getFirebaseApp\(\), 'europe-west1'\)/)
 })
 
-test('analytics stays disabled in explicit emulator browser-test mode', async () => {
-  const [source, main] = await Promise.all([
-    readFile(new URL('../src/firebase/analyticsClient.js', import.meta.url), 'utf8'),
-    readFile(new URL('../src/main.jsx', import.meta.url), 'utf8'),
-  ])
-  assert.match(source, /import\.meta\.env\.MODE === 'browser-test'/)
-  assert.match(source, /shouldUseFirebaseEmulators\(\)/)
-  assert.match(main, /if \(import\.meta\.env\.MODE !== 'browser-test'\)/)
-  assert.ok(main.indexOf("MODE !== 'browser-test'") < main.indexOf("import('./firebase/analyticsClient.js')"))
+test('automatic analytics is absent in every website mode', async () => {
+  const main = await readFile(new URL('../src/main.jsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(main, /analyticsClient|initializeAnalytics|getAnalytics/)
+  await assert.rejects(readFile(new URL('../src/firebase/analyticsClient.js', import.meta.url)), { code: 'ENOENT' })
 })
