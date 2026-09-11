@@ -3,7 +3,7 @@ import {chromium} from 'playwright'
 import assert from 'node:assert/strict'
 import {mkdir,writeFile} from 'node:fs/promises'
 import {resolve} from 'node:path'
-const output=resolve('../../../review-evidence/admin-visual-preview')
+const output=resolve(process.env.HOLALOCAL_ADMIN_PREVIEW_EVIDENCE ?? '../../../review-evidence/admin-visual-preview')
 await mkdir(output,{recursive:true})
 const browser=await chromium.launch({args:['--disable-dev-shm-usage']})
 const context=await browser.newContext({viewport:{width:1440,height:1000},hasTouch:true})

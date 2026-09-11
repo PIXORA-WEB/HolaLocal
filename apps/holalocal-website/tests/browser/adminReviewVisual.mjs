@@ -9,7 +9,7 @@ for(const key of ['GOOGLE_APPLICATION_CREDENTIALS','FIREBASE_TOKEN','GOOGLE_OAUT
 const hub=await fetch('http://127.0.0.1:4400/emulators').then(r=>r.json());assert.equal(hub.firestore.port,8080)
 process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8080'
 const db=getFirestore(initializeApp({projectId:'demo-holalocal-functions'}))
-const output=resolve('../../../review-evidence/admin-visual-preview');await mkdir(output,{recursive:true})
+const output=resolve(process.env.HOLALOCAL_ADMIN_PREVIEW_EVIDENCE ?? '../../../review-evidence/admin-visual-preview');await mkdir(output,{recursive:true})
 const business=(await db.doc('businesses/review-demo-business-v1').get()).data();assert.ok(business)
 await db.doc('businesses/admin-preview-long-business').set({...business,name:'Synthetic Costa del Sol Home Maintenance, Repairs and Community Property Services',status:'pending_review',publishedAt:null,submittedAt:Timestamp.now(),updatedAt:Timestamp.now(),verificationStatus:'unverified'})
 await db.doc('accountDeletionRequests/synthetic-preview-in-progress').set({state:'finalizing',requestVersion:1,requestedAt:Timestamp.now(),updatedAt:Timestamp.now(),leaseExpiresAt:Timestamp.fromMillis(Date.now()+86400000),lastCompletedStep:'saved-businesses'})

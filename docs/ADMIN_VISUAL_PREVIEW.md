@@ -49,10 +49,10 @@ Both `/admin/customer-reviews` and `/admin/customer-review-reports` already exis
 - Pre-existing bundle budget remains a failure: 205.61 kB gzip against unchanged 200 kB. No budget increase or bypass.
 - Preview/test configuration and synthetic source files are outside the production import graph; built assets checked for preview fixture markers.
 
-## Touch investigation — unresolved, no runtime correction
+## Touch investigation — superseded by released fix
 
-Chromium touch emulation inspected the original button before/while/after touch. Computed browser tap highlight: `rgba(0, 0, 0, 0.18)`; no blue box reproduced. `:focus-visible` stayed false on touch and keyboard Tab produced a clear 3px orange outline. Main stylesheet contains no explicit `:active` rule. Screenshots/checks.json preserve evidence. This does not establish behavior on the user's mobile browser. Request a short recording showing the control, touch and release, plus device/browser. Do not apply a guessed highlight/focus suppression. Text selection, outlines and selected states were not changed.
+The recording subsequently confirmed the native tap overlay. PR #41 released the independent base.css correction; the user now confirms it is resolved on their phone. The approved Admin design does not modify that rule. Earlier touch observations above remain historical preview evidence.
 
 ## Release boundary
 
-Appearance approval pending. Website only if later approved; no Firebase/Storage/IAM/index/activation changes. No merge, push or deployment performed for this preview. Real mobile-device blue-box reproduction remains open. Existing production upload transport and separate reviews activation work remain unverified/open as previously documented.
+Appearance approved at `b7856325e98fb69b6c21b9b6365e3b970ac1e395`. Release preparation is documented in ADMIN_REDESIGN_RELEASE.md. Website only; no Firebase/Storage/IAM/index/activation changes. The original preview was not merged or deployed; subsequent PR preparation is tracked in ADMIN_REDESIGN_RELEASE.md. The blue tap-highlight issue is user-confirmed resolved. Existing production upload transport and separate reviews activation work remain unverified/open as previously documented.
