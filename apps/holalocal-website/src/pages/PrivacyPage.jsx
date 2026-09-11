@@ -8,11 +8,11 @@ function PrivacyPage() {
 
   return (
     <PlaceholderPage
-      eyebrow={t('legalPages.version')}
+      eyebrow={t('legalPages.revisionNotice')}
       title={t('legalPages.privacy.title')}
       description={t('legalPages.privacy.description')}
     >
-      <LegalSectionContent sections={Array.isArray(sections) ? sections : []} />
+      <LegalSectionContent title={t('legalPages.privacy.title')} sections={Array.isArray(sections) ? sections : []} />
     </PlaceholderPage>
   )
 }

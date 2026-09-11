@@ -34,7 +34,7 @@
       "consentLegend": "Rechtliche Vereinbarungen",
       "termsPrefix": "Ich akzeptiere die",
       "privacyPrefix": "Ich habe die folgende Erklärung gelesen:",
-      "consentRequired": "Akzeptieren Sie die Bedingungen und die Datenschutzerklärung, bevor Sie Ihr Konto erstellen.",
+      "consentRequired": "Prüfe beide Dokumente und bestätige beide Erklärungen, um fortzufahren.",
       "existingAccount": "Sie haben bereits ein Konto?"
     },
     "verification": {

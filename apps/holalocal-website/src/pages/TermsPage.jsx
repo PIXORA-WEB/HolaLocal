@@ -8,11 +8,11 @@ function TermsPage() {
 
   return (
     <PlaceholderPage
-      eyebrow={t('legalPages.version')}
+      eyebrow={t('legalPages.revisionNotice')}
       title={t('legalPages.terms.title')}
       description={t('legalPages.terms.description')}
     >
-      <LegalSectionContent sections={Array.isArray(sections) ? sections : []} />
+      <LegalSectionContent title={t('legalPages.terms.title')} sections={Array.isArray(sections) ? sections : []} />
     </PlaceholderPage>
   )
 }

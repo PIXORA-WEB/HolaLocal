@@ -56,7 +56,7 @@
       "consentLegend": "Legal agreements",
       "termsPrefix": "I agree to the",
       "privacyPrefix": "I have read the",
-      "consentRequired": "Accept the Terms and Privacy Policy before creating your account.",
+      "consentRequired": "Review both documents and confirm the two acknowledgments to continue.",
       "existingAccount": "Already have an account?"
     },
     "verification": {

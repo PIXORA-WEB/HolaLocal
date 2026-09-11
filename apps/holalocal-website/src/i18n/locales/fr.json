@@ -34,7 +34,7 @@
       "consentLegend": "Accords juridiques",
       "termsPrefix": "J’accepte les",
       "privacyPrefix": "J’ai lu la",
-      "consentRequired": "Acceptez les conditions et la politique de confidentialité avant de créer votre compte.",
+      "consentRequired": "Consultez les deux documents et confirmez les deux déclarations pour continuer.",
       "existingAccount": "Vous avez déjà un compte ?"
     },
     "verification": {
