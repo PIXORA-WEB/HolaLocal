@@ -1,3 +1,4 @@
+import RetentionControls from '../../components/admin/RetentionControls.jsx'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import AccessibleDialog from '../../components/common/AccessibleDialog.jsx'
@@ -108,6 +109,8 @@ function AdminAccountDeletionsPage() {
           ))}
         </div>
       )}
+
+      <RetentionControls />
 
       <AccessibleDialog
         ariaDescribedBy={confirming ? 'deletion-confirm-description' : undefined}

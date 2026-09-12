@@ -1,3 +1,6 @@
+import { executeBusinessReportRetention } from './businessReports.js'
+import { manageRetentionRecords as runManageRetentionRecords } from './adminRetention.js'
+import { getAuth } from 'firebase-admin/auth'
 import {runAccountDeletionRecovery} from './accountDeletionRecovery.js'
 import { runCustomerReviewRetention } from './customerReviewRetention.js'
 import { createCustomerReviewCallableHandler } from './customerReviewCallables.js'
@@ -388,6 +391,13 @@ export const recoverAccountDeletions = onSchedule(
   async () => runAccountDeletionRecovery({createDatabase:getFirestore}),
 )
 
+export const sweepResolvedBusinessReports = onSchedule(
+  {region: MESSAGE_TRANSLATION_REGION, schedule: 'every 60 minutes', timeZone:'Etc/UTC',
+    timeoutSeconds:120, memory:'256MiB', cpu:1, maxInstances:1, minInstances:0, concurrency:1,
+    retryCount:0, serviceAccount:'1097633279895-compute@developer.gserviceaccount.com'},
+  async () => executeBusinessReportRetention({createDatabase:getFirestore}),
+)
+
 export const sweepResolvedCustomerReviewReports = onSchedule(
   { region: MESSAGE_TRANSLATION_REGION, schedule: 'every 60 minutes', maxInstances: 1, timeoutSeconds:540 },
   async () => runCustomerReviewRetention({ createDatabase: getFirestore }),
@@ -470,3 +480,12 @@ export const resolveCustomerReviewReport = onCall(PUBLIC_CALLABLE_OPTIONS, creat
 export const getCustomerReviewRatingSummaries = onCall(PUBLIC_CALLABLE_OPTIONS, createCustomerReviewCallableHandler('getCustomerReviewRatingSummaries'))
 
 export const translatePublishedCustomerReview = onCall({ ...PUBLIC_CALLABLE_OPTIONS, serviceAccount: 'holalocal-review-translation@holalocal-491c9.iam.gserviceaccount.com' }, createCustomerReviewCallableHandler('translatePublishedCustomerReview'))
+
+
+export async function handleManageRetentionRecords(request, dependencies = {}) {
+  return runManageRetentionRecords({actorUid:requireCallableUid(request),claims:request.auth?.token,data:request.data,
+    db:dependencies.db??getFirestore(),auth:dependencies.auth??getAuth(),env:dependencies.env??process.env})
+}
+// Start private: no automatic allUsers grant under the existing organisation policy.
+// Browser access requires the separately approved per-service invoker-check configuration.
+export const manageRetentionRecords = onCall({region:MESSAGE_TRANSLATION_REGION,invoker:'private',timeoutSeconds:60,maxInstances:1,concurrency:1,minInstances:0}, async request => handleManageRetentionRecords(request))

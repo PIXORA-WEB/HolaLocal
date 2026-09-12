@@ -215,3 +215,17 @@ test('sendMessage rejects unauthenticated unauthorized blank oversized and malfo
     db,
   }), (error) => codeFrom(error) === 'invalid-argument')
 })
+
+
+test('retrying an explicitly erased message cannot restore its text or preview', async () => {
+  const db = dbWithConversation()
+  const options = {uid:'owner',conversationId:'customer__business-1',requestId:'erase-retry',text:'synthetic personal information',db}
+  const {messageId} = await sendConversationMessage(options)
+  const path = `conversations/customer__business-1/messages/${messageId}`
+  const row = db.data(path)
+  db.store.set(path,{...row,text:'',moderationStatus:'removed',deletedAt:Timestamp.now()})
+  db.store.get('conversations/customer__business-1').lastMessage = null
+  await assert.rejects(sendConversationMessage(options), error => error.code === 'already-exists')
+  assert.equal(db.data(path).text,'')
+  assert.equal(db.data('conversations/customer__business-1').lastMessage,null)
+})

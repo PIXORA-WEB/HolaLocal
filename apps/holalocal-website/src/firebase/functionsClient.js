@@ -37,3 +37,5 @@ export const listSavedBusinessesCallable = httpsCallable(functions, 'listSavedBu
 
 // Constructed only after the review feature gate permits a request.
 export const customerReviewCallable = name => httpsCallable(functions, name)
+
+export const manageRetentionRecordsCallable = httpsCallable(functions, 'manageRetentionRecords')
