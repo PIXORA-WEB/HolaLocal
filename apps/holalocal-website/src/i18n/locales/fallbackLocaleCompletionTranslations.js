@@ -34,6 +34,7 @@ const keys = {
     'verification.title', 'verification.description', 'verification.sent',
     'verification.initialSendFailed', 'verification.notVerified', 'verification.resent',
     'verification.checkedAction', 'verification.resend', 'verification.resending',
+    'registration.ageConfirmation', 'registration.ageRequired',
   ],
   profile: [
     'businessTools', 'businessProfileStatus', 'becomeBusiness', 'startBusiness',
@@ -176,6 +177,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Adresa de e-mail nu este încă verificată. Urmează linkul primit, apoi verifică din nou.',
       'A fost trimis un nou e-mail de verificare.', 'Mi-am verificat adresa de e-mail',
       'Retrimite e-mailul de verificare', 'Se trimite…',
+      "Confirm că am cel puțin 18 ani.", "Trebuie să confirmi că ai cel puțin 18 ani pentru a crea un cont.",
     ],
     profile: ['Instrumente pentru firme', 'Starea profilului firmei', 'Creează un profil de firmă', 'Configurează firma', 'Completează profilul'],
     business: [
@@ -295,6 +297,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Adres e-mail nie został jeszcze zweryfikowany. Użyj linku w skrzynce, a następnie sprawdź ponownie.',
       'Wysłano nową wiadomość weryfikacyjną.', 'Mój adres e-mail jest zweryfikowany',
       'Wyślij ponownie wiadomość weryfikacyjną', 'Wysyłanie…',
+      "Potwierdzam, że mam co najmniej 18 lat.", "Aby utworzyć konto, musisz potwierdzić, że masz co najmniej 18 lat.",
     ],
     profile: ['Narzędzia firmowe', 'Status profilu firmy', 'Utwórz profil firmy', 'Skonfiguruj firmę', 'Uzupełnij profil'],
     business: [
@@ -408,6 +411,7 @@ export const fallbackLocaleCompletionTranslations = {
       'E-mailová adresa ještě není ověřena. Použijte odkaz v e-mailu a potom kontrolu zopakujte.',
       'Nový ověřovací e-mail byl odeslán.', 'E-mailovou adresu mám ověřenou',
       'Znovu odeslat ověřovací e-mail', 'Odesílání…',
+      "Potvrzuji, že mi je alespoň 18 let.", "Pro vytvoření účtu musíš potvrdit, že ti je alespoň 18 let.",
     ],
     profile: ['Firemní nástroje', 'Stav firemního profilu', 'Vytvořit firemní profil', 'Nastavit firmu', 'Dokončit profil'],
     business: [
@@ -520,6 +524,7 @@ export const fallbackLocaleCompletionTranslations = {
       'E-mailová adresa ešte nie je overená. Použite odkaz v e-maile a potom kontrolu zopakujte.',
       'Nový overovací e-mail bol odoslaný.', 'E-mailovú adresu mám overenú',
       'Znova odoslať overovací e-mail', 'Odosielanie…',
+      "Potvrdzujem, že mám aspoň 18 rokov.", "Na vytvorenie účtu musíš potvrdiť, že máš aspoň 18 rokov.",
     ],
     profile: ['Firemné nástroje', 'Stav firemného profilu', 'Vytvoriť firemný profil', 'Nastaviť firmu', 'Dokončiť profil'],
     business: [
@@ -624,6 +629,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Az e-mail-cím még nincs megerősítve. Nyisd meg az e-mailben kapott hivatkozást, majd ellenőrizd újra.',
       'Új megerősítő e-mailt küldtünk.', 'Megerősítettem az e-mail-címemet',
       'Megerősítő e-mail újraküldése', 'Küldés…',
+      "Megerősítem, hogy betöltöttem a 18. életévemet.", "Fiók létrehozásához meg kell erősítened, hogy betöltötted a 18. életévedet.",
     ],
     profile: ['Vállalkozási eszközök', 'Vállalkozási profil állapota', 'Vállalkozási profil létrehozása', 'Vállalkozás beállítása', 'Profil befejezése'],
     business: [
@@ -742,6 +748,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Адресу електронної пошти ще не підтверджено. Відкрийте посилання в листі, а потім перевірте знову.',
       'Новий лист для підтвердження надіслано.', 'Мою адресу електронної пошти підтверджено',
       'Надіслати лист для підтвердження ще раз', 'Надсилання…',
+      "Підтверджую, що мені щонайменше 18 років.", "Щоб створити обліковий запис, потрібно підтвердити, що вам щонайменше 18 років.",
     ],
     profile: ['Інструменти для бізнесу', 'Стан бізнес-профілю', 'Створити бізнес-профіль', 'Налаштувати бізнес', 'Завершити профіль'],
     business: [
@@ -846,6 +853,7 @@ export const fallbackLocaleCompletionTranslations = {
       'L’indirizzo email non è ancora verificato. Apri il link ricevuto, quindi controlla di nuovo.',
       'È stata inviata una nuova email di verifica.', 'Ho verificato il mio indirizzo email',
       'Invia di nuovo l’email di verifica', 'Invio…',
+      "Confermo di avere almeno 18 anni.", "Devi confermare di avere almeno 18 anni per creare un account.",
     ],
     profile: ['Strumenti per attività', 'Stato del profilo attività', 'Crea un profilo attività', 'Configura l’attività', 'Completa il profilo'],
     business: [
@@ -950,6 +958,7 @@ export const fallbackLocaleCompletionTranslations = {
       'Sähköpostiosoitetta ei ole vielä vahvistettu. Avaa saamasi linkki ja tarkista sitten uudelleen.',
       'Uusi vahvistussähköposti on lähetetty.', 'Olen vahvistanut sähköpostiosoitteeni',
       'Lähetä vahvistussähköposti uudelleen', 'Lähetetään…',
+      "Vahvistan olevani vähintään 18-vuotias.", "Sinun on vahvistettava olevasi vähintään 18-vuotias luodaksesi tilin.",
     ],
     profile: ['Yritystyökalut', 'Yritysprofiilin tila', 'Luo yritysprofiili', 'Määritä yritys', 'Viimeistele profiili'],
     business: [
@@ -1054,6 +1063,7 @@ export const fallbackLocaleCompletionTranslations = {
       'E-postadressen är inte verifierad ännu. Öppna länken i meddelandet och kontrollera sedan igen.',
       'Ett nytt verifieringsmeddelande har skickats.', 'Jag har verifierat min e-postadress',
       'Skicka verifieringsmeddelandet igen', 'Skickar…',
+      "Jag bekräftar att jag är minst 18 år.", "Du måste bekräfta att du är minst 18 år för att skapa ett konto.",
     ],
     profile: ['Företagsverktyg', 'Företagsprofilens status', 'Skapa en företagsprofil', 'Konfigurera företaget', 'Slutför profilen'],
     business: [
@@ -1158,6 +1168,7 @@ export const fallbackLocaleCompletionTranslations = {
       'E-mailadressen er endnu ikke bekræftet. Åbn linket i e-mailen, og tjek derefter igen.',
       'En ny bekræftelsesmail er sendt.', 'Jeg har bekræftet min e-mailadresse',
       'Send bekræftelsesmailen igen', 'Sender…',
+      "Jeg bekræfter, at jeg er mindst 18 år.", "Du skal bekræfte, at du er mindst 18 år for at oprette en konto.",
     ],
     profile: ['Virksomhedsværktøjer', 'Virksomhedsprofilens status', 'Opret en virksomhedsprofil', 'Konfigurer virksomheden', 'Færdiggør profilen'],
     business: [
@@ -1262,6 +1273,7 @@ export const fallbackLocaleCompletionTranslations = {
       'E-postadressen er ikke bekreftet ennå. Åpne lenken i e-posten, og kontroller deretter på nytt.',
       'En ny bekreftelses-e-post er sendt.', 'Jeg har bekreftet e-postadressen min',
       'Send bekreftelses-e-posten på nytt', 'Sender…',
+      "Jeg bekrefter at jeg er minst 18 år.", "Du må bekrefte at du er minst 18 år for å opprette en konto.",
     ],
     profile: ['Bedriftsverktøy', 'Status for bedriftsprofil', 'Opprett en bedriftsprofil', 'Konfigurer bedriften', 'Fullfør profilen'],
     business: [

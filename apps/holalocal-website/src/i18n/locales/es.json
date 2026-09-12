@@ -35,7 +35,9 @@
       "termsPrefix": "Acepto los",
       "privacyPrefix": "He leído la",
       "consentRequired": "Revisa ambos documentos y confirma las dos declaraciones para continuar.",
-      "existingAccount": "¿Ya tienes una cuenta?"
+      "existingAccount": "¿Ya tienes una cuenta?",
+      "ageConfirmation": "Confirmo que tengo al menos 18 años.",
+      "ageRequired": "Debes confirmar que tienes al menos 18 años para crear una cuenta."
     },
     "verification": {
       "eyebrow": "Protegemos tu cuenta",

@@ -50,8 +50,14 @@ function configurePersistence() {
 }
 
 export async function registerUser(email, password, policyConsent) {
+  // A registration-only self-declaration; never a login or existing-account gate.
+  if (policyConsent?.ageConfirmed !== true) {
+    const error = new Error('Confirm you are at least 18 before creating an account.')
+    error.code = 'auth/age-confirmation-required'
+    throw error
+  }
   if (!policyConsent?.termsAccepted || !policyConsent?.privacyAccepted) {
-    throw new Error('Accept the Terms and Privacy Policy before creating your account.')
+    throw new Error('Accept the Terms and acknowledge reading the Privacy Policy before creating your account.')
   }
 
   await configurePersistence()
@@ -132,6 +138,7 @@ export function observeAuthentication(callback, errorCallback) {
 
 export function getAuthenticationErrorMessage(error, translate) {
   const keys = {
+    'auth/age-confirmation-required': 'auth.registration.ageRequired',
     'auth/email-already-in-use': 'auth.errors.emailInUse',
     'auth/invalid-credential': 'auth.errors.invalidCredential',
     'auth/invalid-email': 'auth.errors.invalidEmail',

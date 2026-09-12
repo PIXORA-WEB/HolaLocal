@@ -35,7 +35,9 @@
       "termsPrefix": "Ik ga akkoord met de",
       "privacyPrefix": "Ik heb het volgende gelezen:",
       "consentRequired": "Bekijk beide documenten en bevestig de twee verklaringen om door te gaan.",
-      "existingAccount": "Heb je al een account?"
+      "existingAccount": "Heb je al een account?",
+      "ageConfirmation": "Ik bevestig dat ik minimaal 18 jaar oud ben.",
+      "ageRequired": "Je moet bevestigen dat je minimaal 18 jaar oud bent om een account aan te maken."
     },
     "verification": {
       "eyebrow": "Je account beschermen",

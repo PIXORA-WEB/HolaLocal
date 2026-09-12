@@ -20,6 +20,7 @@ function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [error, setError] = useState('')
@@ -34,9 +35,10 @@ function RegisterPage() {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) nextErrors.email = t('validation.email')
     if (password.length < 8) nextErrors.password = t('validation.passwordLength')
     if (password !== confirmPassword) nextErrors.confirmPassword = t('auth.registration.passwordMismatch')
+    if (!ageConfirmed) nextErrors.age = t('auth.registration.ageRequired')
     if (!termsAccepted || !privacyAccepted) nextErrors.consent = t('auth.registration.consentRequired')
     setFieldErrors(nextErrors)
-    const firstInvalidField = ['email', 'password', 'confirmPassword', 'consent'].find(
+    const firstInvalidField = ['email', 'password', 'confirmPassword', 'age', 'consent'].find(
       (field) => nextErrors[field],
     )
     if (firstInvalidField) {
@@ -48,6 +50,7 @@ function RegisterPage() {
 
     try {
       const registration = await signUp(email.trim(), password, {
+        ageConfirmed,
         termsAccepted,
         termsVersion: CURRENT_TERMS_VERSION,
         privacyAccepted,
@@ -128,6 +131,22 @@ function RegisterPage() {
           <legend>{t('auth.registration.consentLegend')}</legend>
           <label>
             <input
+              id="register-age"
+              checked={ageConfirmed}
+              onChange={(event) => {
+                setAgeConfirmed(event.target.checked)
+                setFieldErrors((current) => ({ ...current, age: '' }))
+              }}
+              aria-invalid={Boolean(fieldErrors.age)}
+              aria-describedby={fieldErrors.age ? 'register-age-error' : undefined}
+              required
+              type="checkbox"
+            />
+            <span>{t('auth.registration.ageConfirmation')}</span>
+          </label>
+          <FormFieldError id="register-age-error" message={fieldErrors.age} />
+          <label>
+            <input
               checked={termsAccepted}
               onChange={(event) => setTermsAccepted(event.target.checked)}
               required
@@ -169,7 +188,7 @@ function RegisterPage() {
 
         <button
           className="button button--primary"
-          disabled={submitting || !termsAccepted || !privacyAccepted}
+          disabled={submitting || !ageConfirmed || !termsAccepted || !privacyAccepted}
           type="submit"
         >
           {submitting ? t('common.loading') : t('auth.register')}
