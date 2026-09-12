@@ -1,3 +1,4 @@
+import AnalyticsConsent from '../components/common/AnalyticsConsent.jsx'
 import { lazy, Suspense, useLayoutEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -77,6 +78,7 @@ function LegacyBusinessRedirect() {
 function AppRoutes() {
   return (
     <BrowserRouter>
+      <AnalyticsConsent />
       <ScrollToTopOnNavigation />
       <BusinessMediaPresentationCleanup />
       <MetadataManager />

@@ -23,7 +23,7 @@ body,
   overflow-x: clip;
 }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; scroll-padding-bottom: var(--analytics-bar-height, 0px); }
 body { background: var(--canvas); }
 /* Suppress the browser's transient touch overlay, including its paint after a
    menu closes. Component selected/pressed styles and focus-visible stay intact.

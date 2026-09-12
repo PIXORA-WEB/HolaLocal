@@ -27,5 +27,7 @@ test('all Firebase product clients use fixed emulator endpoints through the shar
 test('automatic analytics is absent in every website mode', async () => {
   const main = await readFile(new URL('../src/main.jsx', import.meta.url), 'utf8')
   assert.doesNotMatch(main, /analyticsClient|initializeAnalytics|getAnalytics/)
-  await assert.rejects(readFile(new URL('../src/firebase/analyticsClient.js', import.meta.url)), { code: 'ENOENT' })
+  const controller = await readFile(new URL('../src/services/analyticsController.js', import.meta.url), 'utf8')
+  assert.match(controller, /MODE !== 'browser-test'/)
+  assert.match(controller, /getAnalyticsChoice\(\) === 'accepted'/)
 })
