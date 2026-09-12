@@ -29,7 +29,7 @@ Functions service agent needs actAs/token access to run the selected identity; R
 
 Only translatePublishedCustomerReview onCall options in functions/src/index.js gain serviceAccount. PUBLIC_CALLABLE_OPTIONS and other 44 identities are unchanged. EU adapter, service, guards and feature controls unchanged. Translation is intentionally a public published-content operation, not newly made login-only; Firebase callable token/App Check processing and private/admin operation authentication remain unchanged.
 
-Important existing deployment caveat: PUBLIC_CALLABLE_OPTIONS has invoker public, while organisation policy rejected allUsers and current Cloud Run invoker IAM check is disabled for browser callables. Firebase may repeat the rejected grant or overwrite manual settings. Capture and recheck this service configuration; do not grant allUsers or bypass org policy. Any required reapplication of invoker-IAM-check-disabled must be explicitly included in deployment approval; otherwise stop. Worker authenticated access must not change.
+Important existing deployment caveat: PUBLIC_CALLABLE_OPTIONS has invoker public, while organisation policy rejected allUsers and current Cloud Run invoker IAM check is disabled for browser callables. Firebase may repeat the rejected grant or overwrite manual settings. Capture and recheck this service configuration; do not grant allUsers or bypass org policy. This approval package does NOT include an IAM correction beyond the two dedicated-account bindings. If Firebase deployment requires reapplying invoker-IAM-check-disabled, changing ingress, allUsers, or any further IAM correction, STOP and report the precise change for separate approval. Do not silently repair it. Worker authenticated access must not change.
 
 ## Corrected offline image
 
@@ -52,11 +52,12 @@ Expected writes: two cache transactions (lease/result), point reads for each req
 ## Deployment order (only after concrete approval)
 
 1. Verify current main/candidate and fresh read-only Function/IAM/gate snapshots; record revision translatepublishedcustomerreview-00001-hop and old account 1097633279895-compute@developer.gserviceaccount.com; refresh if advanced. Stop on unexpected differences.
-2. Provision ONLY dedicated account, two custom roles and two additive bindings. Use fresh etag-aware project policy; preserve all other roles. Confirm no inherited extra privileges; test actAs and permission support. No grant to old shared account.
-3. Deploy reviewed source with all controls unchanged/closed: firebase deploy --project holalocal-491c9 --only functions:translatePublishedCustomerReview. Capture build/revision. No other Functions, rules, indexes, Storage, website or Scheduler deployment. Check callable IAM caveat above before proceeding.
-4. Verify identity, EU options, closed review/provider/retention/recovery controls, ingress, callable preflight and disabled handler, all other Function/worker configurations unchanged. Disabled handler is not positive Firestore access verification.
-5. Only with fresh bounded-test approval run acceptance A once and clean up. Stop on failure; no grants/retry automatically.
-6. Keep activation closed; present results and PR44/legal publication requirements. Acceptance B requires separately approved controlled activation/data scope. Do not conflate readiness with activation.
+2. Merge this focused PR into current main through normal required checks. This authorises the usual automatic Vercel production build/deployment even though apps/, shared/, root configuration and lockfiles are unchanged. Verify resulting website commit/aliases without generating Analytics traffic. This merge does not deploy Firebase. Require the resulting source tree to equal the reviewed PR tree if main remains unchanged; stop/reverify if main advances. Keep PR44 separate and unpublished.
+3. Provision ONLY dedicated account, two custom roles and two additive bindings. Use fresh etag-aware project policy; preserve all other roles. Confirm no inherited extra privileges; test actAs and permission support. No grant to old shared account.
+4. Deploy reviewed merged-main source with all controls unchanged/closed: firebase deploy --project holalocal-491c9 --only functions:translatePublishedCustomerReview. Capture build/revision. No other Functions, rules, indexes, Storage, website or Scheduler deployment. Check callable IAM caveat above before proceeding.
+5. Verify identity, EU options, closed review/provider/retention/recovery controls, ingress, callable preflight and disabled handler, all other Function/worker configurations unchanged. Disabled handler is not positive Firestore access verification.
+6. Only with fresh bounded-test approval run acceptance A once and clean up. Stop on failure; no grants/retry automatically.
+7. Keep activation closed; present results and PR44/legal publication requirements. Acceptance B requires separately approved controlled activation/data scope. Do not conflate readiness with activation.
 
 Account/role creation itself has no proposed service subscription; Function deployment can incur normal Cloud Build/Artifact Registry charges. Diagnostic and acceptance allowances do not purport to cap unrelated production spend; €30 alert unchanged, no new quotas.
 
@@ -85,3 +86,7 @@ gcloud projects add-iam-policy-binding holalocal-491c9 --member='serviceAccount:
 ```
 
 These commands modify only their named bindings, not the complete policy; retain before/after etags and verify every unrelated binding remains intact. Stop on errors or unexpected existing resources. Account/roles/grants/Function deployment/diagnostic remain unexecuted.
+
+## Focused PR release checkpoint
+
+Current main reverified 2e49239b8f96bb5d9aee55760142edec136d7bb2; unchanged since preparation. No rebase or runtime integration change necessary. The 20 tests, Functions lint and offline image verification remain applicable; this follow-up modifies release instructions only. No new provider test, website traffic or cloud mutation. Verify PR base/head, mergeability and required checks before merge; do not bypass the known website bundle-budget failure. The source merge and resulting automatic Vercel deployment precede scoped Firebase provisioning/deployment. If required checks block, stop. Paid diagnostic and review/provider/retention/recovery activation are explicitly excluded from this release approval.
