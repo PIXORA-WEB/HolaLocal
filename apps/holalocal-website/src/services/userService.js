@@ -4,7 +4,7 @@ import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebas
 import { db } from '../firebase/firestoreClient.js'
 import { finalizeProfileMediaCallable, prepareProfileMediaUploadCallable, updateAccountRoleCallable } from '../firebase/functionsClient.js'
 import { createApplicationError } from '../utils/frontendErrors.js'
-import { hasCurrentLegalConsent } from '../utils/policies.js'
+import { hasValidLegalConsent } from '../utils/policies.js'
 import { toWebsiteUserProfile } from './firebaseCompatibility.js'
 
 async function uploadCanonicalImageFile(...args) {
@@ -133,7 +133,7 @@ export async function updateUserProfile(uid, updates) {
 export async function completeAbsentUserProfile(firebaseUser, updates) {
   if (!firebaseUser?.uid) throw createApplicationError('auth-required')
   const existingProfile = await getRawUserProfile(firebaseUser.uid)
-  if (!hasCurrentLegalConsent(existingProfile)) {
+  if (!hasValidLegalConsent(existingProfile)) {
     throw createApplicationError('legal-consent-required')
   }
   return updateUserProfile(firebaseUser.uid, updates)

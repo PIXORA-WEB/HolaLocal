@@ -279,7 +279,7 @@ service cloud.firestore {
           resource.data.termsAccepted != true
           && request.resource.data.termsAccepted == true
           && request.resource.data.termsAcceptedAt == request.time
-          && request.resource.data.termsVersion == '1.0'
+          && request.resource.data.termsVersion in ['1.0', '1.1']
         ))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion'
@@ -287,7 +287,7 @@ service cloud.firestore {
           resource.data.privacyAccepted != true
           && request.resource.data.privacyAccepted == true
           && request.resource.data.privacyAcceptedAt == request.time
-          && request.resource.data.privacyVersion == '1.0'
+          && request.resource.data.privacyVersion in ['1.0', '1.1']
         ));
     }
 
@@ -574,10 +574,10 @@ service cloud.firestore {
         && request.resource.data.accountStatus == 'active'
         && request.resource.data.termsAccepted == true
         && request.resource.data.termsAcceptedAt == request.time
-        && request.resource.data.termsVersion == '1.0'
+        && request.resource.data.termsVersion in ['1.0', '1.1']
         && request.resource.data.privacyAccepted == true
         && request.resource.data.privacyAcceptedAt == request.time
-        && request.resource.data.privacyVersion == '1.0';
+        && request.resource.data.privacyVersion in ['1.0', '1.1'];
       allow read: if isOwner(userId);
       allow update: if isOwner(userId)
         && hasActiveAccount()

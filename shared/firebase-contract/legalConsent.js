@@ -1,8 +1,12 @@
-export const CURRENT_TERMS_VERSION = '1.0'
-export const CURRENT_PRIVACY_VERSION = '1.0'
+export const CURRENT_TERMS_VERSION = '1.1'
+export const CURRENT_PRIVACY_VERSION = '1.1'
 
-export const CURRENT_TERMS_EFFECTIVE_DATE = '2026-07-04'
-export const CURRENT_PRIVACY_EFFECTIVE_DATE = '2026-07-04'
+export const CURRENT_TERMS_EFFECTIVE_DATE = null
+export const CURRENT_PRIVACY_EFFECTIVE_DATE = null
+
+// Candidate 1.1 is not published; effective dates are assigned at approved release.
+const historicalTermsVersions = Object.freeze(['1.0'])
+const historicalPrivacyVersions = Object.freeze(['1.0'])
 
 function isFirestoreTimestamp(value) {
   try {
@@ -24,14 +28,29 @@ function isFirestoreTimestamp(value) {
   }
 }
 
+function hasTermsEvidence(profile, versions) {
+  return Boolean(profile?.termsAccepted === true && isFirestoreTimestamp(profile.termsAcceptedAt) && versions.includes(profile.termsVersion))
+}
+function hasPrivacyEvidence(profile, versions) {
+  return Boolean(profile?.privacyAccepted === true && isFirestoreTimestamp(profile.privacyAcceptedAt) && versions.includes(profile.privacyVersion))
+}
+export function hasValidTermsAcceptance(profile) {
+  return hasTermsEvidence(profile, [...historicalTermsVersions, CURRENT_TERMS_VERSION])
+}
+export function hasValidPrivacyAcknowledgment(profile) {
+  return hasPrivacyEvidence(profile, [...historicalPrivacyVersions, CURRENT_PRIVACY_VERSION])
+}
+
+// Access eligibility is distinct from agreement to the current published text.
+export function hasValidLegalConsent(profile) {
+  return hasValidTermsAcceptance(profile) && hasValidPrivacyAcknowledgment(profile)
+}
+
 export function hasCurrentLegalConsent(profile) {
-  return Boolean(
-    profile
-    && profile.termsAccepted === true
-    && isFirestoreTimestamp(profile.termsAcceptedAt)
-    && profile.termsVersion === CURRENT_TERMS_VERSION
-    && profile.privacyAccepted === true
-    && isFirestoreTimestamp(profile.privacyAcceptedAt)
-    && profile.privacyVersion === CURRENT_PRIVACY_VERSION
-  )
+  return hasTermsEvidence(profile, [CURRENT_TERMS_VERSION]) && hasPrivacyEvidence(profile, [CURRENT_PRIVACY_VERSION])
+}
+
+export function isSupportedLegalVersionPair(termsVersion, privacyVersion) {
+  return [...historicalTermsVersions, CURRENT_TERMS_VERSION].includes(termsVersion)
+    && [...historicalPrivacyVersions, CURRENT_PRIVACY_VERSION].includes(privacyVersion)
 }

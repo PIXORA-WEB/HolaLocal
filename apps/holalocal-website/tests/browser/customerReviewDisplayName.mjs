@@ -13,7 +13,7 @@ process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8080';process.env.FIREBASE_AUTH_E
 const {initializeApp}=require('firebase-admin/app'),{getFirestore,Timestamp}=require('firebase-admin/firestore')
 const db=getFirestore(initializeApp({projectId:'demo-holalocal-functions'}))
 for(const id of ['customer','reporter','admin'])await db.doc(`users/review-demo-${id}-v1`).update({firstName:'Private',lastName:'Account',displayName:'PRIVATE ACCOUNT NAME',displayNameNormalized:'private account name',city:'Málaga',country:'Spain',profileCompleted:true})
-const evidence=resolve(root,'../review-evidence/policy-browser');await mkdir(evidence,{recursive:true})
+const evidence=process.env.HOLALOCAL_REVIEW_EVIDENCE?resolve(process.env.HOLALOCAL_REVIEW_EVIDENCE):resolve(root,'../review-evidence/policy-browser');await mkdir(evidence,{recursive:true})
 const b=await chromium.launch({headless:true,args:['--disable-dev-shm-usage']})
 const errors=[]
 async function pageFor(role,width=390){
