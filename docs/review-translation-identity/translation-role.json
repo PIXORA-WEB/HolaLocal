@@ -1,0 +1,8 @@
+{
+  "title": "HolaLocal review Translation caller",
+  "stage": "GA",
+  "includedPermissions": [
+    "cloudtranslate.generalModels.predict",
+    "serviceusage.services.use"
+  ]
+}
