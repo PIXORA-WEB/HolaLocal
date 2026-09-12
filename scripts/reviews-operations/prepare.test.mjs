@@ -40,3 +40,15 @@ test('unattended recovery and partial retention failures get counts-only, disabl
  assert.match(p.metrics[2].filter,/account-deletion-recovery/)
  assert.match(p.policies.find(v=>v.displayName.endsWith('retention-record-failure')).conditions[0].conditionMatchedLog.filter,/failedRecords>0/)
 })
+
+test('metric alert filters use API-supported one_of without mixed resource-label AND/OR',()=>{
+ const {policies}=prepare({projectId:'holalocal-491c9'})
+ for(const id of ['callable-server-errors','callable-latency']){
+  const filter=policies.find(p=>p.displayName.endsWith(id)).conditions[0].conditionThreshold.filter
+  assert.ok(!filter.includes(' OR '))
+  const values=JSON.parse('['+filter.match(/one_of\(([^)]+)\)/)[1]+']')
+  assert.equal(values.length,17);assert.equal(new Set(values).size,17)
+  assert.ok(values.includes('translatepublishedcustomerreview'))
+  assert.ok(filter.includes('resource.labels.location="europe-west1"'))
+ }
+})
