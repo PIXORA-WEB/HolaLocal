@@ -1,0 +1,21 @@
+{
+  "project": "holalocal-491c9",
+  "bindings": [
+    {
+      "role": "projects/holalocal-491c9/roles/holalocalReviewTranslationCaller",
+      "members": [
+        "serviceAccount:holalocal-review-translation@holalocal-491c9.iam.gserviceaccount.com"
+      ]
+    },
+    {
+      "role": "projects/holalocal-491c9/roles/holalocalReviewTranslationCache",
+      "members": [
+        "serviceAccount:holalocal-review-translation@holalocal-491c9.iam.gserviceaccount.com"
+      ],
+      "condition": {
+        "title": "review_translation_default_database",
+        "expression": "resource.name == \"projects/holalocal-491c9/databases/(default)\""
+      }
+    }
+  ]
+}

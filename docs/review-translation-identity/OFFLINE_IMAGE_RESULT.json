@@ -1,0 +1,20 @@
+{
+  "manifest": {
+    "digest": "sha256:45366cc7b6d76da010f8a126e562fac7d631b4b6e6cd6c3559c4523e5bfc6593",
+    "size": 2751
+  },
+  "baseDiagnostic": "sha256:448eb8b902342ea2e7cc04f03942f9733641a3fc9473143366cfddc6bd04d972",
+  "layers": 16,
+  "expectedIdentity": "holalocal-review-translation@holalocal-491c9.iam.gserviceaccount.com",
+  "paidRequests": 0,
+  "startupVerified": true,
+  "verification": {
+    "plan": true,
+    "simulatedProviderAndMemoryCache": true,
+    "simulatedFailureNoRetry": true,
+    "wrongSharedIdentityRejected": true,
+    "network": "unshare-all",
+    "uid": 33,
+    "cloudExecutions": 0
+  }
+}
