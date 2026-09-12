@@ -26,7 +26,7 @@ try {
    for(const route of ['privacy','terms']) {
     await page.goto(`http://127.0.0.1:4193/${route}`)
     await page.locator('.legal-content__contents').waitFor()
-    await page.waitForFunction(label=>document.querySelector('.placeholder__label')?.textContent===label,content.revisionNotice)
+    await page.waitForFunction(label=>document.querySelector('.placeholder__label')?.textContent===label+' · 1.1',content.revisionNotice)
     const headings=page.locator('.legal-content__sections h2')
     assert.deepEqual(await headings.allTextContents(),content[route].sections.map(s=>s.title),`${code}/${route}`)
     assert.equal(await page.locator('h1').count(),1)

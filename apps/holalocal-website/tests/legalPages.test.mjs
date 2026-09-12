@@ -62,3 +62,14 @@ test('informational policy notice is translated in all17language resources',asyn
  const resources={en:legalConsentEnglishTranslations,...legalConsentTranslations}
  for(const code of Object.keys(legalPageContent))assert.ok(resources[code].legalConsent.updateNotice?.length>40,code)
 })
+
+
+test('all legal locales disclose approved mailbox-only support retention without a permanent-deletion promise',()=>{
+ for(const [code,content] of Object.entries(legalPageContent)){
+  const paragraphs=content.privacy.sections.find(s=>s.key==='cloud-retention').paragraphs
+  assert.equal(paragraphs.length,2,code)
+  assert.match(paragraphs[1],/12/,code)
+  assert.match(paragraphs[1],/hello@holalocal\.es/,code)
+ }
+ assert.match(legalPageContent.en.privacy.sections.find(s=>s.key==='cloud-retention').paragraphs[1],/does not necessarily remove recovery/)
+})
