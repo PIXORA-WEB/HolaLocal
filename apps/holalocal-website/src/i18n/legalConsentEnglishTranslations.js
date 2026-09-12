@@ -1,5 +1,6 @@
 export const legalConsentEnglishTranslations = {
   legalConsent: {
+    updateNotice: 'Our Terms and Privacy notice have changed. Your existing acceptance record is unchanged. Viewing or dismissing this notice does not mean you agree to new terms.',
     eyebrow: 'Account access',
     title: "Review the current legal documents",
     description: "To continue, accept the Terms and confirm that you have read the Privacy Policy.",

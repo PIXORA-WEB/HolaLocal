@@ -448,6 +448,15 @@ describe('users and account lifecycle', () => {
     assert.equal(Object.hasOwn(created, 'password'), false)
   })
 
+  test('candidate registration stores 1.1 while existing acceptance cannot be rewritten', async () => {
+    const uid='policy-candidate'
+    const reference=doc(environment.authenticatedContext(uid).firestore(),'users',uid)
+    await assertSucceeds(setDoc(reference,mobilePayload(uid,{termsVersion:'1.1',privacyVersion:'1.1'})))
+    assert.equal((await getDoc(reference)).data().termsVersion,'1.1')
+    await assertFails(updateDoc(reference,{termsVersion:'1.0',termsAcceptedAt:serverTimestamp()}))
+    await assertFails(updateDoc(reference,{privacyVersion:'99'}))
+  })
+
   test('mobile registration rejects missing consent and incorrect policy versions', async () => {
     for (const [uid, changes] of [
       ['mobile-no-terms', { termsAccepted: false, termsAcceptedAt: null }],

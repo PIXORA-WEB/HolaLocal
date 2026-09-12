@@ -6,6 +6,10 @@ export {
   CURRENT_TERMS_EFFECTIVE_DATE,
   CURRENT_TERMS_VERSION,
   hasCurrentLegalConsent,
+  hasValidLegalConsent,
+  isSupportedLegalVersionPair,
+  hasValidTermsAcceptance,
+  hasValidPrivacyAcknowledgment,
 } from './legalConsent.js'
 export {
   ACCOUNT_STATUSES, BUSINESS_STATUSES, BUSINESS_TRUSTED_FIELDS, CONTACT_METHODS,
