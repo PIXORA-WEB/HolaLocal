@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {legalPageContent} from '../src/i18n/locales/legalContent.js'
-import {CURRENT_TERMS_VERSION,CURRENT_PRIVACY_VERSION} from '../../../shared/firebase-contract/legalConsent.js'
+import {CURRENT_TERMS_VERSION,CURRENT_PRIVACY_VERSION,CURRENT_TERMS_EFFECTIVE_DATE,CURRENT_PRIVACY_EFFECTIVE_DATE} from '../../../shared/firebase-contract/legalConsent.js'
 
 test('legal content has matching sections in all languages, no publication placeholders and explicit draft status',()=>{
  assert.equal(Object.keys(legalPageContent).length,17)
@@ -16,8 +16,8 @@ test('legal content has matching sections in all languages, no publication place
   const retention=content.privacy.sections.find(s=>s.key==='cloud-retention').paragraphs.join(' ')
   for(const days of ['30','7','400'])assert.ok(retention.includes(days),code)
  }
- assert.equal(CURRENT_TERMS_VERSION,'1.0')
- assert.equal(CURRENT_PRIVACY_VERSION,'1.0')
+ assert.equal(CURRENT_TERMS_VERSION,'1.1')
+ assert.equal(CURRENT_PRIVACY_VERSION,'1.1')
 })
 
 
@@ -45,11 +45,20 @@ test('both legal pages identify the confirmed individual operator in all 17 lang
 })
 
 
-test('approved account age is stated consistently without changing existing consent versions', () => {
+test('approved account age is consistent and candidate policy dates are not fabricated', () => {
  for (const [code, content] of Object.entries(legalPageContent)) {
   const account = content.terms.sections.find(section => section.key === 'account')
   assert.match(account.paragraphs[0], /18/, code)
  }
- assert.equal(CURRENT_TERMS_VERSION, '1.0')
- assert.equal(CURRENT_PRIVACY_VERSION, '1.0')
+ assert.equal(CURRENT_TERMS_VERSION, '1.1')
+ assert.equal(CURRENT_PRIVACY_VERSION, '1.1')
+ assert.equal(CURRENT_TERMS_EFFECTIVE_DATE,null)
+ assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,null)
+})
+
+test('informational policy notice is translated in all17language resources',async()=>{
+ const {legalConsentEnglishTranslations}=await import('../src/i18n/legalConsentEnglishTranslations.js')
+ const {legalConsentTranslations}=await import('../src/i18n/locales/legalConsentTranslations.js')
+ const resources={en:legalConsentEnglishTranslations,...legalConsentTranslations}
+ for(const code of Object.keys(legalPageContent))assert.ok(resources[code].legalConsent.updateNotice?.length>40,code)
 })
