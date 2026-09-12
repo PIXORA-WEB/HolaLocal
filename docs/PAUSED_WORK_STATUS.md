@@ -75,3 +75,5 @@ The complete local EU runtime Translation image448eb8b902342ea2e7cc04f03942f9733
 
 ### Analytics acceptance, 12 September 2026
 PR45: user-corrected served-tag configuration verified; real Google ingestion completed within approved cap (6/8 page views, six204s, zero retries), signed-in/out acceptance and withdrawal passed. Production unchanged at87d5fbd. Final release must set only Production Analytics readiness true after approval; visitor choice remains mandatory. Report visibility/phone editorial checks are distinguished from transport success. See ANALYTICS_CONSENT_RELEASE.md. PR44 and reviews launch remain separate; original mixed source/backups untouched.
+
+Analytics reporting follow-up: user saw zero Realtime users/page views within the test window. HTTP204 is only endpoint acceptance; end-to-end reporting remains blocked. No further ingestion. Await read-only property/stream/report/data-filter checks. PR45 remains draft/unmerged; do not release based solely on transport success.
