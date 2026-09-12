@@ -24,7 +24,7 @@ test('account deletion contract is trusted, minimal, and has a centralized recen
   assert.deepEqual(Object.keys(ACCOUNT_DELETION_REQUEST_CONTRACT.fields), [
     'uid', 'state', 'requestedAt', 'requestedBy', 'cancelledAt', 'finalizationStartedAt',
     'finalizedBy', 'completedAt', 'lastCompletedStep', 'failureCode', 'retryCount', 'leaseId',
-    'leaseExpiresAt', 'cleanupCounts', 'retainedConsentEvidence', 'evidenceRetention', 'updatedAt', 'requestVersion',
+    'leaseExpiresAt', 'cleanupCounts', 'retainedConsentEvidence', 'updatedAt', 'requestVersion',
   ])
   assert.ok(Object.values(ACCOUNT_DELETION_REQUEST_CONTRACT.fields)
     .every((field) => field.access === 'trusted_only'))
@@ -86,7 +86,7 @@ test('a fresh request cycle increments version and cannot retain prior workflow 
   ), false)
   for (const staleField of [
     'finalizationStartedAt', 'finalizedBy', 'completedAt', 'lastCompletedStep', 'failureCode',
-    'retryCount', 'leaseId', 'leaseExpiresAt', 'cleanupCounts', 'retainedConsentEvidence', 'evidenceRetention',
+    'retryCount', 'leaseId', 'leaseExpiresAt', 'cleanupCounts', 'retainedConsentEvidence',
   ]) {
     assert.equal(isFreshAccountDeletionRequestCycle(cancelled, { ...fresh, [staleField]: null }), false)
   }

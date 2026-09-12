@@ -43,7 +43,7 @@ export async function removeExpiredBusinessReport({db,reportId,actorUid,claims,e
     const snapshot=await tx.get(ref),row=snapshot.data()
     if(!snapshot.exists)return {removed:false,idempotent:true}
     if(row.targetType!=='business'||row.status!=='resolved'||row.resolutionVersion!==1||!(row.resolvedAt instanceof Timestamp))return {removed:false,needsAssessment:true}
-    if(row.resolvedAt.toMillis()+BUSINESS_REPORT_RETENTION_MS>now.toMillis())return {removed:false}
+    if(row.resolvedAt.toMillis()+BUSINESS_REPORT_RETENTION_MS>now.toMillis())return {removed:false,notDue:true}
     if(row.retentionDecision!=null && (!validRetentionDecision(row.retentionDecision)||row.retentionDecision.state!=='released'))return {removed:false,held:true}
     // Unknown legacy schema/copy references require assessment before destructive work.
     const fields=new Set(['reporterId','targetType','targetId','parentId','reason','details','evidence','status','priority','assignedTo','resolution','createdAt','updatedAt','resolutionVersion','resolvedAt','retentionDecision'])

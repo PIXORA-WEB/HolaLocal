@@ -153,3 +153,5 @@ export {
   SUBSCRIPTION_RESOLUTION_SOURCES,
   SUBSCRIPTION_SCHEMA_VERSION,
 } from './subscriptions.js'
+
+export * from './retention.js'

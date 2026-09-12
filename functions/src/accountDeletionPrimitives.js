@@ -238,10 +238,12 @@ export async function completeAccountDeletionWorkflow({ uid, leaseId, expectedRe
     if (request.lastCompletedStep !== 'firebase_auth_removed') {
       throw integrityError('account-deletion-checkpoint-out-of-order')
     }
+    const privateRef = db.doc(`acknowledgmentRetention/${uid}`)
+    const privateSnapshot = await transaction.get(privateRef)
+    if (!privateSnapshot.exists) transaction.set(privateRef, { decision: initialDeletionEvidenceRetention({ reviewerId: request.finalizedBy, now }) })
     const requestVersion = request.requestVersion + 1
     transaction.update(ref, {
       state: 'completed', lastCompletedStep: 'completed', completedAt: FieldValue.serverTimestamp(),
-      evidenceRetention: request.evidenceRetention ?? initialDeletionEvidenceRetention({ reviewerId: request.finalizedBy, now }),
       failureCode: null, leaseId: null, leaseExpiresAt: null,
       requestVersion, updatedAt: FieldValue.serverTimestamp(),
     })
@@ -256,7 +258,7 @@ export async function deleteFirebaseAuthUser({ uid, auth = getAuth() }) {
   catch (error) { if (error?.code === 'auth/user-not-found') return { ok: true, alreadyMissing: true }; return { ok: false, retryable: true, failureCode: 'firebase_auth_deletion_failed' } }
 }
 
-// Preparation-only entry points: no callable or Scheduler export enables these.
+// Admin gateway supplies the closed-by-default cleanup control; no scheduled execution.
 export async function assessAcknowledgmentRetention({ uid, actorUid, claims, db, expectedRevision, action, reason, endingCondition, reviewAt, now = Timestamp.now() }) {
   requireRetentionAdmin(actorUid, claims)
   const ref = db.doc(`accountDeletionRequests/${requireTrustedUid(uid)}`)
@@ -265,8 +267,8 @@ export async function assessAcknowledgmentRetention({ uid, actorUid, claims, db,
     const row = snapshot.data()
     if (!snapshot.exists || row.state !== 'completed' || row.lastCompletedStep !== 'completed' || user.exists) throw new HttpsError('failed-precondition', 'completed-erasure-required')
     if (!row.retainedConsentEvidence) throw new HttpsError('failed-precondition', 'evidence-already-removed')
-    const decision = nextRetentionDecision({previous:row.evidenceRetention,expectedRevision,actorUid,action,reason,endingCondition,reviewAt,now})
-    tx.update(ref,{evidenceRetention:decision})
+    const decision = nextRetentionDecision({previous:(await tx.get(db.doc(`acknowledgmentRetention/${uid}`))).data()?.decision,expectedRevision,actorUid,action,reason,endingCondition,reviewAt,now})
+    tx.set(db.doc(`acknowledgmentRetention/${uid}`),{decision})
     return { revision: decision.revision, state: decision.state }
   })
 }
@@ -281,9 +283,12 @@ export async function removeReleasedAcknowledgmentEvidence({ uid, actorUid, clai
     const row = snapshot.data()
     if (user.exists || row.state !== 'completed' || row.lastCompletedStep !== 'completed') return {removed:false,blocked:true}
     if (row.retainedConsentEvidence == null) return {removed:false,idempotent:true}
-    if (!validRetentionDecision(row.evidenceRetention) || row.evidenceRetention.state !== 'released') return {removed:false,blocked:true}
+    const privateRef = db.doc(`acknowledgmentRetention/${uid}`)
+    const decision = (await tx.get(privateRef)).data()?.decision
+    if (!validRetentionDecision(decision) || decision.state !== 'released') return {removed:false,blocked:true}
     // Keep terminal workflow identity/checkpoints for idempotency; this is not a whole-record retention exemption.
-    tx.update(ref,{retainedConsentEvidence:FieldValue.delete(),evidenceRetention:FieldValue.delete()})
+    tx.update(ref,{retainedConsentEvidence:FieldValue.delete()})
+    tx.delete(privateRef)
     return {removed:true}
   })
 }
