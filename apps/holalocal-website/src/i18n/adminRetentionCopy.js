@@ -1,4 +1,4 @@
-const keys = ["title", "acknowledgments", "reports", "conversations", "review", "hold", "release", "resolve", "execute", "reason", "ending", "reviewAt", "reviewer", "closed", "confirm", "assess", "overdue", "held", "released", "removed", "failed", "done", "next", "reset", "empty", "redact", "message", "subject", "notice"]
+const keys = ["title", "acknowledgments", "reports", "conversations", "review", "hold", "release", "resolve", "execute", "reason", "ending", "reviewAt", "reviewer", "closed", "confirm", "assess", "overdue", "held", "released", "removed", "failed", "done", "next", "reset", "empty", "redact", "message", "subject", "notice", "queueFilter", "allRecords", "dueReviews", "dueCleanup", "eligibleAt", "notDue", "untrustedDate"]
 const rows = {
   "en": [
     "Retention reviews",
@@ -29,7 +29,14 @@ const rows = {
     "Erase assessed message text",
     "Message ID",
     "Account ID in the erasure request",
-    "Report handling does not change business approval. Review dates never automatically end or renew preservation."
+    "Report handling does not change business approval. Review dates never automatically end or renew preservation.",
+    "Queue view",
+    "All records",
+    "Reviews due or overdue",
+    "Cleanup due or overdue",
+    "Cleanup eligibility date",
+    "Not yet due",
+    "No trusted resolution date"
   ],
   "es": [
     "Revisiones de conservación",
@@ -60,7 +67,14 @@ const rows = {
     "Borrar texto del mensaje evaluado",
     "ID del mensaje",
     "ID de cuenta de la solicitud de supresión",
-    "Gestionar un reporte no cambia la aprobación del negocio. Las fechas de revisión no finalizan ni renuevan la conservación automáticamente."
+    "Gestionar un reporte no cambia la aprobación del negocio. Las fechas de revisión no finalizan ni renuevan la conservación automáticamente.",
+    "Vista de la cola",
+    "Todos los registros",
+    "Revisiones pendientes o vencidas",
+    "Limpieza pendiente o vencida",
+    "Fecha de elegibilidad para limpieza",
+    "Aún no vence",
+    "Sin fecha de resolución fiable"
   ],
   "fr": [
     "Examens de conservation",
@@ -91,7 +105,14 @@ const rows = {
     "Effacer le texte du message évalué",
     "ID du message",
     "ID du compte de la demande d’effacement",
-    "Traiter un signalement ne modifie pas l’approbation de l’entreprise. Les dates d’examen ne terminent ni ne renouvellent automatiquement la conservation."
+    "Traiter un signalement ne modifie pas l’approbation de l’entreprise. Les dates d’examen ne terminent ni ne renouvellent automatiquement la conservation.",
+    "Vue de la file",
+    "Tous les dossiers",
+    "Examens dus ou en retard",
+    "Suppressions dues ou en retard",
+    "Date d’éligibilité à la suppression",
+    "Pas encore dû",
+    "Aucune date de résolution fiable"
   ],
   "de": [
     "Aufbewahrungsprüfung",
@@ -122,7 +143,14 @@ const rows = {
     "Geprüften Nachrichtentext löschen",
     "Nachrichten-ID",
     "Konto-ID des Löschantrags",
-    "Die Bearbeitung einer Meldung ändert keine Unternehmensfreigabe. Prüftermine beenden oder verlängern die Aufbewahrung nicht automatisch."
+    "Die Bearbeitung einer Meldung ändert keine Unternehmensfreigabe. Prüftermine beenden oder verlängern die Aufbewahrung nicht automatisch.",
+    "Warteschlangenansicht",
+    "Alle Datensätze",
+    "Fällige oder überfällige Prüfungen",
+    "Fällige oder überfällige Bereinigung",
+    "Frühestes Bereinigungsdatum",
+    "Noch nicht fällig",
+    "Kein verlässliches Abschlussdatum"
   ],
   "nl": [
     "Bewaarbeoordelingen",
@@ -153,7 +181,14 @@ const rows = {
     "Beoordeelde berichttekst wissen",
     "Bericht-ID",
     "Account-ID in het wisverzoek",
-    "Een melding afhandelen verandert geen bedrijfsgoedkeuring. Beoordelingsdatums beëindigen of verlengen de bewaring niet automatisch."
+    "Een melding afhandelen verandert geen bedrijfsgoedkeuring. Beoordelingsdatums beëindigen of verlengen de bewaring niet automatisch.",
+    "Wachtrijweergave",
+    "Alle dossiers",
+    "Te beoordelen of achterstallig",
+    "Opschoning nodig of achterstallig",
+    "Datum voor opschoning",
+    "Nog niet aan de beurt",
+    "Geen betrouwbare afhandeldatum"
   ],
   "pt": [
     "Revisões de conservação",
@@ -184,7 +219,14 @@ const rows = {
     "Apagar texto da mensagem avaliada",
     "ID da mensagem",
     "ID da conta no pedido de apagamento",
-    "Tratar uma denúncia não altera a aprovação do negócio. As datas de revisão não terminam nem renovam a conservação automaticamente."
+    "Tratar uma denúncia não altera a aprovação do negócio. As datas de revisão não terminam nem renovam a conservação automaticamente.",
+    "Vista da fila",
+    "Todos os registos",
+    "Revisões devidas ou atrasadas",
+    "Limpeza devida ou atrasada",
+    "Data de elegibilidade para limpeza",
+    "Ainda não devido",
+    "Sem data de resolução fiável"
   ],
   "it": [
     "Revisioni della conservazione",
@@ -215,7 +257,14 @@ const rows = {
     "Cancella il testo del messaggio valutato",
     "ID messaggio",
     "ID account nella richiesta di cancellazione",
-    "Gestire una segnalazione non cambia l’approvazione dell’attività. Le date di revisione non terminano né rinnovano automaticamente la conservazione."
+    "Gestire una segnalazione non cambia l’approvazione dell’attività. Le date di revisione non terminano né rinnovano automaticamente la conservazione.",
+    "Vista della coda",
+    "Tutti i record",
+    "Revisioni in scadenza o scadute",
+    "Eliminazioni dovute o in ritardo",
+    "Data di idoneità all’eliminazione",
+    "Non ancora dovuto",
+    "Nessuna data di risoluzione attendibile"
   ],
   "pl": [
     "Przeglądy przechowywania",
@@ -246,7 +295,14 @@ const rows = {
     "Usuń oceniony tekst wiadomości",
     "ID wiadomości",
     "ID konta we wniosku o usunięcie",
-    "Obsługa zgłoszenia nie zmienia zatwierdzenia firmy. Terminy przeglądów nie kończą ani nie odnawiają automatycznie przechowywania."
+    "Obsługa zgłoszenia nie zmienia zatwierdzenia firmy. Terminy przeglądów nie kończą ani nie odnawiają automatycznie przechowywania.",
+    "Widok kolejki",
+    "Wszystkie rekordy",
+    "Przeglądy wymagane lub zaległe",
+    "Usuwanie wymagane lub zaległe",
+    "Data kwalifikacji do usunięcia",
+    "Termin jeszcze nie minął",
+    "Brak wiarygodnej daty rozstrzygnięcia"
   ],
   "ro": [
     "Revizuiri ale păstrării",
@@ -277,7 +333,14 @@ const rows = {
     "Șterge textul mesajului evaluat",
     "ID mesaj",
     "ID cont din cererea de ștergere",
-    "Gestionarea raportării nu schimbă aprobarea afacerii. Datele de revizuire nu încheie și nu reînnoiesc automat păstrarea."
+    "Gestionarea raportării nu schimbă aprobarea afacerii. Datele de revizuire nu încheie și nu reînnoiesc automat păstrarea.",
+    "Vizualizarea cozii",
+    "Toate înregistrările",
+    "Revizuiri scadente sau restante",
+    "Ștergeri scadente sau restante",
+    "Data eligibilității pentru ștergere",
+    "Nu este încă scadent",
+    "Fără dată sigură a soluționării"
   ],
   "cs": [
     "Kontroly uchovávání",
@@ -308,7 +371,14 @@ const rows = {
     "Smazat posouzený text zprávy",
     "ID zprávy",
     "ID účtu v žádosti o výmaz",
-    "Vyřízení hlášení nemění schválení firmy. Termíny kontrol automaticky neukončují ani neobnovují uchovávání."
+    "Vyřízení hlášení nemění schválení firmy. Termíny kontrol automaticky neukončují ani neobnovují uchovávání.",
+    "Zobrazení fronty",
+    "Všechny záznamy",
+    "Kontroly splatné nebo po termínu",
+    "Odstranění splatné nebo po termínu",
+    "Datum způsobilosti k odstranění",
+    "Termín ještě nenastal",
+    "Chybí důvěryhodné datum vyřešení"
   ],
   "sk": [
     "Kontroly uchovávania",
@@ -339,7 +409,14 @@ const rows = {
     "Vymazať posúdený text správy",
     "ID správy",
     "ID účtu v žiadosti o výmaz",
-    "Vybavenie hlásenia nemení schválenie firmy. Termíny kontrol automaticky neukončujú ani neobnovujú uchovávanie."
+    "Vybavenie hlásenia nemení schválenie firmy. Termíny kontrol automaticky neukončujú ani neobnovujú uchovávanie.",
+    "Zobrazenie frontu",
+    "Všetky záznamy",
+    "Kontroly na rade alebo po termíne",
+    "Odstránenie na rade alebo po termíne",
+    "Dátum oprávnenosti na odstránenie",
+    "Termín ešte nenastal",
+    "Chýba dôveryhodný dátum vyriešenia"
   ],
   "hu": [
     "Megőrzési felülvizsgálatok",
@@ -370,7 +447,14 @@ const rows = {
     "Értékelt üzenetszöveg törlése",
     "Üzenetazonosító",
     "Fiókazonosító a törlési kérelemben",
-    "A bejelentés kezelése nem módosítja a vállalkozás jóváhagyását. A felülvizsgálati dátum nem zárja le és nem újítja meg automatikusan a megőrzést."
+    "A bejelentés kezelése nem módosítja a vállalkozás jóváhagyását. A felülvizsgálati dátum nem zárja le és nem újítja meg automatikusan a megőrzést.",
+    "Várólista nézete",
+    "Összes bejegyzés",
+    "Esedékes vagy lejárt felülvizsgálatok",
+    "Esedékes vagy lejárt törlések",
+    "Törlésre jogosultság dátuma",
+    "Még nem esedékes",
+    "Nincs megbízható lezárási dátum"
   ],
   "uk": [
     "Перегляд зберігання",
@@ -401,7 +485,14 @@ const rows = {
     "Видалити оцінений текст повідомлення",
     "ID повідомлення",
     "ID облікового запису в запиті на видалення",
-    "Розгляд скарги не змінює схвалення бізнесу. Дати перегляду не завершують і не поновлюють зберігання автоматично."
+    "Розгляд скарги не змінює схвалення бізнесу. Дати перегляду не завершують і не поновлюють зберігання автоматично.",
+    "Вигляд черги",
+    "Усі записи",
+    "Перегляди на часі або прострочені",
+    "Видалення на часі або прострочені",
+    "Дата можливого видалення",
+    "Строк ще не настав",
+    "Немає надійної дати вирішення"
   ],
   "sv": [
     "Granskning av lagring",
@@ -432,7 +523,14 @@ const rows = {
     "Radera bedömd meddelandetext",
     "Meddelande-ID",
     "Konto-ID i raderingsbegäran",
-    "Hantering av en anmälan ändrar inte företagets godkännande. Granskningsdatum avslutar eller förnyar inte bevarande automatiskt."
+    "Hantering av en anmälan ändrar inte företagets godkännande. Granskningsdatum avslutar eller förnyar inte bevarande automatiskt.",
+    "Kövy",
+    "Alla poster",
+    "Granskningar som ska göras eller är försenade",
+    "Rensning som ska göras eller är försenad",
+    "Datum då rensning kan ske",
+    "Inte dags ännu",
+    "Inget tillförlitligt datum för avslut"
   ],
   "da": [
     "Gennemgang af opbevaring",
@@ -463,7 +561,14 @@ const rows = {
     "Slet vurderet beskedtekst",
     "Besked-ID",
     "Konto-ID i sletteanmodningen",
-    "Behandling af en anmeldelse ændrer ikke virksomhedens godkendelse. Gennemgangsdatoer afslutter eller fornyer ikke bevaring automatisk."
+    "Behandling af en anmeldelse ændrer ikke virksomhedens godkendelse. Gennemgangsdatoer afslutter eller fornyer ikke bevaring automatisk.",
+    "Køvisning",
+    "Alle poster",
+    "Gennemgange på tide eller forsinkede",
+    "Oprydning på tide eller forsinket",
+    "Dato for mulig oprydning",
+    "Ikke tid endnu",
+    "Ingen pålidelig afslutningsdato"
   ],
   "fi": [
     "Säilytyksen tarkistukset",
@@ -494,7 +599,14 @@ const rows = {
     "Poista arvioitu viestiteksti",
     "Viestin tunniste",
     "Tilin tunniste poistopyynnössä",
-    "Ilmoituksen käsittely ei muuta yrityksen hyväksyntää. Tarkistuspäivä ei automaattisesti lopeta tai uusi säilytystä."
+    "Ilmoituksen käsittely ei muuta yrityksen hyväksyntää. Tarkistuspäivä ei automaattisesti lopeta tai uusi säilytystä.",
+    "Jononäkymä",
+    "Kaikki tietueet",
+    "Erääntyneet tai myöhässä olevat tarkistukset",
+    "Erääntyneet tai myöhässä olevat poistot",
+    "Poiston mahdollistava päivämäärä",
+    "Ei vielä erääntynyt",
+    "Ei luotettavaa ratkaisupäivää"
   ],
   "no": [
     "Gjennomgang av lagring",
@@ -525,7 +637,14 @@ const rows = {
     "Slett vurdert meldingstekst",
     "Meldings-ID",
     "Konto-ID i sletteforespørselen",
-    "Behandling av en rapport endrer ikke bedriftens godkjenning. Gjennomgangsdatoer avslutter eller fornyer ikke bevaring automatisk."
+    "Behandling av en rapport endrer ikke bedriftens godkjenning. Gjennomgangsdatoer avslutter eller fornyer ikke bevaring automatisk.",
+    "Køvisning",
+    "Alle poster",
+    "Gjennomganger som forfaller eller er forsinket",
+    "Opprydding som forfaller eller er forsinket",
+    "Dato for mulig opprydding",
+    "Ikke tid ennå",
+    "Ingen pålitelig avslutningsdato"
   ]
 }
 export const adminRetentionCopy = Object.fromEntries(Object.entries(rows).map(([code, values]) => [code, Object.fromEntries(keys.map((key, index) => [key, values[index]]))]))

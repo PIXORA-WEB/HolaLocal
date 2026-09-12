@@ -8,7 +8,7 @@ import { adminRetentionCopy } from '../../i18n/adminRetentionCopy.js'
 const freshForm = () => ({action:'hold',reason:'',endingCondition:'',reviewAt:'',messageId:'',subjectUid:''})
 export default function RetentionControls() {
   const {i18n,t}=useTranslation(), copy=adminRetentionCopy[i18n.language.split('-')[0]]??adminRetentionCopy.en
-  const [open,setOpen]=useState(false),[kind,setKind]=useState('acknowledgment'),[cursor,setCursor]=useState(null),[reload,setReload]=useState(0)
+  const [open,setOpen]=useState(false),[kind,setKind]=useState('acknowledgment'),[cursor,setCursor]=useState(null),[queueView,setQueueView]=useState('all'),[reload,setReload]=useState(0)
   const [view,setView]=useState({rows:[],cleanupEnabled:false}),[loading,setLoading]=useState(false),[error,setError]=useState(false)
   const [selected,setSelected]=useState([]),[record,setRecord]=useState(null),[form,setForm]=useState(freshForm),[busy,setBusy]=useState(false),[confirm,setConfirm]=useState(false),[results,setResults]=useState([])
   const heading=useRef(null)
@@ -16,9 +16,9 @@ export default function RetentionControls() {
     if(!open)return
     let active=true
     setLoading(true);setError(false);setSelected([]);setView({rows:[],cleanupEnabled:false})
-    manageRetentionRecords({action:'list',kind,cursor}).then(data=>{if(active){setView(data);setLoading(false)}}).catch(()=>{if(active){setError(true);setLoading(false)}})
+    manageRetentionRecords({action:'list',kind,cursor,view:queueView}).then(data=>{if(active){setView(data);setLoading(false)}}).catch(()=>{if(active){setError(true);setLoading(false)}})
     return ()=>{active=false}
-  },[open,kind,cursor,reload])
+  },[open,kind,cursor,queueView,reload])
   const status=row=>row.evidencePresent===false?copy.removed:row.decision.status==='needs-assessment'?copy.assess:copy[row.decision.status]??row.decision.status
   const close=()=>{if(!busy){setRecord(null);setConfirm(false)}}
   async function submit(event){
@@ -46,13 +46,14 @@ export default function RetentionControls() {
     <summary ref={heading}>{copy.title}</summary>
     {open&&<>
       <p className="admin-panel__note">{copy.notice}</p>
-      <div className="admin-toolbar"><label>{copy.title}<select aria-label={copy.title} disabled={busy} value={kind} onChange={event=>{setKind(event.target.value);setCursor(null);setResults([])}}>{Object.entries(kindLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+      <div className="admin-toolbar"><label>{copy.title}<select aria-label={copy.title} disabled={busy} value={kind} onChange={event=>{setKind(event.target.value);setQueueView('all');setCursor(null);setResults([])}}>{Object.entries(kindLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+        <label>{copy.queueFilter}<select aria-label={copy.queueFilter} disabled={busy} value={queueView} onChange={event=>{setQueueView(event.target.value);setCursor(null);setResults([])}}><option value="all">{copy.allRecords}</option><option value="reviews-due">{copy.dueReviews}</option>{kind==='business-report'&&<option value="cleanup-due">{copy.dueCleanup}</option>}</select></label>
         <button className="button button--secondary" type="button" disabled={busy||loading} onClick={()=>{setCursor(null);setReload(value=>value+1)}}>{copy.reset}</button></div>
       {!view.cleanupEnabled&&<p role="status">{copy.closed}</p>}
       {error&&<p className="admin-alert" role="alert">{copy.failed}</p>}
       {loading?<p role="status">{t('common.loading')}</p>:view.rows.length===0?<p className="admin-empty">{copy.empty}</p>:<div className="admin-deletion-list">{view.rows.map(row=><div className="admin-retention__record" key={row.id}>
         <input type="checkbox" aria-label={`${copy.execute}: ${row.id}`} disabled={busy||!view.cleanupEnabled||(!selected.includes(row.id)&&selected.length>=RETENTION_EXECUTION_LIMIT)} checked={selected.includes(row.id)} onChange={event=>setSelected(current=>event.target.checked?[...current,row.id]:current.filter(id=>id!==row.id))}/>
-        <div><code>{row.id}</code><p>{status(row)}{row.decision.reviewAt?` · ${new Date(row.decision.reviewAt).toLocaleString(i18n.language)}`:''}</p>{row.resolvedAt&&<p>{copy.resolve}: {new Date(row.resolvedAt).toLocaleString(i18n.language)}</p>}</div>
+        <div><code>{row.id}</code><p>{status(row)}{row.decision.reviewAt?` · ${new Date(row.decision.reviewAt).toLocaleString(i18n.language)}`:''}</p>{kind==='business-report'&&<p>{row.eligibleAt?`${copy.eligibleAt}: ${new Date(row.eligibleAt).toLocaleString(i18n.language)} · ${new Date(row.eligibleAt).valueOf()<=Date.now()?copy.dueCleanup:copy.notDue}`:copy.untrustedDate}</p>}{row.resolvedAt&&<p>{copy.resolve}: {new Date(row.resolvedAt).toLocaleString(i18n.language)}</p>}</div>
         <button className="button button--secondary" type="button" disabled={busy||row.evidencePresent===false} onClick={()=>select(row)}>{copy.review}</button>
       </div>)}</div>}
       <div className="admin-toolbar"><button className="button button--secondary" type="button" disabled={loading||busy||!view.nextCursor} onClick={()=>setCursor(view.nextCursor)}>{copy.next}</button>

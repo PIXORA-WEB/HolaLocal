@@ -31,3 +31,28 @@ test('one record failure does not block unrelated eligible cleanup and no client
  assert.equal(JSON.stringify(result).includes('sensitive'),false)
  await assert.rejects(call({action:'resolve',kind:'business-report',id:'x',summary:'handled',now:1}),/unexpected/)
 })
+
+test('full-queue due filters use trusted dates, oldest first, beyond the first directory page',{skip:!enabled},async()=>{
+ const old=Timestamp.fromMillis(now.toMillis()-100*86400000)
+ for(let i=0;i<25;i++)await db.doc(`reports/aa-future-${i}`).set({targetType:'business',status:'resolved',resolutionVersion:1,resolvedAt:now})
+ await db.doc('reports/zz-overdue').set({targetType:'business',status:'resolved',resolutionVersion:1,resolvedAt:old})
+ await db.doc('reports/zz-boundary').set({targetType:'business',status:'resolved',resolutionVersion:1,resolvedAt:Timestamp.fromMillis(now.toMillis()-90*86400000)})
+ await db.doc('reports/zz-legacy').set({targetType:'business',status:'resolved',resolvedAt:old})
+ await db.doc('reports/zz-held').set({targetType:'business',status:'resolved',resolutionVersion:1,resolvedAt:old,retentionDecision:{state:'held',reviewAt:Timestamp.fromMillis(now.toMillis()-1)}})
+ const due=await call({action:'list',kind:'business-report',view:'cleanup-due'})
+ assert.equal(due.rows[0].id,'zz-held');assert.ok(due.rows.some(row=>row.id==='zz-overdue'))
+ assert.ok(due.rows.some(row=>row.id==='zz-boundary'));assert.ok(due.rows.every(row=>!row.id.startsWith('aa-')&&row.id!=='zz-legacy'))
+ assert.equal(due.rows.find(row=>row.id==='zz-overdue').eligibleAt,Timestamp.fromMillis(old.toMillis()+90*86400000).toDate().toISOString())
+ const held=await call({action:'list',kind:'business-report',view:'reviews-due'});assert.ok(held.rows.some(row=>row.id==='zz-held'))
+ for(let i=0;i<23;i++){
+  const id=`due-private-${String(i).padStart(2,'0')}`
+  await db.doc(`conversations/${id}`).set({status:'active'})
+  await db.doc(`conversationRetention/${id}`).set({decision:{state:'held',reviewAt:old}})
+ }
+ const first=await call({action:'list',kind:'conversation',view:'reviews-due'})
+ assert.equal(first.rows.length,20);assert.equal(first.nextCursor,'due-private-19')
+ const next=await call({action:'list',kind:'conversation',view:'reviews-due',cursor:first.nextCursor})
+ assert.equal(next.rows.length,3);assert.equal(next.nextCursor,null)
+ await assert.rejects(call({action:'list',kind:'conversation',view:'cleanup-due'}),/report-only-view/)
+ await assert.rejects(call({action:'list',kind:'business-report',view:'unknown'}),/invalid-retention-view/)
+})

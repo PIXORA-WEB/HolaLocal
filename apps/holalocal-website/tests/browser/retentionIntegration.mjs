@@ -59,6 +59,12 @@ try{
  await dialog.getByRole('button',{name:'Record report resolution',exact:true}).click();await dialog.waitFor({state:'hidden'})
  const resolution=(await db.doc('reports/report-open').get()).data();assert.equal(resolution.status,'resolved');assert.ok(resolution.resolvedAt instanceof Timestamp)
  assert.equal((await db.doc('businesses/retention-business').get()).data().status,'pending_review')
+ const filter=controls.getByRole('combobox',{name:'Queue view',exact:true})
+ await filter.selectOption('cleanup-due');await row('report-due').waitFor()
+ assert.equal(await row('report-open').count(),0)
+ await row('report-due').getByText(/Cleanup eligibility date:/).waitFor()
+ await row('report-due').getByText(/Cleanup due or overdue/).waitFor()
+ await filter.selectOption('all');await row('report-open').waitFor()
  if(cleanupEnabled){
   await row('report-due').getByRole('checkbox').check();await controls.getByRole('button',{name:'Run selected cleanup (1/5)',exact:true}).click()
   let confirmation=page.getByRole('dialog',{name:'Run selected cleanup',exact:true})
