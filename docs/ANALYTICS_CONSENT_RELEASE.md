@@ -1,5 +1,22 @@
 # Optional Firebase Analytics — review candidate, not activated
 
+## Current release decision — manual acceptance completed
+
+**Recommend the website-only consent-enabled release for final approval; not merged or deployed.** This current decision supersedes historical HOLD entries below, which remain as investigation evidence. User confirmed GA4 reporting visibility and then completed a separately approved one-page-view DevTools check against the exact enabled preview of d042bf6. Existing stored acceptance for that exact origin explained collection without a new consent bar. Exactly one204 page_view for /events was observed. After Reject, an accidental refresh occurred with Preserve log enabled: rejected remained stored and no additional collect request appeared. The refreshed rejected visit is a passing observation; the deviation is explicitly retained. No duplicate was observed for this controlled load. The earlier3-view Events/Community report is still unattributed and is NOT reclassified as a deduplication pass.
+
+Evidence is user-observed Network/storage reporting, not a downloaded HAR. Fresh explicit acceptance, no-choice SDK suppression, cookie removal, SPA deduplication and signed-in/out paths retain their separately identified automated evidence. No fresh manual acceptance or manual cookie inspection is claimed for this attempt. No further automated Analytics traffic was generated.
+
+Release scope: PR45 only; Production VITE_ANALYTICS_CONSENT_ENABLED=true, existing measurementG-FKFR4SFML9; all other settings preserved. Normal Preview readiness remains off. The enabled test deployment is dpl_5n5McY8EqBhsWZCfBAWcFBwdSTFD, unique URL https://hola-local-9wi92d99p-hello-8446s-projects.vercel.app/events; the normal branch preview alias was restored to its disabled build. The manual deployment used a one-off build variable, not a project environment change.
+
+Approval sequence: recheck exact approved PR head/current main and checks → set only the Production readiness flag → merge through normal GitHub workflow → verify automatic Vercel production SHA, aliases, compiled consent-enabled assets and read-only public routes without generating more Analytics traffic. Retire only the temporary enabled test deployment once evidence is retained; keep normal PR preview and production rollback deployment. No Firebase, review/provider/retention/recovery, IAM, GA4 console, quotas, budget or operational monitoring changes.
+
+Read-only readiness before this documentation update: main/production87d5fbd5de5f1ba6b7f10dbab11e9655c307c219; PR45 conflict-free; Vercel status and Preview Comments check successful; active main rules list empty and branch-protection endpoint404. No checks bypassed. The local200kB budget is still FAILED: enabled207.56kB versus baseline205.45kB (+2.11kB feature overhead); preserve this known limitation. Runtime source is unchanged from1a85007. Reuse its107 tests/36 browser cases, locale checks, lint/build results, plus11 guard tests and22 actual-tag assertions per rehearsal/ingestion run. No repeated heavy suite is needed for these evidence-only edits.
+
+Rollback target: dpl_DR6e9FuyEA77G58wCErUsV2A3dgF (https://hola-local-c422m3sfv-hello-8446s-projects.vercel.app), production commit87d5fbd. Alternatively rebuild with readinessfalse. Old loaded tabs require reload; withdrawal/rollback cannot erase historical Google data or recall events already accepted/queued. Production configuration was independently unchanged after manual-test preparation.
+
+Remaining limitations: earlier automated204s never conclusively mapped to reports; headless filtering was only a hypothesis. Earlier3 manual views remain unattributed. Current test proves one load, not every device/navigation path. Safari/physical-device coverage and native-language/legal editorial review are limited; no universal tracking/compliance guarantee. PR44's unresolved legal particulars remain private and separate; the single actual optional-Analytics disclosure stays in the authoritative existing Privacy page. Reviews activation and runtime Translation probe remain separate approvals.
+
+
 Baseline: main `87d5fbd5de5f1ba6b7f10dbab11e9655c307c219` (PR43). No Firebase, IAM, review/provider/retention/recovery, budget, quota or monitoring changes. Original mixed workspace and recovery backup preserved.
 
 ## Implementation and boundary
