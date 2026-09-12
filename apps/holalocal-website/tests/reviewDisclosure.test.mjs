@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {legalPageContent} from '../src/i18n/locales/legalContent.js'
+import {legalPageContent,reviewAvailabilityTranslations} from '../src/i18n/locales/legalContent.js'
 import {englishLegalPages} from '../src/i18n/englishLegalPages.js'
 import {customerReviewTranslations} from '../src/i18n/customerReviewTranslations.js'
 import {reviewDisclosureTranslations} from '../src/i18n/reviewDisclosureTranslations.js'
@@ -10,10 +10,10 @@ test('all 17 lazy legal locales and review forms have the shared disclosure with
  for(const [code,content] of Object.entries(legalPageContent)){
   const sections=content.privacy.sections.filter(s=>s.key==='reviews')
   assert.equal(sections.length,1,code)
-  assert.deepEqual(sections[0].paragraphs,reviewDisclosureTranslations[code].slice(1,4),code)
-  assert.match(sections[0].paragraphs[1],/Google Cloud Translation/)
-  assert.match(sections[0].paragraphs[1],/europe-west1/)
-  assert.match(sections[0].paragraphs[2],/90/)
+  assert.deepEqual(sections[0].paragraphs,[reviewAvailabilityTranslations[code],...reviewDisclosureTranslations[code].slice(1,4)],code)
+  assert.match(sections[0].paragraphs[2],/Google Cloud Translation/)
+  assert.match(sections[0].paragraphs[2],/europe-west1/)
+  assert.match(sections[0].paragraphs[3],/90/)
   assert.equal(customerReviewTranslations[code].translationNotice,reviewDisclosureTranslations[code][4])
   assert.ok(customerReviewTranslations[code].privacyLink)
  }

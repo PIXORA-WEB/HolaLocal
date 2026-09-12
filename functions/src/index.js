@@ -136,13 +136,15 @@ export async function handleGetConversationBusinessContext(request, db) {
 
 export async function handleAcceptLegalConsent(request, db) {
   const uid = requireCallableUid(request)
-  requireExactInput(request.data, ['acceptTerms', 'acceptPrivacy'])
+  requireExactInput(request.data, ['acceptTerms', 'acceptPrivacy', 'termsVersion', 'privacyVersion'])
   return runAcceptLegalConsent({
     uid,
     email: request.auth?.token?.email,
     emailVerified: request.auth?.token?.email_verified === true,
     acceptTerms: request.data.acceptTerms,
     acceptPrivacy: request.data.acceptPrivacy,
+    termsVersion: request.data.termsVersion,
+    privacyVersion: request.data.privacyVersion,
     db: db ?? getFirestore(),
   })
 }

@@ -4,6 +4,7 @@ import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
   hasCurrentLegalConsent,
+  hasValidLegalConsent,
 } from '../index.js'
 
 const timestamp = {
@@ -25,8 +26,8 @@ function currentConsent(overrides = {}) {
 }
 
 test('current policy versions are independently addressable', () => {
-  assert.equal(CURRENT_TERMS_VERSION, '1.0')
-  assert.equal(CURRENT_PRIVACY_VERSION, '1.0')
+  assert.equal(CURRENT_TERMS_VERSION, '1.1')
+  assert.equal(CURRENT_PRIVACY_VERSION, '1.1')
 })
 
 test('hasCurrentLegalConsent accepts only exact current consent', () => {
@@ -79,4 +80,14 @@ test('hasCurrentLegalConsent evaluates Terms and Privacy versions independently'
     { termsVersion: '0.9' },
     { privacyVersion: '0.9' },
   ]) assert.equal(hasCurrentLegalConsent(currentConsent(overrides)), false)
+})
+
+test('historical evidence permits access without asserting current agreement or mutation', () => {
+ const profile = currentConsent({termsVersion:'1.0', privacyVersion:'1.0'})
+ const before = {...profile}
+ assert.equal(hasValidLegalConsent(profile),true)
+ assert.equal(hasCurrentLegalConsent(profile),false)
+ assert.deepEqual(profile,before)
+ for(const patch of [{termsVersion:'0.9'},{termsVersion:'99'},{privacyVersion:'1.2'},{termsAccepted:false},{privacyAcceptedAt:null}]) assert.equal(hasValidLegalConsent({...profile,...patch}),false)
+ assert.equal(hasValidLegalConsent(currentConsent()),true)
 })

@@ -2,7 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { HttpsError } from 'firebase-functions/v2/https'
 import {
   ACCOUNT_DELETION_RECENT_AUTH_MAX_AGE_SECONDS,
-  hasCurrentLegalConsent,
+  hasValidLegalConsent,
   isCancellableAccountDeletionRequest,
   projectAccountDeletionRequest,
 } from '@holalocal/firebase-contract'
@@ -22,7 +22,7 @@ function requireRecentAuthentication(authTime, nowSeconds) {
 function assertRequestEligible(profile) {
   if (!profile) throw new HttpsError('failed-precondition', 'profile-not-found')
   if (profile.accountStatus !== 'active') throw new HttpsError('failed-precondition', 'account-not-active')
-  if (!hasCurrentLegalConsent(profile)) throw new HttpsError('failed-precondition', 'legal-consent-required')
+  if (!hasValidLegalConsent(profile)) throw new HttpsError('failed-precondition', 'legal-consent-required')
 }
 
 function assertOwnershipMirrors({ uid, profile, mapping, ownerIds }) {

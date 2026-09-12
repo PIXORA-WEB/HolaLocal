@@ -4,7 +4,7 @@ import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import { HttpsError } from 'firebase-functions/v2/https'
-import { ACCOUNT_DELETION_FINALIZER_LEASE_SECONDS, SAVED_BUSINESSES_SUBCOLLECTION, hasCurrentLegalConsent, hasReachedAccountDeletionCheckpoint, isAccountDeletionFailureCode, isSanitizedAccountDeletionCleanupCounts, nextAccountDeletionCheckpoint } from '@holalocal/firebase-contract'
+import { ACCOUNT_DELETION_FINALIZER_LEASE_SECONDS, SAVED_BUSINESSES_SUBCOLLECTION, hasValidLegalConsent, hasReachedAccountDeletionCheckpoint, isAccountDeletionFailureCode, isSanitizedAccountDeletionCleanupCounts, nextAccountDeletionCheckpoint } from '@holalocal/firebase-contract'
 
 function requireTrustedUid(value) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
@@ -212,7 +212,7 @@ export async function minimizeConsentEvidenceAndRemoveUser({ uid, db, expectedRe
       throw integrityError('profile-not-found')
     }
     const user = userSnapshot.data()
-    if (!hasCurrentLegalConsent(user)) throw integrityError('consent-evidence-invalid')
+    if (!hasValidLegalConsent(user)) throw integrityError('consent-evidence-invalid')
     if (!nextAccountDeletionCheckpoint(request.lastCompletedStep ?? null, 'user_evidence_minimized')) throw integrityError('account-deletion-checkpoint-out-of-order')
     const retainedConsentEvidence = { termsVersion: user.termsVersion, termsAcceptedAt: user.termsAcceptedAt, privacyVersion: user.privacyVersion, privacyAcceptedAt: user.privacyAcceptedAt }
     transaction.update(requestRef, { retainedConsentEvidence, lastCompletedStep: 'user_evidence_minimized', requestVersion: request.requestVersion + 1, updatedAt: FieldValue.serverTimestamp() })
