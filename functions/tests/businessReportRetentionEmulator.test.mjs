@@ -1,3 +1,4 @@
+import {runBusinessReportRetention} from '../src/businessReports.js'
 import {before,after,test} from 'node:test'
 import assert from 'node:assert/strict'
 import {initializeApp,deleteApp} from 'firebase-admin/app'
@@ -38,4 +39,20 @@ test('overdue hold survives; explicit release does not restart90days; legacy dat
   assert.equal((await removeExpiredBusinessReport({...opts(reportId),enabled:true,now:later})).needsAssessment,true)
   assert.deepEqual((await db.doc(`reports/${reportId}`).get()).data(),record)
  }
+})
+
+
+test('prepared automation is closed before database access, bounded and fair across preserved records',{skip:!enabled},async()=>{
+ assert.deepEqual(await runBusinessReportRetention({env:{},createDatabase:()=>{throw new Error('must not open')}}),{disabled:true})
+ const at=Timestamp.fromMillis(now.toMillis()-1000*86400000)
+ for(const [id,extra]of [['auto-a-held',{retentionDecision:{state:'held'}}],['auto-b-eligible',{}],['auto-c-legacy',{resolutionVersion:0}]])await db.doc('reports/'+id).set({targetType:'business',status:'resolved',resolutionVersion:1,resolvedAt:at,evidence:[],parentId:null,...extra})
+ await db.doc('maintenanceProgress/businessReportRetention').set({resolvedAt:null,documentId:null})
+ const options={env:{BUSINESS_REPORT_RETENTION_ENABLED:'true'},createDatabase:()=>db,now,pageSize:1}
+ const first=await runBusinessReportRetention(options);assert.equal(first.preserved,1);assert.equal(first.examined,1)
+ const second=await runBusinessReportRetention(options);assert.equal(second.removed,1)
+ const third=await runBusinessReportRetention(options);assert.equal(third.needsAssessment,1)
+ assert.equal((await db.doc('reports/auto-a-held').get()).exists,true)
+ assert.equal((await db.doc('reports/auto-b-eligible').get()).exists,false)
+ assert.equal((await db.doc('reports/auto-c-legacy').get()).exists,true)
+ await assert.rejects(runBusinessReportRetention({...options,pageSize:51}),/invalid-business-retention/)
 })

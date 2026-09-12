@@ -1,6 +1,6 @@
 # Retention integration — disabled release candidate
 
-Baseline main: 203895227b41c03b87e8edc4a33f57134055a4b8. PR44 dependency: 27d9075608f29c93298a91a69c51892dc650cda3. Original recovery work and backups are preserved. No production changes have been made. This document supersedes the earlier backend-only preparation instructions.
+Baseline main: 203895227b41c03b87e8edc4a33f57134055a4b8. PR44 dependency: 0c0792826a9fec4bb0fed868eb038fcfe8dce968. Original recovery work and backups are preserved. No production changes have been made. This document supersedes the earlier backend-only preparation instructions.
 
 ## Three retained batches and authoritative integration
 
@@ -16,7 +16,7 @@ Every preservation decision has a specific reason, authenticated responsible adm
 
 RECORD_RETENTION_CLEANUP_ENABLED must remain false. Missing also means false. Client payloads cannot override it. Metadata assessment and report-resolution actions remain available when cleanup is closed; destructive selection and text erasure do not.
 
-There is deliberately no new schedule. Existing admin permissions, a 20-record cursor queue, explicit confirmation and at most five selected records per request provide the minimum bounded manual execution. Conversation chunks are ten messages each (at most fifty per request); every record is isolated so a failure does not block later eligible selections. No automatic client retries or unbounded draining. Firestore can retry a transaction for contention under its SDK limits. Pagination advances across ineligible rows. This is not an unattended guarantee of deletion exactly on day 90. Keep public wording truthful until separately approved operational enforcement is accepted.
+Daily manual queue checking is not an operating requirement. There is no new deployed schedule. The separately prepared business-report automation proposal is in BUSINESS_REPORT_AUTOMATION_PROPOSAL.md; it does not cover judgment-based work. Existing admin permissions, a 20-record cursor queue with full-collection, oldest-first due views, explicit confirmation and at most five selected records per request provide the minimum bounded manual execution. Conversation chunks are ten messages each (at most fifty per request); every record is isolated so a failure does not block later eligible selections. No automatic client retries or unbounded draining. Firestore can retry a transaction for contention under its SDK limits. Pagination advances across ineligible rows. This is not an unattended guarantee of deletion exactly on day 90. Keep public wording truthful until separately approved operational enforcement is accepted.
 
 ## Exact deployment scope and order — not authorised
 
@@ -62,3 +62,8 @@ Known limits: attachments/unknown schemas require separate assessment; legacy re
 ## Rollback
 
 Close RECORD_RETENTION_CLEANUP_ENABLED first; an in-flight request may finish. Disable the admin workbench by reverting its website commit while retaining private metadata and protective rules. Preserve PR44 1.0/1.1 backend/rules compatibility once 1.1 registrations exist; old exact-version validation is not a safe rollback. Restore recorded Function/config revisions only with that bridge intact. Restore the new service's invoker-check requirement if withdrawing browser access; do not alter other services. Never delete preservation decisions as rollback. Source rollback cannot restore erased data; do not resurrect personal information by blindly restoring backups. No change to the approved reviews, support-mailbox or monitoring policies.
+
+
+## Corrected candidate verification
+
+The due-view/wording correction adds14real backend emulator cases passed (including global filtering,90day boundary and prepared worker progress),9affected unit cases,34admin browser locale/viewport checks and68legal-page locale/viewport checks. Lint,17locale parity and fresh build pass. Unchanged99rules and other prior regression results are reused, not rerun without reason. New initial JS209.04kB gzip, +0.35kB from208.69with the same local dependencies/flags;200kB check still fails. This increase is not described as entirely pre-existing. Prepared worker has no scheduled Function export, and no new cloud activation is included.

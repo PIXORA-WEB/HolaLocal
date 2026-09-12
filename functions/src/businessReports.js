@@ -1,4 +1,4 @@
-import { Timestamp } from 'firebase-admin/firestore'
+import { Timestamp, FieldPath } from 'firebase-admin/firestore'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { requireRetentionAdmin, nextRetentionDecision, retentionText, validRetentionDecision } from './recordRetention.js'
 
@@ -38,6 +38,12 @@ export async function assessBusinessReportRetention({db,reportId,actorUid,claims
 export async function removeExpiredBusinessReport({db,reportId,actorUid,claims,enabled=false,now=Timestamp.now()}) {
   requireRetentionAdmin(actorUid,claims)
   if(enabled!==true)return {removed:false,disabled:true}
+  return pruneExpiredBusinessReport({db,reportId,now})
+}
+
+// Private shared transaction: browser callers retain their admin checks; the worker
+// can reach this only after its independent server gate. No fabricated admin claims.
+async function pruneExpiredBusinessReport({db,reportId,now}) {
   const ref=reportRef(db,reportId)
   return db.runTransaction(async tx=>{
     const snapshot=await tx.get(ref),row=snapshot.data()
@@ -53,4 +59,30 @@ export async function removeExpiredBusinessReport({db,reportId,actorUid,claims,e
     tx.delete(ref)
     return {removed:true}
   })
+}
+
+
+// Prepared worker, deliberately not exported as a deployed Function yet.
+export async function runBusinessReportRetention({env=process.env,createDatabase,now=Timestamp.now(),pageSize=50}) {
+  if(env.BUSINESS_REPORT_RETENTION_ENABLED!=='true')return {disabled:true}
+  if(!(now instanceof Timestamp)||!Number.isInteger(pageSize)||pageSize<1||pageSize>50)throw new Error('invalid-business-retention-options')
+  const db=createDatabase(),progress=db.doc('maintenanceProgress/businessReportRetention')
+  const state=(await progress.get()).data()??{}
+  const cutoff=Timestamp.fromMillis(now.toMillis()-BUSINESS_REPORT_RETENTION_MS)
+  let query=db.collection('reports').where('resolvedAt','<=',cutoff).orderBy('resolvedAt').orderBy(FieldPath.documentId())
+  if(state.resolvedAt instanceof Timestamp&&typeof state.documentId==='string')query=query.startAfter(state.resolvedAt,state.documentId)
+  const page=await query.limit(pageSize).get()
+  const counts={disabled:false,examined:page.size,removed:0,preserved:0,needsAssessment:0,failed:0,pageLimitReached:page.size===pageSize}
+  for(const candidate of page.docs){
+    // Progress precedes work so one poison record or timeout cannot pin the queue.
+    await progress.set({resolvedAt:candidate.get('resolvedAt'),documentId:candidate.id})
+    try{
+      const result=await pruneExpiredBusinessReport({db,reportId:candidate.id,now})
+      if(result.removed)counts.removed++
+      else if(result.needsAssessment)counts.needsAssessment++
+      else counts.preserved++
+    }catch{counts.failed++}
+  }
+  if(page.size<pageSize)await progress.set({resolvedAt:null,documentId:null})
+  return counts
 }

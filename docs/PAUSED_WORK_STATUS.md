@@ -23,3 +23,7 @@ Integration removes the unpublished owner-readable evidenceRetention field in fa
 ## Separate remaining work
 
 Original upload/retry improvements remain unverified; successful ordinary uploads do not prove failure recovery. Approved-business maintenance remains a proposal. Reviews activation does not depend on deploying these unrelated retention helpers unless public wording promises their operation. Monitoring recipient/limitations and the€30Translation alert remain unchanged. Full website audit follows backlog integration. No additional product policy decisions are introduced here.
+
+## Current correction
+
+Business cleanup dates and full-collection due views are prepared; draft criteria now explicitly distinguish policy from disabled execution in17languages. Daily manual queue checking is not required or proposed. Business-report-only automated execution is an independently gated offline helper and proposal, without a scheduled Function export or cloud changes; see BUSINESS_REPORT_AUTOMATION_PROPOSAL.md. Judgment-based decisions remain explicit admin actions.
