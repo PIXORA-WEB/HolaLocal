@@ -66,3 +66,9 @@ No production activation, notification or review test records created. This docu
 ## Fresh checks for this preparation
 
 Offline monitoring generator:2 tests pass (closed defaults, explicit same-project channel references, scoped error/heartbeat configuration). Preserved gallery-config extraction:8 isolation tests pass; this does NOT execute cloud uploads or establish metadata parity. Real OwnStatus/i18next17-language rendering confirms changed labels and unchanged review text; initial diagnostic entry resolution failed and was corrected before the successful run. No runtime behaviour was changed to hide that missing requirement. Node syntax/whitespace checks pass; no fresh full build or heavy emulator rerun is needed for this scripts/docs-only source. Dependencies reused temporarily; no installation.
+
+## Current optional Analytics batch — 12 September 2026
+
+Main verified at87d5fbd (PR43). A separate explicit-consent Analytics candidate now supersedes any proposal to replace Firebase Analytics. Default collection remains off pending Google web-stream/automatic-event configuration verification and release approval. No review gates, Firebase deployments, monitoring destinations/budget or quotas change. See ANALYTICS_CONSENT_RELEASE.md for the exact payload, cookie handling, separate business-counter implications and approval prerequisites. PR44 remains draft; its obsolete no-consent-interface statement is being removed in all17 languages, without publishing incomplete legal details. No company/age/address policy invented; the operator is confirmed as Craig Evans personally and the publishable address question remains pending.
+
+The complete local EU runtime Translation image448eb8b902342ea2e7cc04f03942f9733641a3fc9473143366cfddc6bd04d972 and its evidence are preserved. No cloud test or activation is implied by Analytics work. Original mixed workspace and recovery backup remain untouched.

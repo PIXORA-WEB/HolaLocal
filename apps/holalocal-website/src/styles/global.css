@@ -1,3 +1,33 @@
+/* The shared choice bar reserves space and lifts existing sticky Save actions. */
+#root { padding-bottom: var(--analytics-bar-height, 0px); }
+.analytics-choice {
+  position: fixed;
+  z-index: 35;
+  inset: auto 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1.5rem;
+  padding: 0.8rem max(1rem, calc((100vw - 80rem) / 2)) calc(0.8rem + env(safe-area-inset-bottom));
+  max-height: 45dvh;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 -0.25rem 1.5rem rgb(7 29 53 / 8%);
+}
+.analytics-choice__copy { flex: 1 1 25rem; min-width: 0; }
+.analytics-choice h2 { margin: 0 0 0.2rem; font-size: 1rem; }
+.analytics-choice p { margin: 0.2rem 0 0; font-size: 0.875rem; line-height: 1.5; }
+.analytics-choice a { text-decoration: underline; text-underline-offset: 0.2em; }
+.analytics-choice__actions { display: flex; flex: 1 1 22rem; flex-wrap: wrap; gap: 0.5rem; }
+.analytics-choice__actions .button { flex: 1 1 9rem; margin: 0; min-height: 2.75rem; }
+.analytics-choice__close { min-height: 2.75rem; background: none; border: 0; text-decoration: underline; cursor: pointer; }
+.analytics-choice :is(a, button):focus-visible,
+.analytics-choice:focus-visible { outline: 3px solid var(--brand-blue, #087df2); outline-offset: 3px; }
+.analytics-privacy { scroll-margin-top: 8rem; }
+
 .skip-link {
   position: fixed;
   z-index: 100;
@@ -1906,7 +1936,7 @@
 
 .profile-edit-form__actions {
   position: sticky;
-  bottom: 0;
+  bottom: var(--analytics-bar-height, 0px);
   margin: 0.75rem -1.5rem 0;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--line);
@@ -2087,7 +2117,7 @@
 .business-form__save {
   position: sticky;
   z-index: 12;
-  bottom: 0.75rem;
+  bottom: calc(0.75rem + var(--analytics-bar-height, 0px));
   gap: 0.75rem;
   align-items: center;
   padding: 0.8rem 1rem;
@@ -5740,7 +5770,10 @@
   gap: 0.05rem;
 }
 
-.site-footer__links a {
+.site-footer__links :is(a, button) {
+  border: 0;
+  background: none;
+  cursor: pointer;
   display: inline-flex;
   min-height: 2.75rem;
   max-width: 100%;
@@ -5754,7 +5787,7 @@
   transition: color 160ms ease;
 }
 
-.site-footer__links a:hover {
+.site-footer__links :is(a, button):hover {
   color: #ffffff;
 }
 
@@ -5774,7 +5807,7 @@
   color: var(--footer-link-accent);
 }
 
-.site-footer__links a:focus-visible {
+.site-footer__links :is(a, button):focus-visible {
   border-radius: 0.25rem;
   outline: 2px solid #ffffff;
   outline-offset: 3px;
@@ -6253,7 +6286,7 @@
     gap: clamp(1rem, 2.5vw, 2rem);
   }
 
-  .site-footer__links a {
+  .site-footer__links :is(a, button) {
     min-height: 2rem;
     padding-block: 0.15rem;
   }
@@ -6484,7 +6517,7 @@
     justify-content: center;
   }
 
-  .site-footer__links a {
+  .site-footer__links :is(a, button) {
     min-height: 2.75rem;
     padding-block: 0.45rem;
   }
