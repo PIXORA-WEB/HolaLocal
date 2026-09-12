@@ -1,3 +1,4 @@
+import AnalyticsPrivacy from '../components/common/AnalyticsPrivacy.jsx'
 import PlaceholderPage from '../components/common/PlaceholderPage.jsx'
 import LegalSectionContent from '../components/common/LegalSectionContent.jsx'
 import { useTranslation } from 'react-i18next'
@@ -12,6 +13,7 @@ function PrivacyPage() {
       title={t('legalPages.privacy.title')}
       description={t('legalPages.privacy.description')}
     >
+      <AnalyticsPrivacy />
       <LegalSectionContent title={t('legalPages.privacy.title')} sections={Array.isArray(sections) ? sections : []} />
     </PlaceholderPage>
   )

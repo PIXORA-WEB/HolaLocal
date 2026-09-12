@@ -1,3 +1,4 @@
+import { openAnalyticsSettings } from '../../services/analyticsConsent.js'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import BrandLockup from '../common/BrandLockup.jsx'
@@ -51,6 +52,7 @@ function SiteFooter() {
             <h2>{t('footer.helpLegal')}</h2>
             <div className="site-footer__links">
               {helpLegalLinks.map((link) => <Link key={link.to} to={link.to}>{t(link.labelKey)}</Link>)}
+              <button type="button" onClick={openAnalyticsSettings}>{t('analytics.settings')}</button>
             </div>
           </nav>
           <div className="site-footer__language">

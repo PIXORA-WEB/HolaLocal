@@ -1,3 +1,4 @@
+import { analyticsEnglish } from './analyticsEnglish.js'
 import {adminCustomerReviewNavigation} from './adminCustomerReviewNavigation.js'
 import { customerReviewTranslations } from './customerReviewTranslations.js'
 import i18n from 'i18next'
@@ -76,6 +77,7 @@ const englishResource = composeEnglishTranslationResource({
   productLandingTranslations: productLandingEnglishTranslations,
   serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
 })
+englishResource.analytics = analyticsEnglish
 englishResource.adminCustomerReviews = {...adminCustomerReviewNavigation.en}
   englishResource.customerReviews = customerReviewTranslations.en
 const loadedLocales = new Set(['en'])
@@ -107,6 +109,7 @@ export async function loadLocale(languageCode) {
     import('./adminTranslations.js'),
     import('./accountDeletionTranslations.js'),
     import('./locales/nonEnglishTranslationPacks.js'),
+    import('./locales/analyticsTranslations.js'),
   ]).then(([
     { default: baseLocale },
     { authenticatedTranslations },
@@ -117,6 +120,7 @@ export async function loadLocale(languageCode) {
     { ownerRejectionTranslations },
     { accountDeletionTranslations },
     { getNonEnglishTranslationSlices },
+    { analyticsTranslations },
   ]) => {
     const translationPacks = getNonEnglishTranslationSlices(code)
     const resource = composeLocaleTranslationResource({
@@ -143,6 +147,7 @@ export async function loadLocale(languageCode) {
       legalPageContent: { legalPages: legalPageContent[code] },
       serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
     })
+    resource.analytics = analyticsTranslations[code]
     resource.adminCustomerReviews = {...adminCustomerReviewNavigation[code]}
     resource.customerReviews = customerReviewTranslations[code]
     i18n.addResourceBundle(code, 'translation', resource, true, true)

@@ -43,3 +43,13 @@ test('both legal pages identify the confirmed individual operator in all 17 lang
   assert.ok(contact.paragraphs.some(text=>text.includes('Craig Evans')),code+'/'+kind)
  }
 })
+
+
+test('approved account age is stated consistently without changing existing consent versions', () => {
+ for (const [code, content] of Object.entries(legalPageContent)) {
+  const account = content.terms.sections.find(section => section.key === 'account')
+  assert.match(account.paragraphs[0], /18/, code)
+ }
+ assert.equal(CURRENT_TERMS_VERSION, '1.0')
+ assert.equal(CURRENT_PRIVACY_VERSION, '1.0')
+})

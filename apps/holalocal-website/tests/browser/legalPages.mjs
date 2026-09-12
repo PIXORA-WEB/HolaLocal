@@ -5,6 +5,8 @@ import assert from 'node:assert/strict'
 import {mkdir,writeFile} from 'node:fs/promises'
 import {resolve} from 'node:path'
 import {BROWSER_TEST_CORE_ENVIRONMENT} from './browserTestEnvironment.mjs'
+import {analyticsEnglish} from '../../src/i18n/analyticsEnglish.js'
+import {analyticsTranslations} from '../../src/i18n/locales/analyticsTranslations.js'
 import {legalPageContent} from '../../src/i18n/locales/legalContent.js'
 Object.assign(process.env,BROWSER_TEST_CORE_ENVIRONMENT,{VITE_CUSTOMER_REVIEWS_ENABLED:'false'})
 const output=resolve(process.env.HOLALOCAL_LEGAL_EVIDENCE??'../../../review-evidence/legal-review-launch/browser')
@@ -38,7 +40,17 @@ try {
     await page.reload();await page.locator(`#${anchor}`).waitFor()
     assert.ok(page.url().endsWith('#'+anchor))
     assert.equal(await page.locator(`a[href="mailto:hello@holalocal.es"]`).count()>0,true)
-    if(route==='privacy')assert.equal(await page.locator('a[href="https://www.aepd.es/"]').count(),1)
+    if(route==='privacy') {
+     assert.equal(await page.locator('a[href="https://www.aepd.es/"]').count(),1)
+     const analytics = code === 'en' ? analyticsEnglish : analyticsTranslations[code]
+     assert.equal(await page.locator('#optional-analytics').count(),1)
+     assert.equal(await page.locator('#optional-analytics h2').textContent(),analytics.title)
+     const settings=page.locator('#optional-analytics button')
+     await settings.focus();await page.keyboard.press('Enter')
+     await page.getByRole('button',{name:analytics.reject,exact:true}).click()
+     assert.equal(await page.evaluate(()=>localStorage.getItem('holalocal.analyticsChoice.v1')),'rejected')
+     assert.equal(await page.locator('.analytics-choice').count(),0)
+    }
     if(code==='en') {await page.goto(`http://127.0.0.1:4193/${route}`);await page.locator('.legal-content__contents').waitFor();await page.screenshot({path:resolve(output,`${route}-${width}.png`),fullPage:true});await page.screenshot({path:resolve(output,`${route}-${width}-top.png`)})}
     results.push({code,route,width,headings:content[route].sections.length,anchorReload:true,keyboardAnchor:true,overflow:false})
    }
