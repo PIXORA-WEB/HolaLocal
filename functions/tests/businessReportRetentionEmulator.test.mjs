@@ -1,0 +1,41 @@
+import {before,after,test} from 'node:test'
+import assert from 'node:assert/strict'
+import {initializeApp,deleteApp} from 'firebase-admin/app'
+import {getFirestore,Timestamp} from 'firebase-admin/firestore'
+import {resolveBusinessReport,assessBusinessReportRetention,removeExpiredBusinessReport,BUSINESS_REPORT_RETENTION_MS} from '../src/businessReports.js'
+const enabled=process.env.HOLALOCAL_RETENTION_EMULATOR==='1'
+let app,db
+before(()=>{if(!enabled)return;assert.equal(process.env.GCLOUD_PROJECT,'demo-holalocal-retention');assert.equal(process.env.FIRESTORE_EMULATOR_HOST,'127.0.0.1:18080');app=initializeApp({projectId:process.env.GCLOUD_PROJECT},'report-retention');db=getFirestore(app)})
+after(async()=>{if(app)await deleteApp(app)})
+const now=Timestamp.fromMillis(1800000000000),later=Timestamp.fromMillis(now.toMillis()+BUSINESS_REPORT_RETENTION_MS)
+const opts=reportId=>({db,reportId,actorUid:'admin',claims:{admin:true},now})
+const row={reporterId:'synthetic',targetType:'business',targetId:'synthetic-business',parentId:null,reason:'other',details:'synthetic report',evidence:[],status:'open',priority:'normal',assignedTo:null,resolution:null,createdAt:now,updatedAt:now}
+test('resolution retry does not reset clock; boundary deletion preserves business and review reports',{skip:!enabled},async()=>{
+ await db.doc('businesses/synthetic-business').set({status:'pending_review',ownerId:'owner'})
+ await db.doc('customerReviewReports/unrelated').set({privateText:'synthetic untouched'})
+ const reportId='report-boundary';await db.doc(`reports/${reportId}`).set(row)
+ await assert.rejects(resolveBusinessReport({...opts(reportId),claims:{},summary:'handled'}),/moderator-required/)
+ assert.equal((await removeExpiredBusinessReport(opts(reportId))).disabled,true)
+ const results=await Promise.all([1,2].map(()=>resolveBusinessReport({...opts(reportId),claims:{moderator:true},summary:'handled'})))
+ assert.equal(results.filter(x=>x.idempotent).length,1)
+ await resolveBusinessReport({...opts(reportId),summary:'handled',now:later})
+ assert.equal((await db.doc(`reports/${reportId}`).get()).data().resolvedAt.toMillis(),now.toMillis())
+ assert.equal((await removeExpiredBusinessReport({...opts(reportId),enabled:true,now:Timestamp.fromMillis(later.toMillis()-1)})).removed,false)
+ assert.equal((await removeExpiredBusinessReport({...opts(reportId),enabled:true,now:later})).removed,true)
+ assert.equal((await removeExpiredBusinessReport({...opts(reportId),enabled:true,now:later})).idempotent,true)
+ assert.deepEqual((await db.doc('businesses/synthetic-business').get()).data(),{status:'pending_review',ownerId:'owner'})
+ assert.equal((await db.doc('customerReviewReports/unrelated').get()).exists,true)
+})
+test('overdue hold survives; explicit release does not restart90days; legacy dates never inferred',{skip:!enabled},async()=>{
+ const reportId='report-held';await db.doc(`reports/${reportId}`).set(row);await resolveBusinessReport({...opts(reportId),summary:'handled'})
+ await assessBusinessReportRetention({...opts(reportId),action:'hold',expectedRevision:0,reason:'specific dispute',endingCondition:'case ends',reviewAt:Timestamp.fromMillis(now.toMillis()+1)})
+ assert.equal((await removeExpiredBusinessReport({...opts(reportId),enabled:true,now:later})).held,true)
+ await assessBusinessReportRetention({...opts(reportId),action:'release',expectedRevision:1,reason:'case ended',now:later})
+ assert.equal((await removeExpiredBusinessReport({...opts(reportId),enabled:true,now:later})).removed,true)
+ for(const reportId of ['legacy-resolved','open','unknown-copy']){
+  const record=reportId==='legacy-resolved'?{...row,status:'resolved'}:reportId==='open'?row:{...row,status:'resolved',resolvedAt:now,resolutionVersion:1,externalAuditId:'unverified'}
+  await db.doc(`reports/${reportId}`).set(record)
+  assert.equal((await removeExpiredBusinessReport({...opts(reportId),enabled:true,now:later})).needsAssessment,true)
+  assert.deepEqual((await db.doc(`reports/${reportId}`).get()).data(),record)
+ }
+})
