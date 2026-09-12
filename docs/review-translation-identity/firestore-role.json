@@ -1,0 +1,10 @@
+{
+  "title": "HolaLocal review cache transactions",
+  "stage": "GA",
+  "includedPermissions": [
+    "datastore.databases.get",
+    "datastore.entities.get",
+    "datastore.entities.create",
+    "datastore.entities.update"
+  ]
+}
