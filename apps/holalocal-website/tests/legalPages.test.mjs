@@ -73,3 +73,20 @@ test('all legal locales disclose approved mailbox-only support retention without
  }
  assert.match(legalPageContent.en.privacy.sections.find(s=>s.key==='cloud-retention').paragraphs[1],/does not necessarily remove recovery/)
 })
+
+
+test('approved retention criteria appear once in each draft locale without enabling cleanup',()=>{
+ for(const [code,content]of Object.entries(legalPageContent)){
+  const paragraphs=content.privacy.sections.find(section=>section.key==='deletion').paragraphs
+  assert.equal(paragraphs.length,7,code)
+  assert.equal(paragraphs.slice(-4).filter(text=>text.includes('90')).length,1,code)
+  assert.ok(paragraphs.slice(-4).every(text=>text.length>80),code)
+ }
+ const copy=legalPageContent.en.privacy.sections.find(section=>section.key==='deletion').paragraphs.join(' ')
+ assert.match(copy,/at least one participant retains an account/)
+ assert.match(copy,/does not mean recent login/)
+ assert.match(copy,/destructive cleanup is not enabled/)
+ assert.match(copy,/responsible reviewer, next review date and ending condition/)
+ assert.match(copy,/does not automatically end or renew/)
+ assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,null)
+})
