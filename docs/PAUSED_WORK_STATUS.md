@@ -27,3 +27,7 @@ Original upload/retry improvements remain unverified; successful ordinary upload
 ## Current correction
 
 Business cleanup dates and full-collection due views are prepared; draft criteria now explicitly distinguish policy from disabled execution in17languages. Daily manual queue checking is not required or proposed. Business-report-only automated execution is an independently gated offline helper and proposal, without a scheduled Function export or cloud changes; see BUSINESS_REPORT_AUTOMATION_PROPOSAL.md. Judgment-based decisions remain explicit admin actions.
+
+## Final worker preparation
+
+The hourly sweepResolvedBusinessReports export and three metric/four disabled-policy payloads are prepared. See BUSINESS_REPORT_WORKER_RELEASE.md for the authoritative eight-Function source/deployment order, exact service-scoped Scheduler IAM and separate activation approval. The worker keeps its own closed gate,50candidate bound and transactional holds. No resources or notifications created; no daily queue requirement. Older proposal/helper-only instructions are superseded. PR44 remains0c0792826a9fec4bb0fed868eb038fcfe8dce968.

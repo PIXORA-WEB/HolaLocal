@@ -56,3 +56,20 @@ test('prepared automation is closed before database access, bounded and fair acr
  assert.equal((await db.doc('reports/auto-c-legacy').get()).exists,true)
  await assert.rejects(runBusinessReportRetention({...options,pageSize:51}),/invalid-business-retention/)
 })
+
+test('worker isolates record failures, retries later and rereads a newly placed hold',{skip:!enabled},async()=>{
+ const at=Timestamp.fromMillis(now.toMillis()-2000*86400000)
+ const seed=async id=>db.doc('reports/'+id).set({...row,status:'resolved',resolutionVersion:1,resolvedAt:at})
+ await seed('worker-a-fail');await seed('worker-b-good')
+ await db.doc('maintenanceProgress/businessReportRetention').set({resolvedAt:null,documentId:null})
+ const wrapped={collection:path=>db.collection(path),doc:path=>{if(path==='reports/worker-a-fail')throw new Error('private details');return db.doc(path)},runTransaction:fn=>db.runTransaction(fn)}
+ const options={env:{BUSINESS_REPORT_RETENTION_ENABLED:'true'},createDatabase:()=>wrapped,now,pageSize:2}
+ const result=await runBusinessReportRetention(options);assert.equal(result.failed,1);assert.equal(result.removed,1)
+ assert.equal((await db.doc('reports/worker-a-fail').get()).exists,true);assert.equal((await db.doc('reports/worker-b-good').get()).exists,false)
+ await db.doc('maintenanceProgress/businessReportRetention').set({resolvedAt:null,documentId:null})
+ assert.equal((await runBusinessReportRetention({...options,createDatabase:()=>db,pageSize:1})).removed,1)
+ await seed('worker-c-hold');await db.doc('maintenanceProgress/businessReportRetention').set({resolvedAt:null,documentId:null})
+ const race={collection:path=>db.collection(path),doc:path=>db.doc(path),runTransaction:async fn=>{await db.doc('reports/worker-c-hold').update({retentionDecision:{state:'held'}});return db.runTransaction(fn)}}
+ const held=await runBusinessReportRetention({...options,createDatabase:()=>race,pageSize:1});assert.equal(held.preserved,1)
+ assert.equal((await db.doc('reports/worker-c-hold').get()).exists,true)
+})

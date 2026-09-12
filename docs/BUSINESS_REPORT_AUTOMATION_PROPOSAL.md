@@ -1,3 +1,5 @@
+> Current release authority: [BUSINESS_REPORT_WORKER_RELEASE.md](BUSINESS_REPORT_WORKER_RELEASE.md). The scheduled export and disabled monitoring are now prepared. Earlier seven-export/unexported-helper descriptions below are historical preparation evidence; nothing is deployed or activated.
+
 # Business-report cleanup automation — preparation only
 
 This replaces the proposed daily manual queue routine. No daily attendance requirement, grace period or changed retention policy is introduced. No cloud resources, scheduled Function export, IAM changes or activation are included in this candidate.

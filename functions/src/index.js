@@ -1,3 +1,4 @@
+import { executeBusinessReportRetention } from './businessReports.js'
 import { manageRetentionRecords as runManageRetentionRecords } from './adminRetention.js'
 import { getAuth } from 'firebase-admin/auth'
 import {runAccountDeletionRecovery} from './accountDeletionRecovery.js'
@@ -388,6 +389,13 @@ export const cleanStagingMediaObject = onObjectFinalized(
 export const recoverAccountDeletions = onSchedule(
   {region: MESSAGE_TRANSLATION_REGION, schedule: 'every 60 minutes', maxInstances: 1, timeoutSeconds:540},
   async () => runAccountDeletionRecovery({createDatabase:getFirestore}),
+)
+
+export const sweepResolvedBusinessReports = onSchedule(
+  {region: MESSAGE_TRANSLATION_REGION, schedule: 'every 60 minutes', timeZone:'Etc/UTC',
+    timeoutSeconds:120, memory:'256MiB', cpu:1, maxInstances:1, minInstances:0, concurrency:1,
+    retryCount:0, serviceAccount:'1097633279895-compute@developer.gserviceaccount.com'},
+  async () => executeBusinessReportRetention({createDatabase:getFirestore}),
 )
 
 export const sweepResolvedCustomerReviewReports = onSchedule(

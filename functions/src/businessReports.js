@@ -1,4 +1,5 @@
 import { Timestamp, FieldPath } from 'firebase-admin/firestore'
+import { info, error as logError } from 'firebase-functions/logger'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { requireRetentionAdmin, nextRetentionDecision, retentionText, validRetentionDecision } from './recordRetention.js'
 
@@ -62,7 +63,7 @@ async function pruneExpiredBusinessReport({db,reportId,now}) {
 }
 
 
-// Prepared worker, deliberately not exported as a deployed Function yet.
+// Independent worker gate; never shares manual/review/recovery activation.
 export async function runBusinessReportRetention({env=process.env,createDatabase,now=Timestamp.now(),pageSize=50}) {
   if(env.BUSINESS_REPORT_RETENTION_ENABLED!=='true')return {disabled:true}
   if(!(now instanceof Timestamp)||!Number.isInteger(pageSize)||pageSize<1||pageSize>50)throw new Error('invalid-business-retention-options')
@@ -85,4 +86,17 @@ export async function runBusinessReportRetention({env=process.env,createDatabase
   }
   if(page.size<pageSize)await progress.set({resolvedAt:null,documentId:null})
   return counts
+}
+
+
+export async function executeBusinessReportRetention(options = {}, logger = {info,error:logError}) {
+  try {
+    const result = await runBusinessReportRetention(options)
+    logger.info('business-report-retention', {...result,outcome:result.disabled?'disabled':'complete'})
+    return result
+  } catch {
+    // Do not leak document paths, provider details, report text or exception reasons.
+    logger.error('business-report-retention', {outcome:'error'})
+    throw new Error('business-report-retention-failed')
+  }
 }

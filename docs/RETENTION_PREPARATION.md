@@ -1,3 +1,5 @@
+> Current release authority: [BUSINESS_REPORT_WORKER_RELEASE.md](BUSINESS_REPORT_WORKER_RELEASE.md). The scheduled export and disabled monitoring are now prepared. Earlier seven-export/unexported-helper descriptions below are historical preparation evidence; nothing is deployed or activated.
+
 # Retention integration — disabled release candidate
 
 Baseline main: 203895227b41c03b87e8edc4a33f57134055a4b8. PR44 dependency: 0c0792826a9fec4bb0fed868eb038fcfe8dce968. Original recovery work and backups are preserved. No production changes have been made. This document supersedes the earlier backend-only preparation instructions.
