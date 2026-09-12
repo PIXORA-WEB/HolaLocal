@@ -162,6 +162,7 @@ export const ACCOUNT_DELETION_REQUEST_CONTRACT = Object.freeze({
     leaseExpiresAt: field('Timestamp|null', 'trusted_only', 'private_internal'),
     cleanupCounts: field('sanitized_count_map|null', 'trusted_only', 'private_internal'),
     retainedConsentEvidence: field('minimal_consent_evidence|null', 'trusted_only', 'private_internal'),
+    evidenceRetention: field('retention_decision|null', 'trusted_only', 'private_internal'),
     updatedAt: field('Timestamp', 'trusted_only', 'private_internal', 'required'),
     requestVersion: field('number', 'trusted_only', 'private_internal', 'required'),
   }),

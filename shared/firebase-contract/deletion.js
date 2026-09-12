@@ -45,7 +45,7 @@ const TRANSITIONS = Object.freeze({
 const WORKFLOW_FIELDS = new Set([
   'uid', 'state', 'requestedAt', 'requestedBy', 'cancelledAt', 'updatedAt', 'requestVersion',
   'finalizationStartedAt', 'finalizedBy', 'completedAt', 'lastCompletedStep', 'failureCode',
-  'retryCount', 'leaseId', 'leaseExpiresAt', 'cleanupCounts', 'retainedConsentEvidence',
+  'retryCount', 'leaseId', 'leaseExpiresAt', 'cleanupCounts', 'retainedConsentEvidence', 'evidenceRetention',
 ])
 
 const FRESH_REQUEST_CYCLE_FIELDS = new Set([

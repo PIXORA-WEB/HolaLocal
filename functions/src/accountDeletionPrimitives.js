@@ -1,3 +1,4 @@
+import { initialDeletionEvidenceRetention, nextRetentionDecision, requireRetentionAdmin, validRetentionDecision } from './recordRetention.js'
 import { customerReviewCleanupPath } from './customerReviewDeletion.js'
 import { randomUUID } from 'node:crypto'
 import { getAuth } from 'firebase-admin/auth'
@@ -221,7 +222,7 @@ export async function minimizeConsentEvidenceAndRemoveUser({ uid, db, expectedRe
   })
 }
 
-export async function completeAccountDeletionWorkflow({ uid, leaseId, expectedRequestVersion, db }) {
+export async function completeAccountDeletionWorkflow({ uid, leaseId, expectedRequestVersion, db, now = Timestamp.now() }) {
   const ref = db.doc(`accountDeletionRequests/${requireTrustedUid(uid)}`)
   return db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref)
@@ -240,6 +241,7 @@ export async function completeAccountDeletionWorkflow({ uid, leaseId, expectedRe
     const requestVersion = request.requestVersion + 1
     transaction.update(ref, {
       state: 'completed', lastCompletedStep: 'completed', completedAt: FieldValue.serverTimestamp(),
+      evidenceRetention: request.evidenceRetention ?? initialDeletionEvidenceRetention({ reviewerId: request.finalizedBy, now }),
       failureCode: null, leaseId: null, leaseExpiresAt: null,
       requestVersion, updatedAt: FieldValue.serverTimestamp(),
     })
@@ -252,4 +254,36 @@ export async function deleteFirebaseAuthUser({ uid, auth = getAuth() }) {
   const safeUid = requireTrustedUid(uid)
   try { await auth.deleteUser(safeUid); return { ok: true, alreadyMissing: false } }
   catch (error) { if (error?.code === 'auth/user-not-found') return { ok: true, alreadyMissing: true }; return { ok: false, retryable: true, failureCode: 'firebase_auth_deletion_failed' } }
+}
+
+// Preparation-only entry points: no callable or Scheduler export enables these.
+export async function assessAcknowledgmentRetention({ uid, actorUid, claims, db, expectedRevision, action, reason, endingCondition, reviewAt, now = Timestamp.now() }) {
+  requireRetentionAdmin(actorUid, claims)
+  const ref = db.doc(`accountDeletionRequests/${requireTrustedUid(uid)}`)
+  return db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref), user = await tx.get(db.doc(`users/${uid}`))
+    const row = snapshot.data()
+    if (!snapshot.exists || row.state !== 'completed' || row.lastCompletedStep !== 'completed' || user.exists) throw new HttpsError('failed-precondition', 'completed-erasure-required')
+    if (!row.retainedConsentEvidence) throw new HttpsError('failed-precondition', 'evidence-already-removed')
+    const decision = nextRetentionDecision({previous:row.evidenceRetention,expectedRevision,actorUid,action,reason,endingCondition,reviewAt,now})
+    tx.update(ref,{evidenceRetention:decision})
+    return { revision: decision.revision, state: decision.state }
+  })
+}
+
+export async function removeReleasedAcknowledgmentEvidence({ uid, actorUid, claims, db, enabled = false }) {
+  requireRetentionAdmin(actorUid, claims)
+  if (enabled !== true) return { removed: false, disabled: true }
+  const ref = db.doc(`accountDeletionRequests/${requireTrustedUid(uid)}`)
+  return db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref), user = await tx.get(db.doc(`users/${uid}`))
+    if (!snapshot.exists) return {removed:false}
+    const row = snapshot.data()
+    if (user.exists || row.state !== 'completed' || row.lastCompletedStep !== 'completed') return {removed:false,blocked:true}
+    if (row.retainedConsentEvidence == null) return {removed:false,idempotent:true}
+    if (!validRetentionDecision(row.evidenceRetention) || row.evidenceRetention.state !== 'released') return {removed:false,blocked:true}
+    // Keep terminal workflow identity/checkpoints for idempotency; this is not a whole-record retention exemption.
+    tx.update(ref,{retainedConsentEvidence:FieldValue.delete(),evidenceRetention:FieldValue.delete()})
+    return {removed:true}
+  })
 }
