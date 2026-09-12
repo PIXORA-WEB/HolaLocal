@@ -1,4 +1,4 @@
-import { initialDeletionEvidenceRetention, nextRetentionDecision, requireRetentionAdmin, validRetentionDecision } from './recordRetention.js'
+import { initialDeletionEvidenceRetention, nextRetentionDecision, requireRetentionAdmin, retentionText, validRetentionDecision } from './recordRetention.js'
 import { customerReviewCleanupPath } from './customerReviewDeletion.js'
 import { randomUUID } from 'node:crypto'
 import { getAuth } from 'firebase-admin/auth'
@@ -285,5 +285,78 @@ export async function removeReleasedAcknowledgmentEvidence({ uid, actorUid, clai
     // Keep terminal workflow identity/checkpoints for idempotency; this is not a whole-record retention exemption.
     tx.update(ref,{retainedConsentEvidence:FieldValue.delete(),evidenceRetention:FieldValue.delete()})
     return {removed:true}
+  })
+}
+
+
+export async function assessConversationRetention({ conversationId, actorUid, claims, db, expectedRevision, action, reason, endingCondition, reviewAt, now = Timestamp.now() }) {
+  requireRetentionAdmin(actorUid, claims)
+  const id = requireTrustedUid(conversationId), ref = db.doc(`conversationRetention/${id}`)
+  return db.runTransaction(async tx => {
+    const conversation = await tx.get(db.doc(`conversations/${id}`)), assessment = await tx.get(ref)
+    if (!conversation.exists) throw new HttpsError('not-found', 'conversation-not-found')
+    const decision = nextRetentionDecision({previous:assessment.data()?.decision,expectedRevision,actorUid,action,reason,endingCondition,reviewAt,now})
+    // Never put private preservation reasons in participant-readable conversation data.
+    tx.set(ref,{decision},{merge:true})
+    return {revision:decision.revision,state:decision.state}
+  })
+}
+
+export async function removeUnneededConversationBatch({ conversationId, actorUid, claims, db, auth, enabled = false, pageSize = 25 }) {
+  requireRetentionAdmin(actorUid, claims)
+  if (enabled !== true) return {removed:0,disabled:true}
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 50) throw new HttpsError('invalid-argument','invalid-retention-page-size')
+  const id=requireTrustedUid(conversationId), ref=db.doc(`conversations/${id}`), privateRef=db.doc(`conversationRetention/${id}`)
+  const initial=await ref.get()
+  if(!initial.exists)return {removed:0,complete:true}
+  const ids=initial.data().participantIds
+  if(!Array.isArray(ids)||ids.length!==2||new Set(ids).size!==2)throw new HttpsError('failed-precondition','conversation-identity-mismatch')
+  ids.forEach(requireTrustedUid)
+  // No recent-login cutoff. Disabled/suspended Auth accounts still exist and retain history.
+  for(const uid of ids){
+    try {await auth.getUser(uid);return {removed:0,accountRetained:true}}
+    catch(error){if(error?.code!=='auth/user-not-found')throw error}
+  }
+  return db.runTransaction(async tx=>{
+    const [snapshot,assessment,...accounts]=await Promise.all([tx.get(ref),tx.get(privateRef),...ids.flatMap(uid=>[tx.get(db.doc(`users/${uid}`)),tx.get(db.doc(`accountDeletionRequests/${uid}`))])])
+    if(!snapshot.exists)return {removed:0,complete:true}
+    if(!sameMembers(snapshot.data().participantIds,ids))throw new HttpsError('aborted','conversation-identity-changed')
+    for(let i=0;i<accounts.length;i+=2){
+      const request=accounts[i+1].data()
+      if(accounts[i].exists||!accounts[i+1].exists||request.state!=='completed'||request.lastCompletedStep!=='completed')return {removed:0,needsAssessment:true}
+    }
+    const decision=assessment.data()?.decision
+    // Explicit assessment confirms history is no longer needed; missing/overdue is not consent to erase.
+    if(!validRetentionDecision(decision)||decision.state!=='released')return {removed:0,held:true}
+    const messages=await tx.get(ref.collection('messages').limit(pageSize))
+    if(messages.docs.some(doc=>doc.data().attachment!=null))return {removed:0,needsAssessment:true}
+    for(const message of messages.docs)tx.delete(message.ref)
+    if(messages.size<pageSize){tx.delete(ref);tx.delete(privateRef)}
+    else tx.update(ref,{lastMessage:null})
+    return {removed:messages.size,complete:messages.size<pageSize}
+  })
+}
+
+
+// Explicit human assessment only; never scans message text or infers what identifies a person.
+export async function redactAssessedConversationMessage({ conversationId, messageId, subjectUid, actorUid, claims, reason, db, enabled = false, now = Timestamp.now() }) {
+  requireRetentionAdmin(actorUid,claims)
+  if(enabled!==true)return {redacted:false,disabled:true}
+  const id=requireTrustedUid(conversationId), subject=requireTrustedUid(subjectUid), message=requireTrustedUid(messageId)
+  const assessmentReason=retentionText(reason),ref=db.doc(`conversations/${id}`),messageRef=ref.collection('messages').doc(message),privateRef=db.doc(`conversationRetention/${id}`)
+  return db.runTransaction(async tx=>{
+    const [conversation,record,request,assessment]=await Promise.all([tx.get(ref),tx.get(messageRef),tx.get(db.doc(`accountDeletionRequests/${subject}`)),tx.get(privateRef)])
+    if(!conversation.exists||!conversation.data().participantIds?.includes(subject)||!request.exists||!['requested','finalizing','failed_retryable','completed'].includes(request.data().state))throw new HttpsError('failed-precondition','authorised-participant-erasure-required')
+    const decision=assessment.data()?.decision
+    if(decision!=null&&(!validRetentionDecision(decision)||decision.state!=='released'))return {redacted:false,held:true}
+    if(!record.exists)return {redacted:false,idempotent:true}
+    const row=record.data()
+    if(row.attachment!=null)return {redacted:false,needsAssessment:true}
+    if(row.deletedAt instanceof Timestamp&&row.text===''&&row.translation==null)return {redacted:false,idempotent:true}
+    // Keep the existing message ID and request tuple so retrying its old send cannot resurrect it.
+    tx.update(messageRef,{text:'',translation:FieldValue.delete(),deletedAt:now,moderationStatus:'removed'})
+    if(conversation.data().lastMessage?.messageId===message)tx.update(ref,{lastMessage:null})
+    tx.set(privateRef,{lastErasureAssessment:{subjectUid:subject,messageId:message,reviewerId:actorUid,reason:assessmentReason,at:now}},{merge:true})
+    return {redacted:true}
   })
 }
