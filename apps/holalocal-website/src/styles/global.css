@@ -3107,14 +3107,13 @@
 }
 
 .business-insights__range-select > label,
-.business-insights__chart-heading label,
-.business-insights__custom-range label {
+.business-insights__chart-heading label {
   color: var(--brand-navy);
   font-size: 0.8rem;
   font-weight: 800;
 }
 
-.business-insights__custom-range input {
+.date-picker__input {
   width: 100%;
   min-width: 0;
   min-height: 3rem;
@@ -3126,16 +3125,16 @@
   font: inherit;
 }
 
-.business-insights__custom-range input:hover:not(:disabled) {
+.date-picker__input:hover:not(:disabled) {
   border-color: #b8c4d3;
 }
 
-.business-insights__custom-range input:focus-visible {
+.date-picker__input:focus-visible {
   border-color: var(--brand-blue);
   outline: 3px solid rgb(8 125 242 / 14%);
 }
 
-.business-insights__custom-range input[aria-invalid="true"] {
+.date-picker__input[aria-invalid="true"] {
   border-color: #b42318;
 }
 
@@ -3146,17 +3145,42 @@
   gap: 0.75rem;
 }
 
-.business-insights__custom-range label {
+.date-picker {
   display: grid;
   min-width: 0;
   gap: 0.35rem;
 }
 
-.business-insights__custom-range .button {
+.business-insights__custom-range > .button {
   width: 100%;
   min-height: 3rem;
   margin: 0;
 }
+
+/* Shared calendar uses the standard form fields, buttons and month dropdown. */
+.date-picker > label { color: var(--brand-navy); font-size: .8rem; font-weight: 800; }
+.date-picker__field { display: grid; grid-template-columns: minmax(0, 1fr) 3rem; gap: .35rem; }
+.date-picker__field .button { padding: .65rem; margin: 0; }
+.date-picker__field svg { width: 1.25rem; height: 1.25rem; }
+.date-picker > small { color: var(--muted); font-size: .75rem; }
+.date-picker > small[role="alert"] { color: #9f1239; }
+.date-picker__popover { position: fixed; z-index: 90; width: min(23rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; padding: .65rem; border: 1px solid var(--line); border-radius: 1rem; background: #fff; box-shadow: 0 18px 40px rgb(8 30 52 / 16%); }
+.date-picker__navigation { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 4.8rem 2.75rem; align-items: center; gap: .25rem; }
+.date-picker__navigation > div { min-width: 0; }
+.date-picker__navigation > .button { min-width: 0; min-height: 3rem; padding: .25rem; margin: 0; font-size: 1.4rem; }
+.date-picker__navigation > input { padding: .35rem; }
+.date-picker__grid { margin: .6rem 0; }
+.date-picker__grid [role="row"] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.date-picker__grid [role="columnheader"] { text-align: center; font-size: .7rem; color: #64748b; padding: .4rem 0; overflow-wrap: anywhere; }
+.date-picker__grid button { min-width: 0; min-height: 2.75rem; padding: .2rem; border: 1px solid transparent; border-radius: .65rem; background: transparent; color: var(--brand-navy); font: inherit; cursor: pointer; }
+.date-picker__grid button.is-outside-month { color: #64748b; }
+.date-picker__grid button[aria-current="date"] { border-color: var(--brand-blue); font-weight: 800; }
+.date-picker__grid button:hover:not([aria-disabled="true"]):not([aria-selected="true"]) { background: #edf5ff; }
+.date-picker__grid button[aria-selected="true"] { background: var(--brand-blue); color: white; font-weight: 800; }
+.date-picker__grid button[aria-disabled="true"] { color: #94a3b8; text-decoration: line-through; cursor: not-allowed; }
+.date-picker__grid button:focus-visible { outline: 3px solid var(--brand-purple); outline-offset: -3px; }
+.date-picker__footer { display: flex; justify-content: space-between; gap: .5rem; }
+.date-picker__footer .button { margin: 0; min-height: 2.75rem; padding: .5rem .75rem; }
 
 .business-insights__range-error {
   margin: 0;
@@ -3202,7 +3226,7 @@
 .business-insights__all-time dd { margin: 0; font-weight: 600; font-size: .9rem; }
 @media (min-width: 36rem) {
   .business-insights__custom-range { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; }
-  .business-insights__custom-range .button { width: auto; }
+  .business-insights__custom-range > .button { width: auto; }
 }
 @media (max-width: 35.99rem) {
   .business-insights__grid { grid-template-columns: 1fr; }

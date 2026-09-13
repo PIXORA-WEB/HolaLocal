@@ -575,5 +575,15 @@
     "activityDescription": "Los valores diarios usan fechas UTC. Las fechas anteriores al inicio de la recopilación aparecen como «Sin registrar». Cero significa que no se registró actividad ese día después del inicio de la recopilación.",
     "emptyMetric": "No hay actividad registrada para esta métrica en este período.",
     "notRecorded": "Sin registrar"
+  },
+  "datePicker": {
+    "open": "Elegir fecha",
+    "example": "Ejemplo: {{date}}",
+    "invalid": "Introduce una fecha válida.",
+    "previous": "Mes anterior",
+    "next": "Mes siguiente",
+    "month": "Mes",
+    "year": "Año",
+    "today": "Hoy"
   }
 }

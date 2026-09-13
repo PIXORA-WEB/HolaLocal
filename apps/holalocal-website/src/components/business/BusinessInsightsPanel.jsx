@@ -1,3 +1,4 @@
+import DatePicker from '../common/DatePicker.jsx'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BUSINESS_CONTACT_ACTIONS } from '@holalocal/firebase-contract'
@@ -141,8 +142,8 @@ export default function BusinessInsightsPanel({ businessId, status, business }) 
         </div>
         {selection.preset === 'custom' && (
           <form className="business-insights__custom-range" onSubmit={applyCustomRange}>
-            <label>{t('businessInsights.range.from')}<input aria-describedby={validationError ? 'business-insights-range-error' : undefined} aria-invalid={Boolean(validationError)} max={today} onChange={(event) => setCustom((value) => ({ ...value, startDate: event.target.value }))} type="date" value={custom.startDate} /></label>
-            <label>{t('businessInsights.range.to')}<input aria-describedby={validationError ? 'business-insights-range-error' : undefined} aria-invalid={Boolean(validationError)} max={today} onChange={(event) => setCustom((value) => ({ ...value, endDate: event.target.value }))} type="date" value={custom.endDate} /></label>
+            <DatePicker label={t('businessInsights.range.from')} ariaDescribedBy={validationError ? 'business-insights-range-error' : undefined} ariaInvalid={Boolean(validationError)} today={today} max={today} onChange={(date) => setCustom((value) => ({ ...value, startDate: date }))} value={custom.startDate} />
+            <DatePicker label={t('businessInsights.range.to')} ariaDescribedBy={validationError ? 'business-insights-range-error' : undefined} ariaInvalid={Boolean(validationError)} today={today} max={today} onChange={(date) => setCustom((value) => ({ ...value, endDate: date }))} value={custom.endDate} />
             <button className="button button--secondary" disabled={state.status === 'loading'} type="submit">{t('businessInsights.range.apply')}</button>
           </form>
         )}

@@ -575,5 +575,15 @@
     "activityDescription": "Tageswerte verwenden UTC-Daten. Tage vor Erfassungsbeginn sind als „Nicht erfasst“ gekennzeichnet. Null bedeutet, dass an diesem Tag nach Erfassungsbeginn keine Aktivität erfasst wurde.",
     "emptyMetric": "Für diese Kennzahl wurde in diesem Zeitraum keine Aktivität erfasst.",
     "notRecorded": "Nicht erfasst"
+  },
+  "datePicker": {
+    "open": "Datum auswählen",
+    "example": "Beispiel: {{date}}",
+    "invalid": "Gib ein gültiges Datum ein.",
+    "previous": "Vorheriger Monat",
+    "next": "Nächster Monat",
+    "month": "Monat",
+    "year": "Jahr",
+    "today": "Heute"
   }
 }

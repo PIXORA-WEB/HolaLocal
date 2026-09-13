@@ -137,14 +137,14 @@ test('range toolbar reuses the HolaLocal select and accessible form-control patt
   assert.doesNotMatch(panel, /<select[ >]/)
   assert.match(panel, /<SelectField id="business-insights-metric"[\s\S]*?onChange=\{setMetric\}/)
   assert.match(panel, /htmlFor="business-insights-range"/)
-  assert.match(panel, /type="date"/)
-  assert.match(panel, /aria-invalid=\{Boolean\(validationError\)\}/)
-  assert.match(panel, /aria-describedby=\{validationError/)
+  assert.match(panel, /<DatePicker label=/)
+  assert.match(panel, /ariaInvalid=\{Boolean\(validationError\)\}/)
+  assert.match(panel, /ariaDescribedBy=\{validationError/)
   assert.match(panel, /max=\{today\}/)
   assert.match(styles, /business-insights__range-select[\s\S]*?width: 13rem;[\s\S]*?max-width: 100%/)
   assert.match(styles, /business-insights__range-field \.select-field__menu[\s\S]*?width: min\(16rem, calc\(100vw - 3rem\)\)/)
   assert.match(styles, /business-insights__range-field \.select-field__menu button > span:first-child[\s\S]*?white-space: nowrap/)
-  assert.match(styles, /business-insights__custom-range input:focus-visible/)
+  assert.match(styles, /date-picker__input:focus-visible/)
 })
 
 test('single-metric chart preserves zero heights and exposes exact values', async () => {

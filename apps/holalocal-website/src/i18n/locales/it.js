@@ -1,6 +1,16 @@
 import en from './en.json'
 import { createFallbackLocale } from './createFallbackLocale.js'
 export default createFallbackLocale(en, {
+  datePicker: {
+    "open": "Scegli data",
+    "example": "Esempio: {{date}}",
+    "invalid": "Inserisci una data valida.",
+    "previous": "Mese precedente",
+    "next": "Mese successivo",
+    "month": "Mese",
+    "year": "Anno",
+    "today": "Oggi"
+  },
   businessInsights: { ...en.businessInsights, ...{"description": "Visualizzazioni del profilo e clic sui pulsanti di contatto registrati. Nuove conversazioni conta le nuove conversazioni HolaLocal, non i messaggi inviati o le richieste confermate. I clic non confermano un contatto. L’attività precedente non viene stimata.", "historicalChannel": "Attualmente non disponibile", "profileViews": "Visualizzazioni del profilo", "enquiries": "Nuove conversazioni", "contactActions": "Clic di contatto", "contactBreakdownSelected": "Clic sui pulsanti di contatto nel periodo selezionato", "actions": {"holalocal": "Clic sul pulsante messaggi", "phone": "Clic sul pulsante telefono", "email": "Clic sul pulsante e-mail", "whatsapp": "Clic sul pulsante WhatsApp", "website": "Clic sul sito web"}, "subtitle": "Scopri come le persone trovano la tua attività e interagiscono con essa.", "about": "Informazioni su questi numeri", "metric": "Metrica", "exactValues": "Valori giornalieri esatti", "partialCoverage": "Copertura parziale: registrazione dal {{date}}.", "activityDescription": "I valori giornalieri usano date UTC. Le date precedenti all’inizio della raccolta sono indicate come «Non registrato». Zero significa che quel giorno, dopo l’inizio della raccolta, non è stata registrata attività.", "emptyMetric": "Nessuna attività registrata per questa metrica nel periodo selezionato.", "notRecorded": "Non registrato"} },
   marketing: { hero: { activeProfile: "Profilo pubblico", previousBusiness: "Attività precedente", nextBusiness: "Attività successiva", businessPosition: "Attività {{current}} di {{total}}" }, trust: { verified: { title: "Verifica delle attività", comingSoon: "Prossimamente", description: "Stiamo sviluppando un processo di verifica per aiutare i clienti a riconoscere le attività di cui sono stati controllati identità e dati di registrazione." } } },
   business: { completion: 'Profilo attività completato al {{percent}}%' },

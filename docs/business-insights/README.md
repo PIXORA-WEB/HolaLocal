@@ -25,11 +25,11 @@ Affected metric wording is translated in all 17 original locale resources. Exist
 
 ## Verification
 
-- 27 insights/locale-composition tests pass.
+- 45 insights/date-picker/locale-composition tests pass.
 - The new actual managed/public projection regression passes, including private overrides, hidden values, lifecycle and deletion state.
 - Full compatibility suite: 30 pass, 7 fail. Unchanged main-equivalent source with the same dependencies: 29 pass, the same 7 fail. These are existing broader locale manifest/composition/legal assertions; no coverage suppressed or changed to mask them.
 - 50 local browser checks: 390/1440 widths, messaging-only, populated, sparse, historical channels, inactive business, empty/error, period changes/reload, all three metric selections, exact daily values, mixed/entirely unrecorded periods, preserved zero bar heights, full-width chart sizing, default-closed keyboard disclosures and table End-key scrolling, 17-language wrapping. Fixtures render the actual BusinessDashboardPage within SiteLayout and BusinessLayout. All external requests blocked; zero external requests occurred.
-- Lint, locale parity (17), fresh production build and unchanged 200 kB budget pass. Local initial JS: 190.24 kB gzip; Vercel's configured preview build may differ.
+- Lint, locale parity (17), fresh production build and unchanged 200 kB budget pass. Local initial JS: 190.31 kB gzip; Vercel's configured preview build may differ.
 
 Synthetic fixtures exist only in `tests/browser/businessInsights.mjs`, loaded by a programmatic test server. They are not imported into runtime pages or the production build. Run from apps/holalocal-website:
 
@@ -59,3 +59,15 @@ The original panel uses SelectField with the existing select-field--form class, 
 Browser checks exercise all three choices by keyboard in all 17 languages at both widths, menu overflow, Escape/focus return, and matching computed font family/size/weight, minimum height, padding and radius against the date-range control. Existing metric/table/coverage checks continue to pass.
 
 [Open Metric menu — mobile](metric-mobile.png) · [desktop](metric-desktop.png)
+
+## Shared custom-date calendar
+
+The original From/To controls now use one reusable `DatePicker`, with UTC civil-date helpers and the existing `SelectField` month control and standard buttons. The previous native-date input rules and markup were replaced directly; there is no alternate insights page or override layer. No dependency was added.
+
+Manual entry accepts the locale's displayed format or ISO YYYY-MM-DD. Invalid dates have a labelled error; the existing range validator still controls Apply, ordering, future dates and the 366-day limit. Selection changes only the draft range until Apply. Selected dates, today and unavailable future dates have separate styles and accessible state. Arrow keys, Home/End, Page Up/Down (Shift for years), month selection, editable year, Escape and focus return are supported. The nonmodal popup stays inside the viewport and dismisses when focus leaves it.
+
+Calendar names/format/week starts use Intl in all 17 supported languages. Original locale resources contain the eight shared labels, with no parallel translations. Local synthetic browser checks cover desktop/mobile, all 17 calendars and month menus, manual invalid dates, reversed ranges, future rejection, actual selection/Apply, month/year keyboard navigation, and focus return. Translation parity is automated verification, not native-speaker certification. Device-specific virtual-keyboard and assistive-technology checks remain a useful follow-up.
+
+[Calendar open — mobile](calendar-mobile.png) · [desktop](calendar-desktop.png)
+
+Final calendar verification: 50 full browser scenarios plus 36 focused calendar/locale scenarios passed, with zero external requests. Initial JavaScript changed from 190.24 to 190.31 kB gzip, below the unchanged 200 kB limit. No production fixtures are imported by the application build.

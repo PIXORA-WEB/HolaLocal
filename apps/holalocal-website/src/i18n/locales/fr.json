@@ -575,5 +575,15 @@
     "activityDescription": "Les valeurs quotidiennes utilisent les dates UTC. Les dates précédant le début de la collecte sont indiquées « Non enregistré ». Zéro signifie qu’aucune activité n’a été enregistrée ce jour-là après le début de la collecte.",
     "emptyMetric": "Aucune activité enregistrée pour cet indicateur sur cette période.",
     "notRecorded": "Non enregistré"
+  },
+  "datePicker": {
+    "open": "Choisir une date",
+    "example": "Exemple : {{date}}",
+    "invalid": "Saisissez une date valide.",
+    "previous": "Mois précédent",
+    "next": "Mois suivant",
+    "month": "Mois",
+    "year": "Année",
+    "today": "Aujourd’hui"
   }
 }

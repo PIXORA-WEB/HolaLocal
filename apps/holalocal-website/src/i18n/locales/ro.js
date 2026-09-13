@@ -2,6 +2,16 @@ import en from './en.json'
 import { createFallbackLocale } from './createFallbackLocale.js'
 
 export default createFallbackLocale(en, {
+  datePicker: {
+    "open": "Alege data",
+    "example": "Exemplu: {{date}}",
+    "invalid": "Introdu o dată validă.",
+    "previous": "Luna precedentă",
+    "next": "Luna următoare",
+    "month": "Lună",
+    "year": "An",
+    "today": "Astăzi"
+  },
   businessInsights: { ...en.businessInsights, ...{"description": "Vizualizări ale profilului și clicuri pe butoanele de contact înregistrate. Conversații noi numără conversațiile HolaLocal nou create, nu mesajele trimise sau solicitările confirmate. Clicurile nu confirmă un contact. Activitatea anterioară nu este estimată.", "historicalChannel": "Momentan indisponibil", "profileViews": "Vizualizări ale profilului", "enquiries": "Conversații noi", "contactActions": "Clicuri de contact", "contactBreakdownSelected": "Clicuri pe butoanele de contact în perioada selectată", "actions": {"holalocal": "Clicuri pe butonul de mesaje", "phone": "Clicuri pe butonul de telefon", "email": "Clicuri pe butonul de e-mail", "whatsapp": "Clicuri pe butonul WhatsApp", "website": "Clicuri pe site"}, "subtitle": "Vezi cum oamenii îți descoperă afacerea și interacționează cu ea.", "about": "Despre aceste cifre", "metric": "Indicator", "exactValues": "Valori zilnice exacte", "partialCoverage": "Acoperire parțială: înregistrare din {{date}}.", "activityDescription": "Valorile zilnice folosesc date UTC. Datele anterioare începerii colectării sunt marcate „Neînregistrat”. Zero înseamnă că nu s-a înregistrat activitate în acea zi după începerea colectării.", "emptyMetric": "Nicio activitate înregistrată pentru acest indicator în această perioadă.", "notRecorded": "Neînregistrat"} },
   marketing: { hero: { activeProfile: "Profil public", previousBusiness: "Afacerea anterioară", nextBusiness: "Afacerea următoare", businessPosition: "Afacerea {{current}} din {{total}}" }, trust: { verified: { title: "Verificarea afacerilor", comingSoon: "În curând", description: "Dezvoltăm un proces de verificare care să ajute clienții să recunoască afacerile ale căror identitate și date de înregistrare au fost verificate." } } },
   business: { completion: 'Profilul afacerii este completat {{percent}}%' },

@@ -1134,5 +1134,15 @@
   "mediaFeedback": {
     "immediate": "Image changes save immediately. Save and Cancel apply to the other profile details.",
     "saved": "Image saved."
+  },
+  "datePicker": {
+    "open": "Choose date",
+    "example": "Example: {{date}}",
+    "invalid": "Enter a valid date.",
+    "previous": "Previous month",
+    "next": "Next month",
+    "month": "Month",
+    "year": "Year",
+    "today": "Today"
   }
 }

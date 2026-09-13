@@ -1,6 +1,16 @@
 import en from './en.json'
 import { createFallbackLocale } from './createFallbackLocale.js'
 export default createFallbackLocale(en, {
+  datePicker: {
+    "open": "Dátum kiválasztása",
+    "example": "Példa: {{date}}",
+    "invalid": "Adjon meg érvényes dátumot.",
+    "previous": "Előző hónap",
+    "next": "Következő hónap",
+    "month": "Hónap",
+    "year": "Év",
+    "today": "Ma"
+  },
   businessInsights: { ...en.businessInsights, ...{"description": "Rögzített profilmegtekintések és kapcsolatfelvételi gombokra kattintások. Az új megkeresések az új HolaLocal-beszélgetéseket számolja, nem az elküldött üzeneteket vagy megerősített megkereséseket. A kattintás nem igazol kapcsolatfelvételt. A korábbi aktivitást nem becsüljük meg.", "historicalChannel": "Jelenleg nem érhető el", "profileViews": "Profilmegtekintések", "enquiries": "Új beszélgetések", "contactActions": "Kapcsolatfelvételi kattintások", "contactBreakdownSelected": "Kattintások a kapcsolatfelvételi gombokra a kiválasztott időszakban", "actions": {"holalocal": "Kattintások az üzenetgombra", "phone": "Kattintások a telefongombra", "email": "Kattintások az e-mail-gombra", "whatsapp": "Kattintások a WhatsApp-gombra", "website": "Weboldalkattintások"}, "subtitle": "Nézze meg, hogyan találják meg vállalkozását és lépnek vele kapcsolatba az emberek.", "about": "Ezekről a számokról", "metric": "Mutató", "exactValues": "Pontos napi értékek", "partialCoverage": "Részleges lefedettség: rögzítés kezdete {{date}}.", "activityDescription": "A napi értékek UTC-dátumokat használnak. Az adatgyűjtés kezdete előtti dátumok „Nincs rögzítve” jelölést kapnak. A nulla azt jelenti, hogy az adatgyűjtés kezdete után azon a napon nem rögzítettek aktivitást.", "emptyMetric": "Ehhez a mutatóhoz ebben az időszakban nincs rögzített aktivitás.", "notRecorded": "Nincs rögzítve"} },
   marketing: { hero: { activeProfile: "Nyilvános profil", previousBusiness: "Előző vállalkozás", nextBusiness: "Következő vállalkozás", businessPosition: "{{current}}. vállalkozás / {{total}}" }, trust: { verified: { title: "Vállalkozás-ellenőrzés", comingSoon: "Hamarosan", description: "Olyan ellenőrzési folyamatot fejlesztünk, amely segít az ügyfeleknek felismerni azokat a vállalkozásokat, amelyek személyazonosságát és regisztrációs adatait ellenőrizték." } } },
   business: { completion: 'Az üzleti profil {{percent}}%-ban kész' },
