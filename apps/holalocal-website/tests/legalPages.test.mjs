@@ -58,11 +58,15 @@ test('approved account age is consistent and approved publication dates match', 
  assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,'2026-09-13')
 })
 
-test('informational policy notice is translated in all17language resources',async()=>{
+test('automatic update notice is absent without changing required legal acknowledgment copy',async()=>{
  const {legalConsentEnglishTranslations}=await import('../src/i18n/legalConsentEnglishTranslations.js')
  const {legalConsentTranslations}=await import('../src/i18n/locales/legalConsentTranslations.js')
  const resources={en:legalConsentEnglishTranslations,...legalConsentTranslations}
- for(const code of Object.keys(legalPageContent))assert.ok(resources[code].legalConsent.updateNotice?.length>40,code)
+ for(const code of Object.keys(legalPageContent)){assert.equal(resources[code].legalConsent.updateNotice,undefined,code);assert.ok(resources[code].legalConsent.termsPrefix,code);assert.ok(resources[code].legalConsent.privacyPrefix,code)}
+ const {readFile}=await import('node:fs/promises')
+ const layout=await readFile(new URL('../src/components/layout/SiteLayout.jsx',import.meta.url),'utf8')
+ assert.doesNotMatch(layout,/showPolicyNotice|noticeDismissed|updateNotice|useAuthentication|localStorage|sessionStorage/)
+ assert.match(layout,/<SiteHeader \/>/);assert.match(layout,/<Outlet \/>/);assert.match(layout,/<SiteFooter \/>/)
 })
 
 

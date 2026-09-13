@@ -16,12 +16,12 @@ import {fallbackLocaleCompletionTranslations} from '../../src/i18n/locales/fallb
 Object.assign(process.env,BROWSER_TEST_CORE_ENVIRONMENT,{VITE_ONBOARDING_REGRESSION:'true',FIREBASE_AUTH_EMULATOR_HOST:'127.0.0.1:19099',FIRESTORE_EMULATOR_HOST:'127.0.0.1:18080',VITE_FIREBASE_AUTH_EMULATOR_URL:'http://127.0.0.1:19099',VITE_FIRESTORE_EMULATOR_URL:'http://127.0.0.1:18080',VITE_FUNCTIONS_EMULATOR_URL:'http://127.0.0.1:15001',VITE_STORAGE_EMULATOR_URL:'http://127.0.0.1:19199'})
 const hub=await fetch('http://127.0.0.1:14400/emulators').then(r=>r.json())
 for(const [name,port]of Object.entries({auth:19099,firestore:18080}))assert.deepEqual([hub[name].host,hub[name].port],['127.0.0.1',port])
-const output=resolve('../../../review-evidence/legal-review-launch/policy-transition-browser');await mkdir(output,{recursive:true})
+const output=resolve(process.env.HOLALOCAL_POLICY_EVIDENCE ?? '../../../review-evidence/legal-review-launch/policy-transition-browser');await mkdir(output,{recursive:true})
 const app=initializeApp({projectId:BROWSER_TEST_CORE_ENVIRONMENT.VITE_FIREBASE_PROJECT_ID}),auth=getAuth(app),db=getFirestore(app)
 const run=Date.now(),password='Synthetic-Registration!123'
 const existing=await auth.createUser({email:`age-existing-${run}@example.test`,password,emailVerified:true})
 await db.doc(`users/${existing.uid}`).set({uid:existing.uid,email:existing.email,accountType:'customer',roles:['customer'],accountStatus:'active',profileCompleted:true,firstName:'Synthetic',lastName:'Existing',displayName:'Synthetic Existing',country:'Spain',city:'Málaga',preferredLocale:'en',termsAccepted:true,privacyAccepted:true,termsVersion:'1.0',privacyVersion:'1.0',termsAcceptedAt:Timestamp.now(),privacyAcceptedAt:Timestamp.now(),createdAt:Timestamp.now(),updatedAt:Timestamp.now(),lastActiveAt:Timestamp.now(),displayNameNormalized:'synthetic existing',photoURL:null,profilePhoto:null,onboardingCompleted:true,businessProfileRequired:false,businessProfileCompleted:false,businessId:null,deletionRequestedAt:null,deletionScheduledFor:null,anonymizedAt:null})
-const server=await createServer({mode:'browser-test',plugins:[{name:'synthetic-policy-publication-date',enforce:'pre',transform(code,id){if(id.split('?')[0].endsWith('/shared/firebase-contract/legalConsent.js'))return code.replaceAll('EFFECTIVE_DATE = null',"EFFECTIVE_DATE = '2099-01-01'")}}],server:{host:'127.0.0.1',port:4194,strictPort:true}});await server.listen()
+const server=await createServer({mode:'browser-test',server:{host:'127.0.0.1',port:4194,strictPort:true}});await server.listen()
 const browser=await chromium.launch({args:['--disable-dev-shm-usage']}),results=[]
 async function contextFor(width){const context=await browser.newContext({viewport:{width,height:900}});await context.route('**/*',r=>/^http:\/\/127\.0\.0\.1:/.test(r.request().url())?r.continue():r.abort());return context}
 try{
@@ -42,7 +42,18 @@ try{
   const denied=await page.evaluate(async()=>{const {registerUser}=await import('/src/firebase/auth.js');const result=[];for(const ageConfirmed of [undefined,false,'true',1])try{await registerUser('never-created@example.test','Synthetic-Registration!123',{ageConfirmed,termsAccepted:true,privacyAccepted:true});result.push('unexpected')}catch(e){result.push(e.code)}return result})
   assert.deepEqual(denied,Array(4).fill('auth/age-confirmation-required'));assert.equal(requests.some(url=>url.includes('accounts:signUp')),false)
   await page.locator('#register-email').fill(`age-new-${width}-${run}@example.test`);await page.locator('#register-password').fill(password);await page.locator('#register-confirm-password').fill(password)
-  const checks=page.locator('#register-consent input');await checks.nth(1).check();await checks.nth(2).check();assert.equal(await page.locator('button[type=submit]').isDisabled(),true)
+  const checks=page.locator('#register-consent input')
+  await checks.nth(0).check();await checks.nth(1).check();assert.equal(await page.locator('button[type=submit]').isDisabled(),true)
+  await checks.nth(1).uncheck();await checks.nth(2).check();assert.equal(await page.locator('button[type=submit]').isDisabled(),true)
+  await checks.nth(1).check();assert.equal(await page.locator('button[type=submit]').isDisabled(),false)
+  await checks.nth(0).uncheck();assert.equal(await page.locator('button[type=submit]').isDisabled(),true)
+  const missingAcknowledgments=await page.evaluate(async()=>{
+   const {registerUser}=await import('/src/firebase/auth.js');const errors=[]
+   for(const pair of [[false,true],[true,false],[false,false]])try{await registerUser('never-created@example.test','Synthetic-Registration!123',{ageConfirmed:true,termsAccepted:pair[0],privacyAccepted:pair[1]});errors.push('unexpected')}catch(e){errors.push(e.message)}
+   return errors
+  })
+  assert.ok(missingAcknowledgments.every(message=>message.includes('Accept the Terms and acknowledge reading the Privacy Policy')))
+  assert.equal(requests.some(url=>url.includes('accounts:signUp')),false)
   await page.locator('form').evaluate(form=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})))
   await page.getByText('You must confirm that you are at least 18 to create an account.',{exact:true}).waitFor();assert.equal(await page.locator('#register-age').evaluate(n=>n===document.activeElement),true)
   await page.locator('#register-age').check();assert.equal(await page.locator('#register-age-error').count(),0);await page.getByRole('button',{name:'Reject analytics',exact:true}).click();await page.screenshot({path:resolve(output,`registration-${width}.png`),fullPage:true});await page.locator('button[type=submit]').click();await page.waitForURL('**/verify-email')
@@ -64,10 +75,16 @@ try{
  assert.equal('ageConfirmed' in (await db.doc(`users/${existing.uid}`).get()).data(),false)
  const consentBeforeNotice=(await db.doc(`users/${existing.uid}`).get()).data()
  const notice=page.locator('aside.form-message')
- await notice.waitFor();assert.match(await notice.innerText(),/does not mean you agree/)
- await notice.getByRole('button',{name:'Close',exact:true}).focus();assert.equal(await page.locator(':focus-visible').count()>0,true)
- await page.keyboard.press('Enter');assert.equal(await notice.count(),0)
- await page.reload();await page.waitForURL('**/profile');await notice.waitFor()
+ assert.equal(await notice.count(),0)
+ await page.reload();await page.waitForURL('**/profile');assert.equal(await notice.count(),0)
+ for(const width of [390,1440]){
+  await page.setViewportSize({width,height:900});await page.reload();await page.locator('h1').waitFor()
+  assert.equal(await notice.count(),0)
+  assert.equal(await page.locator('main > :first-child').evaluate(e=>e.tagName==='ASIDE'),false)
+  assert.ok(await page.locator('footer a[href="/terms"]').count()>0)
+  assert.ok(await page.locator('footer a[href="/privacy"]').count()>0)
+  await page.screenshot({path:resolve(output,`no-policy-banner-${width}.png`),fullPage:true})
+ }
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1))
  const consentAfterNotice=(await db.doc(`users/${existing.uid}`).get()).data()
  for(const key of ['termsVersion','termsAcceptedAt','privacyVersion','privacyAcceptedAt'])assert.deepEqual(consentAfterNotice[key],consentBeforeNotice[key])
@@ -78,6 +95,6 @@ try{
  const after=(await db.doc(`users/${existing.uid}`).get()).data()
  assert.equal(after.termsVersion,'1.0');assert.equal(after.privacyVersion,'1.0');assert.deepEqual(after.termsAcceptedAt,prior.termsAcceptedAt);assert.deepEqual(after.privacyAcceptedAt,prior.privacyAcceptedAt)
  assert.ok((await db.doc(`accountDeletionRequests/${existing.uid}`).get()).exists)
- await writeFile(resolve(output,'results.json'),JSON.stringify({checks:results,realRegistrations:results.length ? 2 : 0,guardRejections:results.length ? 8 : 0,historicalDeletionRequestedWithoutReacceptance:true,acceptanceRecordsPreserved:true,existingAccountLoginReload:true,publicBrowsing:true,productionWrites:0},null,2))
- console.log(`PASS ${results.length} locale/viewport checks; ${results.length ? 8 : 0} service guard rejections; ${results.length ? 2 : 0} real emulator registrations/reloads; existing account login/reload and public browsing unaffected.`)
+ await writeFile(resolve(output,'results.json'),JSON.stringify({checks:results,realRegistrations:results.length ? 2 : 0,guardRejections:results.length ? 14 : 0,historicalDeletionRequestedWithoutReacceptance:true,acceptanceRecordsPreserved:true,existingAccountLoginReload:true,publicBrowsing:true,productionWrites:0},null,2))
+ console.log(`PASS ${results.length} locale/viewport checks; ${results.length ? 14 : 0} service guard rejections; ${results.length ? 2 : 0} real emulator registrations/reloads; existing account login/reload and public browsing unaffected.`)
 }finally{await browser.close();await server.close()}
