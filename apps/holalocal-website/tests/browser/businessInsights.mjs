@@ -35,6 +35,38 @@ try{for(const width of [390,1440]){
  const context=await browser.newContext({viewport:{width,height:1000}});let external=0
  await context.route('**/*',r=>{if(new URL(r.request().url()).hostname==='127.0.0.1')return r.continue();external++;return r.abort()})
  const page=await context.newPage();page.on('pageerror',e=>console.log('Browser error:',e.message))
+ if(process.argv.includes('--alignment-only')) {
+  for(const language of ['en','es','fr','de','it','pt','nl','cs','da','fi','hu','no','pl','ro','sk','sv','uk']) {
+   await page.goto('http://127.0.0.1:4198/insights-preview?scenario=historical')
+   await page.evaluate(l=>localStorage.setItem('holalocal.uiLanguage',l),language);await page.reload()
+   const panel=page.locator('.business-insights');await panel.locator('#business-insights-range').click();await page.keyboard.press('End');await page.keyboard.press('Enter')
+   const form=panel.locator('.business-insights__custom-range')
+   const check=async()=>{
+    const geometry=await form.evaluate(e=>{
+     const rect=e=>{const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom}}
+     return {button:rect(e.querySelector(':scope > button')),pickers:[...e.querySelectorAll('.date-picker')].map(p=>({label:rect(p.querySelector(':scope > label')),field:rect(p.querySelector('.date-picker__field')),hint:rect(p.querySelector(':scope > small'))}))}
+    })
+    if(width>=576){for(const {field} of geometry.pickers){assert.ok(Math.abs(field.top-geometry.button.top)<1,language+' input/Apply top');assert.ok(Math.abs(field.bottom-geometry.button.bottom)<1,language+' input/Apply bottom')}}
+    else assert.ok(geometry.button.top>=geometry.pickers[1].field.bottom,language+' stacked Apply')
+    for(const {label,field,hint} of geometry.pickers){assert.ok(label.bottom<=field.top+.5);assert.ok(hint.top>=field.bottom-.5)}
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),language+' no overflow')
+   }
+   await check()
+   if(language==='en'){
+    await page.evaluate(()=>{document.activeElement?.blur();window.scrollTo({top:0,behavior:'instant'})})
+    const b=await form.boundingBox(),p=await panel.boundingBox();await page.screenshot({path:resolve(output,`dates-aligned-${width}.png`),fullPage:true,clip:{x:p.x,y:b.y-95,width:p.width,height:b.height+175}})
+   }
+   await form.locator('.date-picker__field input').first().fill('2026-02-30');await form.locator('.date-picker__field input').first().blur()
+   await form.locator(':scope > button').click();await panel.locator('#business-insights-range-error').waitFor();await check()
+   if(language==='de'){
+    await page.evaluate(()=>{document.activeElement?.blur();window.scrollTo({top:0,behavior:'instant'})})
+    const b=await form.boundingBox(),p=await panel.boundingBox();await page.screenshot({path:resolve(output,`dates-errors-${width}.png`),fullPage:true,clip:{x:p.x,y:b.y-95,width:p.width,height:b.height+220}})
+   }
+   await form.locator('.date-picker > label').first().evaluate(e=>e.textContent+=' — '+e.textContent.repeat(15));await check()
+   results.push({width,language,alignment:true})
+  }
+  assert.equal(external,0);await context.close();continue
+ }
  async function selectMetric(panel, metric) {
   const trigger=panel.locator('#business-insights-metric')
   await trigger.focus();await page.keyboard.press('ArrowDown')

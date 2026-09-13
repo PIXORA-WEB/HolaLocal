@@ -71,3 +71,11 @@ Calendar names/format/week starts use Intl in all 17 supported languages. Origin
 [Calendar open — mobile](calendar-mobile.png) · [desktop](calendar-desktop.png)
 
 Final calendar verification: 50 full browser scenarios plus 36 focused calendar/locale scenarios passed, with zero external requests. Initial JavaScript changed from 190.24 to 190.31 kB gzip, below the unchanged 200 kB limit. No production fixtures are imported by the application build.
+
+## Custom-date alignment
+
+The original desktop range grid now shares four rows with both date pickers through CSS subgrid: labels, input/calendar controls, format hints, and validation errors. Apply explicitly occupies the controls row. Removed the old bottom alignment; no positional offsets or override layer. The original mobile stack is unchanged. No date, label, validation or submission logic changed.
+
+Verification: 34 local browser cases across desktop/mobile and all 17 locales, with visible invalid-date/range messages and deliberately long wrapping labels; exact top/bottom control alignment; labels/hints remain above/below their controls; no horizontal overflow or external requests. 37 affected unit tests, lint and fresh build/budget pass (190.31 kB / 200 kB).
+
+[Aligned desktop](dates-aligned-desktop.png) · [Stacked mobile](dates-aligned-mobile.png) · [Desktop errors](dates-errors-desktop.png) · [Mobile errors](dates-errors-mobile.png)
