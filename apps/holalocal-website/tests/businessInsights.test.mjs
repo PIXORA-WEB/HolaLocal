@@ -171,9 +171,9 @@ test('all-time and contact summaries keep values grouped in responsive tiles', a
   assert.match(panel, /business-insights__all-time/)
   assert.match(panel, /displayed\.allTime\[key\]/)
   assert.match(panel, /business-insights__breakdown/)
-  assert.match(panel, /BUSINESS_CONTACT_ACTIONS\.map/)
+  assert.match(panel, /BUSINESS_CONTACT_ACTIONS\.filter/)
   assert.match(styles, /business-insights__all-time dl div[\s\S]*?border-radius: 0\.75rem/)
-  assert.match(styles, /business-insights__breakdown dl[\s\S]*?minmax\(min\(7rem, 100%\), 1fr\)/)
+  assert.match(styles, /business-insights__breakdown dl[\s\S]*?minmax\(min\(10rem, 100%\), 1fr\)/)
   assert.doesNotMatch(panel, /saved|reviews/i)
 })
 

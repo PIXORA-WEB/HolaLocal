@@ -459,7 +459,7 @@ function BusinessDashboardPage() {
           </div>
         </article>
 
-        <BusinessInsightsPanel businessId={businessProfile.businessId} status={status} />
+        <BusinessInsightsPanel business={businessProfile} businessId={businessProfile.businessId} status={status} />
       </div>
     </section>
   )

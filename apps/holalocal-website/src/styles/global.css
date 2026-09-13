@@ -3122,11 +3122,6 @@
   background: rgb(37 189 73 / 5%);
 }
 
-.business-insights__grid article:nth-child(3) {
-  border-color: rgb(107 56 232 / 20%);
-  background: rgb(107 56 232 / 5%);
-}
-
 .business-insights__grid strong {
   color: var(--brand-navy);
   font-size: 1.5rem;
@@ -3323,7 +3318,7 @@
 
 .business-insights__breakdown dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
   gap: 0.5rem;
   margin: 0;
 }
@@ -3343,6 +3338,13 @@
   font-size: 0.75rem;
   font-weight: 750;
   overflow-wrap: anywhere;
+}
+
+.business-insights__breakdown dt small {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 400;
 }
 
 .business-insights__breakdown dd {
@@ -3392,7 +3394,7 @@
   height: var(--activity-size);
   min-height: 2px;
   border-radius: 0.2rem 0.2rem 0 0;
-  background: var(--brand-coral);
+  background: var(--brand-orange);
 }
 
 .business-insights__activity-days li small {
@@ -6111,7 +6113,7 @@
   }
 
   .business-insights__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .business-form__save {

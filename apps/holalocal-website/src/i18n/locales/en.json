@@ -484,23 +484,23 @@
   "businessInsights": {
     "eyebrow": "Performance",
     "title": "Business insights",
-    "description": "Private, server-counted activity from your public HolaLocal profile. Earlier activity is not estimated.",
+    "description": "Recorded profile views and contact-button clicks. New enquiries counts newly created HolaLocal conversations, not sent messages or confirmed enquiries. Clicks do not confirm contact. Earlier activity is not estimated.",
     "profileViews": "Profile views",
     "enquiries": "New enquiries",
-    "contactActions": "Contact actions",
+    "contactActions": "Contact button clicks",
     "selectedPeriod": "Selected period",
     "allTimeTitle": "All-time totals",
-    "contactBreakdownSelected": "Contact actions in the selected period",
+    "contactBreakdownSelected": "Contact button clicks in the selected period",
     "activityTitle": "Daily activity",
     "activityDescription": "Each column shows all tracked profile views, enquiries and contact actions for one UTC day in the selected period.",
     "dayLabel": "{{date}}: {{count}} total activities",
     "dayDetails": "{{views}} profile views, {{enquiries}} enquiries and {{contacts}} contact actions",
     "actions": {
-      "holalocal": "HolaLocal messages",
-      "phone": "Phone",
-      "email": "Email",
-      "whatsapp": "WhatsApp",
-      "website": "Website"
+      "holalocal": "Message button clicks",
+      "phone": "Phone button clicks",
+      "email": "Email button clicks",
+      "whatsapp": "WhatsApp button clicks",
+      "website": "Website clicks"
     },
     "range": {
       "label": "Date range",
@@ -534,7 +534,8 @@
       "unpublished": "Insights begin after your business profile is published and active.",
       "inactive": "New public activity is not currently recorded. Previously collected totals are retained.",
       "empty": "No eligible activity has been recorded yet."
-    }
+    },
+    "historicalChannel": "Historical activity · currently unavailable"
   },
   "common": {
     "save": "Save",

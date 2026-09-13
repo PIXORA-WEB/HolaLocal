@@ -2,6 +2,7 @@ import en from './en.json'
 import { createFallbackLocale } from './createFallbackLocale.js'
 
 export default createFallbackLocale(en, {
+  businessInsights: { ...en.businessInsights, ...{"description": "Zarejestrowane wyświetlenia profilu i kliknięcia przycisków kontaktu. Nowe zapytania liczą nowo utworzone rozmowy HolaLocal, nie wysłane wiadomości ani potwierdzone zapytania. Kliknięcia nie potwierdzają kontaktu. Wcześniejsza aktywność nie jest szacowana.", "historicalChannel": "Wcześniejsza aktywność · obecnie niedostępne", "profileViews": "Wyświetlenia profilu", "enquiries": "Nowe zapytania", "contactActions": "Kliknięcia przycisków kontaktu", "contactBreakdownSelected": "Kliknięcia przycisków kontaktu w wybranym okresie", "actions": {"holalocal": "Kliknięcia przycisku wiadomości", "phone": "Kliknięcia przycisku telefonu", "email": "Kliknięcia przycisku e-mail", "whatsapp": "Kliknięcia przycisku WhatsApp", "website": "Kliknięcia strony internetowej"}} },
   marketing: { hero: { activeProfile: "Profil publiczny", previousBusiness: "Poprzednia firma", nextBusiness: "Następna firma", businessPosition: "Firma {{current}} z {{total}}" }, trust: { verified: { title: "Weryfikacja firm", comingSoon: "Wkrótce", description: "Opracowujemy proces weryfikacji, który pomoże klientom rozpoznawać firmy, których tożsamość i dane rejestrowe zostały sprawdzone." } } },
   business: { completion: 'Profil firmy ukończony w {{percent}}%' },
   nav: { primary: 'Główna nawigacja', home: 'Strona główna', findServices: 'Znajdź usługi', join: 'Dołącz do HolaLocal' },

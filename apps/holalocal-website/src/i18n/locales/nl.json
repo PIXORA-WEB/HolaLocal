@@ -552,5 +552,20 @@
     "account": "Account",
     "accountLabel": "Accountlinks",
     "poweredBy": "Mogelijk gemaakt door PIXORA"
+  },
+  "businessInsights": {
+    "description": "Geregistreerde profielweergaven en klikken op contactknoppen. Nieuwe aanvragen telt nieuw aangemaakte HolaLocal-gesprekken, geen verzonden berichten of bevestigde aanvragen. Klikken bevestigen geen contact. Eerdere activiteit wordt niet geschat.",
+    "historicalChannel": "Eerdere activiteit · momenteel niet beschikbaar",
+    "profileViews": "Profielweergaven",
+    "enquiries": "Nieuwe aanvragen",
+    "contactActions": "Klikken op contactknoppen",
+    "contactBreakdownSelected": "Klikken op contactknoppen in de geselecteerde periode",
+    "actions": {
+      "holalocal": "Klikken op de berichtenknop",
+      "phone": "Klikken op de telefoonknop",
+      "email": "Klikken op de e-mailknop",
+      "whatsapp": "Klikken op de WhatsApp-knop",
+      "website": "Websiteklikken"
+    }
   }
 }

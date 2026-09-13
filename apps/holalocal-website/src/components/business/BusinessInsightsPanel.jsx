@@ -19,7 +19,7 @@ function totalActivity(day) {
   return day.profileViews + day.enquiries + day.contactActions
 }
 
-export default function BusinessInsightsPanel({ businessId, status }) {
+export default function BusinessInsightsPanel({ businessId, status, business }) {
   const { i18n, t } = useTranslation()
   const today = currentLocalDateKey()
   const defaultDates = presetDateRequest('last_30_days', today)
@@ -75,6 +75,18 @@ export default function BusinessInsightsPanel({ businessId, status }) {
   }
 
   const displayed = state.data
+  const contact = business?.publicContact ?? {}
+  const publicAvailable = Boolean(business?.publicContact)
+  const available = {
+    holalocal: publicAvailable && Boolean(business?.ownerId),
+    phone: publicAvailable && Boolean(contact.phone),
+    email: publicAvailable && Boolean(contact.email),
+    whatsapp: publicAvailable && Boolean(contact.whatsappNumber),
+    website: publicAvailable && Boolean(contact.website),
+  }
+  const visibleActions = BUSINESS_CONTACT_ACTIONS.filter((action) => (
+    available[action] || (displayed?.selectedRange.contactActionBreakdown[action] ?? 0) > 0
+  ))
   const rangeLabel = displayed
     ? t('businessInsights.range.dates', {
         start: localeDate(displayed.range.startDate, locale),
@@ -141,16 +153,17 @@ export default function BusinessInsightsPanel({ businessId, status }) {
             <strong>{rangeLabel}</strong>
           </div>
           <div className="business-insights__grid">
-            {metricKeys.map((key) => <article key={key}><strong>{displayed.selectedRange[key]}</strong><span>{t(`businessInsights.${key}`)}</span></article>)}
+            {metricKeys.slice(0, 2).map((key) => <article key={key}><strong>{displayed.selectedRange[key]}</strong><span>{t(`businessInsights.${key}`)}</span></article>)}
           </div>
           <section className="business-insights__all-time" aria-labelledby="insights-all-time-title">
             <h3 id="insights-all-time-title">{t('businessInsights.allTimeTitle')}</h3>
             <dl>{metricKeys.map((key) => <div key={key}><dt>{t(`businessInsights.${key}`)}</dt><dd>{displayed.allTime[key]}</dd></div>)}</dl>
           </section>
-          <section className="business-insights__breakdown" aria-labelledby="contact-breakdown-title">
-            <h3 id="contact-breakdown-title">{t('businessInsights.contactBreakdownSelected')}</h3>
-            <dl>{BUSINESS_CONTACT_ACTIONS.map((action) => <div key={action}><dt>{t(`businessInsights.actions.${action}`)}</dt><dd>{displayed.selectedRange.contactActionBreakdown[action]}</dd></div>)}</dl>
-          </section>
+          {visibleActions.length === 0 && <p>{t('businessInsights.contactBreakdownSelected')}: <strong>{displayed.selectedRange.contactActions}</strong></p>}
+          {visibleActions.length > 0 && <section className="business-insights__breakdown" aria-labelledby="contact-breakdown-title">
+            <h3 id="contact-breakdown-title">{t('businessInsights.contactBreakdownSelected')}: {displayed.selectedRange.contactActions}</h3>
+            <dl>{visibleActions.map((action) => <div key={action}><dt>{t(`businessInsights.actions.${action}`)}{!available[action] && <small>{t('businessInsights.historicalChannel')}</small>}</dt><dd>{displayed.selectedRange.contactActionBreakdown[action]}</dd></div>)}</dl>
+          </section>}
           <section className="business-insights__activity" aria-labelledby="insights-activity-title">
             <h3 id="insights-activity-title">{t('businessInsights.activityTitle')}</h3>
             {hasActivity ? (

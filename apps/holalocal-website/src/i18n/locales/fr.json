@@ -552,5 +552,20 @@
     "account": "Compte",
     "accountLabel": "Liens du compte",
     "poweredBy": "Propulsé par PIXORA"
+  },
+  "businessInsights": {
+    "description": "Vues du profil et clics sur les boutons de contact enregistrés. Les nouvelles demandes comptent les nouvelles conversations HolaLocal, pas les messages envoyés ni les demandes confirmées. Un clic ne confirme pas un contact. L’activité antérieure n’est pas estimée.",
+    "historicalChannel": "Activité passée · actuellement indisponible",
+    "profileViews": "Vues du profil",
+    "enquiries": "Nouvelles demandes",
+    "contactActions": "Clics sur les boutons de contact",
+    "contactBreakdownSelected": "Clics sur les boutons de contact pendant la période sélectionnée",
+    "actions": {
+      "holalocal": "Clics sur le bouton de messagerie",
+      "phone": "Clics sur le bouton téléphone",
+      "email": "Clics sur le bouton e-mail",
+      "whatsapp": "Clics sur le bouton WhatsApp",
+      "website": "Clics vers le site web"
+    }
   }
 }

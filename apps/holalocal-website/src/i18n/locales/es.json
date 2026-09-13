@@ -552,5 +552,20 @@
     "account": "Cuenta",
     "accountLabel": "Enlaces de cuenta",
     "poweredBy": "Impulsado por PIXORA"
+  },
+  "businessInsights": {
+    "description": "Visitas al perfil y clics en botones de contacto registrados. Nuevas consultas cuenta las conversaciones nuevas de HolaLocal, no mensajes enviados ni consultas confirmadas. Los clics no confirman un contacto. No se estima la actividad anterior.",
+    "historicalChannel": "Actividad histórica · actualmente no disponible",
+    "profileViews": "Visitas al perfil",
+    "enquiries": "Nuevas consultas",
+    "contactActions": "Clics en botones de contacto",
+    "contactBreakdownSelected": "Clics en botones de contacto en el período seleccionado",
+    "actions": {
+      "holalocal": "Clics en el botón de mensajes",
+      "phone": "Clics en el botón de teléfono",
+      "email": "Clics en el botón de correo",
+      "whatsapp": "Clics en el botón de WhatsApp",
+      "website": "Clics en el sitio web"
+    }
   }
 }

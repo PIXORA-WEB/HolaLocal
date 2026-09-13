@@ -552,5 +552,20 @@
     "account": "Conta",
     "accountLabel": "Links da conta",
     "poweredBy": "Criado por PIXORA"
+  },
+  "businessInsights": {
+    "description": "Visualizações do perfil e cliques nos botões de contacto registados. Novos pedidos conta novas conversas HolaLocal, não mensagens enviadas nem pedidos confirmados. Os cliques não confirmam contacto. A atividade anterior não é estimada.",
+    "historicalChannel": "Atividade histórica · atualmente indisponível",
+    "profileViews": "Visualizações do perfil",
+    "enquiries": "Novos pedidos",
+    "contactActions": "Cliques nos botões de contacto",
+    "contactBreakdownSelected": "Cliques nos botões de contacto no período selecionado",
+    "actions": {
+      "holalocal": "Cliques no botão de mensagens",
+      "phone": "Cliques no botão de telefone",
+      "email": "Cliques no botão de e-mail",
+      "whatsapp": "Cliques no botão de WhatsApp",
+      "website": "Cliques no site"
+    }
   }
 }
