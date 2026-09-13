@@ -90,3 +90,20 @@ test('approved retention criteria appear once in each draft locale without enabl
  assert.match(copy,/does not automatically end or renew/)
  assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,null)
 })
+
+test('all locales distinguish service, interests, legal duties, consent and transfer safeguards',()=>{
+ for(const [code,content] of Object.entries(legalPageContent)){
+  const purpose=content.privacy.sections.find(s=>s.key==='purpose')
+  const providers=content.privacy.sections.find(s=>s.key==='providers')
+  assert.equal(purpose.paragraphs.length,1,code)
+  assert.ok(purpose.paragraphs[0].includes('Analytics'),code)
+  assert.equal(providers.paragraphs.length,2,code)
+  assert.ok(providers.paragraphs[1].includes('<email>hello@holalocal.es</email>'),code)
+ }
+ const purpose=legalPageContent.en.privacy.sections.find(s=>s.key==='purpose').paragraphs[0]
+ assert.match(purpose,/legitimate interests.*balanced against your rights/)
+ assert.match(purpose,/may object/)
+ assert.match(purpose,/legal obligations/)
+ assert.match(purpose,/separate consent.*withdraw/)
+ assert.match(legalPageContent.en.privacy.sections.find(s=>s.key==='providers').paragraphs[1],/standard contractual clauses where required/)
+})
