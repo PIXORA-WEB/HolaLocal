@@ -41,6 +41,8 @@ test('both legal pages identify the confirmed individual operator in all 17 lang
  for(const [code,content] of Object.entries(legalPageContent))for(const kind of ['privacy','terms']){
   const contact=content[kind].sections.find(section=>section.key==='contact')
   assert.ok(contact.paragraphs.some(text=>text.includes('Craig Evans')),code+'/'+kind)
+  assert.ok(contact.paragraphs.includes('Vista Hermosa, Santa Margarita, 11300 La Línea de la Concepción, Cádiz, Spain'),code+'/'+kind)
+  assert.doesNotMatch(contact.paragraphs.join(' '),/operator-supplied|apartment number|unverified/i)
  }
 })
 
