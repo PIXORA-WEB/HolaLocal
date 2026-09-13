@@ -5,7 +5,7 @@ export const deletionDisclosureEnglishTranslations = {
     "Our retention policy is to keep conversation history while at least one participant retains an account and the history remains needed. This does not mean recent login activity. We assess erasure requests separately, including personal information within message text.",
     "For non-review reports, our policy is to remove personal information 90 days after resolution, except for a specific documented ongoing need. Each preservation exception has a reason, responsible reviewer, next review date and ending condition. An overdue review does not automatically end or renew preservation. The separate customer-review report policy remains unchanged.",
     "Existing account acknowledgment records are preserved. After account deletion, our policy is to retain only minimal acknowledgment evidence justified by a specific documented need, with a review date, and remove it when that need ends.",
-    "The new retention controls are prepared but destructive cleanup is not enabled. These policy criteria do not mean automated cleanup is operating. Scheduled customer-review report cleanup is separate and also remains disabled."
+    "Scheduled cleanup of customer-review reports and business reports is enabled under the criteria described above. Business-report cleanup requires a trusted resolution date and excludes records under preservation holds. Manual conversation and acknowledgment cleanup and automatic account-deletion recovery remain disabled."
   ],
   "request": "Deleting your account removes your account profile and profile media. Limited records may remain, including consent records, moderation or safety reports, and historic conversation records, as explained in the"
 }

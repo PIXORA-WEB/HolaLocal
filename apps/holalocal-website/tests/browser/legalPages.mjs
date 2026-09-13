@@ -7,8 +7,9 @@ import {resolve} from 'node:path'
 import {BROWSER_TEST_CORE_ENVIRONMENT} from './browserTestEnvironment.mjs'
 import {analyticsEnglish} from '../../src/i18n/analyticsEnglish.js'
 import {analyticsTranslations} from '../../src/i18n/locales/analyticsTranslations.js'
+import {CURRENT_TERMS_EFFECTIVE_DATE} from '../../src/utils/policies.js'
 import {legalPageContent} from '../../src/i18n/locales/legalContent.js'
-Object.assign(process.env,BROWSER_TEST_CORE_ENVIRONMENT,{VITE_CUSTOMER_REVIEWS_ENABLED:'false'})
+Object.assign(process.env,BROWSER_TEST_CORE_ENVIRONMENT,{VITE_CUSTOMER_REVIEWS_ENABLED:'true',VITE_FIREBASE_PROJECT_ID:'demo-holalocal-functions',VITE_FIREBASE_AUTH_DOMAIN:'demo-holalocal-functions.firebaseapp.com',VITE_FIREBASE_STORAGE_BUCKET:'demo-holalocal-functions.appspot.com'})
 const output=resolve(process.env.HOLALOCAL_LEGAL_EVIDENCE??'../../../review-evidence/legal-review-launch/browser')
 await mkdir(output,{recursive:true})
 const server=await createServer({mode:'browser-test',server:{host:'127.0.0.1',port:4193,strictPort:true}})
@@ -26,7 +27,7 @@ try {
    for(const route of ['privacy','terms']) {
     await page.goto(`http://127.0.0.1:4193/${route}`)
     await page.locator('.legal-content__contents').waitFor()
-    await page.waitForFunction(label=>document.querySelector('.placeholder__label')?.textContent===label+' · 1.1',content.revisionNotice)
+    await page.waitForFunction(label=>document.querySelector('.placeholder__label')?.textContent===label,`${content.revisionNotice} · 1.1 · ${CURRENT_TERMS_EFFECTIVE_DATE}`)
     const headings=page.locator('.legal-content__sections h2')
     assert.deepEqual(await headings.allTextContents(),content[route].sections.map(s=>s.title),`${code}/${route}`)
     assert.equal(await page.locator('h1').count(),1)
