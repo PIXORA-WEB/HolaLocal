@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
+import { Linter } from 'eslint'
 import {
   adminEnglishTranslations,
   ownerEnglishRejectionTranslations,
@@ -48,6 +49,7 @@ const approvedResidualPaths = [
   'business.form.errors.savePermissionDenied',
   'business.form.errors.saveNetworkUnavailable',
   'business.form.errors.saveFailed',
+  'business.form.errors.savedRefreshFailed',
   'common.change',
   'common.changeImage',
   'common.loadingAccount',
@@ -96,10 +98,30 @@ const englishSources = {
 test('English authenticated residual contains exactly the approved authoritative leaves', () => {
   const residualLeaves = leafMap(englishAuthenticatedResidual)
   assert.deepEqual([...residualLeaves.keys()].sort(), approvedResidualPaths)
-  assert.equal(residualLeaves.size, 14)
+  assert.equal(residualLeaves.size, 15)
   for (const path of approvedResidualPaths) {
     assert.equal(residualLeaves.get(path), getPath(authenticatedTranslations.en, path))
   }
+})
+
+function stringLiterals(source) {
+  const values = []
+  const messages = new Linter().verify(source, [{
+    plugins: { literals: { rules: { collect: {
+      create: () => ({ Literal(node) {
+        if (typeof node.value === 'string') values.push(node.value)
+      } }),
+    } } } },
+    rules: { 'literals/collect': 'error' },
+  }])
+  assert.deepEqual(messages, [], 'translation source must parse successfully')
+  return values
+}
+
+test('literal inspection distinguishes whole values from substrings and detects duplicates', () => {
+  assert.deepEqual(stringLiterals(`const values = ['Contact support', 'Contact support if this continues.', "Contact support"]`),
+    ['Contact support', 'Contact support if this continues.', 'Contact support'])
+  assert.equal(stringLiterals(`const values = ['Contact support', "Contact support"]`).filter(value => value === 'Contact support').length, 2)
 })
 
 test('each residual value has one authoritative literal across its source and consumer', async () => {
@@ -111,13 +133,14 @@ test('each residual value has one authoritative literal across its source and co
     new URL('../src/i18n/locales/authenticatedTranslations.js', import.meta.url),
     'utf8',
   )
+  const literals = [...stringLiterals(source), ...stringLiterals(consumer)]
   for (const value of leafMap(englishAuthenticatedResidual).values()) {
-    const occurrences = `${source}\n${consumer}`.split(value).length - 1
+    const occurrences = literals.filter(literal => literal === value).length
     assert.equal(occurrences, 1, value)
   }
 })
 
-test('English residual composition adds 14 leaves without changing existing values', () => {
+test('English residual composition adds 15 leaves without changing existing values', () => {
   const withoutResidual = mergeLocale(
     ...ENGLISH_TRANSLATION_SOURCE_ORDER
       .filter((name) => name !== 'englishAuthenticatedResidual')
@@ -129,7 +152,7 @@ test('English residual composition adds 14 leaves without changing existing valu
   const additions = [...after.keys()].filter((path) => !before.has(path)).sort()
 
   assert.deepEqual(additions, approvedResidualPaths)
-  assert.equal(after.size - before.size, 14)
+  assert.equal(after.size - before.size, 15)
   for (const [path, value] of before) assert.equal(after.get(path), value, path)
 })
 
