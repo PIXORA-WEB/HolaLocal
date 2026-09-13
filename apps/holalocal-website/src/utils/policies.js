@@ -4,4 +4,5 @@ export {
   CURRENT_TERMS_EFFECTIVE_DATE,
   CURRENT_TERMS_VERSION,
   hasCurrentLegalConsent,
+  hasValidLegalConsent,
 } from '@holalocal/firebase-contract'

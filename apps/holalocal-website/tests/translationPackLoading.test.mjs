@@ -124,3 +124,15 @@ test('runtime source manifests retain the nine names and authoritative order', (
     assert.equal(LOCALE_TRANSLATION_SOURCE_ORDER.indexOf(name), position, name)
   }
 })
+
+test('review English is the single eager authority and remaining reviews load with the locale', async () => {
+  const { customerReviewEnglishTranslations } = await import('../src/i18n/customerReviewEnglishTranslations.js')
+  const { customerReviewTranslations } = await import('../src/i18n/customerReviewTranslations.js')
+  assert.equal(customerReviewTranslations.en, customerReviewEnglishTranslations)
+  const keys = Object.keys(customerReviewEnglishTranslations).sort()
+  for (const copy of Object.values(customerReviewTranslations)) assert.deepEqual(Object.keys(copy).sort(), keys)
+  const index = await readFile(new URL('../src/i18n/index.js', import.meta.url), 'utf8')
+  assert.doesNotMatch(index, /^import .* from ['"]\.\/customerReviewTranslations\.js['"]/m)
+  assert.match(index, /import\('\.\/customerReviewTranslations\.js'\)/)
+  assert.match(index, /englishResource\.customerReviews = customerReviewEnglishTranslations/)
+})

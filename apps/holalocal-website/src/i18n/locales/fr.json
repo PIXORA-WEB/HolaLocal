@@ -34,8 +34,10 @@
       "consentLegend": "Accords juridiques",
       "termsPrefix": "J’accepte les",
       "privacyPrefix": "J’ai lu la",
-      "consentRequired": "Acceptez les conditions et la politique de confidentialité avant de créer votre compte.",
-      "existingAccount": "Vous avez déjà un compte ?"
+      "consentRequired": "Consultez les deux documents et confirmez les deux déclarations pour continuer.",
+      "existingAccount": "Vous avez déjà un compte ?",
+      "ageConfirmation": "Je confirme avoir au moins 18 ans.",
+      "ageRequired": "Vous devez confirmer avoir au moins 18 ans pour créer un compte."
     },
     "verification": {
       "eyebrow": "Protection de votre compte",

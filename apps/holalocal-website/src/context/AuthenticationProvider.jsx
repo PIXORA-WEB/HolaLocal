@@ -1,3 +1,4 @@
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from '../utils/policies.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   loginUser,
@@ -229,6 +230,8 @@ function AuthenticationProvider({ children }) {
     const response = await acceptLegalConsentCallable({
       acceptTerms: true,
       acceptPrivacy: true,
+      termsVersion: CURRENT_TERMS_VERSION,
+      privacyVersion: CURRENT_PRIVACY_VERSION,
     })
     const profile = await refreshUserProfile(user)
     return { consent: response.data, profile }

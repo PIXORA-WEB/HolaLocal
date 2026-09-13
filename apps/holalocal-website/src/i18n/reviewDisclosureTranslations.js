@@ -139,8 +139,15 @@ export const reviewDisclosureTranslations = {
   ]
 }
 
-export function reviewPrivacySection(code) {
+
+export function reviewPrivacySection(code, availability) {
   const [title, identity, provider, retention] = reviewDisclosureTranslations[code]
-  const date = new Intl.DateTimeFormat(code, {year:'numeric',month:'long',day:'numeric',timeZone:'UTC'}).format(new Date('2026-09-10T00:00:00Z'))
-  return {key:'reviews',title:`${title} — ${date}`,paragraphs:[identity,provider,retention]}
+  return { key: 'reviews', title, paragraphs: [availability, identity, provider, retention] }
+}
+
+
+export function reviewTermsSection(code, availability, text) {
+  return { key: 'reviews', title: reviewDisclosureTranslations[code][0], paragraphs: [
+    availability, text, reviewDisclosureTranslations[code][1],
+  ] }
 }

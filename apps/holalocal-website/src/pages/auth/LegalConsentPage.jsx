@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import FormFieldError from '../../components/common/FormFieldError.jsx'
 import useAuthentication from '../../hooks/useAuthentication.js'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
-import { hasCurrentLegalConsent } from '../../utils/policies.js'
+import { hasValidLegalConsent } from '../../utils/policies.js'
 import { intendedLocation, internalPathFromLocation } from '../../utils/internalNavigation.js'
 
 function nextAccountPath(profile, intended) {
@@ -31,7 +31,7 @@ function LegalConsentPage() {
   const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
-    if (!hasCurrentLegalConsent(userProfile)) return
+    if (!hasValidLegalConsent(userProfile)) return
     navigate(nextAccountPath(userProfile, intended), {
       replace: true,
       state: { from: intended },

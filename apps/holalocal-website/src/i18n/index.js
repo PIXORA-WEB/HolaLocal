@@ -1,6 +1,6 @@
 import { analyticsEnglish } from './analyticsEnglish.js'
 import {adminCustomerReviewNavigation} from './adminCustomerReviewNavigation.js'
-import { customerReviewTranslations } from './customerReviewTranslations.js'
+import { customerReviewEnglishTranslations } from './customerReviewEnglishTranslations.js'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { supportedUILanguages } from '../utils/languages.js'
@@ -79,7 +79,7 @@ const englishResource = composeEnglishTranslationResource({
 })
 englishResource.analytics = analyticsEnglish
 englishResource.adminCustomerReviews = {...adminCustomerReviewNavigation.en}
-  englishResource.customerReviews = customerReviewTranslations.en
+englishResource.customerReviews = customerReviewEnglishTranslations
 const loadedLocales = new Set(['en'])
 const localeLoadPromises = new Map()
 let languageChangeSequence = 0
@@ -110,6 +110,7 @@ export async function loadLocale(languageCode) {
     import('./accountDeletionTranslations.js'),
     import('./locales/nonEnglishTranslationPacks.js'),
     import('./locales/analyticsTranslations.js'),
+    import('./customerReviewTranslations.js'),
   ]).then(([
     { default: baseLocale },
     { authenticatedTranslations },
@@ -121,6 +122,7 @@ export async function loadLocale(languageCode) {
     { accountDeletionTranslations },
     { getNonEnglishTranslationSlices },
     { analyticsTranslations },
+    { customerReviewTranslations },
   ]) => {
     const translationPacks = getNonEnglishTranslationSlices(code)
     const resource = composeLocaleTranslationResource({

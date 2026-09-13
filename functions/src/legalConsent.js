@@ -4,6 +4,10 @@ import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
   hasCurrentLegalConsent,
+  hasValidLegalConsent,
+  isSupportedLegalVersionPair,
+  hasValidTermsAcceptance,
+  hasValidPrivacyAcknowledgment,
 } from '@holalocal/firebase-contract'
 
 function requireUid(uid) {
@@ -46,22 +50,22 @@ function minimalUserProfile({ uid, email, timestamp }) {
   }
 }
 
-function consentUpdate(timestamp) {
+function consentUpdate(timestamp, profile, termsVersion, privacyVersion) {
   return {
     termsAccepted: true,
-    termsAcceptedAt: timestamp,
-    termsVersion: CURRENT_TERMS_VERSION,
+    termsAcceptedAt: hasValidTermsAcceptance(profile) ? profile.termsAcceptedAt : timestamp,
+    termsVersion: hasValidTermsAcceptance(profile) ? profile.termsVersion : termsVersion,
     privacyAccepted: true,
-    privacyAcceptedAt: timestamp,
-    privacyVersion: CURRENT_PRIVACY_VERSION,
+    privacyAcceptedAt: hasValidPrivacyAcknowledgment(profile) ? profile.privacyAcceptedAt : timestamp,
+    privacyVersion: hasValidPrivacyAcknowledgment(profile) ? profile.privacyVersion : privacyVersion,
   }
 }
 
-function result() {
+function result(profile, newlyRecorded = false) {
   return {
-    current: true,
-    termsVersion: CURRENT_TERMS_VERSION,
-    privacyVersion: CURRENT_PRIVACY_VERSION,
+    current: (newlyRecorded && profile.termsVersion === CURRENT_TERMS_VERSION && profile.privacyVersion === CURRENT_PRIVACY_VERSION) || hasCurrentLegalConsent(profile),
+    termsVersion: profile.termsVersion,
+    privacyVersion: profile.privacyVersion,
   }
 }
 
@@ -71,6 +75,9 @@ export async function acceptLegalConsent({
   emailVerified,
   acceptTerms,
   acceptPrivacy,
+  // Older released clients displayed version1.0 and did not send version fields.
+  termsVersion = '1.0',
+  privacyVersion = '1.0',
   db,
   timestampFactory = () => FieldValue.serverTimestamp(),
 }) {
@@ -79,29 +86,29 @@ export async function acceptLegalConsent({
     throw new HttpsError('failed-precondition', 'email-verification-required')
   }
   requireAcknowledgements(acceptTerms, acceptPrivacy)
+  if (!isSupportedLegalVersionPair(termsVersion, privacyVersion)) throw new HttpsError('invalid-argument', 'unsupported-legal-version')
   const userRef = db.doc(`users/${safeUid}`)
 
-  await db.runTransaction(async (transaction) => {
+  return db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(userRef)
     const profile = snapshot.exists ? snapshot.data() : null
 
     if (profile && (profile.accountStatus !== 'active' || profile.deletionRequestedAt != null)) {
       throw new HttpsError('failed-precondition', 'account-not-active')
     }
-    if (hasCurrentLegalConsent(profile)) return
+    if (hasValidLegalConsent(profile)) return result(profile)
 
     const timestamp = timestampFactory()
-    const consent = consentUpdate(timestamp)
+    const consent = consentUpdate(timestamp, profile, termsVersion, privacyVersion)
     if (profile) {
       transaction.update(userRef, consent)
-      return
+      return result(consent, true)
     }
 
     transaction.set(userRef, {
       ...minimalUserProfile({ uid: safeUid, email, timestamp }),
       ...consent,
     })
+    return result(consent, true)
   })
-
-  return result()
 }

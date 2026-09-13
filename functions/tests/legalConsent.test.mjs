@@ -39,6 +39,8 @@ async function accept(db, overrides = {}) {
     emailVerified: true,
     acceptTerms: true,
     acceptPrivacy: true,
+    termsVersion: CURRENT_TERMS_VERSION,
+    privacyVersion: CURRENT_PRIVACY_VERSION,
     db,
     timestampFactory: () => timestamp,
     ...overrides,
@@ -194,4 +196,41 @@ test('concurrent acceptance preserves a complete consent pair and unrelated stat
   assert.equal(stored.privateField, original.privateField)
   assert.deepEqual(stored.roles, original.roles)
   assert.equal([...db.store.keys()].filter((path) => path === 'users/user-1').length, 1)
+})
+
+test('valid historical evidence is preserved and is not reported as current agreement', async () => {
+ const historic=existingProfile({termsAccepted:true,termsAcceptedAt:timestamp,termsVersion:'1.0',privacyAccepted:true,privacyAcceptedAt:timestamp,privacyVersion:'1.0'})
+ const db=database(historic)
+ const response=await accept(db)
+ assert.equal(response.current,false)
+ assert.equal(response.termsVersion,'1.0')
+ assert.deepEqual(db.store.get('users/user-1'),historic)
+})
+
+test('recovering a missing privacy acknowledgment preserves valid historical Terms evidence', async () => {
+ const historic=existingProfile({termsAccepted:true,termsAcceptedAt:timestamp,termsVersion:'1.0',privacyAccepted:false})
+ const db=database(historic)
+ const response=await accept(db)
+ const saved=db.store.get('users/user-1')
+ assert.equal(saved.termsVersion,'1.0')
+ assert.deepEqual(saved.termsAcceptedAt,timestamp)
+ assert.equal(saved.privacyVersion,CURRENT_PRIVACY_VERSION)
+ assert.equal(response.current,false)
+})
+
+test('old clients record only the1.0 documents they displayed; unknown versions are rejected', async () => {
+ const db=database()
+ const response=await accept(db,{termsVersion:undefined,privacyVersion:undefined})
+ assert.equal(response.current,false)
+ assert.equal(db.store.get('users/user-1').termsVersion,'1.0')
+ await assert.rejects(()=>accept(database(),{termsVersion:'99'}),e=>e.message==='unsupported-legal-version')
+})
+
+test('callable boundary forwards displayed versions and retains the legacy payload contract', async () => {
+ const {handleAcceptLegalConsent}=await import('../src/index.js')
+ for(const [data,expected] of [[{acceptTerms:true,acceptPrivacy:true},'1.0'],[{acceptTerms:true,acceptPrivacy:true,termsVersion:'1.1',privacyVersion:'1.1'},'1.1']]) {
+  const db=database()
+  await handleAcceptLegalConsent({auth:{uid:'user-1',token:{email_verified:true,email:'synthetic@example.test'}},data},db)
+  assert.equal(db.store.get('users/user-1').termsVersion,expected)
+ }
 })
