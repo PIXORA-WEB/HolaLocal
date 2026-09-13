@@ -35,6 +35,16 @@ try{for(const width of [390,1440]){
  const context=await browser.newContext({viewport:{width,height:1000}});let external=0
  await context.route('**/*',r=>{if(new URL(r.request().url()).hostname==='127.0.0.1')return r.continue();external++;return r.abort()})
  const page=await context.newPage();page.on('pageerror',e=>console.log('Browser error:',e.message))
+ async function selectMetric(panel, metric) {
+  const trigger=panel.locator('#business-insights-metric')
+  await trigger.focus();await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Home')
+  for(let i=0;i<['profileViews','enquiries','contactActions'].indexOf(metric);i++)await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Enter')
+  assert.equal(await trigger.getAttribute('aria-expanded'),'false')
+  assert.ok(await trigger.evaluate(e=>e===document.activeElement&&e.matches(':focus-visible')))
+ }
+
  for(const scenario of ['messaging','populated','sparse','historical','inactive','empty','unrecorded','error']){
   await page.goto('http://127.0.0.1:4198/insights-preview?scenario='+scenario)
   const panel=page.locator('.business-insights');await panel.locator(scenario==='error'?'[role="alert"]':'.business-insights__all-time').waitFor()
@@ -53,7 +63,7 @@ try{for(const width of [390,1440]){
    await page.keyboard.press('Enter')
    await panel.getByText('Exact daily values',{exact:true}).focus();await page.keyboard.press('Enter')
    for(const metric of ['profileViews','enquiries','contactActions']){
-    await panel.locator('select').selectOption(metric)
+    await selectMetric(panel,metric)
     assert.equal(await panel.locator('tbody tr').count(),scenario==='unrecorded'?14:30)
     const values=await panel.locator('tbody td').allTextContents()
     const unrecorded=values.filter(v=>v==='Not recorded').length
@@ -71,7 +81,7 @@ try{for(const width of [390,1440]){
     assert.ok(await panel.locator('tbody tr').last().isVisible())
 
    }
-   await panel.locator('select').selectOption('profileViews');await panel.getByText('Exact daily values',{exact:true}).click()
+   await selectMetric(panel,'profileViews');await panel.getByText('Exact daily values',{exact:true}).click()
    if(scenario==='historical') {
     await panel.locator('#business-insights-range').click();await page.getByRole('option',{name:'Custom dates',exact:true}).click()
     await panel.locator('input[type=date]').first().fill('2026-09-07');await panel.locator('input[type=date]').last().fill('2026-09-13')
@@ -81,6 +91,7 @@ try{for(const width of [390,1440]){
     await page.reload();await panel.locator('.business-insights__breakdown dt small').waitFor()
    }
   }
+  if(scenario==='populated'){await panel.locator('#business-insights-metric').click();await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));const box=await panel.boundingBox();await page.screenshot({path:resolve(output,`metric-open-${width}.png`),fullPage:true,clip:box});await page.keyboard.press('Escape')}
   await page.evaluate(()=>{document.activeElement?.blur();window.scrollTo({top:0,behavior:'instant'})});
   await page.screenshot({path:resolve(output,`dashboard-${scenario}-${width}.png`),fullPage:true});
   const bounds=await panel.boundingBox();await page.screenshot({path:resolve(output,`${scenario}-${width}.png`),fullPage:true,clip:bounds});results.push({width,scenario})
@@ -88,7 +99,19 @@ try{for(const width of [390,1440]){
  for(const language of ['en','es','fr','de','it','pt','nl','cs','da','fi','hu','no','pl','ro','sk','sv','uk']){
   await page.evaluate(l=>localStorage.setItem('holalocal.uiLanguage',l),language)
   await page.goto('http://127.0.0.1:4198/insights-preview?scenario=historical');await page.locator('.business-insights__breakdown dt small').waitFor()
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),language);results.push({width,language})
+  const panel=page.locator('.business-insights')
+  for(const metric of ['profileViews','enquiries','contactActions']) {
+   await selectMetric(panel,metric)
+   await panel.locator('#business-insights-metric').click()
+   const menu=panel.locator('#business-insights-metric-menu')
+   assert.equal(await menu.getByRole('option').count(),3)
+   assert.ok(await menu.evaluate(e=>e.scrollWidth<=e.clientWidth+1),language+' menu width')
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),language)
+   await page.keyboard.press('Escape')
+  }
+  const styles=await panel.evaluate(e=>['business-insights-range','business-insights-metric'].map(id=>{const s=getComputedStyle(e.querySelector('#'+id));return ['fontFamily','fontSize','fontWeight','minHeight','padding','borderRadius'].map(k=>s[k])}))
+  assert.deepEqual(styles[0],styles[1],language+' authoritative dropdown styling')
+  results.push({width,language})
  }
  assert.equal(external,0);await context.close()
 }await writeFile(resolve(output,'browser-results.json'),JSON.stringify(results,null,2));console.log(results.length+' checks passed; zero external requests')

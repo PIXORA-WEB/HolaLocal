@@ -29,7 +29,7 @@ Affected metric wording is translated in all 17 original locale resources. Exist
 - The new actual managed/public projection regression passes, including private overrides, hidden values, lifecycle and deletion state.
 - Full compatibility suite: 30 pass, 7 fail. Unchanged main-equivalent source with the same dependencies: 29 pass, the same 7 fail. These are existing broader locale manifest/composition/legal assertions; no coverage suppressed or changed to mask them.
 - 50 local browser checks: 390/1440 widths, messaging-only, populated, sparse, historical channels, inactive business, empty/error, period changes/reload, all three metric selections, exact daily values, mixed/entirely unrecorded periods, preserved zero bar heights, full-width chart sizing, default-closed keyboard disclosures and table End-key scrolling, 17-language wrapping. Fixtures render the actual BusinessDashboardPage within SiteLayout and BusinessLayout. All external requests blocked; zero external requests occurred.
-- Lint, locale parity (17), fresh production build and unchanged 200 kB budget pass. Local initial JS: 190.25 kB gzip; Vercel's configured preview build may differ.
+- Lint, locale parity (17), fresh production build and unchanged 200 kB budget pass. Local initial JS: 190.24 kB gzip; Vercel's configured preview build may differ.
 
 Synthetic fixtures exist only in `tests/browser/businessInsights.mjs`, loaded by a programmatic test server. They are not imported into runtime pages or the production build. Run from apps/holalocal-website:
 
@@ -51,3 +51,11 @@ Other scenarios: messaging, populated, sparse, inactive, empty, error. Locale us
 ## Release boundary
 
 Appearance approval and production merge remain pending. The PR's automatic Vercel preview uses actual guarded application routes, without synthetic fixtures. No production tracking traffic was generated. No Firebase deployment is required. Preserve current production environment and review/translation/retention/Analytics settings. Original mixed workspace, older insights branch and backups remain untouched.
+
+## Shared Metric dropdown
+
+The original panel uses SelectField with the existing select-field--form class, as the date-range selector does. Removed the native select styling; only the surrounding layout specifies a responsive 18rem maximum-width container. Existing labels in all 17 languages are reused unchanged. No new component or design variant.
+
+Browser checks exercise all three choices by keyboard in all 17 languages at both widths, menu overflow, Escape/focus return, and matching computed font family/size/weight, minimum height, padding and radius against the date-range control. Existing metric/table/coverage checks continue to pass.
+
+[Open Metric menu — mobile](metric-mobile.png) · [desktop](metric-desktop.png)

@@ -170,7 +170,7 @@ export default function BusinessInsightsPanel({ businessId, status, business }) 
           <section ref={chartContainer} className="business-insights__activity" aria-labelledby="insights-activity-title">
             <div className="business-insights__chart-heading">
               <h3 id="insights-activity-title">{t('businessInsights.activityTitle')}</h3>
-              <label>{t('businessInsights.metric')}<select value={metric} onChange={(event) => setMetric(event.target.value)}>{metricKeys.map((key) => <option value={key} key={key}>{t(`businessInsights.${key}`)}</option>)}</select></label>
+              <div><label htmlFor="business-insights-metric">{t('businessInsights.metric')}</label><SelectField id="business-insights-metric" ariaLabel={t('businessInsights.metric')} className="select-field--form" value={metric} onChange={setMetric} options={metricKeys.map((key) => ({ value: key, label: t(`businessInsights.${key}`) }))} /></div>
             </div>
             {hasActivity || hasUnrecordedDays ? <svg className="business-insights__chart" viewBox={`0 0 ${chartWidth} 200`} aria-hidden="true">
               <defs><pattern id={unrecordedPattern} width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#f1f5f9" /><path d="M0 8 8 0" stroke="#cbd5e1" strokeWidth="1" /></pattern></defs>
