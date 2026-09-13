@@ -1,33 +1,23 @@
-# Current paused-work and launch status
+# Current paused-work and release status — 13 September 2026
 
-Remote main verified 12 September 2026: 203895227b41c03b87e8edc4a33f57134055a4b8 (PR46). Released website fixes and consent-based Analytics are preserved. No new Analytics traffic or production mutations were used for this retention integration. Earlier baseline, failed diagnostic and backend-only instructions remain historical evidence, not current execution instructions.
+Main203895227b41c03b87e8edc4a33f57134055a4b8 verified by fetch. All released onboarding/location, business-save, Services, media feedback/deletion, Profile/Admin, mobile tap and consent-based Analytics fixes are preserved. Original mixed workspace/recovery backups remain untouched. The historical144files were45modifiedtracked+99untracked;598was a broader fingerprint, not a new count today.
 
-## Integrated and preserved
+## Completed backend and evidence
 
-PR25–43/45 retain onboarding, locations, save, media display/deletion, Services, Profile/Business, Admin, mobile tap-highlight and optional Analytics fixes. PR46 provides the dedicated EU Translation runtime identity. Original mixed work and recovery snapshots remain untouched. The historical 144 preserved files were45 modified tracked plus99 untracked; the broader recovery fingerprint was598files. No new full fingerprint verification is claimed.
+The exact eight-Function consent/retention backend and scoped rules from78ff238cc04c6f18143a0d21ebe955177fd1ad4e are deployed disabled. New business-report worker hourly/authenticated,50candidate bound/transactional holds/failure isolation, explicitfalse gate. Three metrics/fourdisabledpolicies created; existing alerts unchanged. Natural23:46Madrid12September execution200/disabled with unchanged report/progress fingerprints. Browser admin read-only result allowedtrue/cleanupEnabledfalse user-confirmed13September. Valid non-admin remains pending a suitable existing session; emulator verification is retained separately.
 
-Reviews/translation/monitoring code is integrated but public review/provider/retention/recovery controls remain closed. The dedicated-account runtime Translation diagnostic and isolated named-database cache verification completed successfully; retain those records and do not repeat them. Memory-only provider tests and real Firestore-cache persistence are separately recorded. First genuine published review acceptance necessarily remains after separately approved activation; no synthetic public reviews are permitted.
+Dedicated EU Translation runtime and isolated named-database cache checks completed; do not repeat. Monitoring test delivery was received; no resend. Customer reviews/provider, review-report retention and recovery remain closed. The first genuine approved review translation/cache check is post-activation acceptance, not a circular blocker.
 
-## PR44: unpublished Privacy/Terms and historical acknowledgments
+## Pending website publication (#44 then #47)
 
-Dependency head27d9075608f29c93298a91a69c51892dc650cda3. Authoritative pages,17languages, registration18+ confirmation and nonblocking policy transition are prepared. Public browsing and existing-account access are preserved. Versions1.0/1.1 are compatible; existing records/timestamps are not overwritten. Informational notice dismissal is not agreement. Effective dates remain unset until actual approved publication.
+Original Privacy/Terms17language resources now include approved retention directions, separate Analytics consent, registration18+, nonblocking historical1.0/1.1compatibility, purpose/legal-basis and provider-transfer safeguards. Earlier purpose wording was replaced in place. No new page, service, CSS override or policy workflow. Linked contents/layout remain original components. No native/legal certification claimed.
 
-Craig Evans is the individual operator. Postal address/applicable tax particulars remain pending in the private checklist; do not repeatedly ask or invent them. Support-mailbox retention and the three retention directions are already approved, not outstanding questions. Privacy wording must distinguish criteria from cleanup actually operating. Provider contract archival details are not automatically publication blockers. Legal/native-language review is not certified. Keep the remaining narrow legal-basis/transfer/counter disclosure assessment separate from a broad compliance audit.
+Operator Craig Evans confirmed. Postal address/applicable individual tax particulars remain pending; actual publication date remains unset until approved release. Historical acknowledgments stay intact and notice dismissal is not agreement. No retention policy decision remains open. Provider agreement archival details/old invoices/separatecheckbox are not automatically blockers.
 
-## Retention child: prepared, not deployed
+The current publication edits change no deployed backend/runtime contracts/rules. Do not redeploy those resources for website wording. Final PR heads/tree, bundle measurement and previews are recorded in durable release evidence after commits. Preserve original three retention commits c08edbb,9d1f484,e975b7a and normal merge ancestry. Known200kBbudget failure remains visible with measured candidate impact; no increase or required-check bypass.
 
-The three backend commits c08edbb,9d1f484,e975b7a are retained, with PR44 compatibility merged and the contract regenerated. Existing Admin Account deletions now hosts one bounded workbench for acknowledgment assessments, business-report handling and conversation assessments. No new business-status workflow. Private assessment collections, trusted report metadata protection, explicit five-record execution and closed-by-default RECORD_RETENTION_CLEANUP_ENABLED are described in RETENTION_PREPARATION.md. No new schedule or index; one new admin callable. New-completion assessment metadata is immediate on future backend deployment, but destruction remains separately gated.
+## Independent remaining tracks
 
-Integration removes the unpublished owner-readable evidenceRetention field in favor of private acknowledgmentRetention documents. It adds no CSS override layer or competing page/service. Final-source verification and measured bundle size belong to the release report. The200KiB budget is unchanged; known failures remain visible.
+See REVIEWS_FINAL_LAUNCH_PACKAGE.md for current publication/review activation scope and rollback. It supersedes old failed-runtime/unexportedworker/sevenexport/dailyqueue recommendations. Customer-review gates, business-report cleanup, review-report cleanup, authorized-erasure recovery and manual judgment cleanup are distinct approvals. No daily queue checking or staffed-hours/backup promise; Craig responds when available athello@holalocal.es. EUR30Translation spending alert is unchanged, not a cap; no new quotas approved.
 
-## Separate remaining work
-
-Original upload/retry improvements remain unverified; successful ordinary uploads do not prove failure recovery. Approved-business maintenance remains a proposal. Reviews activation does not depend on deploying these unrelated retention helpers unless public wording promises their operation. Monitoring recipient/limitations and the€30Translation alert remain unchanged. Full website audit follows backlog integration. No additional product policy decisions are introduced here.
-
-## Current correction
-
-Business cleanup dates and full-collection due views are prepared; draft criteria now explicitly distinguish policy from disabled execution in17languages. Daily manual queue checking is not required or proposed. Business-report-only automated execution is an independently gated offline helper and proposal, without a scheduled Function export or cloud changes; see BUSINESS_REPORT_AUTOMATION_PROPOSAL.md. Judgment-based decisions remain explicit admin actions.
-
-## Final worker preparation
-
-The hourly sweepResolvedBusinessReports export and three metric/four disabled-policy payloads are prepared. See BUSINESS_REPORT_WORKER_RELEASE.md for the authoritative eight-Function source/deployment order, exact service-scoped Scheduler IAM and separate activation approval. The worker keeps its own closed gate,50candidate bound and transactional holds. No resources or notifications created; no daily queue requirement. Older proposal/helper-only instructions are superseded. PR44 remains0c0792826a9fec4bb0fed868eb038fcfe8dce968.
+Original upload/retry improvements remain separately unverified; ordinary successful uploads do not verify failure recovery. Approved-business maintenance is still a separate proposal. Full website audit follows backlog integration. No new feature or moderation policy introduced by this batch.
