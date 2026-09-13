@@ -38,11 +38,35 @@ export function prepare({projectId,notificationChannels=[]}={}) {
  ]
  return {projectId,phase:'offline-preparation-only',readyToNotify:false,metrics,policies,manualChecks:['When available: open reports older than7days; no automatic close/visibility changes.','When available: account deletion requests stuck/failed; caught domain failures may not emit ERROR. Use existing private admin queue, no new broad data projection.','Craig: hello@holalocal.es, Europe/Madrid, checks when available; no staffed hours, response guarantee or backup. Verify delivery and automatic safeguards before arming alerts; spending limits undecided.']}
 }
+// Separate business-report responsibility; does not alter existing review policies.
+export function prepareBusinessReportMonitoring({projectId,notificationChannels=[]}={}) {
+ prepare({projectId,notificationChannels}) // Reuse authoritative input validation; no cloud calls.
+ const service='sweepresolvedbusinessreports',job='firebase-schedule-sweepResolvedBusinessReports-europe-west1'
+ const worker=`resource.type="cloud_run_revision" AND resource.labels.project_id="${projectId}" AND resource.labels.location="europe-west1" AND resource.labels.service_name="${service}"`
+ const scheduler=`resource.type="cloud_scheduler_job" AND resource.labels.project_id="${projectId}" AND resource.labels.location="europe-west1" AND resource.labels.job_id="${job}"`
+ const completed=`${worker} AND jsonPayload.message="business-report-retention" AND jsonPayload.outcome="complete" AND jsonPayload.disabled=false`
+ const metrics=[
+  {name:'holalocal_business_report_scheduler_success',filter:`${scheduler} AND jsonPayload."@type"="type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished" AND httpRequest.status>=200 AND httpRequest.status<300`},
+  {name:'holalocal_business_report_cleanup_completion',filter:completed},
+  {name:'holalocal_business_report_capacity',filter:`${completed} AND jsonPayload.pageLimitReached=true AND (jsonPayload.removed>0 OR jsonPayload.failed>0 OR jsonPayload.needsAssessment>0)`},
+ ].map(metric=>({...metric,description:'Count only; no record identifiers or text.',metricDescriptor:{metricKind:'DELTA',valueType:'INT64',unit:'1'}}))
+ const policy=(id,condition,notes,log=false)=>({displayName:`HolaLocal business-report retention: ${id}`,enabled:false,combiner:'OR',notificationChannels:[...notificationChannels],conditions:[{displayName:id,...condition}],documentation:{content:notes+' Craig checks when available; no staffed hours, response guarantee or backup. Never release holds to resolve an alert. See docs/BUSINESS_REPORT_WORKER_RELEASE.md.',mimeType:'text/markdown'},alertStrategy:{autoClose:'604800s',...(log?{notificationRateLimit:{period:'86400s'}}:{})},userLabels:{feature:'business-report-retention',managed_by:'reviewed-local-plan'}})
+ const threshold=(index,comparison,value)=>({conditionThreshold:{filter:`resource.type="${index===0?'cloud_scheduler_job':'cloud_run_revision'}" AND resource.labels.project_id="${projectId}" AND resource.labels.location="europe-west1" AND metric.type="logging.googleapis.com/user/${metrics[index].name}"`,comparison,thresholdValue:value,duration:'300s',...(index<2?{evaluationMissingData:'EVALUATION_MISSING_DATA_ACTIVE'}:{}),aggregations:[{alignmentPeriod:'7200s',perSeriesAligner:'ALIGN_SUM',crossSeriesReducer:'REDUCE_SUM'}],trigger:{count:1}}})
+ const policies=[
+  policy('failure-or-assessment-required',{conditionMatchedLog:{filter:`(${scheduler} AND jsonPayload."@type"="type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished" AND (severity>=ERROR OR httpRequest.status>=300 OR jsonPayload.status:*)) OR (${worker} AND (severity>=ERROR OR (jsonPayload.message="business-report-retention" AND jsonPayload.outcome="complete" AND (jsonPayload.failed>0 OR jsonPayload.needsAssessment>0))))`}},'One failure channel covers delivery, runtime and partial failures. Held-only and disabled success do not match. Investigate unsupported records without fabricating resolution dates.',true),
+  policy('scheduler-missing-success',threshold(0,'COMPARISON_LT',1),'No delivery success over120minutes for5minutes. Establish a real natural-run metric series before arming; no-series-from-birth is not proven detection.'),
+  policy('cleanup-missing-completion',threshold(1,'COMPARISON_LT',1),'Arm only after separately approved activation and first enabled completion. Scheduler200/disabled success does not prove cleanup. First-run failures use the failure policy.'),
+  policy('sustained-capacity',threshold(2,'COMPARISON_GT',1),'At least2 non-held-only full pages in120minutes for5minutes: capacity investigation signal, not proof of a precise backlog count. Preserved-only pages do not match. Do not loosen eligibility or holds.'),
+ ]
+ return {projectId,phase:'offline-preparation-only',readyToNotify:false,metrics,policies,activationOrder:['Create all policies disabled. Verify existing channel; send no test email.','Establish natural Scheduler-success series with cleanup closed.','After separate alert approval, arm failure and delivery absence coverage.','After separate destructive activation approval, arm capacity and bootstrap completion coverage from first enabled completion.']}
+}
+
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
- const [projectId,directory,...notificationChannels]=process.argv.slice(2)
+ const businessReports=process.argv.includes('--business-reports')
+ const [projectId,directory,...notificationChannels]=process.argv.slice(2).filter(arg=>arg!=='--business-reports')
  if(!directory)throw new Error('Usage: node scripts/reviews-operations/prepare.mjs PROJECT OUTPUT_DIRECTORY [EXISTING_CHANNEL_RESOURCE ...]')
- const plan=prepare({projectId,notificationChannels});await mkdir(directory,{recursive:true});await writeFile(resolve(directory,'monitoring-plan.json'),JSON.stringify(plan,null,2)+'\n')
+ const plan=(businessReports?prepareBusinessReportMonitoring:prepare)({projectId,notificationChannels});await mkdir(directory,{recursive:true});await writeFile(resolve(directory,'monitoring-plan.json'),JSON.stringify(plan,null,2)+'\n')
  for(const [i,p] of plan.policies.entries())await writeFile(resolve(directory,`policy-${i+1}.json`),JSON.stringify(p,null,2)+'\n')
  for(const m of plan.metrics)await writeFile(resolve(directory,m.name+'.json'),JSON.stringify(m,null,2)+'\n')
- console.log('Prepared three log metrics and twelve DISABLED policies locally. Nothing created or notified; cloud validation still required.')
+ console.log(`Prepared ${plan.metrics.length} log metrics and ${plan.policies.length} DISABLED policies locally. Nothing created or notified; cloud validation still required.`)
 }

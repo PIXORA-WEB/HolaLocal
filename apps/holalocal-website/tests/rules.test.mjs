@@ -2453,3 +2453,34 @@ test('complete profile transactions reject unauthorized states and payloads atom
     })
   }
 })
+
+
+test('retention decisions stay private and trusted report metadata cannot be forged or deleted', async () => {
+  await environment.withSecurityRulesDisabled(async context => {
+    const db = context.firestore()
+    await setDoc(doc(db, 'acknowledgmentRetention', 'customer'), { decision: { reason: 'private assessment' } })
+    await setDoc(doc(db, 'conversationRetention', 'private-case'), { decision: { reason: 'private assessment' } })
+    await setDoc(doc(db, 'reports', 'legacy-retention'), { status: 'open', targetType: 'business' })
+    await setDoc(doc(db, 'reports', 'trusted-retention'), { status: 'resolved', targetType: 'business', resolutionVersion: 1, resolvedAt: Timestamp.now(), retentionDecision: { state: 'held' } })
+  })
+  for (const context of [environment.unauthenticatedContext(), environment.authenticatedContext('customer'), environment.authenticatedContext('admin', { admin: true })]) {
+    for (const [collectionName, id] of [['acknowledgmentRetention', 'customer'], ['conversationRetention', 'private-case']]) {
+      const ref = doc(context.firestore(), collectionName, id)
+      await assertFails(getDoc(ref))
+      await assertFails(setDoc(ref, { decision: { state: 'released' } }))
+    }
+  }
+  for (const [uid, claims] of [['moderator', { moderator: true }], ['admin', { admin: true }]]) {
+    const db = environment.authenticatedContext(uid, claims).firestore()
+    await assertSucceeds(getDoc(doc(db, 'reports', 'trusted-retention')))
+    await assertSucceeds(updateDoc(doc(db, 'reports', 'legacy-retention'), { assignedTo: uid }))
+    for (const patch of [{ resolvedAt: Timestamp.now() }, { resolutionVersion: 1 }, { retentionDecision: { state: 'released' } }]) {
+      await assertFails(updateDoc(doc(db, 'reports', 'legacy-retention'), patch))
+    }
+    for (const field of ['resolvedAt', 'resolutionVersion', 'retentionDecision']) {
+      await assertFails(updateDoc(doc(db, 'reports', 'trusted-retention'), { [field]: deleteField() }))
+    }
+    await assertFails(deleteDoc(doc(db, 'reports', 'trusted-retention')))
+  }
+  await assertFails(updateDoc(doc(environment.authenticatedContext('customer').firestore(), 'reports', 'legacy-retention'), { status: 'resolved' }))
+})

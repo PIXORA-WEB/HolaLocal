@@ -40,3 +40,29 @@ test('unattended recovery and partial retention failures get counts-only, disabl
  assert.match(p.metrics[2].filter,/account-deletion-recovery/)
  assert.match(p.policies.find(v=>v.displayName.endsWith('retention-record-failure')).conditions[0].conditionMatchedLog.filter,/failedRecords>0/)
 })
+
+test('business-report monitoring is separate, disabled and scoped without review policy drift',async()=>{
+ const {prepareBusinessReportMonitoring}=await import('./prepare.mjs')
+ const plan=prepareBusinessReportMonitoring({projectId:'holalocal-491c9',notificationChannels:['projects/holalocal-491c9/notificationChannels/13796860726352907332']})
+ assert.equal(plan.metrics.length,3);assert.equal(plan.policies.length,4)
+ assert.equal(plan.readyToNotify,false)
+ assert.ok(!JSON.stringify(plan).includes('sweepresolvedcustomerreviewreports'))
+ for(const p of plan.policies){assert.equal(p.enabled,false);assert.equal(p.notificationChannels.length,1);assert.equal(p.alertStrategy.notificationChannelStrategy,undefined)}
+ assert.match(plan.policies[0].conditions[0].conditionMatchedLog.filter,/httpRequest.status>=300/)
+ assert.match(plan.policies[0].conditions[0].conditionMatchedLog.filter,/jsonPayload.failed>0 OR jsonPayload.needsAssessment>0/)
+ assert.equal(plan.policies[0].alertStrategy.notificationRateLimit.period,'86400s')
+ assert.match(plan.metrics[1].filter,/outcome="complete" AND jsonPayload.disabled=false/)
+ assert.match(plan.metrics[2].filter,/pageLimitReached=true AND \(jsonPayload.removed>0 OR jsonPayload.failed>0 OR jsonPayload.needsAssessment>0\)/)
+ assert.equal(plan.policies[3].conditions[0].conditionThreshold.thresholdValue,1)
+ assert.equal(plan.policies[3].conditions[0].conditionThreshold.aggregations[0].alignmentPeriod,'7200s')
+ assert.equal(plan.metrics.some(m=>m.labelExtractors||m.metricDescriptor.labels),false)
+ assert.throws(()=>prepareBusinessReportMonitoring({projectId:'holalocal-491c9',notificationChannels:['projects/other-project/notificationChannels/123']}))
+ assert.equal(prepare({projectId:'holalocal-491c9'}).policies.length,12)
+})
+
+test('committed business-report deployment payload exactly matches the authoritative generator',async()=>{
+ const {readFile}=await import('node:fs/promises')
+ const {prepareBusinessReportMonitoring}=await import('./prepare.mjs')
+ const artifact=JSON.parse(await readFile(new URL('./business-report-monitoring.json',import.meta.url),'utf8'))
+ assert.deepEqual(artifact,prepareBusinessReportMonitoring({projectId:'holalocal-491c9',notificationChannels:['projects/holalocal-491c9/notificationChannels/13796860726352907332']}))
+})

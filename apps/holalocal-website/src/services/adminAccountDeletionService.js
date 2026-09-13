@@ -1,5 +1,6 @@
 import {
   finalizeAccountDeletionCallable,
+  manageRetentionRecordsCallable,
   listAdminAccountDeletionRequestsCallable,
 } from '../firebase/functionsClient.js'
 
@@ -11,4 +12,8 @@ export async function listAccountDeletionRequests({ includeHistory = false } = {
 export async function finalizeAccountDeletion(uid, expectedRequestVersion) {
   const result = await finalizeAccountDeletionCallable({ uid, expectedRequestVersion })
   return result.data
+}
+
+export async function manageRetentionRecords(data) {
+  return (await manageRetentionRecordsCallable(data)).data
 }

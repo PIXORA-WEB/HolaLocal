@@ -925,7 +925,13 @@ service cloud.firestore {
         && request.resource.data.resolution == null
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-      allow read, update, delete: if isModerator();
+      allow read: if isModerator();
+      // Trusted handling dates and preservation decisions are callable-owned.
+      allow update: if isModerator()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['resolvedAt', 'resolutionVersion', 'retentionDecision']);
+      allow delete: if isModerator()
+        && !resource.data.keys().hasAny(['resolutionVersion', 'retentionDecision']);
     }
 
     match /{document=**} {

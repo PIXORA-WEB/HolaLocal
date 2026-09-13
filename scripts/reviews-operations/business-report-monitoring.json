@@ -1,0 +1,197 @@
+{
+  "projectId": "holalocal-491c9",
+  "phase": "offline-preparation-only",
+  "readyToNotify": false,
+  "metrics": [
+    {
+      "name": "holalocal_business_report_scheduler_success",
+      "filter": "resource.type=\"cloud_scheduler_job\" AND resource.labels.project_id=\"holalocal-491c9\" AND resource.labels.location=\"europe-west1\" AND resource.labels.job_id=\"firebase-schedule-sweepResolvedBusinessReports-europe-west1\" AND jsonPayload.\"@type\"=\"type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished\" AND httpRequest.status>=200 AND httpRequest.status<300",
+      "description": "Count only; no record identifiers or text.",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "valueType": "INT64",
+        "unit": "1"
+      }
+    },
+    {
+      "name": "holalocal_business_report_cleanup_completion",
+      "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.project_id=\"holalocal-491c9\" AND resource.labels.location=\"europe-west1\" AND resource.labels.service_name=\"sweepresolvedbusinessreports\" AND jsonPayload.message=\"business-report-retention\" AND jsonPayload.outcome=\"complete\" AND jsonPayload.disabled=false",
+      "description": "Count only; no record identifiers or text.",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "valueType": "INT64",
+        "unit": "1"
+      }
+    },
+    {
+      "name": "holalocal_business_report_capacity",
+      "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.project_id=\"holalocal-491c9\" AND resource.labels.location=\"europe-west1\" AND resource.labels.service_name=\"sweepresolvedbusinessreports\" AND jsonPayload.message=\"business-report-retention\" AND jsonPayload.outcome=\"complete\" AND jsonPayload.disabled=false AND jsonPayload.pageLimitReached=true AND (jsonPayload.removed>0 OR jsonPayload.failed>0 OR jsonPayload.needsAssessment>0)",
+      "description": "Count only; no record identifiers or text.",
+      "metricDescriptor": {
+        "metricKind": "DELTA",
+        "valueType": "INT64",
+        "unit": "1"
+      }
+    }
+  ],
+  "policies": [
+    {
+      "displayName": "HolaLocal business-report retention: failure-or-assessment-required",
+      "enabled": false,
+      "combiner": "OR",
+      "notificationChannels": [
+        "projects/holalocal-491c9/notificationChannels/13796860726352907332"
+      ],
+      "conditions": [
+        {
+          "displayName": "failure-or-assessment-required",
+          "conditionMatchedLog": {
+            "filter": "(resource.type=\"cloud_scheduler_job\" AND resource.labels.project_id=\"holalocal-491c9\" AND resource.labels.location=\"europe-west1\" AND resource.labels.job_id=\"firebase-schedule-sweepResolvedBusinessReports-europe-west1\" AND jsonPayload.\"@type\"=\"type.googleapis.com/google.cloud.scheduler.logging.AttemptFinished\" AND (severity>=ERROR OR httpRequest.status>=300 OR jsonPayload.status:*)) OR (resource.type=\"cloud_run_revision\" AND resource.labels.project_id=\"holalocal-491c9\" AND resource.labels.location=\"europe-west1\" AND resource.labels.service_name=\"sweepresolvedbusinessreports\" AND (severity>=ERROR OR (jsonPayload.message=\"business-report-retention\" AND jsonPayload.outcome=\"complete\" AND (jsonPayload.failed>0 OR jsonPayload.needsAssessment>0))))"
+          }
+        }
+      ],
+      "documentation": {
+        "content": "One failure channel covers delivery, runtime and partial failures. Held-only and disabled success do not match. Investigate unsupported records without fabricating resolution dates. Craig checks when available; no staffed hours, response guarantee or backup. Never release holds to resolve an alert. See docs/BUSINESS_REPORT_WORKER_RELEASE.md.",
+        "mimeType": "text/markdown"
+      },
+      "alertStrategy": {
+        "autoClose": "604800s",
+        "notificationRateLimit": {
+          "period": "86400s"
+        }
+      },
+      "userLabels": {
+        "feature": "business-report-retention",
+        "managed_by": "reviewed-local-plan"
+      }
+    },
+    {
+      "displayName": "HolaLocal business-report retention: scheduler-missing-success",
+      "enabled": false,
+      "combiner": "OR",
+      "notificationChannels": [
+        "projects/holalocal-491c9/notificationChannels/13796860726352907332"
+      ],
+      "conditions": [
+        {
+          "displayName": "scheduler-missing-success",
+          "conditionThreshold": {
+            "filter": "resource.type=\"cloud_scheduler_job\" AND resource.labels.project_id=\"holalocal-491c9\" AND resource.labels.location=\"europe-west1\" AND metric.type=\"logging.googleapis.com/user/holalocal_business_report_scheduler_success\"",
+            "comparison": "COMPARISON_LT",
+            "thresholdValue": 1,
+            "duration": "300s",
+            "evaluationMissingData": "EVALUATION_MISSING_DATA_ACTIVE",
+            "aggregations": [
+              {
+                "alignmentPeriod": "7200s",
+                "perSeriesAligner": "ALIGN_SUM",
+                "crossSeriesReducer": "REDUCE_SUM"
+              }
+            ],
+            "trigger": {
+              "count": 1
+            }
+          }
+        }
+      ],
+      "documentation": {
+        "content": "No delivery success over120minutes for5minutes. Establish a real natural-run metric series before arming; no-series-from-birth is not proven detection. Craig checks when available; no staffed hours, response guarantee or backup. Never release holds to resolve an alert. See docs/BUSINESS_REPORT_WORKER_RELEASE.md.",
+        "mimeType": "text/markdown"
+      },
+      "alertStrategy": {
+        "autoClose": "604800s"
+      },
+      "userLabels": {
+        "feature": "business-report-retention",
+        "managed_by": "reviewed-local-plan"
+      }
+    },
+    {
+      "displayName": "HolaLocal business-report retention: cleanup-missing-completion",
+      "enabled": false,
+      "combiner": "OR",
+      "notificationChannels": [
+        "projects/holalocal-491c9/notificationChannels/13796860726352907332"
+      ],
+      "conditions": [
+        {
+          "displayName": "cleanup-missing-completion",
+          "conditionThreshold": {
+            "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.project_id=\"holalocal-491c9\" AND resource.labels.location=\"europe-west1\" AND metric.type=\"logging.googleapis.com/user/holalocal_business_report_cleanup_completion\"",
+            "comparison": "COMPARISON_LT",
+            "thresholdValue": 1,
+            "duration": "300s",
+            "evaluationMissingData": "EVALUATION_MISSING_DATA_ACTIVE",
+            "aggregations": [
+              {
+                "alignmentPeriod": "7200s",
+                "perSeriesAligner": "ALIGN_SUM",
+                "crossSeriesReducer": "REDUCE_SUM"
+              }
+            ],
+            "trigger": {
+              "count": 1
+            }
+          }
+        }
+      ],
+      "documentation": {
+        "content": "Arm only after separately approved activation and first enabled completion. Scheduler200/disabled success does not prove cleanup. First-run failures use the failure policy. Craig checks when available; no staffed hours, response guarantee or backup. Never release holds to resolve an alert. See docs/BUSINESS_REPORT_WORKER_RELEASE.md.",
+        "mimeType": "text/markdown"
+      },
+      "alertStrategy": {
+        "autoClose": "604800s"
+      },
+      "userLabels": {
+        "feature": "business-report-retention",
+        "managed_by": "reviewed-local-plan"
+      }
+    },
+    {
+      "displayName": "HolaLocal business-report retention: sustained-capacity",
+      "enabled": false,
+      "combiner": "OR",
+      "notificationChannels": [
+        "projects/holalocal-491c9/notificationChannels/13796860726352907332"
+      ],
+      "conditions": [
+        {
+          "displayName": "sustained-capacity",
+          "conditionThreshold": {
+            "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.project_id=\"holalocal-491c9\" AND resource.labels.location=\"europe-west1\" AND metric.type=\"logging.googleapis.com/user/holalocal_business_report_capacity\"",
+            "comparison": "COMPARISON_GT",
+            "thresholdValue": 1,
+            "duration": "300s",
+            "aggregations": [
+              {
+                "alignmentPeriod": "7200s",
+                "perSeriesAligner": "ALIGN_SUM",
+                "crossSeriesReducer": "REDUCE_SUM"
+              }
+            ],
+            "trigger": {
+              "count": 1
+            }
+          }
+        }
+      ],
+      "documentation": {
+        "content": "At least2 non-held-only full pages in120minutes for5minutes: capacity investigation signal, not proof of a precise backlog count. Preserved-only pages do not match. Do not loosen eligibility or holds. Craig checks when available; no staffed hours, response guarantee or backup. Never release holds to resolve an alert. See docs/BUSINESS_REPORT_WORKER_RELEASE.md.",
+        "mimeType": "text/markdown"
+      },
+      "alertStrategy": {
+        "autoClose": "604800s"
+      },
+      "userLabels": {
+        "feature": "business-report-retention",
+        "managed_by": "reviewed-local-plan"
+      }
+    }
+  ],
+  "activationOrder": [
+    "Create all policies disabled. Verify existing channel; send no test email.",
+    "Establish natural Scheduler-success series with cleanup closed.",
+    "After separate alert approval, arm failure and delivery absence coverage.",
+    "After separate destructive activation approval, arm capacity and bootstrap completion coverage from first enabled completion."
+  ]
+}
