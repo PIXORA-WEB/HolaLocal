@@ -552,5 +552,38 @@
     "account": "Konto",
     "accountLabel": "Kontolinks",
     "poweredBy": "Bereitgestellt von PIXORA"
+  },
+  "businessInsights": {
+    "description": "Erfasste Profilaufrufe und Klicks auf Kontaktbuttons. Neue Unterhaltungen zählt neu erstellte HolaLocal-Unterhaltungen, keine gesendeten Nachrichten oder bestätigten Anfragen. Klicks bestätigen keine Kontaktaufnahme. Frühere Aktivitäten werden nicht geschätzt.",
+    "historicalChannel": "Derzeit nicht verfügbar",
+    "profileViews": "Profilaufrufe",
+    "enquiries": "Neue Unterhaltungen",
+    "contactActions": "Kontaktklicks",
+    "contactBreakdownSelected": "Klicks auf Kontaktbuttons im ausgewählten Zeitraum",
+    "actions": {
+      "holalocal": "Klicks auf den Nachrichtenbutton",
+      "phone": "Klicks auf den Telefonbutton",
+      "email": "Klicks auf den E-Mail-Button",
+      "whatsapp": "Klicks auf den WhatsApp-Button",
+      "website": "Website-Klicks"
+    },
+    "subtitle": "Erfahren Sie, wie Menschen Ihr Unternehmen finden und mit ihm interagieren.",
+    "about": "Über diese Zahlen",
+    "metric": "Kennzahl",
+    "exactValues": "Genaue Tageswerte",
+    "partialCoverage": "Teilweise Abdeckung: Aufzeichnung seit {{date}}.",
+    "activityDescription": "Tageswerte verwenden UTC-Daten. Tage vor Erfassungsbeginn sind als „Nicht erfasst“ gekennzeichnet. Null bedeutet, dass an diesem Tag nach Erfassungsbeginn keine Aktivität erfasst wurde.",
+    "emptyMetric": "Für diese Kennzahl wurde in diesem Zeitraum keine Aktivität erfasst.",
+    "notRecorded": "Nicht erfasst"
+  },
+  "datePicker": {
+    "open": "Datum auswählen",
+    "example": "Beispiel: {{date}}",
+    "invalid": "Gib ein gültiges Datum ein.",
+    "previous": "Vorheriger Monat",
+    "next": "Nächster Monat",
+    "month": "Monat",
+    "year": "Jahr",
+    "today": "Heute"
   }
 }

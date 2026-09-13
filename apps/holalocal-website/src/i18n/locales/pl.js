@@ -2,6 +2,17 @@ import en from './en.json'
 import { createFallbackLocale } from './createFallbackLocale.js'
 
 export default createFallbackLocale(en, {
+  datePicker: {
+    "open": "Wybierz datę",
+    "example": "Przykład: {{date}}",
+    "invalid": "Wpisz prawidłową datę.",
+    "previous": "Poprzedni miesiąc",
+    "next": "Następny miesiąc",
+    "month": "Miesiąc",
+    "year": "Rok",
+    "today": "Dzisiaj"
+  },
+  businessInsights: { ...en.businessInsights, ...{"description": "Zarejestrowane wyświetlenia profilu i kliknięcia przycisków kontaktu. Nowe rozmowy liczą nowo utworzone rozmowy HolaLocal, nie wysłane wiadomości ani potwierdzone zapytania. Kliknięcia nie potwierdzają kontaktu. Wcześniejsza aktywność nie jest szacowana.", "historicalChannel": "Obecnie niedostępne", "profileViews": "Wyświetlenia profilu", "enquiries": "Nowe rozmowy", "contactActions": "Kliknięcia kontaktu", "contactBreakdownSelected": "Kliknięcia przycisków kontaktu w wybranym okresie", "actions": {"holalocal": "Kliknięcia przycisku wiadomości", "phone": "Kliknięcia przycisku telefonu", "email": "Kliknięcia przycisku e-mail", "whatsapp": "Kliknięcia przycisku WhatsApp", "website": "Kliknięcia strony internetowej"}, "subtitle": "Zobacz, jak ludzie znajdują Twoją firmę i nawiązują z nią kontakt.", "about": "O tych liczbach", "metric": "Wskaźnik", "exactValues": "Dokładne wartości dzienne", "partialCoverage": "Częściowy zakres: rejestracja od {{date}}.", "activityDescription": "Wartości dzienne używają dat UTC. Daty sprzed rozpoczęcia zbierania danych są oznaczone „Nie zarejestrowano”. Zero oznacza, że tego dnia po rozpoczęciu zbierania danych nie zarejestrowano aktywności.", "emptyMetric": "Brak zarejestrowanej aktywności dla tego wskaźnika w tym okresie.", "notRecorded": "Nie zarejestrowano"} },
   marketing: { hero: { activeProfile: "Profil publiczny", previousBusiness: "Poprzednia firma", nextBusiness: "Następna firma", businessPosition: "Firma {{current}} z {{total}}" }, trust: { verified: { title: "Weryfikacja firm", comingSoon: "Wkrótce", description: "Opracowujemy proces weryfikacji, który pomoże klientom rozpoznawać firmy, których tożsamość i dane rejestrowe zostały sprawdzone." } } },
   business: { completion: 'Profil firmy ukończony w {{percent}}%' },
   nav: { primary: 'Główna nawigacja', home: 'Strona główna', findServices: 'Znajdź usługi', join: 'Dołącz do HolaLocal' },

@@ -2,6 +2,17 @@ import en from './en.json'
 import { createFallbackLocale } from './createFallbackLocale.js'
 
 export default createFallbackLocale(en, {
+  datePicker: {
+    "open": "Vybrat datum",
+    "example": "Příklad: {{date}}",
+    "invalid": "Zadejte platné datum.",
+    "previous": "Předchozí měsíc",
+    "next": "Následující měsíc",
+    "month": "Měsíc",
+    "year": "Rok",
+    "today": "Dnes"
+  },
+  businessInsights: { ...en.businessInsights, ...{"description": "Zaznamenaná zobrazení profilu a kliknutí na kontaktní tlačítka. Nové konverzace počítají nově vytvořené konverzace HolaLocal, nikoli odeslané zprávy nebo potvrzené poptávky. Kliknutí nepotvrzuje kontakt. Dřívější aktivita se neodhaduje.", "historicalChannel": "Nyní nedostupné", "profileViews": "Zobrazení profilu", "enquiries": "Nové konverzace", "contactActions": "Kliknutí na kontakt", "contactBreakdownSelected": "Kliknutí na kontaktní tlačítka ve vybraném období", "actions": {"holalocal": "Kliknutí na tlačítko zpráv", "phone": "Kliknutí na tlačítko telefonu", "email": "Kliknutí na tlačítko e-mailu", "whatsapp": "Kliknutí na tlačítko WhatsApp", "website": "Kliknutí na web"}, "subtitle": "Podívejte se, jak lidé objevují vaši firmu a navazují s ní kontakt.", "about": "O těchto číslech", "metric": "Ukazatel", "exactValues": "Přesné denní hodnoty", "partialCoverage": "Částečné pokrytí: záznam od {{date}}.", "activityDescription": "Denní hodnoty používají data UTC. Data před začátkem sběru jsou označena „Nezaznamenáno“. Nula znamená, že v daný den po zahájení sběru nebyla zaznamenána žádná aktivita.", "emptyMetric": "Pro tento ukazatel nebyla v tomto období zaznamenána žádná aktivita.", "notRecorded": "Nezaznamenáno"} },
   marketing: { hero: { activeProfile: "Veřejný profil", previousBusiness: "Předchozí firma", nextBusiness: "Další firma", businessPosition: "Firma {{current}} z {{total}}" }, trust: { verified: { title: "Ověření firem", comingSoon: "Již brzy", description: "Vyvíjíme ověřovací proces, který zákazníkům pomůže rozpoznat firmy, jejichž totožnost a registrační údaje byly zkontrolovány." } } },
   business: { completion: 'Firemní profil je dokončen z {{percent}} %' },
   nav: { primary: 'Hlavní navigace', home: 'Domů', findServices: 'Najít služby', join: 'Přidat se k HolaLocal' }, auth: { logout: 'Odhlásit se' }, account: { signIn: 'Přihlásit se', getStarted: 'Začít', navigationLabel: 'Navigace účtu', profile: 'Můj profil', business: 'Moje firma', messages: 'Zprávy', greeting: 'Ahoj {{name}}', fallback: 'Účet' }, language: { label: 'Jazyk' },

@@ -552,5 +552,38 @@
     "account": "Account",
     "accountLabel": "Accountlinks",
     "poweredBy": "Mogelijk gemaakt door PIXORA"
+  },
+  "businessInsights": {
+    "description": "Geregistreerde profielweergaven en klikken op contactknoppen. Nieuwe gesprekken telt nieuw aangemaakte HolaLocal-gesprekken, geen verzonden berichten of bevestigde aanvragen. Klikken bevestigen geen contact. Eerdere activiteit wordt niet geschat.",
+    "historicalChannel": "Momenteel niet beschikbaar",
+    "profileViews": "Profielweergaven",
+    "enquiries": "Nieuwe gesprekken",
+    "contactActions": "Contactklikken",
+    "contactBreakdownSelected": "Klikken op contactknoppen in de geselecteerde periode",
+    "actions": {
+      "holalocal": "Klikken op de berichtenknop",
+      "phone": "Klikken op de telefoonknop",
+      "email": "Klikken op de e-mailknop",
+      "whatsapp": "Klikken op de WhatsApp-knop",
+      "website": "Websiteklikken"
+    },
+    "subtitle": "Bekijk hoe mensen uw bedrijf ontdekken en ermee in contact komen.",
+    "about": "Over deze cijfers",
+    "metric": "Meetwaarde",
+    "exactValues": "Exacte dagwaarden",
+    "partialCoverage": "Gedeeltelijke dekking: registratie sinds {{date}}.",
+    "activityDescription": "Dagwaarden gebruiken UTC-datums. Datums vóór het begin van de registratie staan als ‘Niet geregistreerd’ vermeld. Nul betekent dat er die dag na het begin van de registratie geen activiteit is vastgelegd.",
+    "emptyMetric": "Geen activiteit geregistreerd voor deze meetwaarde in deze periode.",
+    "notRecorded": "Niet geregistreerd"
+  },
+  "datePicker": {
+    "open": "Datum kiezen",
+    "example": "Voorbeeld: {{date}}",
+    "invalid": "Voer een geldige datum in.",
+    "previous": "Vorige maand",
+    "next": "Volgende maand",
+    "month": "Maand",
+    "year": "Jaar",
+    "today": "Vandaag"
   }
 }

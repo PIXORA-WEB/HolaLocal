@@ -8,11 +8,9 @@ import {
   secureRandomToken,
 } from '../src/services/businessInsightsTracking.js'
 import {
-  activityChartConfiguration,
   currentLocalDateKey,
   INSIGHT_RANGE_PRESETS,
   presetDateRequest,
-  showActivityDayLabel,
   validateCustomInsightRange,
 } from '../src/services/businessInsightsRanges.js'
 
@@ -24,7 +22,7 @@ test('dashboard uses real insights states and excludes misleading placeholder me
     read('../src/components/business/BusinessInsightsPanel.jsx'),
   ])
   assert.match(dashboard, /<BusinessInsightsPanel/)
-  for (const state of ['loading', 'loadingRange', 'error', 'unpublished', 'inactive', 'notStarted', 'collectingSince', 'empty']) {
+  for (const state of ['loading', 'loadingRange', 'error', 'unpublished', 'inactive', 'notStarted', 'collectingSince']) {
     assert.match(panel, new RegExp(`businessInsights\\.state\\.${state}`))
   }
   assert.doesNotMatch(panel, /saved|reviews|rating|revenue/i)
@@ -120,11 +118,11 @@ test('custom ranges validate before a backend request is constructed', () => {
 
 test('range UI keeps selected and all-time values separate with accessible zero-day output', async () => {
   const panel = await read('../src/components/business/BusinessInsightsPanel.jsx')
-  assert.match(panel, /businessInsights\.selectedPeriod/)
+  assert.match(panel, /businessInsights\.partialCoverage/)
   assert.match(panel, /businessInsights\.range\.dates/)
   assert.match(panel, /businessInsights\.allTimeTitle/)
-  assert.match(panel, /aria-label=\{t\('businessInsights\.dayLabel'/)
-  assert.match(panel, /Math\.max\(total \? 8 : 2/)
+  assert.match(panel, /scope="row"/)
+  assert.doesNotMatch(panel, /totalActivity/)
   assert.match(panel, /businessInsights\.state\.collectingSince/)
   assert.doesNotMatch(panel, /saved|reviews/i)
 })
@@ -136,74 +134,28 @@ test('range toolbar reuses the HolaLocal select and accessible form-control patt
   ])
   assert.match(panel, /import SelectField from '\.\.\/common\/SelectField\.jsx'/)
   assert.match(panel, /<SelectField[\s\S]*?className="select-field--form business-insights__range-field"/)
-  assert.doesNotMatch(panel, /<select/)
+  assert.doesNotMatch(panel, /<select[ >]/)
+  assert.match(panel, /<SelectField id="business-insights-metric"[\s\S]*?onChange=\{setMetric\}/)
   assert.match(panel, /htmlFor="business-insights-range"/)
-  assert.match(panel, /type="date"/)
-  assert.match(panel, /aria-invalid=\{Boolean\(validationError\)\}/)
-  assert.match(panel, /aria-describedby=\{validationError/)
+  assert.match(panel, /<DatePicker label=/)
+  assert.match(panel, /ariaInvalid=\{Boolean\(validationError\)\}/)
+  assert.match(panel, /ariaDescribedBy=\{validationError/)
   assert.match(panel, /max=\{today\}/)
   assert.match(styles, /business-insights__range-select[\s\S]*?width: 13rem;[\s\S]*?max-width: 100%/)
   assert.match(styles, /business-insights__range-field \.select-field__menu[\s\S]*?width: min\(16rem, calc\(100vw - 3rem\)\)/)
   assert.match(styles, /business-insights__range-field \.select-field__menu button > span:first-child[\s\S]*?white-space: nowrap/)
-  assert.match(styles, /business-insights__custom-range input:focus-visible/)
+  assert.match(styles, /date-picker__input:focus-visible/)
 })
 
-test('zero activity uses a compact state while populated activity retains the chart', async () => {
-  const [panel, styles] = await Promise.all([
-    read('../src/components/business/BusinessInsightsPanel.jsx'),
-    read('../src/styles/global.css'),
-  ])
-  assert.match(panel, /const hasActivity = displayed\?\.days\.some/)
-  assert.match(panel, /hasActivity \? \(/)
-  assert.match(panel, /business-insights__activity-empty/)
-  assert.match(panel, /<ol className="visually-hidden">/)
-  assert.match(panel, /business-insights__activity-days--\$\{chartConfiguration\.density\}/)
-  assert.match(styles, /business-insights__activity-empty[\s\S]*?padding: 0\.75rem 0\.85rem;[\s\S]*?border: 1px solid/)
-  assert.doesNotMatch(panel, /business-insights__activity-empty[\s\S]{0,100}<span aria-hidden/)
-  assert.doesNotMatch(styles, /\.business-insights__activity ol\s*\{/)
-})
-
-test('all-time and contact summaries keep values grouped in responsive tiles', async () => {
-  const [panel, styles] = await Promise.all([
-    read('../src/components/business/BusinessInsightsPanel.jsx'),
-    read('../src/styles/global.css'),
-  ])
-  assert.match(panel, /business-insights__all-time/)
-  assert.match(panel, /displayed\.allTime\[key\]/)
-  assert.match(panel, /business-insights__breakdown/)
-  assert.match(panel, /BUSINESS_CONTACT_ACTIONS\.map/)
-  assert.match(styles, /business-insights__all-time dl div[\s\S]*?border-radius: 0\.75rem/)
-  assert.match(styles, /business-insights__breakdown dl[\s\S]*?minmax\(min\(7rem, 100%\), 1fr\)/)
-  assert.doesNotMatch(panel, /saved|reviews/i)
-})
-
-test('activity chart config adapts for 7, 30, 90 and 366 days', () => {
-  assert.deepEqual(activityChartConfiguration(7), { density: 'spacious', labelEvery: 1 })
-  assert.deepEqual(activityChartConfiguration(30), { density: 'spacious', labelEvery: 1 })
-  assert.deepEqual(activityChartConfiguration(90), { density: 'compact', labelEvery: 10 })
-  assert.deepEqual(activityChartConfiguration(366), { density: 'dense', labelEvery: 0 })
-  assert.equal(showActivityDayLabel(6, 7), true)
-  assert.equal(showActivityDayLabel(8, 90), false)
-  assert.equal(showActivityDayLabel(9, 90), true)
-  assert.equal(showActivityDayLabel(365, 366), false)
-})
-
-test('dense charts remove fixed gaps while retaining every accessible daily list item', async () => {
-  const [panel, styles] = await Promise.all([
-    read('../src/components/business/BusinessInsightsPanel.jsx'),
-    read('../src/styles/global.css'),
-  ])
-  assert.match(panel, /data-day-count=\{displayed\.days\.length\}/)
-  assert.match(panel, /--activity-day-count/)
-  assert.match(panel, /displayed\.days\.map\(\(day, index\)/)
-  assert.match(panel, /aria-label=\{t\('businessInsights\.dayLabel'/)
-  assert.match(panel, /className="visually-hidden"/)
-  assert.match(panel, /showActivityDayLabel/)
-  assert.match(styles, /grid-template-columns: repeat\(var\(--activity-day-count\), minmax\(0, 1fr\)\)/)
-  assert.match(styles, /business-insights__activity-days--dense[\s\S]*?gap: 0;/)
-  assert.match(styles, /business-insights__activity[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%;[\s\S]*?overflow: hidden;/)
-  assert.doesNotMatch(styles, /business-insights__activity ol[\s\S]{0,200}display: flex/)
-  assert.doesNotMatch(panel, /saved|reviews/i)
+test('single-metric chart preserves zero heights and exposes exact values', async () => {
+ const panel = await read('../src/components/business/BusinessInsightsPanel.jsx')
+ assert.doesNotMatch(panel, /totalActivity|activity-days|selected-period/)
+ assert.match(panel, /height=\{day\[metric\] \/ maximum \* 140\}/)
+ assert.match(panel, /scope="row"/)
+ assert.match(panel, /businessInsights.exactValues/)
+ assert.match(panel, /hasActivity \|\| hasUnrecordedDays \? <svg/)
+ assert.match(panel, /displayed\.allTime\[key\]/)
+ assert.match(panel, /BUSINESS_CONTACT_ACTIONS\.filter/)
 })
 
 test('public profile and deliberate contact controls are instrumented non-blockingly', async () => {
@@ -287,4 +239,14 @@ test('normal contact activations generate separate valid tokens', () => {
   assert.match(calls[0].eventToken, BUSINESS_INSIGHT_TOKEN_PATTERN)
   assert.match(calls[1].eventToken, BUSINESS_INSIGHT_TOKEN_PATTERN)
   assert.notEqual(calls[0].eventToken, calls[1].eventToken)
+})
+
+ test('unrecorded dates are distinct from zeros and the chart observes the available width', async () => {
+ const panel = await read('../src/components/business/BusinessInsightsPanel.jsx')
+ assert.match(panel, /new ResizeObserver/)
+ assert.match(panel, /observer.disconnect/)
+ assert.match(panel, /day.date >= trackingDate/)
+ assert.match(panel, /isRecorded\(day\) \? number\(day\[metric\]\) : t\('businessInsights.notRecorded'\)/)
+ assert.doesNotMatch(panel, /<details[^>]+open/)
+ assert.match(panel, /tabIndex=\{0\} role="region"/)
 })

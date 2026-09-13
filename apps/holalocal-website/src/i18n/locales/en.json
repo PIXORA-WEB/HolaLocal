@@ -484,23 +484,20 @@
   "businessInsights": {
     "eyebrow": "Performance",
     "title": "Business insights",
-    "description": "Private, server-counted activity from your public HolaLocal profile. Earlier activity is not estimated.",
+    "description": "Recorded profile views and contact-button clicks. New conversations counts newly created HolaLocal conversations, not sent messages or confirmed enquiries. Clicks do not confirm contact. Earlier activity is not estimated.",
     "profileViews": "Profile views",
-    "enquiries": "New enquiries",
-    "contactActions": "Contact actions",
-    "selectedPeriod": "Selected period",
+    "enquiries": "New conversations",
+    "contactActions": "Contact clicks",
     "allTimeTitle": "All-time totals",
-    "contactBreakdownSelected": "Contact actions in the selected period",
+    "contactBreakdownSelected": "Contact button clicks in the selected period",
     "activityTitle": "Daily activity",
-    "activityDescription": "Each column shows all tracked profile views, enquiries and contact actions for one UTC day in the selected period.",
-    "dayLabel": "{{date}}: {{count}} total activities",
-    "dayDetails": "{{views}} profile views, {{enquiries}} enquiries and {{contacts}} contact actions",
+    "activityDescription": "Daily values use UTC dates. Dates before collection began are marked “Not recorded”. Zero means no activity was recorded that day after collection began.",
     "actions": {
-      "holalocal": "HolaLocal messages",
-      "phone": "Phone",
-      "email": "Email",
-      "whatsapp": "WhatsApp",
-      "website": "Website"
+      "holalocal": "Message button clicks",
+      "phone": "Phone button clicks",
+      "email": "Email button clicks",
+      "whatsapp": "WhatsApp button clicks",
+      "website": "Website clicks"
     },
     "range": {
       "label": "Date range",
@@ -534,7 +531,15 @@
       "unpublished": "Insights begin after your business profile is published and active.",
       "inactive": "New public activity is not currently recorded. Previously collected totals are retained.",
       "empty": "No eligible activity has been recorded yet."
-    }
+    },
+    "historicalChannel": "Currently unavailable",
+    "subtitle": "See how people discover and interact with your business.",
+    "about": "About these numbers",
+    "metric": "Metric",
+    "exactValues": "Exact daily values",
+    "partialCoverage": "Partial coverage: recording began {{date}}.",
+    "emptyMetric": "No activity recorded for this metric in this period.",
+    "notRecorded": "Not recorded"
   },
   "common": {
     "save": "Save",
@@ -1129,5 +1134,15 @@
   "mediaFeedback": {
     "immediate": "Image changes save immediately. Save and Cancel apply to the other profile details.",
     "saved": "Image saved."
+  },
+  "datePicker": {
+    "open": "Choose date",
+    "example": "Example: {{date}}",
+    "invalid": "Enter a valid date.",
+    "previous": "Previous month",
+    "next": "Next month",
+    "month": "Month",
+    "year": "Year",
+    "today": "Today"
   }
 }

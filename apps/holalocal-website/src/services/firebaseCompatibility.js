@@ -132,6 +132,7 @@ export function toManagedBusinessView(documentId, rawDocument, privateDocument =
       ? business.languageValues.find(({ id }) => id === business.primaryLanguage)?.label
       : business.primaryLanguage,
     contact: privateContactForManagedView(adapted, privateDocument),
+    publicContact: sharedPublicBusinessEligible(rawDocument) ? publicContact(rawDocument.contact) : null,
     currentRejection: privateDocument?.currentRejection ?? null,
     logoStoragePath: typeof rawDocument?.logoStoragePath === 'string' ? rawDocument.logoStoragePath : null,
     galleryStoragePaths: Array.isArray(rawDocument?.galleryStoragePaths) ? [...rawDocument.galleryStoragePaths] : [],

@@ -552,5 +552,38 @@
     "account": "Compte",
     "accountLabel": "Liens du compte",
     "poweredBy": "Propulsé par PIXORA"
+  },
+  "businessInsights": {
+    "description": "Vues du profil et clics sur les boutons de contact enregistrés. Les nouvelles demandes comptent les nouvelles conversations HolaLocal, pas les messages envoyés ni les demandes confirmées. Un clic ne confirme pas un contact. L’activité antérieure n’est pas estimée.",
+    "historicalChannel": "Actuellement indisponible",
+    "profileViews": "Vues du profil",
+    "enquiries": "Nouvelles conversations",
+    "contactActions": "Clics de contact",
+    "contactBreakdownSelected": "Clics sur les boutons de contact pendant la période sélectionnée",
+    "actions": {
+      "holalocal": "Clics sur le bouton de messagerie",
+      "phone": "Clics sur le bouton téléphone",
+      "email": "Clics sur le bouton e-mail",
+      "whatsapp": "Clics sur le bouton WhatsApp",
+      "website": "Clics vers le site web"
+    },
+    "subtitle": "Découvrez comment les personnes trouvent votre entreprise et interagissent avec elle.",
+    "about": "À propos de ces chiffres",
+    "metric": "Indicateur",
+    "exactValues": "Valeurs quotidiennes exactes",
+    "partialCoverage": "Couverture partielle : enregistrement depuis le {{date}}.",
+    "activityDescription": "Les valeurs quotidiennes utilisent les dates UTC. Les dates précédant le début de la collecte sont indiquées « Non enregistré ». Zéro signifie qu’aucune activité n’a été enregistrée ce jour-là après le début de la collecte.",
+    "emptyMetric": "Aucune activité enregistrée pour cet indicateur sur cette période.",
+    "notRecorded": "Non enregistré"
+  },
+  "datePicker": {
+    "open": "Choisir une date",
+    "example": "Exemple : {{date}}",
+    "invalid": "Saisissez une date valide.",
+    "previous": "Mois précédent",
+    "next": "Mois suivant",
+    "month": "Mois",
+    "year": "Année",
+    "today": "Aujourd’hui"
   }
 }

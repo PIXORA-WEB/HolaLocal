@@ -1736,3 +1736,15 @@ test('canonical customer, business and combined roles retain route-facing semant
     assert.equal(profile.onboardingCompleted, true)
   }
 })
+
+test('owner insights use actual public contact projection, never private contact overrides', () => {
+  const raw = canonicalBusiness({ status: 'active', publishedAt: new TimestampFixture(), contact: { ...canonicalContact, phone: '123', phoneVisible: true } })
+  const managed = toManagedBusinessView('insights-business', raw, {contact:{...canonicalContact,phone:'private',email:'private@example.invalid',emailVisible:true}})
+  assert.deepEqual(managed.publicContact, toPublicBusinessView('insights-business', raw).contact)
+  assert.equal(managed.publicContact.phone, '123')
+  assert.equal(managed.publicContact.email, '')
+  for (const update of [{status:'draft'},{status:'pending_review'},{status:'suspended'},{publishedAt:null},{deletionRequestedAt:new TimestampFixture()},{deletedAt:new TimestampFixture()}]) {
+    assert.equal(toManagedBusinessView('insights-business',{...raw,...update}).publicContact,null)
+  }
+  assert.equal(toManagedBusinessView('insights-business',{...raw,contact:{...canonicalContact,phone:'hidden'}}).publicContact,null)
+})

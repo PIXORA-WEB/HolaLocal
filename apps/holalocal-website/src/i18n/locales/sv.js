@@ -1,6 +1,17 @@
 import en from './en.json'
 import { createFallbackLocale } from './createFallbackLocale.js'
 export default createFallbackLocale(en, {
+  datePicker: {
+    "open": "Välj datum",
+    "example": "Exempel: {{date}}",
+    "invalid": "Ange ett giltigt datum.",
+    "previous": "Föregående månad",
+    "next": "Nästa månad",
+    "month": "Månad",
+    "year": "År",
+    "today": "Idag"
+  },
+  businessInsights: { ...en.businessInsights, ...{"description": "Registrerade profilvisningar och klick på kontaktknappar. Nya konversationer räknar nya HolaLocal-konversationer, inte skickade meddelanden eller bekräftade förfrågningar. Klick bekräftar inte kontakt. Tidigare aktivitet uppskattas inte.", "historicalChannel": "Inte tillgänglig nu", "profileViews": "Profilvisningar", "enquiries": "Nya konversationer", "contactActions": "Kontaktklick", "contactBreakdownSelected": "Klick på kontaktknappar under vald period", "actions": {"holalocal": "Klick på meddelandeknappen", "phone": "Klick på telefonknappen", "email": "Klick på e-postknappen", "whatsapp": "Klick på WhatsApp-knappen", "website": "Klick på webbplatsen"}, "subtitle": "Se hur människor upptäcker och interagerar med ditt företag.", "about": "Om dessa siffror", "metric": "Mätvärde", "exactValues": "Exakta dagliga värden", "partialCoverage": "Delvis täckning: registrering från {{date}}.", "activityDescription": "Dagliga värden använder UTC-datum. Datum före insamlingens början markeras ”Inte registrerat”. Noll betyder att ingen aktivitet registrerades den dagen efter att insamlingen började.", "emptyMetric": "Ingen aktivitet registrerad för detta mätvärde under denna period.", "notRecorded": "Inte registrerat"} },
   marketing: { hero: { activeProfile: "Offentlig profil", previousBusiness: "Föregående företag", nextBusiness: "Nästa företag", businessPosition: "Företag {{current}} av {{total}}" }, trust: { verified: { title: "Företagsverifiering", comingSoon: "Kommer snart", description: "Vi utvecklar en verifieringsprocess som hjälper kunder att känna igen företag vars identitet och registreringsuppgifter har kontrollerats." } } },
   business: { completion: 'Företagsprofilen är {{percent}}% klar' },
   nav: { primary: 'Huvudnavigering', home: 'Hem', findServices: 'Hitta tjänster', join: 'Gå med i HolaLocal' }, auth: { logout: 'Logga ut' }, account: { signIn: 'Logga in', getStarted: 'Kom igång', navigationLabel: 'Kontonavigering', profile: 'Min profil', business: 'Mitt företag', messages: 'Meddelanden', greeting: 'Hej {{name}}', fallback: 'Konto' }, language: { label: 'Språk' },

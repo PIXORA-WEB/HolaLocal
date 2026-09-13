@@ -552,5 +552,38 @@
     "account": "Cuenta",
     "accountLabel": "Enlaces de cuenta",
     "poweredBy": "Impulsado por PIXORA"
+  },
+  "businessInsights": {
+    "description": "Visitas al perfil y clics en botones de contacto registrados. Nuevas conversaciones cuenta las conversaciones nuevas de HolaLocal, no mensajes enviados ni consultas confirmadas. Los clics no confirman un contacto. No se estima la actividad anterior.",
+    "historicalChannel": "Actualmente no disponible",
+    "profileViews": "Visitas al perfil",
+    "enquiries": "Nuevas conversaciones",
+    "contactActions": "Clics de contacto",
+    "contactBreakdownSelected": "Clics en botones de contacto en el período seleccionado",
+    "actions": {
+      "holalocal": "Clics en el botón de mensajes",
+      "phone": "Clics en el botón de teléfono",
+      "email": "Clics en el botón de correo",
+      "whatsapp": "Clics en el botón de WhatsApp",
+      "website": "Clics en el sitio web"
+    },
+    "subtitle": "Descubre cómo las personas encuentran tu negocio e interactúan con él.",
+    "about": "Acerca de estas cifras",
+    "metric": "Métrica",
+    "exactValues": "Valores diarios exactos",
+    "partialCoverage": "Cobertura parcial: el registro comenzó el {{date}}.",
+    "activityDescription": "Los valores diarios usan fechas UTC. Las fechas anteriores al inicio de la recopilación aparecen como «Sin registrar». Cero significa que no se registró actividad ese día después del inicio de la recopilación.",
+    "emptyMetric": "No hay actividad registrada para esta métrica en este período.",
+    "notRecorded": "Sin registrar"
+  },
+  "datePicker": {
+    "open": "Elegir fecha",
+    "example": "Ejemplo: {{date}}",
+    "invalid": "Introduce una fecha válida.",
+    "previous": "Mes anterior",
+    "next": "Mes siguiente",
+    "month": "Mes",
+    "year": "Año",
+    "today": "Hoy"
   }
 }

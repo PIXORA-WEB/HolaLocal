@@ -1,6 +1,17 @@
 import en from './en.json'
 import { createFallbackLocale } from './createFallbackLocale.js'
 export default createFallbackLocale(en, {
+  datePicker: {
+    "open": "Vælg dato",
+    "example": "Eksempel: {{date}}",
+    "invalid": "Indtast en gyldig dato.",
+    "previous": "Forrige måned",
+    "next": "Næste måned",
+    "month": "Måned",
+    "year": "År",
+    "today": "I dag"
+  },
+  businessInsights: { ...en.businessInsights, ...{"description": "Registrerede profilvisninger og klik på kontaktknapper. Nye samtaler tæller nye HolaLocal-samtaler, ikke sendte beskeder eller bekræftede henvendelser. Klik bekræfter ikke kontakt. Tidligere aktivitet estimeres ikke.", "historicalChannel": "Ikke tilgængelig nu", "profileViews": "Profilvisninger", "enquiries": "Nye samtaler", "contactActions": "Kontaktklik", "contactBreakdownSelected": "Klik på kontaktknapper i den valgte periode", "actions": {"holalocal": "Klik på beskedknappen", "phone": "Klik på telefonknappen", "email": "Klik på e-mailknappen", "whatsapp": "Klik på WhatsApp-knappen", "website": "Klik på hjemmesiden"}, "subtitle": "Se, hvordan folk opdager og interagerer med din virksomhed.", "about": "Om disse tal", "metric": "Måling", "exactValues": "Præcise daglige værdier", "partialCoverage": "Delvis dækning: registrering fra {{date}}.", "activityDescription": "Daglige værdier bruger UTC-datoer. Datoer før indsamlingen begyndte er markeret »Ikke registreret«. Nul betyder, at der ikke blev registreret aktivitet den dag efter indsamlingens start.", "emptyMetric": "Ingen aktivitet registreret for denne måling i denne periode.", "notRecorded": "Ikke registreret"} },
   marketing: { hero: { activeProfile: "Offentlig profil", previousBusiness: "Forrige virksomhed", nextBusiness: "Næste virksomhed", businessPosition: "Virksomhed {{current}} af {{total}}" }, trust: { verified: { title: "Virksomhedsverificering", comingSoon: "Kommer snart", description: "Vi udvikler en verificeringsproces, der hjælper kunder med at genkende virksomheder, hvis identitet og registreringsoplysninger er blevet kontrolleret." } } },
   business: { completion: 'Virksomhedsprofilen er {{percent}}% færdig' },
   nav: { primary: 'Primær navigation', home: 'Forside', findServices: 'Find tjenester', join: 'Deltag i HolaLocal' }, auth: { logout: 'Log ud' }, account: { signIn: 'Log ind', getStarted: 'Kom i gang', navigationLabel: 'Kontonavigation', profile: 'Min profil', business: 'Min virksomhed', messages: 'Beskeder', greeting: 'Hej {{name}}', fallback: 'Konto' }, language: { label: 'Sprog' },
