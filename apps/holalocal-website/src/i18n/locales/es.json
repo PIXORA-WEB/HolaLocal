@@ -554,11 +554,11 @@
     "poweredBy": "Impulsado por PIXORA"
   },
   "businessInsights": {
-    "description": "Visitas al perfil y clics en botones de contacto registrados. Nuevas consultas cuenta las conversaciones nuevas de HolaLocal, no mensajes enviados ni consultas confirmadas. Los clics no confirman un contacto. No se estima la actividad anterior.",
-    "historicalChannel": "Actividad histórica · actualmente no disponible",
+    "description": "Visitas al perfil y clics en botones de contacto registrados. Nuevas conversaciones cuenta las conversaciones nuevas de HolaLocal, no mensajes enviados ni consultas confirmadas. Los clics no confirman un contacto. No se estima la actividad anterior.",
+    "historicalChannel": "Actualmente no disponible",
     "profileViews": "Visitas al perfil",
-    "enquiries": "Nuevas consultas",
-    "contactActions": "Clics en botones de contacto",
+    "enquiries": "Nuevas conversaciones",
+    "contactActions": "Clics de contacto",
     "contactBreakdownSelected": "Clics en botones de contacto en el período seleccionado",
     "actions": {
       "holalocal": "Clics en el botón de mensajes",
@@ -566,6 +566,13 @@
       "email": "Clics en el botón de correo",
       "whatsapp": "Clics en el botón de WhatsApp",
       "website": "Clics en el sitio web"
-    }
+    },
+    "subtitle": "Descubre cómo las personas encuentran tu negocio e interactúan con él.",
+    "about": "Acerca de estas cifras",
+    "metric": "Métrica",
+    "exactValues": "Valores diarios exactos",
+    "partialCoverage": "Cobertura parcial: el registro comenzó el {{date}}.",
+    "activityDescription": "Los valores diarios usan fechas UTC. Los días anteriores al inicio del registro no tienen actividad registrada; no se estima.",
+    "emptyMetric": "No hay actividad registrada para esta métrica en este período."
   }
 }

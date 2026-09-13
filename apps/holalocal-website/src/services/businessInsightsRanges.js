@@ -60,16 +60,3 @@ export function localeDate(apiDate, locale) {
   const date = parseBusinessInsightDate(apiDate)
   return date ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(date) : apiDate
 }
-
-export function activityChartConfiguration(dayCount) {
-  const count = Math.max(0, Number(dayCount) || 0)
-  if (count <= 30) return { density: 'spacious', labelEvery: 1 }
-  if (count <= 90) return { density: 'compact', labelEvery: 10 }
-  return { density: 'dense', labelEvery: 0 }
-}
-
-export function showActivityDayLabel(index, dayCount) {
-  const { labelEvery } = activityChartConfiguration(dayCount)
-  if (labelEvery === 0) return false
-  return labelEvery === 1 || index === 0 || index === dayCount - 1 || (index + 1) % labelEvery === 0
-}

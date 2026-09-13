@@ -555,10 +555,10 @@
   },
   "businessInsights": {
     "description": "Vues du profil et clics sur les boutons de contact enregistrés. Les nouvelles demandes comptent les nouvelles conversations HolaLocal, pas les messages envoyés ni les demandes confirmées. Un clic ne confirme pas un contact. L’activité antérieure n’est pas estimée.",
-    "historicalChannel": "Activité passée · actuellement indisponible",
+    "historicalChannel": "Actuellement indisponible",
     "profileViews": "Vues du profil",
-    "enquiries": "Nouvelles demandes",
-    "contactActions": "Clics sur les boutons de contact",
+    "enquiries": "Nouvelles conversations",
+    "contactActions": "Clics de contact",
     "contactBreakdownSelected": "Clics sur les boutons de contact pendant la période sélectionnée",
     "actions": {
       "holalocal": "Clics sur le bouton de messagerie",
@@ -566,6 +566,13 @@
       "email": "Clics sur le bouton e-mail",
       "whatsapp": "Clics sur le bouton WhatsApp",
       "website": "Clics vers le site web"
-    }
+    },
+    "subtitle": "Découvrez comment les personnes trouvent votre entreprise et interagissent avec elle.",
+    "about": "À propos de ces chiffres",
+    "metric": "Indicateur",
+    "exactValues": "Valeurs quotidiennes exactes",
+    "partialCoverage": "Couverture partielle : enregistrement depuis le {{date}}.",
+    "activityDescription": "Les valeurs quotidiennes utilisent les dates UTC. Les jours précédant le début du suivi n’ont aucune activité enregistrée, sans estimation.",
+    "emptyMetric": "Aucune activité enregistrée pour cet indicateur sur cette période."
   }
 }

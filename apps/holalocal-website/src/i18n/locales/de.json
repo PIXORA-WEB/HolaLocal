@@ -554,11 +554,11 @@
     "poweredBy": "Bereitgestellt von PIXORA"
   },
   "businessInsights": {
-    "description": "Erfasste Profilaufrufe und Klicks auf Kontaktbuttons. Neue Anfragen zählt neu erstellte HolaLocal-Unterhaltungen, keine gesendeten Nachrichten oder bestätigten Anfragen. Klicks bestätigen keine Kontaktaufnahme. Frühere Aktivitäten werden nicht geschätzt.",
-    "historicalChannel": "Frühere Aktivität · derzeit nicht verfügbar",
+    "description": "Erfasste Profilaufrufe und Klicks auf Kontaktbuttons. Neue Unterhaltungen zählt neu erstellte HolaLocal-Unterhaltungen, keine gesendeten Nachrichten oder bestätigten Anfragen. Klicks bestätigen keine Kontaktaufnahme. Frühere Aktivitäten werden nicht geschätzt.",
+    "historicalChannel": "Derzeit nicht verfügbar",
     "profileViews": "Profilaufrufe",
-    "enquiries": "Neue Anfragen",
-    "contactActions": "Klicks auf Kontaktbuttons",
+    "enquiries": "Neue Unterhaltungen",
+    "contactActions": "Kontaktklicks",
     "contactBreakdownSelected": "Klicks auf Kontaktbuttons im ausgewählten Zeitraum",
     "actions": {
       "holalocal": "Klicks auf den Nachrichtenbutton",
@@ -566,6 +566,13 @@
       "email": "Klicks auf den E-Mail-Button",
       "whatsapp": "Klicks auf den WhatsApp-Button",
       "website": "Website-Klicks"
-    }
+    },
+    "subtitle": "Erfahren Sie, wie Menschen Ihr Unternehmen finden und mit ihm interagieren.",
+    "about": "Über diese Zahlen",
+    "metric": "Kennzahl",
+    "exactValues": "Genaue Tageswerte",
+    "partialCoverage": "Teilweise Abdeckung: Aufzeichnung seit {{date}}.",
+    "activityDescription": "Tageswerte verwenden UTC-Daten. Für Tage vor Aufzeichnungsbeginn gibt es keine erfasste Aktivität und keine Schätzung.",
+    "emptyMetric": "Für diese Kennzahl wurde in diesem Zeitraum keine Aktivität erfasst."
   }
 }

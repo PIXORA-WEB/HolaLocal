@@ -484,17 +484,14 @@
   "businessInsights": {
     "eyebrow": "Performance",
     "title": "Business insights",
-    "description": "Recorded profile views and contact-button clicks. New enquiries counts newly created HolaLocal conversations, not sent messages or confirmed enquiries. Clicks do not confirm contact. Earlier activity is not estimated.",
+    "description": "Recorded profile views and contact-button clicks. New conversations counts newly created HolaLocal conversations, not sent messages or confirmed enquiries. Clicks do not confirm contact. Earlier activity is not estimated.",
     "profileViews": "Profile views",
-    "enquiries": "New enquiries",
-    "contactActions": "Contact button clicks",
-    "selectedPeriod": "Selected period",
+    "enquiries": "New conversations",
+    "contactActions": "Contact clicks",
     "allTimeTitle": "All-time totals",
     "contactBreakdownSelected": "Contact button clicks in the selected period",
     "activityTitle": "Daily activity",
-    "activityDescription": "Each column shows all tracked profile views, enquiries and contact actions for one UTC day in the selected period.",
-    "dayLabel": "{{date}}: {{count}} total activities",
-    "dayDetails": "{{views}} profile views, {{enquiries}} enquiries and {{contacts}} contact actions",
+    "activityDescription": "Daily values use UTC dates. Days before recording began have no recorded activity, not estimated activity.",
     "actions": {
       "holalocal": "Message button clicks",
       "phone": "Phone button clicks",
@@ -535,7 +532,13 @@
       "inactive": "New public activity is not currently recorded. Previously collected totals are retained.",
       "empty": "No eligible activity has been recorded yet."
     },
-    "historicalChannel": "Historical activity · currently unavailable"
+    "historicalChannel": "Currently unavailable",
+    "subtitle": "See how people discover and interact with your business.",
+    "about": "About these numbers",
+    "metric": "Metric",
+    "exactValues": "Exact daily values",
+    "partialCoverage": "Partial coverage: recording began {{date}}.",
+    "emptyMetric": "No activity recorded for this metric in this period."
   },
   "common": {
     "save": "Save",

@@ -7,49 +7,73 @@ const output=resolve('../../../review-evidence/business-insights')
 await mkdir(output,{recursive:true})
 const fixture=`
 const scenario=new URLSearchParams(location.search).get('scenario')||'historical';
-export const business={ownerId:'synthetic',managerIds:['synthetic'],name:'Synthetic',description:'Fixture',primaryCategoryId:'handyman',categoryIds:['handyman'],serviceAreas:['algeciras'],languages:['en'],primaryLanguage:'en',location:{locality:'Algeciras',region:'Cadiz',countryCode:'ES'},status:scenario==='empty'?'draft':scenario==='inactive'?'suspended':'active',publishedAt:'2026-09-01',contact:scenario==='multiple'?{phone:'123',phoneVisible:true,email:'test@example.invalid',emailVisible:true,website:'https://example.invalid',websiteVisible:true,whatsappNumber:'456',whatsappVisible:true}:{phone:'private',phoneVisible:false}};
-business.publicContact=business.status==='active'?(scenario==='multiple'?business.contact:{}):null;
+export const business={businessId:'synthetic',verificationStatus:'unverified',subscription:{planId:'early_access'},entitlements:{features:{businessInsights:true}},ownerId:'synthetic',managerIds:['synthetic'],name:'Costa Home & Garden · Synthetic preview',description:'Fixture',primaryCategoryId:'handyman',categoryIds:['handyman'],serviceAreas:['algeciras'],languages:['en'],primaryLanguage:'en',location:{locality:'Algeciras',region:'Cadiz',countryCode:'ES'},status:scenario==='empty'?'draft':scenario==='inactive'?'suspended':'active',publishedAt:'2026-09-01',contact:['multiple','populated'].includes(scenario)?{phone:'123',phoneVisible:true,email:'test@example.invalid',emailVisible:true,website:'https://example.invalid',websiteVisible:true,whatsappNumber:'456',whatsappVisible:true}:{phone:'private',phoneVisible:false}};
+business.publicContact=business.status==='active'?(['multiple','populated'].includes(scenario)?business.contact:{}):null;
 export async function getOwnerBusinessInsights(id,range){
  if(scenario==='error')throw new Error('fixture');
  const b={holalocal:0,phone:0,email:0,whatsapp:0,website:0};
- if(['historical','inactive'].includes(scenario)&&!range)Object.assign(b,{holalocal:4,phone:3});
- if(scenario==='multiple')Object.assign(b,{holalocal:3,email:2,website:1});
+ if(['historical','inactive','sparse'].includes(scenario)&&!range)Object.assign(b,{holalocal:4,phone:3});
+ if(['multiple','populated'].includes(scenario))Object.assign(b,{holalocal:3,email:2,website:1});
  const t={profileViews:scenario==='empty'?0:24,enquiries:scenario==='empty'?0:2,contactActions:Object.values(b).reduce((a,b)=>a+b,0),contactActionBreakdown:b};
- const startDate=range?.startDate||'2026-09-01',endDate=range?.endDate||'2026-09-13';
- return {selectedRange:t,allTime:{profileViews:140,enquiries:15,contactActions:90},range:{startDate,endDate},trackingStartedAt:'2026-09-01',days:Array.from({length:13},(_,i)=>({date:'2026-09-'+String(i+1).padStart(2,'0'),...(i===0?t:{profileViews:0,enquiries:0,contactActions:0})}))};}
+ const startDate=range?.startDate||'2026-08-15',endDate=range?.endDate||'2026-09-13';
+ const days=Array.from({length:Math.round((Date.parse(endDate)-Date.parse(startDate))/86400000)+1},(_,i)=>{
+  const date=new Date(Date.parse(startDate)+i*86400000).toISOString().slice(0,10),n=Number(date.slice(8));
+  const counts=scenario==='populated'?{profileViews:n>=3&&n<9?4:0,enquiries:n>=3&&n<5?1:0,contactActions:n===3?6:0}:date==='2026-09-03'?t:{profileViews:0,enquiries:0,contactActions:0};
+  return {date,...counts};
+ });
+ const selectedRange={...t,...Object.fromEntries(['profileViews','enquiries','contactActions'].map(k=>[k,days.reduce((sum,d)=>sum+d[k],0)]))};
+ if(!days.some(d=>d.contactActions>0))selectedRange.contactActionBreakdown={holalocal:0,phone:0,email:0,whatsapp:0,website:0};
+ return {selectedRange,allTime:{profileViews:140,enquiries:15,contactActions:90},range:{startDate,endDate},trackingStartedAt:'2026-09-03',days};}
+
 `
-const server=await createServer({server:{host:'127.0.0.1',port:4198,strictPort:true},plugins:[{name:'insights-fixture',enforce:'pre',resolveId(id){if(id.endsWith('businessInsightsService.js')||id==='virtual:insights-data')return '\0insights-data';if(id==='virtual:insights-entry')return '\0insights-entry'},load(id){if(id==='\0insights-data')return fixture;if(id==='\0insights-entry')return `import React from 'react';import {createRoot} from 'react-dom/client';import {i18nReady} from '/src/i18n/index.js';import '/src/styles/tokens.css';import '/src/styles/base.css';import '/src/styles/global.css';import Panel from '/src/components/business/BusinessInsightsPanel.jsx';import {business} from 'virtual:insights-data';await i18nReady;createRoot(document.getElementById('root')).render(React.createElement('main',{className:'business-dashboard'},React.createElement(Panel,{businessId:'synthetic',business,status:business.status})));`},configureServer(s){s.middlewares.use('/insights-preview',async(req,res)=>{res.setHeader('Content-Type','text/html');res.end(await s.transformIndexHtml('/insights-preview','<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Local synthetic insights preview</title></head><body><div id="root"></div><script type="module" src="/@id/virtual:insights-entry"></script></body></html>'))})}}]})
+const authFixture=`const state={user:{uid:'synthetic',emailVerified:true},userProfile:{businessId:'synthetic',roles:['business'],displayName:'Alex · Preview',accountStatus:'active',termsAccepted:true,termsVersion:'1.1',privacyAccepted:true,privacyVersion:'1.1'},refreshUserProfile:async()=>{},signOutUser:async()=>{},updateUserProfile:async()=>{}};export default function useAuthentication(){return state}`
+const server=await createServer({server:{host:'127.0.0.1',port:4198,strictPort:true},plugins:[{name:'insights-fixture',enforce:'pre',resolveId(id){if(id.endsWith('useAuthentication.js'))return '\0auth-fixture';if(id.endsWith('useUnreadMessageCount.js'))return '\0unread-fixture';if(id.endsWith('/firebase/auth.js'))return '\0firebase-auth-fixture';if(id.endsWith('businessService.js'))return '\0business-fixture';if(id.endsWith('businessInsightsService.js')||id==='virtual:insights-data')return '\0insights-data';if(id==='virtual:insights-entry')return '\0insights-entry'},load(id){if(id==='\0auth-fixture')return authFixture;if(id==='\0unread-fixture')return 'export default function useUnreadMessageCount(){return 0}';if(id==='\0firebase-auth-fixture')return 'export const getAuthenticationErrorMessage=()=>"Fixture only"';if(id==='\0business-fixture')return `import {business} from 'virtual:insights-data';export const ensureBusinessProfile=async()=>business;export const getOwnerSubscriptionStatus=async()=>business.entitlements;export const submitBusinessForReview=async()=>{throw new Error('No writes allowed')};`;if(id==='\0insights-data')return fixture;if(id==='\0insights-entry')return `import React from 'react';import {createRoot} from 'react-dom/client';import {i18nReady} from '/src/i18n/index.js';import '/src/styles/tokens.css';import '/src/styles/base.css';import '/src/styles/global.css';import Dashboard from '/src/pages/business/BusinessDashboardPage.jsx';import Layout from '/src/components/layout/SiteLayout.jsx';import BusinessLayout from '/src/components/layout/BusinessLayout.jsx';import {BrowserRouter,Routes,Route} from 'react-router-dom';await i18nReady;createRoot(document.getElementById('root')).render(React.createElement(BrowserRouter,null,React.createElement(Routes,null,React.createElement(Route,{element:React.createElement(Layout)},React.createElement(Route,{element:React.createElement(BusinessLayout)},React.createElement(Route,{path:'*',element:React.createElement(Dashboard)}))))));`},configureServer(s){s.middlewares.use('/insights-preview',async(req,res)=>{res.setHeader('Content-Type','text/html');res.end(await s.transformIndexHtml('/insights-preview','<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Local synthetic insights preview</title></head><body><div id="root"></div><script type="module" src="/@id/virtual:insights-entry"></script></body></html>'))})}}]})
 await server.listen();console.log('http://127.0.0.1:4198/insights-preview?scenario=historical')
 if(process.argv.includes('--serve'))await new Promise(()=>{})
 const browser=await chromium.launch({args:['--disable-dev-shm-usage']});const results=[]
 try{for(const width of [390,1440]){
  const context=await browser.newContext({viewport:{width,height:1000}});let external=0
  await context.route('**/*',r=>{if(new URL(r.request().url()).hostname==='127.0.0.1')return r.continue();external++;return r.abort()})
- const page=await context.newPage()
- for(const scenario of ['messaging','multiple','historical','inactive','empty','error']){
+ const page=await context.newPage();page.on('pageerror',e=>console.log('Browser error:',e.message))
+ for(const scenario of ['messaging','populated','sparse','historical','inactive','empty','error']){
   await page.goto('http://127.0.0.1:4198/insights-preview?scenario='+scenario)
-  await page.locator(scenario==='error'?'[role="alert"]':'.business-insights__all-time').waitFor()
-  await page.screenshot({path:resolve(output,'debug.png'),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('*')].filter(e=>e.getBoundingClientRect().right>innerWidth+1).map(e=>[e.className,e.getBoundingClientRect().width]))))
+  const panel=page.locator('.business-insights');await panel.locator(scenario==='error'?'[role="alert"]':'.business-insights__all-time').waitFor()
+  assert.equal(await page.locator('.site-content .business-area__content > .business-dashboard').count(),1)
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),scenario)
   if(scenario!=='error'){
-   assert.equal(await page.locator('.business-insights__grid article').count(),2)
-   assert.equal(await page.locator('.business-insights__breakdown dd').count(),{messaging:1,multiple:5,historical:2,inactive:2,empty:0}[scenario])
-   assert.deepEqual(await page.locator('.business-insights__all-time dd').allTextContents(),['140','15','90'])
-   assert.equal(await page.locator('.business-insights__breakdown dt small').count(),scenario==='historical'?1:scenario==='inactive'?2:0)
-   if(scenario==='historical'){
-    await page.locator('#business-insights-range').focus();assert.ok(await page.locator('#business-insights-range').evaluate(e=>e.matches(':focus-visible')))
-    await page.keyboard.press('Enter');await page.getByRole('option',{name:'Last 7 days',exact:true}).click()
-    await page.waitForFunction(()=>document.querySelectorAll('.business-insights__breakdown dd').length===1)
-    assert.equal(await page.locator('.business-insights__all-time dd').last().textContent(),'90')
-    await page.reload();await page.locator('.business-insights__breakdown dt small').waitFor()
+   assert.equal(await panel.locator('.business-insights__grid article').count(),3)
+   assert.equal(await panel.locator('.business-insights__breakdown dd').count(),{messaging:1,populated:5,sparse:2,historical:2,inactive:2,empty:0}[scenario])
+   assert.deepEqual(await panel.locator('.business-insights__all-time dd').allTextContents(),['140','15','90'])
+   assert.equal(await panel.locator('.business-insights__breakdown dt small').count(),['historical','sparse'].includes(scenario)?1:scenario==='inactive'?2:0)
+   assert.equal(await panel.locator('.business-insights__chart').count(),scenario==='empty'?0:1)
+   await panel.getByText('About these numbers',{exact:true}).focus();await page.keyboard.press('Enter')
+   assert.ok(await panel.getByText('About these numbers',{exact:true}).evaluate(e=>e.parentElement.open))
+   await page.keyboard.press('Enter')
+   await panel.getByText('Exact daily values',{exact:true}).click()
+   for(const metric of ['profileViews','enquiries','contactActions']){
+    await panel.locator('select').selectOption(metric)
+    assert.equal(await panel.locator('tbody tr').count(),30)
+    const values=await panel.locator('tbody td').allTextContents();const bars=await panel.locator('.business-insights__chart rect').evaluateAll(nodes=>nodes.map(n=>Number(n.getAttribute('height'))))
+    if(bars.length)for(let i=0;i<values.length;i++)assert.equal(bars[i]===0,Number(values[i])===0)
+   }
+   await panel.locator('select').selectOption('profileViews');await panel.getByText('Exact daily values',{exact:true}).click()
+   if(scenario==='historical') {
+    await panel.locator('#business-insights-range').click();await page.getByRole('option',{name:'Custom dates',exact:true}).click()
+    await panel.locator('input[type=date]').first().fill('2026-09-07');await panel.locator('input[type=date]').last().fill('2026-09-13')
+    await panel.getByRole('button',{name:'Apply',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.business-insights__breakdown dd').length===1)
+    assert.deepEqual(await panel.locator('.business-insights__grid strong').allTextContents(),['0','0','0'])
+    assert.deepEqual(await panel.locator('.business-insights__all-time dd').allTextContents(),['140','15','90'])
+    await page.reload();await panel.locator('.business-insights__breakdown dt small').waitFor()
    }
   }
-  await page.screenshot({path:resolve(output,`${scenario}-${width}.png`),fullPage:true});results.push({width,scenario})
+  await page.evaluate(()=>{document.activeElement?.blur();window.scrollTo({top:0,behavior:'instant'})});
+  await page.screenshot({path:resolve(output,`dashboard-${scenario}-${width}.png`),fullPage:true});
+  const bounds=await panel.boundingBox();await page.screenshot({path:resolve(output,`${scenario}-${width}.png`),fullPage:true,clip:bounds});results.push({width,scenario})
  }
  for(const language of ['en','es','fr','de','it','pt','nl','cs','da','fi','hu','no','pl','ro','sk','sv','uk']){
   await page.evaluate(l=>localStorage.setItem('holalocal.uiLanguage',l),language)
   await page.goto('http://127.0.0.1:4198/insights-preview?scenario=historical');await page.locator('.business-insights__breakdown dt small').waitFor()
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),language)
-  assert.ok(!(await page.locator('.business-insights').textContent()).includes('server-counted'));results.push({width,language})
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),language);results.push({width,language})
  }
  assert.equal(external,0);await context.close()
 }await writeFile(resolve(output,'browser-results.json'),JSON.stringify(results,null,2));console.log(results.length+' checks passed; zero external requests')
