@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {legalPageContent} from '../src/i18n/locales/legalContent.js'
 import {CURRENT_TERMS_VERSION,CURRENT_PRIVACY_VERSION,CURRENT_TERMS_EFFECTIVE_DATE,CURRENT_PRIVACY_EFFECTIVE_DATE} from '../../../shared/firebase-contract/legalConsent.js'
 
-test('legal content has matching sections in all languages, no publication placeholders and explicit draft status',()=>{
+test('legal content has matching sections in all languages, no publication placeholders and a version label',()=>{
  assert.equal(Object.keys(legalPageContent).length,17)
  for(const [code,content] of Object.entries(legalPageContent)) {
   assert.ok(content.revisionNotice,code)
@@ -47,15 +47,15 @@ test('both legal pages identify the confirmed individual operator in all 17 lang
 })
 
 
-test('approved account age is consistent and candidate policy dates are not fabricated', () => {
+test('approved account age is consistent and approved publication dates match', () => {
  for (const [code, content] of Object.entries(legalPageContent)) {
   const account = content.terms.sections.find(section => section.key === 'account')
   assert.match(account.paragraphs[0], /18/, code)
  }
  assert.equal(CURRENT_TERMS_VERSION, '1.1')
  assert.equal(CURRENT_PRIVACY_VERSION, '1.1')
- assert.equal(CURRENT_TERMS_EFFECTIVE_DATE,null)
- assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,null)
+ assert.equal(CURRENT_TERMS_EFFECTIVE_DATE,'2026-09-13')
+ assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,'2026-09-13')
 })
 
 test('informational policy notice is translated in all17language resources',async()=>{
@@ -77,7 +77,7 @@ test('all legal locales disclose approved mailbox-only support retention without
 })
 
 
-test('approved retention criteria appear once in each draft locale without enabling cleanup',()=>{
+test('approved retention criteria appear once in each locale with distinct automatic and manual controls',()=>{
  for(const [code,content]of Object.entries(legalPageContent)){
   const paragraphs=content.privacy.sections.find(section=>section.key==='deletion').paragraphs
   assert.equal(paragraphs.length,7,code)
@@ -87,10 +87,10 @@ test('approved retention criteria appear once in each draft locale without enabl
  const copy=legalPageContent.en.privacy.sections.find(section=>section.key==='deletion').paragraphs.join(' ')
  assert.match(copy,/at least one participant retains an account/)
  assert.match(copy,/does not mean recent login/)
- assert.match(copy,/destructive cleanup is not enabled/)
+ assert.match(copy,/Manual conversation and acknowledgment cleanup and automatic account-deletion recovery remain disabled/)
  assert.match(copy,/responsible reviewer, next review date and ending condition/)
  assert.match(copy,/does not automatically end or renew/)
- assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,null)
+ assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,'2026-09-13')
 })
 
 test('all locales distinguish service, interests, legal duties, consent and transfer safeguards',()=>{
@@ -108,4 +108,15 @@ test('all locales distinguish service, interests, legal duties, consent and tran
  assert.match(purpose,/legal obligations/)
  assert.match(purpose,/separate consent.*withdraw/)
  assert.match(legalPageContent.en.privacy.sections.find(s=>s.key==='providers').paragraphs[1],/standard contractual clauses where required/)
+})
+
+
+test('published review availability and independent cleanup controls are explicit',()=>{
+ const content=legalPageContent.en
+ assert.match(content.privacy.sections.find(s=>s.key==='reviews').paragraphs[0],/Only approved reviews are public.*translation is enabled/)
+ assert.match(content.privacy.sections.find(s=>s.key==='deletion').paragraphs.at(-1),/Scheduled cleanup.*is enabled.*trusted resolution date.*preservation holds.*remain disabled/)
+ for(const [code,row] of Object.entries(legalPageContent)){
+  assert.equal(row.privacy.sections.find(s=>s.key==='reviews').paragraphs[0],row.terms.sections.find(s=>s.key==='reviews').paragraphs[0],code)
+  assert.ok(row.privacy.sections.find(s=>s.key==='reviews').paragraphs[2].includes('europe-west1'),code)
+ }
 })

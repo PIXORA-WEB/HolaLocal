@@ -1,10 +1,10 @@
 export const CURRENT_TERMS_VERSION = '1.1'
 export const CURRENT_PRIVACY_VERSION = '1.1'
 
-export const CURRENT_TERMS_EFFECTIVE_DATE = null
-export const CURRENT_PRIVACY_EFFECTIVE_DATE = null
+export const CURRENT_TERMS_EFFECTIVE_DATE = '2026-09-13'
+export const CURRENT_PRIVACY_EFFECTIVE_DATE = '2026-09-13'
 
-// Candidate 1.1 is not published; effective dates are assigned at approved release.
+// Approved publication date; historical acknowledgments retain their original versions.
 const historicalTermsVersions = Object.freeze(['1.0'])
 const historicalPrivacyVersions = Object.freeze(['1.0'])
 
