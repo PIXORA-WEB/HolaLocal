@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BUSINESS_CONTACT_ACTIONS } from '@holalocal/firebase-contract'
 import SelectField from '../common/SelectField.jsx'
@@ -31,6 +31,16 @@ export default function BusinessInsightsPanel({ businessId, status, business }) 
   const [validationError, setValidationError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [metric, setMetric] = useState('profileViews')
+  const [chartWidth, setChartWidth] = useState(640)
+  const chartContainer = useRef(null)
+  const unrecordedPattern = useId()
+
+  useEffect(() => {
+    if (!chartContainer.current) return
+    const observer = new ResizeObserver(([entry]) => setChartWidth(Math.max(1, Math.round(entry.contentRect.width))))
+    observer.observe(chartContainer.current)
+    return () => observer.disconnect()
+  }, [state.data])
 
   useEffect(() => {
     let current = true
@@ -95,9 +105,12 @@ export default function BusinessInsightsPanel({ businessId, status, business }) 
         end: localeDate(displayed.range.endDate, locale),
       })
     : ''
-  const maximum = Math.max(4, Math.ceil(Math.max(0, ...(displayed?.days ?? []).map((day) => day[metric])) / 4) * 4)
-  const hasActivity = displayed?.days.some((day) => day[metric] > 0) ?? false
   const trackingDate = displayed?.trackingStartedAt ? new Date(displayed.trackingStartedAt).toISOString().slice(0, 10) : null
+  const isRecorded = (day) => !trackingDate || day.date >= trackingDate
+  const maximum = Math.max(4, Math.ceil(Math.max(0, ...(displayed?.days ?? []).filter(isRecorded).map((day) => day[metric])) / 4) * 4)
+  const hasActivity = displayed?.days.some((day) => isRecorded(day) && day[metric] > 0) ?? false
+  const hasUnrecordedDays = displayed?.days.some((day) => !isRecorded(day)) ?? false
+  const plotWidth = Math.max(1, chartWidth - 64)
   const partialCoverage = trackingDate && new Date(displayed.trackingStartedAt).getTime() > Date.parse(`${displayed.range.startDate}T00:00:00Z`)
   const number = (value) => new Intl.NumberFormat(locale).format(value)
   const rangeOptions = INSIGHT_RANGE_PRESETS.map((preset) => ({
@@ -154,17 +167,20 @@ export default function BusinessInsightsPanel({ businessId, status, business }) 
           <div className="business-insights__grid">
             {metricKeys.map((key) => <article key={key}><span>{t(`businessInsights.${key}`)}</span><strong>{number(displayed.selectedRange[key])}</strong></article>)}
           </div>
-          <section className="business-insights__activity" aria-labelledby="insights-activity-title">
+          <section ref={chartContainer} className="business-insights__activity" aria-labelledby="insights-activity-title">
             <div className="business-insights__chart-heading">
               <h3 id="insights-activity-title">{t('businessInsights.activityTitle')}</h3>
               <label>{t('businessInsights.metric')}<select value={metric} onChange={(event) => setMetric(event.target.value)}>{metricKeys.map((key) => <option value={key} key={key}>{t(`businessInsights.${key}`)}</option>)}</select></label>
             </div>
-            {hasActivity ? <svg className="business-insights__chart" viewBox="0 0 640 200" aria-hidden="true">
-              {[0, maximum / 2, maximum].map((tick) => <g key={tick}><line x1="40" x2="620" y1={165 - tick / maximum * 140} y2={165 - tick / maximum * 140} /><text x="32" y={169 - tick / maximum * 140} textAnchor="end">{number(tick)}</text></g>)}
-              {displayed.days.map((day, index) => <rect key={day.date} x={40 + index * 580 / displayed.days.length} y={165 - day[metric] / maximum * 140} width={580 / displayed.days.length * 0.8} height={day[metric] / maximum * 140} />)}
-              {[0, Math.floor((displayed.days.length - 1) / 2), displayed.days.length - 1].filter((index, position, items) => items.indexOf(index) === position).map((index, position) => <text key={index} x={position === 0 ? 40 : index === displayed.days.length - 1 ? 620 : 330} y="190" textAnchor={position === 0 ? 'start' : index === displayed.days.length - 1 ? 'end' : 'middle'}>{new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${displayed.days[index].date}T00:00:00Z`))}</text>)}
+            {hasActivity || hasUnrecordedDays ? <svg className="business-insights__chart" viewBox={`0 0 ${chartWidth} 200`} aria-hidden="true">
+              <defs><pattern id={unrecordedPattern} width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#f1f5f9" /><path d="M0 8 8 0" stroke="#cbd5e1" strokeWidth="1" /></pattern></defs>
+              {displayed.days.map((day, index) => !isRecorded(day) && <rect className="business-insights__unrecorded" key={day.date} x={44 + index * plotWidth / displayed.days.length} y="25" width={plotWidth / displayed.days.length} height="140" fill={`url(#${unrecordedPattern})`} />)}
+              {[0, maximum / 2, maximum].map((tick) => <g key={tick}><line x1="44" x2={chartWidth - 20} y1={165 - tick / maximum * 140} y2={165 - tick / maximum * 140} /><text x="36" y={169 - tick / maximum * 140} textAnchor="end">{number(tick)}</text></g>)}
+              {displayed.days.map((day, index) => isRecorded(day) && <rect className="business-insights__bar" data-date={day.date} key={day.date} x={44 + index * plotWidth / displayed.days.length} y={165 - day[metric] / maximum * 140} width={plotWidth / displayed.days.length * 0.8} height={day[metric] / maximum * 140} />)}
+              {[0, Math.floor((displayed.days.length - 1) / 2), displayed.days.length - 1].filter((index, position, items) => items.indexOf(index) === position).map((index, position) => <text key={index} x={position === 0 ? 44 : index === displayed.days.length - 1 ? chartWidth - 20 : 44 + plotWidth / 2} y="190" textAnchor={position === 0 ? 'start' : index === displayed.days.length - 1 ? 'end' : 'middle'}>{new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${displayed.days[index].date}T00:00:00Z`))}</text>)}
             </svg> : <div className="business-insights__activity-empty" role="status"><p>{t('businessInsights.emptyMetric')}</p></div>}
-            <details className="business-insights__details"><summary>{t('businessInsights.exactValues')}</summary><div className="business-insights__table"><table><thead><tr><th scope="col">{t('businessInsights.range.label')}</th><th scope="col">{t(`businessInsights.${metric}`)}</th></tr></thead><tbody>{displayed.days.map((day) => <tr key={day.date}><th scope="row">{localeDate(day.date, locale)}</th><td>{number(day[metric])}</td></tr>)}</tbody></table></div></details>
+            {hasUnrecordedDays && <p className="business-insights__legend"><span aria-hidden="true" />{t('businessInsights.notRecorded')}</p>}
+            <details className="business-insights__details"><summary>{t('businessInsights.exactValues')}</summary><div className="business-insights__table" tabIndex={0} role="region" aria-label={t('businessInsights.exactValues')}><table><thead><tr><th scope="col">{t('businessInsights.range.label')}</th><th scope="col">{t(`businessInsights.${metric}`)}</th></tr></thead><tbody>{displayed.days.map((day) => <tr key={day.date}><th scope="row">{localeDate(day.date, locale)}</th><td>{isRecorded(day) ? number(day[metric]) : t('businessInsights.notRecorded')}</td></tr>)}</tbody></table></div></details>
           </section>
           {visibleActions.length > 0 && <section className="business-insights__breakdown" aria-labelledby="contact-breakdown-title">
             <h3 id="contact-breakdown-title">{t('businessInsights.contactBreakdownSelected')}</h3>

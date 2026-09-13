@@ -15,7 +15,7 @@ export async function getOwnerBusinessInsights(id,range){
  if(['historical','inactive','sparse'].includes(scenario)&&!range)Object.assign(b,{holalocal:4,phone:3});
  if(['multiple','populated'].includes(scenario))Object.assign(b,{holalocal:3,email:2,website:1});
  const t={profileViews:scenario==='empty'?0:24,enquiries:scenario==='empty'?0:2,contactActions:Object.values(b).reduce((a,b)=>a+b,0),contactActionBreakdown:b};
- const startDate=range?.startDate||'2026-08-15',endDate=range?.endDate||'2026-09-13';
+ const startDate=range?.startDate||(scenario==='unrecorded'?'2026-08-01':'2026-08-15'),endDate=range?.endDate||(scenario==='unrecorded'?'2026-08-14':'2026-09-13');
  const days=Array.from({length:Math.round((Date.parse(endDate)-Date.parse(startDate))/86400000)+1},(_,i)=>{
   const date=new Date(Date.parse(startDate)+i*86400000).toISOString().slice(0,10),n=Number(date.slice(8));
   const counts=scenario==='populated'?{profileViews:n>=3&&n<9?4:0,enquiries:n>=3&&n<5?1:0,contactActions:n===3?6:0}:date==='2026-09-03'?t:{profileViews:0,enquiries:0,contactActions:0};
@@ -23,7 +23,7 @@ export async function getOwnerBusinessInsights(id,range){
  });
  const selectedRange={...t,...Object.fromEntries(['profileViews','enquiries','contactActions'].map(k=>[k,days.reduce((sum,d)=>sum+d[k],0)]))};
  if(!days.some(d=>d.contactActions>0))selectedRange.contactActionBreakdown={holalocal:0,phone:0,email:0,whatsapp:0,website:0};
- return {selectedRange,allTime:{profileViews:140,enquiries:15,contactActions:90},range:{startDate,endDate},trackingStartedAt:'2026-09-03',days};}
+ return {selectedRange,allTime:{profileViews:140,enquiries:15,contactActions:90},range:{startDate,endDate},trackingStartedAt:scenario==='empty'?'2026-08-01':'2026-09-03',days};}
 
 `
 const authFixture=`const state={user:{uid:'synthetic',emailVerified:true},userProfile:{businessId:'synthetic',roles:['business'],displayName:'Alex · Preview',accountStatus:'active',termsAccepted:true,termsVersion:'1.1',privacyAccepted:true,privacyVersion:'1.1'},refreshUserProfile:async()=>{},signOutUser:async()=>{},updateUserProfile:async()=>{}};export default function useAuthentication(){return state}`
@@ -35,26 +35,41 @@ try{for(const width of [390,1440]){
  const context=await browser.newContext({viewport:{width,height:1000}});let external=0
  await context.route('**/*',r=>{if(new URL(r.request().url()).hostname==='127.0.0.1')return r.continue();external++;return r.abort()})
  const page=await context.newPage();page.on('pageerror',e=>console.log('Browser error:',e.message))
- for(const scenario of ['messaging','populated','sparse','historical','inactive','empty','error']){
+ for(const scenario of ['messaging','populated','sparse','historical','inactive','empty','unrecorded','error']){
   await page.goto('http://127.0.0.1:4198/insights-preview?scenario='+scenario)
   const panel=page.locator('.business-insights');await panel.locator(scenario==='error'?'[role="alert"]':'.business-insights__all-time').waitFor()
   assert.equal(await page.locator('.site-content .business-area__content > .business-dashboard').count(),1)
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),scenario)
   if(scenario!=='error'){
    assert.equal(await panel.locator('.business-insights__grid article').count(),3)
-   assert.equal(await panel.locator('.business-insights__breakdown dd').count(),{messaging:1,populated:5,sparse:2,historical:2,inactive:2,empty:0}[scenario])
+   assert.equal(await panel.locator('.business-insights__breakdown dd').count(),{messaging:1,populated:5,sparse:2,historical:2,inactive:2,empty:0,unrecorded:1}[scenario])
    assert.deepEqual(await panel.locator('.business-insights__all-time dd').allTextContents(),['140','15','90'])
    assert.equal(await panel.locator('.business-insights__breakdown dt small').count(),['historical','sparse'].includes(scenario)?1:scenario==='inactive'?2:0)
    assert.equal(await panel.locator('.business-insights__chart').count(),scenario==='empty'?0:1)
+   assert.equal(await panel.locator('details[open]').count(),0)
+   if(scenario!=='empty')await page.waitForFunction(()=>{const s=document.querySelector('.business-insights__chart');return s&&Math.abs(s.viewBox.baseVal.width-s.getBoundingClientRect().width)<2})
    await panel.getByText('About these numbers',{exact:true}).focus();await page.keyboard.press('Enter')
    assert.ok(await panel.getByText('About these numbers',{exact:true}).evaluate(e=>e.parentElement.open))
    await page.keyboard.press('Enter')
-   await panel.getByText('Exact daily values',{exact:true}).click()
+   await panel.getByText('Exact daily values',{exact:true}).focus();await page.keyboard.press('Enter')
    for(const metric of ['profileViews','enquiries','contactActions']){
     await panel.locator('select').selectOption(metric)
-    assert.equal(await panel.locator('tbody tr').count(),30)
-    const values=await panel.locator('tbody td').allTextContents();const bars=await panel.locator('.business-insights__chart rect').evaluateAll(nodes=>nodes.map(n=>Number(n.getAttribute('height'))))
-    if(bars.length)for(let i=0;i<values.length;i++)assert.equal(bars[i]===0,Number(values[i])===0)
+    assert.equal(await panel.locator('tbody tr').count(),scenario==='unrecorded'?14:30)
+    const values=await panel.locator('tbody td').allTextContents()
+    const unrecorded=values.filter(v=>v==='Not recorded').length
+    assert.equal(unrecorded,scenario==='empty'?0:scenario==='unrecorded'?14:19)
+    const recordedValues=values.filter(v=>v!=='Not recorded')
+    const bars=await panel.locator('.business-insights__bar').evaluateAll(nodes=>nodes.map(n=>Number(n.getAttribute('height'))))
+    if(bars.length) {
+     assert.equal(bars.length,recordedValues.length)
+     for(let i=0;i<recordedValues.length;i++)assert.equal(bars[i]===0,Number(recordedValues[i])===0)
+    }
+    assert.equal(await panel.locator('.business-insights__unrecorded').count(),unrecorded)
+    const region=panel.getByRole('region',{name:'Exact daily values'})
+    await region.focus();await page.keyboard.press('End')
+    await page.waitForFunction(()=>{const e=document.querySelector('.business-insights__table');return e.scrollTop+e.clientHeight>=e.scrollHeight-2})
+    assert.ok(await panel.locator('tbody tr').last().isVisible())
+
    }
    await panel.locator('select').selectOption('profileViews');await panel.getByText('Exact daily values',{exact:true}).click()
    if(scenario==='historical') {

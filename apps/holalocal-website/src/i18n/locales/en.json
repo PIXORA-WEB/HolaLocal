@@ -491,7 +491,7 @@
     "allTimeTitle": "All-time totals",
     "contactBreakdownSelected": "Contact button clicks in the selected period",
     "activityTitle": "Daily activity",
-    "activityDescription": "Daily values use UTC dates. Days before recording began have no recorded activity, not estimated activity.",
+    "activityDescription": "Daily values use UTC dates. Dates before collection began are marked “Not recorded”. Zero means no activity was recorded that day after collection began.",
     "actions": {
       "holalocal": "Message button clicks",
       "phone": "Phone button clicks",
@@ -538,7 +538,8 @@
     "metric": "Metric",
     "exactValues": "Exact daily values",
     "partialCoverage": "Partial coverage: recording began {{date}}.",
-    "emptyMetric": "No activity recorded for this metric in this period."
+    "emptyMetric": "No activity recorded for this metric in this period.",
+    "notRecorded": "Not recorded"
   },
   "common": {
     "save": "Save",

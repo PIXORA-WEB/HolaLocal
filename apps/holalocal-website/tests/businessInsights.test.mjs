@@ -152,7 +152,7 @@ test('single-metric chart preserves zero heights and exposes exact values', asyn
  assert.match(panel, /height=\{day\[metric\] \/ maximum \* 140\}/)
  assert.match(panel, /scope="row"/)
  assert.match(panel, /businessInsights.exactValues/)
- assert.match(panel, /hasActivity \? <svg/)
+ assert.match(panel, /hasActivity \|\| hasUnrecordedDays \? <svg/)
  assert.match(panel, /displayed\.allTime\[key\]/)
  assert.match(panel, /BUSINESS_CONTACT_ACTIONS\.filter/)
 })
@@ -238,4 +238,14 @@ test('normal contact activations generate separate valid tokens', () => {
   assert.match(calls[0].eventToken, BUSINESS_INSIGHT_TOKEN_PATTERN)
   assert.match(calls[1].eventToken, BUSINESS_INSIGHT_TOKEN_PATTERN)
   assert.notEqual(calls[0].eventToken, calls[1].eventToken)
+})
+
+ test('unrecorded dates are distinct from zeros and the chart observes the available width', async () => {
+ const panel = await read('../src/components/business/BusinessInsightsPanel.jsx')
+ assert.match(panel, /new ResizeObserver/)
+ assert.match(panel, /observer.disconnect/)
+ assert.match(panel, /day.date >= trackingDate/)
+ assert.match(panel, /isRecorded\(day\) \? number\(day\[metric\]\) : t\('businessInsights.notRecorded'\)/)
+ assert.doesNotMatch(panel, /<details[^>]+open/)
+ assert.match(panel, /tabIndex=\{0\} role="region"/)
 })

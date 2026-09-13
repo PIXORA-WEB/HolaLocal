@@ -572,7 +572,8 @@
     "metric": "Indicateur",
     "exactValues": "Valeurs quotidiennes exactes",
     "partialCoverage": "Couverture partielle : enregistrement depuis le {{date}}.",
-    "activityDescription": "Les valeurs quotidiennes utilisent les dates UTC. Les jours précédant le début du suivi n’ont aucune activité enregistrée, sans estimation.",
-    "emptyMetric": "Aucune activité enregistrée pour cet indicateur sur cette période."
+    "activityDescription": "Les valeurs quotidiennes utilisent les dates UTC. Les dates précédant le début de la collecte sont indiquées « Non enregistré ». Zéro signifie qu’aucune activité n’a été enregistrée ce jour-là après le début de la collecte.",
+    "emptyMetric": "Aucune activité enregistrée pour cet indicateur sur cette période.",
+    "notRecorded": "Non enregistré"
   }
 }

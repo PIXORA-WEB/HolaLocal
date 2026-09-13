@@ -572,7 +572,8 @@
     "metric": "Métrica",
     "exactValues": "Valores diários exatos",
     "partialCoverage": "Cobertura parcial: registo desde {{date}}.",
-    "activityDescription": "Os valores diários usam datas UTC. Os dias anteriores ao início do registo não têm atividade registada, sem estimativas.",
-    "emptyMetric": "Nenhuma atividade registada para esta métrica neste período."
+    "activityDescription": "Os valores diários usam datas UTC. As datas anteriores ao início da recolha aparecem como «Não registado». Zero significa que não foi registada atividade nesse dia após o início da recolha.",
+    "emptyMetric": "Nenhuma atividade registada para esta métrica neste período.",
+    "notRecorded": "Não registado"
   }
 }

@@ -572,7 +572,8 @@
     "metric": "Meetwaarde",
     "exactValues": "Exacte dagwaarden",
     "partialCoverage": "Gedeeltelijke dekking: registratie sinds {{date}}.",
-    "activityDescription": "Dagwaarden gebruiken UTC-datums. Dagen vóór het begin van de registratie hebben geen geregistreerde activiteit; er wordt niets geschat.",
-    "emptyMetric": "Geen activiteit geregistreerd voor deze meetwaarde in deze periode."
+    "activityDescription": "Dagwaarden gebruiken UTC-datums. Datums vóór het begin van de registratie staan als ‘Niet geregistreerd’ vermeld. Nul betekent dat er die dag na het begin van de registratie geen activiteit is vastgelegd.",
+    "emptyMetric": "Geen activiteit geregistreerd voor deze meetwaarde in deze periode.",
+    "notRecorded": "Niet geregistreerd"
   }
 }

@@ -17,7 +17,7 @@ Website-only candidate from main 6ba0d27212319699197a18306b7bbf47b69f7681. No ba
 
 Three compact summary cards show Profile views, New conversations and Contact clicks. They stack as compact rows on mobile. The heading and date selector share a responsive header; the selected-period box is removed and coverage is secondary text, with partial coverage explicit.
 
-Daily activity now shows one selected metric using dependency-free SVG bars, zero heights for zero counts, dates and a numerical scale. Native disclosures expose exact daily values in a table and explain what the counters mean. Contact channels are compact icon/list rows with right-aligned counts. All-time totals are a quiet bottom section.
+Daily activity now shows one selected metric using dependency-free SVG bars, zero heights for recorded zero counts, dates and a numerical scale. The chart observes the full available panel width, keeping axis text at a readable size. Dates before the known UTC collection-start day are hatched and labelled “Not recorded” in the exact-value table. The collection-start day retains actual recorded values (the existing partial-coverage notice accounts for a mid-day start). Unknown start metadata is not used to invent an unavailable interval. All totals remain unchanged. Native disclosures remain collapsed by default and keyboard accessible. The expanded table includes every returned date in a labelled, keyboard-scrollable region. Contact channels are compact icon/list rows with right-aligned counts. All-time totals are a quiet bottom section.
 
 Removed obsolete summed-chart helpers, old bar-grid styles, per-day label helpers, selected-period box rules and contact/all-time tile rules. Original style rules are consolidated; no override layer or replacement component.
 
@@ -25,11 +25,11 @@ Affected metric wording is translated in all 17 original locale resources. Exist
 
 ## Verification
 
-- 26 insights/locale-composition tests pass.
+- 27 insights/locale-composition tests pass.
 - The new actual managed/public projection regression passes, including private overrides, hidden values, lifecycle and deletion state.
 - Full compatibility suite: 30 pass, 7 fail. Unchanged main-equivalent source with the same dependencies: 29 pass, the same 7 fail. These are existing broader locale manifest/composition/legal assertions; no coverage suppressed or changed to mask them.
-- 48 local browser checks: 390/1440 widths, messaging-only, populated, sparse, historical channels, inactive business, empty/error, period changes/reload, all three metric selections, exact daily values and zero bar heights, keyboard disclosures, 17-language wrapping. Fixtures render the actual BusinessDashboardPage within SiteLayout and BusinessLayout. All external requests blocked; zero external requests occurred.
-- Lint, locale parity (17), fresh production build and unchanged 200 kB budget pass. Local initial JS: 190.22 kB gzip; Vercel's configured preview build may differ.
+- 50 local browser checks: 390/1440 widths, messaging-only, populated, sparse, historical channels, inactive business, empty/error, period changes/reload, all three metric selections, exact daily values, mixed/entirely unrecorded periods, preserved zero bar heights, full-width chart sizing, default-closed keyboard disclosures and table End-key scrolling, 17-language wrapping. Fixtures render the actual BusinessDashboardPage within SiteLayout and BusinessLayout. All external requests blocked; zero external requests occurred.
+- Lint, locale parity (17), fresh production build and unchanged 200 kB budget pass. Local initial JS: 190.25 kB gzip; Vercel's configured preview build may differ.
 
 Synthetic fixtures exist only in `tests/browser/businessInsights.mjs`, loaded by a programmatic test server. They are not imported into runtime pages or the production build. Run from apps/holalocal-website:
 
@@ -46,7 +46,7 @@ Other scenarios: messaging, populated, sparse, inactive, empty, error. Locale us
 ![Mobile insights detail](mobile.png)
 ![Desktop insights detail](desktop.png)
 
-[Historical channel](historical-mobile.png) · [Empty selected period](empty-mobile.png)
+[Historical channel](historical-mobile.png) · [Empty selected period](empty-mobile.png) · [Entirely unrecorded period](unrecorded-mobile.png)
 
 ## Release boundary
 

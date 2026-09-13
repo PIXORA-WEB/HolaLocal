@@ -572,7 +572,8 @@
     "metric": "Kennzahl",
     "exactValues": "Genaue Tageswerte",
     "partialCoverage": "Teilweise Abdeckung: Aufzeichnung seit {{date}}.",
-    "activityDescription": "Tageswerte verwenden UTC-Daten. Für Tage vor Aufzeichnungsbeginn gibt es keine erfasste Aktivität und keine Schätzung.",
-    "emptyMetric": "Für diese Kennzahl wurde in diesem Zeitraum keine Aktivität erfasst."
+    "activityDescription": "Tageswerte verwenden UTC-Daten. Tage vor Erfassungsbeginn sind als „Nicht erfasst“ gekennzeichnet. Null bedeutet, dass an diesem Tag nach Erfassungsbeginn keine Aktivität erfasst wurde.",
+    "emptyMetric": "Für diese Kennzahl wurde in diesem Zeitraum keine Aktivität erfasst.",
+    "notRecorded": "Nicht erfasst"
   }
 }
