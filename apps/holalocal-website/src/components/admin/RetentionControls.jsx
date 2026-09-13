@@ -15,10 +15,10 @@ export default function RetentionControls() {
   useEffect(()=>{
     if(!open)return
     let active=true
-    setLoading(true);setError(false);setSelected([]);setView({rows:[],cleanupEnabled:false})
-    manageRetentionRecords({action:'list',kind,cursor,view:queueView}).then(data=>{if(active){setView(data);setLoading(false)}}).catch(()=>{if(active){setError(true);setLoading(false)}})
+    manageRetentionRecords({action:'list',kind,cursor,view:queueView}).then(data=>{if(active){setView({...data,observedAt:Date.now()});setLoading(false)}}).catch(()=>{if(active){setError(true);setLoading(false)}})
     return ()=>{active=false}
   },[open,kind,cursor,queueView,reload])
+  function resetQueryView(){setLoading(true);setError(false);setSelected([]);setView({rows:[],cleanupEnabled:false})}
   const status=row=>row.evidencePresent===false?copy.removed:row.decision.status==='needs-assessment'?copy.assess:copy[row.decision.status]??row.decision.status
   const close=()=>{if(!busy){setRecord(null);setConfirm(false)}}
   async function submit(event){
@@ -37,26 +37,26 @@ export default function RetentionControls() {
         const response=await manageRetentionRecords(data)
         setResults([{id:record.id,...response}])
       }
-      setRecord(null);setConfirm(false);setReload(value=>value+1)
+      setRecord(null);setConfirm(false);resetQueryView();setReload(value=>value+1)
     }catch(error){setError(true);if(String(error?.message).includes('future-review-date'))formElement.querySelector('input[type=datetime-local]')?.focus()}finally{setBusy(false)}
   }
   function select(row){setForm(freshForm());setRecord(row);setError(false)}
   const kindLabels={'acknowledgment':copy.acknowledgments,'business-report':copy.reports,conversation:copy.conversations}
-  return <details className="admin-panel admin-retention" onToggle={event=>setOpen(event.currentTarget.open)}>
+  return <details className="admin-panel admin-retention" onToggle={event=>{if(event.target!==event.currentTarget)return;if(event.currentTarget.open&&!open)resetQueryView();setOpen(event.currentTarget.open)}}>
     <summary ref={heading}>{copy.title}</summary>
     {open&&<>
       <p className="admin-panel__note">{copy.notice}</p>
-      <div className="admin-toolbar"><label>{copy.title}<select aria-label={copy.title} disabled={busy} value={kind} onChange={event=>{setKind(event.target.value);setQueueView('all');setCursor(null);setResults([])}}>{Object.entries(kindLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-        <label>{copy.queueFilter}<select aria-label={copy.queueFilter} disabled={busy} value={queueView} onChange={event=>{setQueueView(event.target.value);setCursor(null);setResults([])}}><option value="all">{copy.allRecords}</option><option value="reviews-due">{copy.dueReviews}</option>{kind==='business-report'&&<option value="cleanup-due">{copy.dueCleanup}</option>}</select></label>
-        <button className="button button--secondary" type="button" disabled={busy||loading} onClick={()=>{setCursor(null);setReload(value=>value+1)}}>{copy.reset}</button></div>
+      <div className="admin-toolbar"><label>{copy.title}<select aria-label={copy.title} disabled={busy} value={kind} onChange={event=>{resetQueryView();setKind(event.target.value);setQueueView('all');setCursor(null);setResults([])}}>{Object.entries(kindLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+        <label>{copy.queueFilter}<select aria-label={copy.queueFilter} disabled={busy} value={queueView} onChange={event=>{resetQueryView();setQueueView(event.target.value);setCursor(null);setResults([])}}><option value="all">{copy.allRecords}</option><option value="reviews-due">{copy.dueReviews}</option>{kind==='business-report'&&<option value="cleanup-due">{copy.dueCleanup}</option>}</select></label>
+        <button className="button button--secondary" type="button" disabled={busy||loading} onClick={()=>{resetQueryView();setCursor(null);setReload(value=>value+1)}}>{copy.reset}</button></div>
       {!view.cleanupEnabled&&<p role="status">{copy.closed}</p>}
       {error&&<p className="admin-alert" role="alert">{copy.failed}</p>}
       {loading?<p role="status">{t('common.loading')}</p>:view.rows.length===0?<p className="admin-empty">{copy.empty}</p>:<div className="admin-deletion-list">{view.rows.map(row=><div className="admin-retention__record" key={row.id}>
         <input type="checkbox" aria-label={`${copy.execute}: ${row.id}`} disabled={busy||!view.cleanupEnabled||(!selected.includes(row.id)&&selected.length>=RETENTION_EXECUTION_LIMIT)} checked={selected.includes(row.id)} onChange={event=>setSelected(current=>event.target.checked?[...current,row.id]:current.filter(id=>id!==row.id))}/>
-        <div><code>{row.id}</code><p>{status(row)}{row.decision.reviewAt?` · ${new Date(row.decision.reviewAt).toLocaleString(i18n.language)}`:''}</p>{kind==='business-report'&&<p>{row.eligibleAt?`${copy.eligibleAt}: ${new Date(row.eligibleAt).toLocaleString(i18n.language)} · ${new Date(row.eligibleAt).valueOf()<=Date.now()?copy.dueCleanup:copy.notDue}`:copy.untrustedDate}</p>}{row.resolvedAt&&<p>{copy.resolve}: {new Date(row.resolvedAt).toLocaleString(i18n.language)}</p>}</div>
+        <div><code>{row.id}</code><p>{status(row)}{row.decision.reviewAt?` · ${new Date(row.decision.reviewAt).toLocaleString(i18n.language)}`:''}</p>{kind==='business-report'&&<p>{row.eligibleAt?`${copy.eligibleAt}: ${new Date(row.eligibleAt).toLocaleString(i18n.language)} · ${new Date(row.eligibleAt).valueOf()<=view.observedAt?copy.dueCleanup:copy.notDue}`:copy.untrustedDate}</p>}{row.resolvedAt&&<p>{copy.resolve}: {new Date(row.resolvedAt).toLocaleString(i18n.language)}</p>}</div>
         <button className="button button--secondary" type="button" disabled={busy||row.evidencePresent===false} onClick={()=>select(row)}>{copy.review}</button>
       </div>)}</div>}
-      <div className="admin-toolbar"><button className="button button--secondary" type="button" disabled={loading||busy||!view.nextCursor} onClick={()=>setCursor(view.nextCursor)}>{copy.next}</button>
+      <div className="admin-toolbar"><button className="button button--secondary" type="button" disabled={loading||busy||!view.nextCursor} onClick={()=>{resetQueryView();setCursor(view.nextCursor)}}>{copy.next}</button>
         <button className="button button--danger" type="button" disabled={busy||loading||!view.cleanupEnabled||!selected.length} onClick={()=>setConfirm(true)}>{copy.execute} ({selected.length}/{RETENTION_EXECUTION_LIMIT})</button></div>
       {results.length>0&&<ul aria-live="polite">{results.map(result=><li key={result.id}><code>{result.id}</code>: {result.failed?copy.failed:result.held||result.blocked||result.accountRetained||result.notDue?copy.held:result.needsAssessment?copy.assess:result.removed||result.redacted?copy.removed:result.disabled?copy.closed:copy.done}{result.complete===false?` · ${copy.execute}`:''}</li>)}</ul>}
     </>}
