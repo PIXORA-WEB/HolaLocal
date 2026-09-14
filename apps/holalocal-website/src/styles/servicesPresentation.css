@@ -207,7 +207,7 @@
 .business-detail__section {
   padding: clamp(1.25rem, 3vw, 2rem);
   border-top: 1px solid #e8eef3;
-  scroll-margin-top: 1rem;
+  scroll-margin-top: var(--site-header-height, 1rem);
 }
 
 .business-detail__section h3 {
