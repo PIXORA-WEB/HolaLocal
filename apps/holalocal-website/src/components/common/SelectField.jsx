@@ -18,27 +18,33 @@ function SelectField({
   const buttonRef = useRef(null)
   const menuRef = useRef(null)
   const [open, setOpen] = useState(false)
+  const menuOpen = open && !disabled
+  // Reset stored intent as well as hiding the menu in this render. Re-enabling
+  // must not revive an old popup, and no effect is needed to enforce disabling.
+  if (disabled && open) setOpen(false)
   const activeOption = options.find((option) => option.value === value) ?? options[0]
 
   useEffect(() => {
-    if (!open) return undefined
+    if (!menuOpen) return undefined
     const closeOutside = (event) => {
       if (!rootRef.current?.contains(event.target)) setOpen(false)
     }
     document.addEventListener('pointerdown', closeOutside)
     return () => document.removeEventListener('pointerdown', closeOutside)
-  }, [open])
+  }, [menuOpen])
 
   useEffect(() => {
-    if (open) menuRef.current?.querySelector('[aria-selected="true"]')?.focus()
-  }, [open])
+    if (menuOpen) menuRef.current?.querySelector('[aria-selected="true"]')?.focus()
+  }, [menuOpen])
 
   function closeAndRestoreFocus() {
     setOpen(false)
-    buttonRef.current?.focus()
+    if (!disabled && !buttonRef.current?.disabled
+      && rootRef.current?.contains(document.activeElement)) buttonRef.current?.focus()
   }
 
   function handleMenuKeyDown(event) {
+    if (disabled || !menuOpen) return
     const optionButtons = [...menuRef.current.querySelectorAll('[role="option"]')]
     const currentIndex = optionButtons.indexOf(document.activeElement)
     let nextIndex
@@ -68,15 +74,16 @@ function SelectField({
       <button
         aria-controls={menuId}
         aria-describedby={ariaDescribedBy}
-        aria-expanded={open}
+        aria-expanded={menuOpen}
         aria-haspopup="listbox"
         aria-invalid={ariaInvalid}
         aria-label={ariaLabel}
         className="select-field__button"
         disabled={disabled}
         id={id}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => { if (!disabled) setOpen((current) => !current) }}
         onKeyDown={(event) => {
+          if (disabled) return
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault()
             setOpen(true)
@@ -93,7 +100,7 @@ function SelectField({
       <div
         aria-label={ariaLabel}
         className="select-field__menu"
-        hidden={!open}
+        hidden={!menuOpen}
         id={menuId}
         onKeyDown={handleMenuKeyDown}
         ref={menuRef}
@@ -103,8 +110,10 @@ function SelectField({
           <button
             aria-selected={option.value === value}
             className={option.value === value ? 'is-active' : ''}
+            disabled={disabled}
             key={option.value}
             onClick={() => {
+              if (disabled || !menuOpen) return
               onChange(option.value)
               closeAndRestoreFocus()
             }}
