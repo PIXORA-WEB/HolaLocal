@@ -482,12 +482,12 @@ function ProfilePage() {
 
       <AccessibleDialog
         ariaLabelledBy="profile-edit-title"
-        className="profile-edit-dialog"
+        className="profile-edit-dialog profile-edit-dialog--account"
         closeDisabled={submitting}
         onClose={closeEditor}
         open={editing}
       >
-        <div className="profile-edit-dialog__panel">
+        <div className="profile-edit-dialog__panel profile-edit-dialog__panel--account">
           <header className="profile-edit-dialog__header">
             <div>
               <p className="placeholder-page__eyebrow">{t('profile.yourAccount')}</p>
@@ -503,113 +503,116 @@ function ProfilePage() {
             </button>
           </header>
 
-          <div className="profile-photo-editor">
-            <EditableImageAvatar
-              className="image-avatar--profile"
-              disabled={photoUploading}
-              iconOnly
-              inputLabel={t('profile.changeImage')}
-              name={displayName}
-              onChange={handleProfilePhotoChange}
-              src={profilePhotoUrl}
-              uploading={photoUploading}
-            />
-            {photoError && (
-              <RecoveryMessage
-                actionPending={photoUploading}
-                actionLabel={photoError.recovery === 'sign-in' ? t('account.signIn') : undefined}
-                message={t(photoError.translationKey)}
-                onRetry={photoErrorAction}
-              />
-            )}
-            <div>
-              <span>{t('profile.changeImage')}</span>
-              <p>{t('mediaFeedback.immediate')}</p>
-              <p role="status">{photoUploading ? t('common.uploading') : !photoError && photoPreview.items[0]?.committed ? t('mediaFeedback.saved') : ''}</p>
+          <form className="profile-edit-form" onSubmit={handleProfileUpdate}>
+            <div className="profile-edit-form__body">
+              <div className="profile-photo-editor">
+                <EditableImageAvatar
+                  className="image-avatar--profile"
+                  disabled={photoUploading}
+                  iconOnly
+                  inputLabel={t('profile.changeImage')}
+                  name={displayName}
+                  onChange={handleProfilePhotoChange}
+                  src={profilePhotoUrl}
+                  uploading={photoUploading}
+                />
+                {photoError && (
+                  <RecoveryMessage
+                    actionPending={photoUploading}
+                    actionLabel={photoError.recovery === 'sign-in' ? t('account.signIn') : undefined}
+                    message={t(photoError.translationKey)}
+                    onRetry={photoErrorAction}
+                  />
+                )}
+                <div>
+                  <span>{t('profile.changeImage')}</span>
+                  <p>{t('mediaFeedback.immediate')}</p>
+                  <p role="status">{photoUploading ? t('common.uploading') : !photoError && photoPreview.items[0]?.committed ? t('mediaFeedback.saved') : ''}</p>
+                </div>
+              </div>
+              <div className="auth-form profile-edit-form__fields">
+                {error && <p className="form-message form-message--error" role="alert">{error}</p>}
+
+                <label htmlFor="edit-first-name">{t('profile.firstName')}</label>
+                <input
+                  autoComplete="given-name"
+                  aria-describedby={fieldErrors.firstName ? 'edit-first-name-error' : undefined}
+                  aria-invalid={Boolean(fieldErrors.firstName)}
+                  id="edit-first-name"
+                  maxLength={60}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  required
+                  type="text"
+                  value={firstName}
+                />
+                <FormFieldError id="edit-first-name-error" message={fieldErrors.firstName} />
+
+                <label htmlFor="edit-last-name">{t('profile.lastName')}</label>
+                <input
+                  autoComplete="family-name"
+                  aria-describedby={fieldErrors.lastName ? 'edit-last-name-error' : undefined}
+                  aria-invalid={Boolean(fieldErrors.lastName)}
+                  id="edit-last-name"
+                  maxLength={60}
+                  onChange={(event) => setLastName(event.target.value)}
+                  required
+                  type="text"
+                  value={lastName}
+                />
+                <FormFieldError id="edit-last-name-error" message={fieldErrors.lastName} />
+
+                <label htmlFor="edit-language">{t('profile.preferredLanguage')}</label>
+                <SelectField
+                  ariaDescribedBy={fieldErrors.preferredLocale ? 'edit-language-error' : undefined}
+                  ariaInvalid={Boolean(fieldErrors.preferredLocale)}
+                  ariaLabel={t('profile.preferredLanguage')}
+                  className="select-field--form"
+                  id="edit-language"
+                  onChange={setPreferredLocale}
+                  options={preferredLocaleOptions}
+                  value={preferredLocale}
+                />
+                <FormFieldError id="edit-language-error" message={fieldErrors.preferredLocale} />
+
+                <label htmlFor="edit-city">{t('profile.city')}</label>
+                <input
+                  autoComplete="address-level2"
+                  aria-describedby={fieldErrors.city ? 'edit-city-error' : undefined}
+                  aria-invalid={Boolean(fieldErrors.city)}
+                  id="edit-city"
+                  maxLength={100}
+                  onChange={(event) => setCity(event.target.value)}
+                  required
+                  type="text"
+                  value={city}
+                />
+                <FormFieldError id="edit-city-error" message={fieldErrors.city} />
+
+                <label htmlFor="edit-country">{t('profile.country')}</label>
+                <input
+                  autoComplete="country-name"
+                  id="edit-country"
+                  maxLength={100}
+                  onChange={(event) => setCountry(event.target.value)}
+                  type="text"
+                  value={country}
+                />
+              </div>
             </div>
-          </div>
 
-          <form className="auth-form profile-edit-form" onSubmit={handleProfileUpdate}>
-            {error && <p className="form-message form-message--error" role="alert">{error}</p>}
-
-          <label htmlFor="edit-first-name">{t('profile.firstName')}</label>
-          <input
-            autoComplete="given-name"
-            aria-describedby={fieldErrors.firstName ? 'edit-first-name-error' : undefined}
-            aria-invalid={Boolean(fieldErrors.firstName)}
-            id="edit-first-name"
-            maxLength={60}
-            onChange={(event) => setFirstName(event.target.value)}
-            required
-            type="text"
-            value={firstName}
-          />
-          <FormFieldError id="edit-first-name-error" message={fieldErrors.firstName} />
-
-          <label htmlFor="edit-last-name">{t('profile.lastName')}</label>
-          <input
-            autoComplete="family-name"
-            aria-describedby={fieldErrors.lastName ? 'edit-last-name-error' : undefined}
-            aria-invalid={Boolean(fieldErrors.lastName)}
-            id="edit-last-name"
-            maxLength={60}
-            onChange={(event) => setLastName(event.target.value)}
-            required
-            type="text"
-            value={lastName}
-          />
-          <FormFieldError id="edit-last-name-error" message={fieldErrors.lastName} />
-
-          <label htmlFor="edit-language">{t('profile.preferredLanguage')}</label>
-          <SelectField
-            ariaDescribedBy={fieldErrors.preferredLocale ? 'edit-language-error' : undefined}
-            ariaInvalid={Boolean(fieldErrors.preferredLocale)}
-            ariaLabel={t('profile.preferredLanguage')}
-            className="select-field--form"
-            id="edit-language"
-            onChange={setPreferredLocale}
-            options={preferredLocaleOptions}
-            value={preferredLocale}
-          />
-          <FormFieldError id="edit-language-error" message={fieldErrors.preferredLocale} />
-
-          <label htmlFor="edit-city">{t('profile.city')}</label>
-          <input
-            autoComplete="address-level2"
-            aria-describedby={fieldErrors.city ? 'edit-city-error' : undefined}
-            aria-invalid={Boolean(fieldErrors.city)}
-            id="edit-city"
-            maxLength={100}
-            onChange={(event) => setCity(event.target.value)}
-            required
-            type="text"
-            value={city}
-          />
-          <FormFieldError id="edit-city-error" message={fieldErrors.city} />
-
-          <label htmlFor="edit-country">{t('profile.country')}</label>
-          <input
-            autoComplete="country-name"
-            id="edit-country"
-            maxLength={100}
-            onChange={(event) => setCountry(event.target.value)}
-            type="text"
-            value={country}
-          />
-
-          <div className="profile-edit-form__actions">
-            <button className="button button--primary" disabled={submitting} type="submit">
-              {submitting ? t('common.loading') : t('common.save')}
-            </button>
-            <button
-              className="button button--secondary"
-              disabled={submitting}
-              onClick={closeEditor}
-              type="button"
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
+            <div className="profile-edit-form__actions">
+              <button className="button button--primary" disabled={submitting} type="submit">
+                {submitting ? t('common.loading') : t('common.save')}
+              </button>
+              <button
+                className="button button--secondary"
+                disabled={submitting}
+                onClick={closeEditor}
+                type="button"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
           </form>
         </div>
       </AccessibleDialog>
