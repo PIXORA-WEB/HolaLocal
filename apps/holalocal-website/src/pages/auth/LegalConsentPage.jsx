@@ -50,7 +50,8 @@ function LegalConsentPage() {
 
     setSubmitting(true)
     try {
-      const { profile } = await acceptLegalConsent()
+      const { profile, status } = await acceptLegalConsent()
+      if (status === 'superseded') return
       navigate(nextAccountPath(profile, intended), {
         replace: true,
         state: { from: intended },

@@ -700,12 +700,12 @@ test('account onboarding uses the trusted callable instead of direct role writes
     assert.doesNotMatch(source, /\}, \[[^\]]*\buserProfile\b[^\]]*\]\)/s)
     assert.doesNotMatch(source, /refreshUserProfile\(user\)/)
   }
-  assert.match(authenticationProvider, /refreshUserProfile = useCallback\(async \(firebaseUser = user, options = \{\}\)/)
+  assert.match(authenticationProvider, /refreshUserProfile = useCallback\(\(firebaseUser = user, options = \{\}\)/)
   assert.match(authenticationProvider, /const background = options\.background === true/)
   assert.match(authenticationProvider, /setProfileLoading\(true\)/)
   assert.match(
     authenticationProvider,
-    /if \(!background && requestId === profileRequestIdRef\.current\) setProfileLoading\(false\)/,
+    /if \(ownsRead\(\)\) \{[\s\S]*?finishProfileLoading\(\)/,
   )
   assert.match(routePolicy, /profileLoading \|\| profileStatus === 'loading'/)
   assert.match(businessRoute, /loading \|\| profileLoading \|\| profileStatus === 'loading'/)
@@ -734,11 +734,11 @@ test('profile restoration failures remain distinct from confirmed incomplete pro
   assert.match(provider, /setProfileStatus\(profile \? 'loaded' : 'absent'\)/)
   assert.match(
     provider,
-    /catch \(error\) \{\s*if \(!background && requestId === profileRequestIdRef\.current\) \{\s*setUserProfile\(null\)\s*setProfileStatus\('unavailable'\)/s,
+    /catch \(error\) \{\s*if \(ownsRead\(\) && \(!background \|\| settledProfileRef\.current === undefined\)\) \{\s*settledProfileRef\.current = undefined\s*setUserProfile\(null\)\s*setProfileStatus\('unavailable'\)/s,
   )
   assert.match(
     provider,
-    /setUserProfile\(profile\)\s*setProfileStatus\(profile \? 'loaded' : 'absent'\)[\s\S]*void updateLastActive\(user\.uid\)\.catch\(\(\) => undefined\)/,
+    /setUserProfile\(profile\)\s*setProfileStatus\(profile \? 'loaded' : 'absent'\)[\s\S]*void updateLastActive\(firebaseUser\.uid\)\.catch\(\(\) => undefined\)/,
   )
   assert.match(provider, /retryUserProfile/)
   assert.match(provider, /retainUnavailable: true/)
@@ -775,9 +775,9 @@ test('profile completion cannot fabricate legal consent for an absent profile', 
   assert.doesNotMatch(completionPage, /createUserProfile|completeAbsentUserProfile|setDoc|runTransaction/)
   assert.match(
     provider,
-    /profileStatus === 'absent'\s*\? await completeAbsentUserProfile\(user, updates\)\s*: await updateUserProfileDocument\(user\.uid, updates\)/s,
+    /profileStatus === 'absent'\s*\? completeAbsentUserProfile\(user, updates\)\s*: update\(user\.uid, updates\)/s,
   )
-  assert.match(provider, /setUserProfile\(profile\)\s*setProfileStatus\('loaded'\)/)
+  assert.match(provider, /setUserProfile\(profile\)\s*setProfileStatus\(profile \? 'loaded' : 'absent'\)/)
   assert.match(userService, /export async function completeAbsentUserProfile\(firebaseUser, updates\)[\s\S]*?hasCurrentLegalConsent\(existingProfile\)/s)
   assert.doesNotMatch(userService, /completeAbsentUserProfile[\s\S]*?termsAccepted: true/)
   assert.doesNotMatch(userService, /completeAbsentUserProfile[\s\S]*?privacyAccepted: true/)
