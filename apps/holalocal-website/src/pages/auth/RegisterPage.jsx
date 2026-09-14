@@ -11,6 +11,14 @@ import {
 } from '../../utils/policies.js'
 import { normalizeInternalLocation } from '../../utils/internalNavigation.js'
 
+const registrationFieldIds = {
+  email: 'register-email',
+  password: 'register-password',
+  confirmPassword: 'register-confirm-password',
+  age: 'register-age',
+  consent: 'register-consent',
+}
+
 function RegisterPage() {
   const { t } = useTranslation()
   const { signUp } = useAuthentication()
@@ -42,7 +50,7 @@ function RegisterPage() {
       (field) => nextErrors[field],
     )
     if (firstInvalidField) {
-      document.getElementById(`register-${firstInvalidField}`)?.focus()
+      document.getElementById(registrationFieldIds[firstInvalidField])?.focus()
       return
     }
 
