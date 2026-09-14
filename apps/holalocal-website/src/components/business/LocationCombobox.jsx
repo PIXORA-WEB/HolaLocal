@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   locationDisplayLabel,
@@ -20,12 +20,40 @@ function LocationCombobox({
   const listboxId = `${generatedId}-listbox`
   const instructionsId = `${generatedId}-instructions`
   const errorId = `${generatedId}-error`
+  const rootRef = useRef(null)
+  const listRef = useRef(null)
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const results = useMemo(
     () => searchLaunchLocations(inputValue).slice(0, 12),
     [inputValue],
   )
+
+  // Parent-driven filtering can change results without an input event.
+  const visibleActiveIndex = Math.min(activeIndex, Math.max(0, results.length - 1))
+
+  useEffect(() => {
+    if (!open) return undefined
+    const ownerDocument = rootRef.current.ownerDocument
+    function dismissOutside(event) {
+      if (!rootRef.current?.contains(event.target)) setOpen(false)
+    }
+    ownerDocument.addEventListener('pointerdown', dismissOutside, true)
+    return () => ownerDocument.removeEventListener('pointerdown', dismissOutside, true)
+  }, [open])
+
+  useLayoutEffect(() => {
+    const list = listRef.current
+    const option = list?.children[visibleActiveIndex]
+    if (!open || !results.length || !option) return
+    const listTop = list.getBoundingClientRect().top + list.clientTop
+    const optionBounds = option.getBoundingClientRect()
+    // Scroll the suggestion list only; scrollIntoView can move ancestor/page scrollers.
+    if (optionBounds.top < listTop) list.scrollTop += optionBounds.top - listTop
+    else if (optionBounds.bottom > listTop + list.clientHeight) {
+      list.scrollTop += optionBounds.bottom - listTop - list.clientHeight
+    }
+  }, [open, results, visibleActiveIndex])
 
   function select(location) {
     onSelect(location)
@@ -37,25 +65,31 @@ function LocationCombobox({
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
       setOpen(true)
-      setActiveIndex((current) => {
+      setActiveIndex(() => {
         const direction = event.key === 'ArrowDown' ? 1 : -1
-        return (current + direction + results.length) % Math.max(results.length, 1)
+        return (visibleActiveIndex + direction + results.length) % Math.max(results.length, 1)
       })
-    } else if (event.key === 'Enter' && open && results[activeIndex]) {
+    } else if (event.key === 'Enter' && open && results[visibleActiveIndex]) {
       event.preventDefault()
-      select(results[activeIndex])
+      select(results[visibleActiveIndex])
     } else if (event.key === 'Escape') {
       setOpen(false)
     }
   }
 
   return (
-    <div className="location-combobox">
+    <div
+      className="location-combobox"
+      ref={rootRef}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+      }}
+    >
       <label htmlFor={inputId}>{label}</label>
       <p id={instructionsId}>{t('business.form.location.primaryInstruction')}</p>
       <div className="location-combobox__input">
         <input
-          aria-activedescendant={open && results[activeIndex] ? `${generatedId}-option-${activeIndex}` : undefined}
+          aria-activedescendant={open && results[visibleActiveIndex] ? `${generatedId}-option-${visibleActiveIndex}` : undefined}
           aria-autocomplete="list"
           aria-controls={listboxId}
           aria-describedby={`${instructionsId}${error ? ` ${errorId}` : ''}`}
@@ -88,13 +122,14 @@ function LocationCombobox({
         )}
       </div>
       {open && (
-        <ul className="location-combobox__listbox" id={listboxId} role="listbox">
+        <ul className="location-combobox__listbox" ref={listRef} id={listboxId} role="listbox" tabIndex={-1}>
           {results.length > 0 ? results.map((location, index) => (
             <li
               aria-selected={location.id === selectedLocationId}
-              className={index === activeIndex ? 'is-active' : ''}
+              className={index === visibleActiveIndex ? 'is-active' : ''}
               id={`${generatedId}-option-${index}`}
               key={location.id}
+              onPointerDown={(event) => event.preventDefault()}
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => select(location)}
