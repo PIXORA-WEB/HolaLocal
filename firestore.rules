@@ -531,6 +531,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll([
           'ownerId', 'managerIds', 'contact', 'createdAt', 'updatedAt'
         ])
+        && request.resource.data.get('currentRejection', null) == null
         && request.resource.data.ownerId == getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId
         && request.resource.data.managerIds == getAfter(/databases/$(database)/documents/businesses/$(businessId)).data.managerIds
         && request.resource.data.createdAt == request.time
