@@ -271,6 +271,7 @@ function AuthenticationProvider({ children }) {
   const value = useMemo(
     () => ({
       acceptLegalConsent,
+      authSession: session,
       completeUserProfile,
       enableBusinessAccess,
       completeOnboarding,
@@ -292,6 +293,7 @@ function AuthenticationProvider({ children }) {
       userProfile,
     }),
     [
+      session,
       acceptLegalConsent,
       completeUserProfile,
       completeOnboarding,
