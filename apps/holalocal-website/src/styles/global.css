@@ -281,7 +281,7 @@
   opacity: 0.65;
 }
 
-.select-field__button[aria-invalid="true"] {
+.select-field .select-field__button[aria-invalid="true"] {
   border-color: #b42318;
 }
 
@@ -3190,7 +3190,7 @@
   outline: 3px solid rgb(8 125 242 / 14%);
 }
 
-.date-picker__input[aria-invalid="true"] {
+.date-picker .date-picker__input[aria-invalid="true"] {
   border-color: #b42318;
 }
 
