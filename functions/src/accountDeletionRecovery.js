@@ -1,3 +1,4 @@
+import { checkMediaCutover } from './mediaCutoverControls.js'
 import {getAuth} from 'firebase-admin/auth'
 import {FieldPath} from 'firebase-admin/firestore'
 import {info} from 'firebase-functions/logger'
@@ -6,6 +7,7 @@ import {finalizeAccountDeletion} from './accountDeletionFinalizer.js'
 
 // Only a scheduler/internal caller can reach this service. No public callable is added.
 export async function recoverAuthorisedAccountDeletions({db,auth=getAuth(),pageSize=25,finalize=finalizeAccountDeletion}) {
+ await checkMediaCutover({db,scope:'accountDeletion'})
  if(!Number.isInteger(pageSize)||pageSize<1||pageSize>25)throw new Error('invalid-recovery-page-size')
  const progress=db.doc('maintenanceProgress/accountDeletionRecovery')
  const cursor=(await progress.get()).data()?.documentId

@@ -1,3 +1,5 @@
+import { openCutoverControl } from './mediaCutoverFixture.mjs'
+import { MEDIA_CUTOVER_CONTROL } from '../src/mediaCutoverControls.js'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
@@ -15,6 +17,7 @@ test('Firestore persists media cleanup failure and safe finalizer resumption', {
   const sessionRef = db.doc(`mediaUploadSessions/profile_${uid}`)
   const userRef = db.doc(`users/${uid}`), requestRef = db.doc(`accountDeletionRequests/${uid}`)
   try {
+    await db.doc(MEDIA_CUTOVER_CONTROL).set(openCutoverControl())
     const stamp = Timestamp.fromMillis(1700000000000)
     await userRef.set({ businessId: null, termsAccepted: true, termsAcceptedAt: stamp, termsVersion: '1.0', privacyAccepted: true, privacyAcceptedAt: stamp, privacyVersion: '1.0' })
     await requestRef.set({ uid, state: 'requested', requestVersion: 1 })
@@ -22,16 +25,15 @@ test('Firestore persists media cleanup failure and safe finalizer resumption', {
     const unrelated = db.doc('mediaUploadSessions/profile_unrelated')
     await unrelated.set({ uid: 'unrelated', state: 'promoting' })
     let rejectDelete = true
-    const mediaDb = { runTransaction: callback => db.runTransaction(callback), doc(path) {
-      assert.ok([sessionRef.path, userRef.path].includes(path))
-      const ref = db.doc(path)
-      if (path === sessionRef.path) ref.delete = async () => {
-        // Controlled boundary failure, not an emulator authorization test.
+    const mediaDb = { doc: path => db.doc(path), runTransaction: callback => db.runTransaction(transaction => {
+      const remove = transaction.delete.bind(transaction)
+      transaction.delete = ref => {
+        assert.equal(ref.path, sessionRef.path)
         if (rejectDelete) throw Object.assign(new Error('Synthetic unavailable'), { code: 14 })
-        return db.doc(path).delete()
+        return remove(ref)
       }
-      return ref
-    } }
+      return callback(transaction)
+    }) }
     const bucket = { getFiles: async ({ prefix }) => { assert.equal(prefix, `users/${uid}/`); return [[]] } }
     const calls = []
     const primitives = {

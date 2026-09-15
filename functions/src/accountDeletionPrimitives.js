@@ -1,3 +1,4 @@
+import { assertMediaCutover, checkMediaCutover } from './mediaCutoverControls.js'
 import { settleProfilePromotionForDeletion } from './profilePromotionCoordination.js'
 import { initialDeletionEvidenceRetention, nextRetentionDecision, requireRetentionAdmin, retentionText, validRetentionDecision } from './recordRetention.js'
 import { customerReviewCleanupPath } from './customerReviewDeletion.js'
@@ -64,6 +65,7 @@ export async function acquireAccountDeletionLease({ uid, adminUid, expectedReque
   if (!Number.isSafeInteger(expectedRequestVersion) || expectedRequestVersion < 1) throw new HttpsError('invalid-argument', 'invalid-request-version')
   const ref = db.doc(`accountDeletionRequests/${safeUid}`)
   return db.runTransaction(async (transaction) => {
+    await assertMediaCutover(transaction, db, 'accountDeletion', uid)
     const snapshot = await transaction.get(ref)
     if (!snapshot.exists) throw integrityError('account-deletion-request-not-found')
     const request = snapshot.data()
@@ -192,10 +194,12 @@ const storageMissing = (error) => ['404', 404, 'storage/object-not-found', 'not-
 export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db = null }) {
   const safeUid = requireTrustedUid(uid); const counts = { attempted: 0, deleted: 0, alreadyMissing: 0, failed: 0 }; let files
   try {
-    if (db) await settleProfilePromotionForDeletion({ db, uid: safeUid, bucket, counts })
+    await settleProfilePromotionForDeletion({ db, uid: safeUid, bucket, counts })
     ;[files] = await bucket.getFiles({ prefix: `users/${safeUid}/` })
   } catch { return { ok: false, retryable: true, counts: { ...counts, failed: 1 } } }
   for (const file of files) {
+    try { await checkMediaCutover({ db, scope: 'accountDeletion', uid: safeUid }) }
+    catch { return { ok: false, retryable: true, counts: { ...counts, failed: counts.failed + 1 } } }
     counts.attempted += 1
     try { await file.delete(); counts.deleted += 1 } catch (error) { if (storageMissing(error)) counts.alreadyMissing += 1; else counts.failed += 1 }
   }
@@ -203,7 +207,12 @@ export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db
     counts.attempted += 1
     // Count acknowledged delete operations: Firestore also succeeds when the
     // document is absent. A rejected delete is not evidence of absence.
-    try { await db.doc(`mediaUploadSessions/profile_${safeUid}`).delete(); counts.deleted += 1 }
+    try {
+      await db.runTransaction(async transaction => {
+        await assertMediaCutover(transaction, db, 'accountDeletion', safeUid)
+        transaction.delete(db.doc(`mediaUploadSessions/profile_${safeUid}`))
+      }); counts.deleted += 1
+    }
     catch { counts.failed += 1 }
   }
   return { ok: counts.failed === 0, retryable: counts.failed > 0, counts }
@@ -212,6 +221,7 @@ export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db
 export async function minimizeConsentEvidenceAndRemoveUser({ uid, db, expectedRequestVersion, leaseId }) {
   const safeUid = requireTrustedUid(uid); const userRef = db.doc(`users/${safeUid}`); const requestRef = db.doc(`accountDeletionRequests/${safeUid}`)
   return db.runTransaction(async (transaction) => {
+    await assertMediaCutover(transaction, db, 'accountDeletion', uid)
     const [userSnapshot, requestSnapshot, reviewCleanup] = await Promise.all([transaction.get(userRef), transaction.get(requestRef), transaction.get(db.doc(customerReviewCleanupPath(safeUid)))])
     const request = requestSnapshot.exists ? requestSnapshot.data() : null
     if (!request || request.state !== 'finalizing' || request.requestVersion !== expectedRequestVersion || (leaseId !== undefined && request.leaseId !== leaseId)) throw new HttpsError('aborted', 'account-deletion-workflow-stale')
@@ -233,6 +243,7 @@ export async function minimizeConsentEvidenceAndRemoveUser({ uid, db, expectedRe
 export async function completeAccountDeletionWorkflow({ uid, leaseId, expectedRequestVersion, db, now = Timestamp.now() }) {
   const ref = db.doc(`accountDeletionRequests/${requireTrustedUid(uid)}`)
   return db.runTransaction(async (transaction) => {
+    await assertMediaCutover(transaction, db, 'accountDeletion', uid)
     const snapshot = await transaction.get(ref)
     const request = snapshot.exists ? snapshot.data() : null
     if (!request) throw integrityError('account-deletion-request-not-found')

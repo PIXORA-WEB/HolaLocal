@@ -124,10 +124,16 @@ class FakeCollectionRef {
       })
     }
     if (this.cursor) {
-      const cursorIndex = documents.findIndex((snapshot) => this.orders.every((order, index) => (
-        comparable(fieldValue(snapshot, order.field)) === comparable(this.cursor[index])
-      )))
-      documents = cursorIndex >= 0 ? documents.slice(cursorIndex + 1) : []
+      documents = documents.filter(snapshot => {
+        for (let index = 0; index < this.orders.length; index++) {
+          const order = this.orders[index]
+          const value = comparable(fieldValue(snapshot, order.field))
+          const cursorValue = comparable(this.cursor[index])
+          if (value === cursorValue) continue
+          return order.direction === 'desc' ? value < cursorValue : value > cursorValue
+        }
+        return false
+      })
     }
     documents = documents.slice(0, this.limitCount)
     return {

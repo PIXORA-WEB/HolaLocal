@@ -1,3 +1,5 @@
+import { assertMediaCutover, checkMediaCutover } from './mediaCutoverControls.js'
+import { replayStagingEvents, stagingAccount, checkStagingWork, retainStagingEvent, finishStagingEvent } from './stagingMediaDeferral.js'
 import { getStorage } from 'firebase-admin/storage'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { parseStagingMediaPath } from '@holalocal/firebase-contract'
@@ -20,7 +22,32 @@ function isNotFound(error) {
   return Number(error?.code) === 404
 }
 
-export async function cleanFinalizedStagingObject({
+// Persist before acknowledging or attempting work. If persistence fails, throw;
+// the trigger explicitly requests retry, with delivery-retention limits documented.
+export async function cleanFinalizedStagingObject(args) {
+  const { object, db, now = new Date() } = args
+  const parsed = parseStagingMediaPath(object?.name)
+  if (!parsed || !object?.generation) return { status: 'ignored' }
+  const retained = await retainStagingEvent({ db, object, marker: uploadSessionMarker(object), now })
+  if (retained.work.state === 'completed') return { status: 'already-clean' }
+  let uid
+  try {
+    uid = await stagingAccount(db, parsed)
+    await checkStagingWork(db, uid)
+  } catch { return { status: 'deferred' } }
+  const checked = operation => async input => {
+    await checkStagingWork(db, uid)
+    return operation(input)
+  }
+  const result = await processFinalizedStagingObject({ ...args,
+    clean: checked(args.clean ?? cleanStagingGeneration),
+    remove: checked(args.remove ?? deleteExactGeneration),
+  })
+  await finishStagingEvent({ db, ref: retained.ref, now })
+  return result
+}
+
+async function processFinalizedStagingObject({
   object, db, bucket = getStorage().bucket(), clean = cleanStagingGeneration,
   remove = deleteExactGeneration,
   checkpoint = checkpointStagingCleanupResponsibility,
@@ -108,6 +135,11 @@ export async function sweepExpiredMediaSessions({
   db, bucket = getStorage().bucket(), now = new Date(), remove = deleteExactGeneration,
   exactExists = exactGenerationExists,
 }) {
+  try { await checkMediaCutover({ db, scope: 'stagingProcessing' }) }
+  catch { return { expired: 0, deferred: true } }
+  await replayStagingEvents({ db, now,
+    process: object => cleanFinalizedStagingObject({ object, db, bucket, now, remove }),
+  })
   const snapshots = await db.collection(MEDIA_SESSION_COLLECTION)
     .where('expiresAt', '<=', now).limit(200).get()
   let expired = 0
@@ -116,6 +148,8 @@ export async function sweepExpiredMediaSessions({
     // Promotion checkpoints remain live recovery state after ordinary upload
     // expiry. Finalization, not the orphan sweeper, owns their cleanup.
     if (hasUnsettledProfilePromotion(session) || ['promoting', 'promoted'].includes(session.state)) continue
+    const uid = session.principalUid ?? parseStagingMediaPath(session.stagingPath)?.uid
+    try { await checkStagingWork(db, uid) } catch { continue }
     let cleanupError = null
     const stagingPathValid = !session.stagingPath || !session.stagingGeneration
       || parseStagingMediaPath(session.stagingPath) != null
@@ -130,6 +164,7 @@ export async function sweepExpiredMediaSessions({
     if (!stagingPathValid) cleanupError = new Error('invalid-staging-cleanup-path')
     for (const target of targets) {
       try {
+        await checkStagingWork(db, uid)
         await remove({ ...target, bucket })
       } catch (error) {
         if (isNotFound(error)) continue
@@ -146,6 +181,7 @@ export async function sweepExpiredMediaSessions({
     if (cleanupError) {
       await db.runTransaction(async (transaction) => {
         const ref = db.doc(`${MEDIA_SESSION_COLLECTION}/${snapshot.id}`)
+        await assertMediaCutover(transaction, db, 'stagingProcessing', uid)
         const fresh = await transaction.get(ref)
         if (!fresh.exists || !sameCleanupCheckpoint(fresh.data(), session)
           || hasUnsettledProfilePromotion(fresh.data())) return
@@ -159,6 +195,7 @@ export async function sweepExpiredMediaSessions({
       continue
     }
     await db.runTransaction(async (transaction) => {
+      await assertMediaCutover(transaction, db, 'stagingProcessing', uid)
       const fresh = await transaction.get(db.doc(`${MEDIA_SESSION_COLLECTION}/${snapshot.id}`))
       if (!fresh.exists || !sameCleanupCheckpoint(fresh.data(), session)
           || hasUnsettledProfilePromotion(fresh.data())) return
@@ -170,6 +207,7 @@ export async function sweepExpiredMediaSessions({
     .where('cleanupAfter', '<=', now).limit(200).get()
   for (const snapshot of conflictSnapshots.docs) {
     const cleanup = snapshot.data()
+    try { await checkStagingWork(db, cleanup.principalUid) } catch { continue }
     if (!parseStagingMediaPath(cleanup.stagingPath) || !cleanup.stagingGeneration) continue
     let cleanupError = null
     try {
@@ -186,6 +224,7 @@ export async function sweepExpiredMediaSessions({
       }
     }
     await db.runTransaction(async (transaction) => {
+      await assertMediaCutover(transaction, db, 'stagingProcessing', cleanup.principalUid)
       const ref = db.doc(`${CONFLICTING_STAGING_CLEANUP_COLLECTION}/${snapshot.id}`)
       const fresh = await transaction.get(ref)
       if (!fresh.exists || !sameConflictCleanup(fresh.data(), cleanup)) return

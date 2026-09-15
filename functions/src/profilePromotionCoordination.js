@@ -1,3 +1,4 @@
+import { assertMediaCutover, checkMediaCutover } from './mediaCutoverControls.js'
 import { isCanonicalProfileMediaPath } from '@holalocal/firebase-contract'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { deleteExactGeneration, exactGenerationExists } from './canonicalMediaStorage.js'
@@ -8,7 +9,7 @@ import { hasUnsettledProfilePromotion, profileSessionId, MEDIA_SESSION_COLLECTIO
 // observing a current object (or absence) cannot prove a remote rewrite settled.
 export async function compensateProfilePromotion({
   db, uid, requestId, bucket, remove = deleteExactGeneration,
-  exactExists = exactGenerationExists, now = new Date(), counts = null,
+  exactExists = exactGenerationExists, now = new Date(), counts = null, controlScope = 'profileSettlement',
 }) {
   const ref = db.doc(`${MEDIA_SESSION_COLLECTION}/${profileSessionId(uid)}`)
   const session = (await ref.get()).data()
@@ -17,6 +18,7 @@ export async function compensateProfilePromotion({
     || !/^[1-9][0-9]*$/.test(String(session.promotedGeneration))) {
     throw new HttpsError('failed-precondition', 'media-compensation-evidence-invalid')
   }
+  await checkMediaCutover({ db, scope: controlScope, uid })
   const target = { path: session.canonicalPath, generation: session.promotedGeneration, bucket }
   if (counts) counts.attempted += 1
   try {
@@ -39,6 +41,7 @@ export async function compensateProfilePromotion({
 export async function settleProfilePromotionForDeletion({ db, uid, bucket, counts = null }) {
   const ref = db.doc(`${MEDIA_SESSION_COLLECTION}/${profileSessionId(uid)}`)
   const compensation = await db.runTransaction(async (transaction) => {
+    await assertMediaCutover(transaction, db, 'accountDeletion', uid)
     const [user, snapshot] = await Promise.all([
       transaction.get(db.doc(`users/${uid}`)), transaction.get(ref),
     ])
@@ -57,5 +60,5 @@ export async function settleProfilePromotionForDeletion({ db, uid, bucket, count
     transaction.update(ref, { promotionObligation: 'compensating' })
     return session.requestId
   })
-  if (compensation) await compensateProfilePromotion({ db, uid, requestId: compensation, bucket, counts })
+  if (compensation) await compensateProfilePromotion({ db, uid, requestId: compensation, bucket, counts, controlScope: 'accountDeletion' })
 }

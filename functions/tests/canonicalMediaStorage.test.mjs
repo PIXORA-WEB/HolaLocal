@@ -6,7 +6,7 @@ import {
   promoteCleanGeneration,
 } from '../src/canonicalMediaStorage.js'
 import { cleanFinalizedStagingObject } from '../src/stagingMediaMaintenance.js'
-import { FakeFirestore } from './fakeFirestore.mjs'
+import { OpenMediaFirestore as FakeFirestore } from './mediaCutoverFixture.mjs'
 
 function fakeBucket(seed, { ignoreMetadataTombstones = false } = {}) {
   const objects = new Map(Object.entries(structuredClone(seed)))

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Timestamp } from 'firebase-admin/firestore'
-import { FakeFirestore } from './fakeFirestore.mjs'
+import { OpenMediaFirestore as FakeFirestore } from './mediaCutoverFixture.mjs'
 import { prepareProfileMediaUpload, finalizeProfileMedia } from '../src/profileMedia.js'
 import { cleanupUserMedia } from '../src/accountDeletionPrimitives.js'
 import { finalizeAccountDeletion } from '../src/accountDeletionFinalizer.js'
@@ -175,7 +175,10 @@ test('lost compensation checkpoint retries exact deletion without resurrecting p
     remove: async () => { throw Error('pause compensation') },
   }))
   const transaction = f.db.runTransaction.bind(f.db)
-  f.db.runTransaction = async () => { throw Error('checkpoint unavailable') }
+  f.db.runTransaction = async callback => {
+    if (!f.objects.has(path)) throw Error('checkpoint unavailable')
+    return transaction(callback)
+  }
   await assert.rejects(compensateProfilePromotion({ db: f.db, uid: 'u1', requestId: f.input.requestId, bucket: f.bucket }), /checkpoint unavailable/)
   assert.equal(f.objects.has(path), false)
   assert.equal(f.db.data(ref).promotionObligation, 'compensating')

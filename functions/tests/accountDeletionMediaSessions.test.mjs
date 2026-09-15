@@ -4,20 +4,20 @@ import { Timestamp } from 'firebase-admin/firestore'
 import { cleanupUserMedia } from '../src/accountDeletionPrimitives.js'
 import { finalizeAccountDeletion } from '../src/accountDeletionFinalizer.js'
 import { customerReviewCleanupPath } from '../src/customerReviewDeletion.js'
-import { FakeFirestore } from './fakeFirestore.mjs'
+import { OpenMediaFirestore as FakeFirestore } from './mediaCutoverFixture.mjs'
 
 const emptyBucket = { getFiles: async () => [[]] }
 const session = uid => ({ uid, state: 'completed', path: `users/${uid}/profile/image`, promotedGeneration: '1' })
 function failingDeletion(db, paths, code = 14) {
-  const original = db.doc.bind(db)
-  db.doc = path => {
-    const ref = original(path), remove = ref.delete.bind(ref)
-    ref.delete = async () => {
-      if (paths.has(path)) throw Object.assign(new Error('Synthetic metadata failure with private path'), { code })
-      return remove()
+  const original = db.runTransaction.bind(db)
+  db.runTransaction = callback => original(transaction => {
+    const remove = transaction.delete.bind(transaction)
+    transaction.delete = ref => {
+      if (paths.has(ref.path)) throw Object.assign(new Error('Synthetic metadata failure with private path'), { code })
+      return remove(ref)
     }
-    return ref
-  }
+    return callback(transaction)
+  })
 }
 for (const code of [7, 14, 5]) {
   test(`session deletion error ${code} reports failure, never confirmed absence`, async () => {

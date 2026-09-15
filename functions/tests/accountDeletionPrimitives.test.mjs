@@ -15,7 +15,7 @@ import {
   removeUserManagerRelationships,
   tombstoneDeletedUserConversations,
 } from '../src/accountDeletionPrimitives.js'
-import { FakeFirestore } from './fakeFirestore.mjs'
+import { OpenMediaFirestore as FakeFirestore } from './mediaCutoverFixture.mjs'
 
 const now = Timestamp.fromMillis(1_700_000_000_000)
 const consentTimestamp = { seconds: 1_700_000_000, nanoseconds: 0, toMillis: () => 1_700_000_000_000 }
@@ -163,11 +163,11 @@ test('profile media cleanup scopes to exact UID prefix and sanitizes partial fai
     { delete: async () => { throw new Error('secret path must not leak') } },
   ]
   const bucket = { getFiles: async (query) => { prefixes.push(query.prefix); return [files] } }
-  const result = await cleanupUserMedia({ uid: 'u1', bucket })
+  const result = await cleanupUserMedia({ uid: 'u1', db: new FakeFirestore(), bucket })
   assert.deepEqual(prefixes, ['users/u1/'])
-  assert.deepEqual(result, { ok: false, retryable: true, counts: { attempted: 3, deleted: 1, alreadyMissing: 1, failed: 1 } })
+  assert.deepEqual(result, { ok: false, retryable: true, counts: { attempted: 4, deleted: 2, alreadyMissing: 1, failed: 1 } })
   assert.equal(JSON.stringify(result).includes('path'), false)
-  assert.deepEqual(await cleanupUserMedia({ uid: 'u1', bucket: { getFiles: async () => [[]] } }), { ok: true, retryable: false, counts: { attempted: 0, deleted: 0, alreadyMissing: 0, failed: 0 } })
+  assert.deepEqual(await cleanupUserMedia({ uid: 'u1', db: new FakeFirestore(), bucket: { getFiles: async () => [[]] } }), { ok: true, retryable: false, counts: { attempted: 1, deleted: 1, alreadyMissing: 0, failed: 0 } })
   await assert.rejects(() => cleanupUserMedia({ uid: '../u2', bucket }), /invalid-trusted-uid/)
 })
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { FakeFirestore } from './fakeFirestore.mjs'
+import { OpenMediaFirestore as FakeFirestore } from './mediaCutoverFixture.mjs'
 import { cleanFinalizedStagingObject, sweepExpiredMediaSessions } from '../src/stagingMediaMaintenance.js'
 import {
   assertFinalizableSession, checkpointStagingCleanupResponsibility,
@@ -43,7 +43,7 @@ test('finalize trigger touches staging exact generation only and ignores canonic
   const calls = []
   const clean = async (input) => calls.push(['clean', input.path, input.generation])
   const path = 'users/u1/staging/profile/avatar'
-  assert.deepEqual(await cleanFinalizedStagingObject({ object: finalizedObject(path, '7', 'request-12345678'), bucket: bucketWithMetadata(path, '7', 'request-12345678'), clean }), { status: 'cleaned' })
+  assert.deepEqual(await cleanFinalizedStagingObject({ db: new FakeFirestore(), object: finalizedObject(path, '7', 'request-12345678'), bucket: bucketWithMetadata(path, '7', 'request-12345678'), clean }), { status: 'cleaned' })
   assert.deepEqual(await cleanFinalizedStagingObject({ object: { name: 'users/u1/profile/avatar', generation: '8' }, bucket: {}, clean }), { status: 'ignored' })
   assert.deepEqual(calls, [['clean', 'users/u1/staging/profile/avatar', '7']])
 })
@@ -387,6 +387,7 @@ test('conflicting-obligation sweeper retains transient and 412, then reconciles 
 test('invalid staging cleanup deletes only the event generation', async () => {
   const calls = []
   await assert.rejects(cleanFinalizedStagingObject({
+    db: new FakeFirestore({ 'mediaUploadSessions/business_b1_gallery_0': { principalUid: 'u1' } }),
     object: { name: 'businesses/b1/staging/photos/0', generation: '9' },
     bucket: bucketWithMetadata('businesses/b1/staging/photos/0', '9', 'request-12345678'),
     clean: async () => { throw new Error('invalid') },

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Timestamp } from 'firebase-admin/firestore'
 import { finalizeAccountDeletion } from '../src/accountDeletionFinalizer.js'
-import { FakeFirestore } from './fakeFirestore.mjs'
+import { OpenMediaFirestore as FakeFirestore } from './mediaCutoverFixture.mjs'
 
 function database({ state = 'requested', requestVersion = 1, request = {}, user = { businessId: null } } = {}) {
   const db = new FakeFirestore({

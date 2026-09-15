@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {Timestamp} from 'firebase-admin/firestore'
 import {isAutomaticErasureEligible,acquireAccountDeletionLease} from '../src/accountDeletionPrimitives.js'
 import {runAccountDeletionRecovery} from '../src/accountDeletionRecovery.js'
-import {FakeFirestore} from './fakeFirestore.mjs'
+import {OpenMediaFirestore as FakeFirestore} from './mediaCutoverFixture.mjs'
 const now=Timestamp.fromMillis(10000000)
 const row={state:'failed_retryable',finalizedBy:'admin',finalizationStartedAt:Timestamp.fromMillis(1),updatedAt:Timestamp.fromMillis(1),retryCount:0,requestVersion:2}
 test('recovery is off before constructing database',async()=>assert.deepEqual(await runAccountDeletionRecovery({env:{},createDatabase:()=>assert.fail()}),{disabled:true}))

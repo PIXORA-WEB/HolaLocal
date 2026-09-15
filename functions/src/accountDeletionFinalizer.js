@@ -1,3 +1,4 @@
+import { checkMediaCutover } from './mediaCutoverControls.js'
 import { cleanupAccountCustomerReviews } from './customerReviewDeletion.js'
 import { HttpsError } from 'firebase-functions/v2/https'
 import { hasReachedAccountDeletionCheckpoint } from '@holalocal/firebase-contract'
@@ -77,6 +78,8 @@ export async function finalizeAccountDeletion({
   requireAdmin(adminUid, claims)
   const safeUid = requireUid(uid)
   const safeVersion = requireVersion(expectedRequestVersion)
+  const checkCutover = () => checkMediaCutover({ db, scope: 'accountDeletion', uid: safeUid })
+  await checkCutover()
   const deps = {
     acquireLease: primitives.acquireLease ?? acquireAccountDeletionLease,
     assertNoOwnedBusinesses: primitives.assertNoOwnedBusinesses ?? assertNoAuthoritativeOwnedBusinesses,
@@ -158,12 +161,15 @@ export async function finalizeAccountDeletion({
     await deps.assertNoOwnedBusinesses({ uid: safeUid, db, profile: latestUser.exists ? latestUser.data() : null })
     await checkpoint('ownership_verified')
 
+    await checkCutover()
     await deps.removeManagerRelationships({ uid: safeUid, db })
     await checkpoint('manager_relationships_cleaned')
 
+    await checkCutover()
     await deps.tombstoneConversations({ uid: safeUid, db })
     await checkpoint('conversations_tombstoned')
 
+    await checkCutover()
     try {
       const savedBusinesses = await deps.cleanupSavedBusinesses({ uid: safeUid, db })
       await checkpoint('saved_businesses_cleaned', {
@@ -173,6 +179,7 @@ export async function finalizeAccountDeletion({
       return fail('saved_businesses_cleanup_failed')
     }
 
+    await checkCutover()
     const mediaResult = await deps.cleanupMedia({ uid: safeUid, db })
     if (!mediaResult?.ok || mediaResult.counts?.failed > 0) {
       return fail('profile_media_cleanup_failed', mediaResult?.counts ?? {
@@ -184,6 +191,7 @@ export async function finalizeAccountDeletion({
       savedBusinessesDeleted: cleanupCounts?.savedBusinessesDeleted ?? 0,
     })
 
+    await checkCutover()
     const reviews = await deps.cleanupCustomerReviews({ uid: safeUid, db, leaseId: lease.leaseId, expectedRequestVersion: version })
     if (!reviews?.complete) return fail('internal_retryable')
 
@@ -193,6 +201,7 @@ export async function finalizeAccountDeletion({
     version = evidenceResult.requestVersion
     lastCompletedStep = 'user_evidence_minimized'
 
+    await checkCutover()
     const authResult = await deps.deleteAuthUser({ uid: safeUid })
     if (!authResult?.ok) return fail(authResult?.failureCode ?? 'firebase_auth_deletion_failed')
     await checkpoint('firebase_auth_removed')

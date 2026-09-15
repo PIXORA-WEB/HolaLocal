@@ -382,7 +382,7 @@ export const finalizeProfileMedia = onCall(
 )
 
 export const cleanStagingMediaObject = onObjectFinalized(
-  { bucket: HOLALOCAL_FIREBASE_STORAGE_BUCKET, region: MESSAGE_TRANSLATION_REGION, maxInstances: 5, concurrency: 10 },
+  { bucket: HOLALOCAL_FIREBASE_STORAGE_BUCKET, region: MESSAGE_TRANSLATION_REGION, maxInstances: 5, concurrency: 10, retry: true },
   async (event) => cleanFinalizedStagingObject({ object: event.data, db: getFirestore() }),
 )
 

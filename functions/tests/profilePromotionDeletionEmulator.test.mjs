@@ -1,3 +1,5 @@
+import { openCutoverControl } from './mediaCutoverFixture.mjs'
+import { MEDIA_CUTOVER_CONTROL } from '../src/mediaCutoverControls.js'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { initializeApp, deleteApp } from 'firebase-admin/app'
@@ -27,6 +29,7 @@ test('real Firestore admission/restriction and persisted deletion checkpoints; b
     return { uid, db, bucket, requestId: prepared.requestId, stagingGeneration: String(metadata.generation) }
   }
   try {
+    await db.doc(MEDIA_CUTOVER_CONTROL).set(openCutoverControl())
     await t.test('admission first pins cleanup before its snapshot; real emulator rewrite failure remains ambiguous', async () => {
       const input = await seed('coordination-real-copy'), entered = deferred(), release = deferred()
       const session = db.doc(`mediaUploadSessions/profile_${input.uid}`)

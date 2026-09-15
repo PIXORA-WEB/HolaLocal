@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { FakeFirestore } from './fakeFirestore.mjs'
+import { OpenMediaFirestore as FakeFirestore } from './mediaCutoverFixture.mjs'
 import {
   assertFinalizableSession, checkpointStagingCleanupResponsibility,
   markStagingGenerationClean, prepareBoundedMediaSession, profileSessionId,

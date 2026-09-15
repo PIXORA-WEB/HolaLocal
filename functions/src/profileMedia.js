@@ -1,3 +1,4 @@
+import { assertMediaCutover, checkMediaCutover } from './mediaCutoverControls.js'
 import { compensateProfilePromotion } from './profilePromotionCoordination.js'
 import { getStorage } from 'firebase-admin/storage'
 import { FieldValue } from 'firebase-admin/firestore'
@@ -38,6 +39,7 @@ async function canonicalGeneration(bucket, path) {
 }
 
 export async function prepareProfileMediaUpload({ uid, db, bucket = getStorage().bucket(), now }) {
+  await checkMediaCutover({ db, scope: 'profileAdmission', uid })
   const userRef = db.doc(`users/${uid}`)
   const user = await userRef.get()
   if (!user.exists || user.data()?.accountStatus !== 'active' || user.data()?.deletionRequestedAt != null) {
@@ -80,6 +82,7 @@ export async function finalizeProfileMedia({
   const userRef = db.doc(`users/${uid}`)
   const [sessionSnapshot, userSnapshot] = await Promise.all([sessionRef.get(), userRef.get()])
   let session = sessionSnapshot.data()
+  await checkMediaCutover({ db, uid, scope: ['copied', 'compensating'].includes(session?.promotionObligation) ? 'profileSettlement' : 'profileAdmission' })
   if (session && !session.stagingGeneration) {
     const [metadata] = await bucket.file(session.stagingPath, { generation: stagingGeneration }).getMetadata()
     await recordFinalizedStagingGeneration({ db, parsedPath: { kind: 'profile', uid },
@@ -108,6 +111,8 @@ export async function finalizeProfileMedia({
       || String(data.stagingGeneration) !== String(stagingGeneration)) {
       throw new HttpsError('failed-precondition', 'media-session-stale')
     }
+    await assertMediaCutover(transaction, db,
+      ['copied', 'compensating'].includes(data.promotionObligation) ? 'profileSettlement' : 'profileAdmission', uid)
     if (data.promotionObligation === 'compensating') return { session: data, copy: false }
     if (data.promotionObligation === 'copied') return { session: data, copy: false }
     if (hasUnsettledProfilePromotion(data)) {
@@ -181,6 +186,7 @@ export async function finalizeProfileMedia({
   // Publication and selection of compensation are mutually exclusive durable
   // decisions. A lost transaction response is safe to retry from its checkpoint.
   const outcome = await db.runTransaction(async (transaction) => {
+    await assertMediaCutover(transaction, db, 'profileSettlement', uid)
     const [freshSession, freshUser] = await Promise.all([
       transaction.get(sessionRef), transaction.get(userRef),
     ])
@@ -214,6 +220,9 @@ export async function finalizeProfileMedia({
   }
   // The copy has settled and publication is durable. Context cleanup cannot
   // create bytes; retain the context if best-effort cleanup fails.
+  try { await checkMediaCutover({ db, scope: 'profileSettlement', uid }) } catch {
+    return { ok: true, storagePath: session.canonicalPath, generation: promotedGeneration }
+  }
   await clearContext({ path: session.canonicalPath, generation: promotedGeneration, bucket }).catch(() => undefined)
   await deleteLegacyProfileMedia(userSnapshot.data(), uid, bucket)
   if (session.expectedAuthorityPath?.endsWith('/a') || session.expectedAuthorityPath?.endsWith('/b')) {

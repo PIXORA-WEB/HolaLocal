@@ -1,3 +1,4 @@
+import { assertMediaCutover } from './mediaCutoverControls.js'
 import { randomUUID } from 'node:crypto'
 import { HttpsError } from 'firebase-functions/v2/https'
 
@@ -45,6 +46,7 @@ export async function prepareBoundedMediaSession({
   await db.runTransaction(async (transaction) => {
     const current = await transaction.get(sessionRef)
     if (kind === 'profile') {
+      await assertMediaCutover(transaction, db, 'profileAdmission', principalUid)
       const user = await transaction.get(db.doc(`users/${principalUid}`))
       if (!user.exists || user.data()?.accountStatus !== 'active' || user.data()?.deletionRequestedAt != null) {
         throw new HttpsError('failed-precondition', 'account-not-active')
