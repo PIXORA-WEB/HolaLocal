@@ -1,124 +1,18 @@
-const consent = (
-  eyebrow, title, description, currentDocuments, legend, termsPrefix, termsLink,
-  privacyPrefix, privacyLink, bothRequired, submit, submitting, logout,
-) => ({
-  legalConsent: {
-    eyebrow, title, description, currentDocuments, legend, termsPrefix, termsLink,
-    privacyPrefix, privacyLink, bothRequired, submit, submitting, logout,
-  },
-})
-
-export const legalConsentTranslations = {
-  es: consent(
-    "Acceso a la cuenta", "Revisa los documentos legales actuales",
-    "Para continuar, acepta los Términos y confirma que has leído la Política de privacidad.",
-    "La información de tu perfil y las opciones de tu cuenta no cambiarán.", "Confirmaciones legales",
-    "Acepto los", "Términos", "He leído la", "Política de privacidad",
-    "Revisa ambos documentos y confirma las dos declaraciones para continuar.", "Aceptar y continuar", "Guardando tu aceptación…", "Cerrar sesión",
-  ),
-  fr: consent(
-    "Accès au compte", "Consultez les documents juridiques actuels",
-    "Pour continuer, acceptez les Conditions et confirmez avoir lu la Politique de confidentialité.",
-    "Les informations de votre profil et les choix de votre compte ne seront pas modifiés.", "Confirmations juridiques",
-    "J’accepte les", "Conditions", "J’ai lu la", "Politique de confidentialité",
-    "Consultez les deux documents et confirmez les deux déclarations pour continuer.", "Accepter et continuer", "Enregistrement de votre acceptation…", "Se déconnecter",
-  ),
-  de: consent(
-    "Kontozugriff", "Aktuelle Rechtsdokumente prüfen",
-    "Akzeptiere zum Fortfahren die Bedingungen und bestätige, dass du die Datenschutzrichtlinie gelesen hast.",
-    "Deine Profildaten und Kontoeinstellungen werden nicht geändert.", "Rechtliche Bestätigungen",
-    "Ich akzeptiere die", "Bedingungen", "Ich habe die folgende Erklärung gelesen:", "Datenschutzrichtlinie",
-    "Prüfe beide Dokumente und bestätige beide Erklärungen, um fortzufahren.", "Akzeptieren und fortfahren", "Akzeptanz wird gespeichert…", "Abmelden",
-  ),
-  nl: consent(
-    "Accounttoegang", "Bekijk de huidige juridische documenten",
-    "Accepteer de Voorwaarden en bevestig dat je het Privacybeleid hebt gelezen om door te gaan.",
-    "Je profielgegevens en accountkeuzes worden niet gewijzigd.", "Juridische bevestigingen",
-    "Ik accepteer de", "Voorwaarden", "Ik heb het volgende gelezen:", "Privacybeleid",
-    "Bekijk beide documenten en bevestig de twee verklaringen om door te gaan.", "Accepteren en doorgaan", "Je acceptatie wordt opgeslagen…", "Uitloggen",
-  ),
-  pt: consent(
-    "Acesso à conta", "Reveja os documentos legais atuais",
-    "Para continuar, aceite os Termos e confirme que leu a Política de Privacidade.",
-    "As informações do seu perfil e as opções da conta não serão alteradas.", "Confirmações legais",
-    "Aceito os", "Termos", "Li a", "Política de Privacidade",
-    "Reveja ambos os documentos e confirme as duas declarações para continuar.", "Aceitar e continuar", "A guardar a sua aceitação…", "Terminar sessão",
-  ),
-  pl: consent(
-    "Dostęp do konta", "Zapoznaj się z aktualnymi dokumentami prawnymi",
-    "Aby kontynuować, zaakceptuj Regulamin i potwierdź przeczytanie Polityki prywatności.",
-    "Dane profilu i ustawienia konta nie zostaną zmienione.", "Potwierdzenia prawne",
-    "Akceptuję", "Warunki", "Przeczytałem(-am)", "Politykę prywatności",
-    "Zapoznaj się z oboma dokumentami i potwierdź oba oświadczenia, aby kontynuować.", "Akceptuj i kontynuuj", "Zapisywanie akceptacji…", "Wyloguj się",
-  ),
-  ro: consent(
-    "Acces la cont", "Consultă documentele juridice actuale",
-    "Pentru a continua, acceptă Termenii și confirmă că ai citit Politica de confidențialitate.",
-    "Informațiile profilului și opțiunile contului nu vor fi modificate.", "Confirmări juridice",
-    "Accept", "Termenii", "Am citit", "Politica de confidențialitate",
-    "Consultă ambele documente și confirmă cele două declarații pentru a continua.", "Acceptă și continuă", "Se salvează acceptarea…", "Deconectare",
-  ),
-  cs: consent(
-    "Přístup k účtu", "Přečtěte si aktuální právní dokumenty",
-    "Pro pokračování přijměte Podmínky a potvrďte přečtení Zásad ochrany soukromí.",
-    "Údaje profilu ani nastavení účtu se nezmění.", "Právní potvrzení",
-    "Přijímám", "Podmínky", "Přečetl/a jsem si", "Zásady ochrany soukromí",
-    "Přečtěte si oba dokumenty a potvrďte obě prohlášení pro pokračování.", "Přijmout a pokračovat", "Ukládá se váš souhlas…", "Odhlásit se",
-  ),
-  sk: consent(
-    "Prístup k účtu", "Prečítajte si aktuálne právne dokumenty",
-    "Pre pokračovanie prijmite Podmienky a potvrďte prečítanie Zásad ochrany súkromia.",
-    "Údaje profilu ani nastavenia účtu sa nezmenia.", "Právne potvrdenia",
-    "Prijímam", "Podmienky", "Prečítal/a som si", "Zásady ochrany súkromia",
-    "Prečítajte si oba dokumenty a potvrďte obe vyhlásenia pre pokračovanie.", "Prijať a pokračovať", "Ukladá sa váš súhlas…", "Odhlásiť sa",
-  ),
-  hu: consent(
-    "Fiókhozzáférés", "Tekintsd át a jelenlegi jogi dokumentumokat",
-    "A folytatáshoz fogadd el a Feltételeket, és erősítsd meg, hogy elolvastad az Adatvédelmi szabályzatot.",
-    "A profiladatai és fiókbeállításai nem változnak.", "Jogi nyilatkozatok",
-    "Elfogadom a", "Feltételeket", "Elolvastam a következőt:", "Adatvédelmi szabályzatot",
-    "Tekintsd át mindkét dokumentumot, és erősítsd meg mindkét nyilatkozatot a folytatáshoz.", "Elfogadás és folytatás", "Az elfogadás mentése…", "Kijelentkezés",
-  ),
-  uk: consent(
-    "Доступ до облікового запису", "Перегляньте чинні правові документи",
-    "Щоб продовжити, прийміть Умови та підтвердьте, що прочитали Політику конфіденційності.",
-    "Дані профілю та налаштування облікового запису не зміняться.", "Юридичні підтвердження",
-    "Я приймаю", "Умови", "Я прочитав(-ла)", "Політику конфіденційності",
-    "Перегляньте обидва документи та підтвердьте обидві заяви, щоб продовжити.", "Прийняти й продовжити", "Збереження прийняття…", "Вийти",
-  ),
-  it: consent(
-    "Accesso all’account", "Leggi i documenti legali attuali",
-    "Per continuare, accetta i Termini e conferma di aver letto l’Informativa sulla privacy.",
-    "Le informazioni del profilo e le scelte dell’account non verranno modificate.", "Conferme legali",
-    "Accetto i", "Termini", "Ho letto", "Informativa sulla privacy",
-    "Leggi entrambi i documenti e conferma le due dichiarazioni per continuare.", "Accetta e continua", "Salvataggio dell’accettazione…", "Esci",
-  ),
-  sv: consent(
-    "Kontoåtkomst", "Läs de aktuella juridiska dokumenten",
-    "Godkänn Villkoren och bekräfta att du har läst Integritetspolicyn för att fortsätta.",
-    "Dina profiluppgifter och kontoval ändras inte.", "Juridiska bekräftelser",
-    "Jag godkänner", "Villkoren", "Jag har läst", "Integritetspolicyn",
-    "Läs båda dokumenten och bekräfta båda förklaringarna för att fortsätta.", "Godkänn och fortsätt", "Sparar ditt godkännande…", "Logga ut",
-  ),
-  da: consent(
-    "Kontoadgang", "Læs de aktuelle juridiske dokumenter",
-    "Accepter Vilkårene og bekræft, at du har læst Privatlivspolitikken, for at fortsætte.",
-    "Dine profiloplysninger og kontovalg ændres ikke.", "Juridiske bekræftelser",
-    "Jeg accepterer", "Vilkårene", "Jeg har læst", "Privatlivspolitikken",
-    "Læs begge dokumenter og bekræft begge erklæringer for at fortsætte.", "Accepter og fortsæt", "Gemmer din accept…", "Log ud",
-  ),
-  fi: consent(
-    "Tilin käyttö", "Lue nykyiset oikeudelliset asiakirjat",
-    "Jatka hyväksymällä Ehdot ja vahvistamalla, että olet lukenut Tietosuojakäytännön.",
-    "Profiilitietojasi ja tilivalintojasi ei muuteta.", "Oikeudelliset vahvistukset",
-    "Hyväksyn", "Ehdot", "Olen lukenut", "Tietosuojakäytännön",
-    "Lue molemmat asiakirjat ja vahvista molemmat ilmoitukset jatkaaksesi.", "Hyväksy ja jatka", "Hyväksyntää tallennetaan…", "Kirjaudu ulos",
-  ),
-  no: consent(
-    "Kontotilgang", "Les de gjeldende juridiske dokumentene",
-    "Godta Vilkårene og bekreft at du har lest Personvernerklæringen for å fortsette.",
-    "Profilopplysningene og kontovalgene dine blir ikke endret.", "Juridiske bekreftelser",
-    "Jeg godtar", "Vilkårene", "Jeg har lest", "Personvernerklæringen",
-    "Les begge dokumentene og bekreft begge erklæringene for å fortsette.", "Godta og fortsett", "Lagrer godkjenningen…", "Logg ut",
-  ),
-}
+// Full-layer access for existing tests/tooling; runtime selects a language slice.
+import es from './consent/consent-es.js'
+import fr from './consent/consent-fr.js'
+import de from './consent/consent-de.js'
+import nl from './consent/consent-nl.js'
+import pt from './consent/consent-pt.js'
+import pl from './consent/consent-pl.js'
+import ro from './consent/consent-ro.js'
+import cs from './consent/consent-cs.js'
+import sk from './consent/consent-sk.js'
+import hu from './consent/consent-hu.js'
+import uk from './consent/consent-uk.js'
+import it from './consent/consent-it.js'
+import sv from './consent/consent-sv.js'
+import da from './consent/consent-da.js'
+import fi from './consent/consent-fi.js'
+import no from './consent/consent-no.js'
+export const legalConsentTranslations = { es, fr, de, nl, pt, pl, ro, cs, sk, hu, uk, it, sv, da, fi, no }

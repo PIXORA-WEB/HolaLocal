@@ -94,6 +94,30 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 })
 
+const consentLoaders = {
+  es: () => import('./locales/consent/consent-es.js'),
+  fr: () => import('./locales/consent/consent-fr.js'),
+  de: () => import('./locales/consent/consent-de.js'),
+  nl: () => import('./locales/consent/consent-nl.js'),
+  pt: () => import('./locales/consent/consent-pt.js'),
+  pl: () => import('./locales/consent/consent-pl.js'),
+  ro: () => import('./locales/consent/consent-ro.js'),
+  cs: () => import('./locales/consent/consent-cs.js'),
+  sk: () => import('./locales/consent/consent-sk.js'),
+  hu: () => import('./locales/consent/consent-hu.js'),
+  uk: () => import('./locales/consent/consent-uk.js'),
+  it: () => import('./locales/consent/consent-it.js'),
+  sv: () => import('./locales/consent/consent-sv.js'),
+  da: () => import('./locales/consent/consent-da.js'),
+  fi: () => import('./locales/consent/consent-fi.js'),
+  no: () => import('./locales/consent/consent-no.js'),
+}
+
+async function loadConsentLocale(code) {
+  const load = consentLoaders[code]
+  return load ? (await load()).default : undefined
+}
+
 const legalLoaders = {
   en: () => import('./locales/legal/legal-en.js'),
   es: () => import('./locales/legal/legal-es.js'),
@@ -162,7 +186,7 @@ export async function loadLocale(languageCode) {
     localeLoaders[code](),
     authenticatedLoaders[code](),
     loadLocaleCompletion(code),
-    import('./locales/legalConsentTranslations.js'),
+    loadConsentLocale(code),
     legalLoaders[code](),
     import('./locales/universalOperationalTranslations.js'),
     import('./adminTranslations.js'),
@@ -174,7 +198,7 @@ export async function loadLocale(languageCode) {
     { default: baseLocale },
     { default: authenticatedTranslations },
     fallbackLocaleCompletion,
-    { legalConsentTranslations },
+    legalConsentTranslations,
     { default: legalPageContent },
     { universalOperationalTranslations },
     { ownerRejectionTranslations },
@@ -193,7 +217,7 @@ export async function loadLocale(languageCode) {
       savedBusinessTranslations: translationPacks.savedBusinessTranslations,
       authenticatedTranslations,
       fallbackLocaleCompletionTranslations: fallbackLocaleCompletion,
-      legalConsentTranslations: legalConsentTranslations[code],
+      legalConsentTranslations,
       universalOperationalTranslations: universalOperationalTranslations[code],
       adminEnglishTranslations,
       ownerRejectionTranslations: ownerRejectionTranslations[code],
