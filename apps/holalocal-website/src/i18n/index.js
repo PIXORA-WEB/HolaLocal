@@ -94,6 +94,26 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 })
 
+const authenticatedLoaders = {
+  en: () => import('./locales/authenticated/authenticated-en.js'),
+  es: () => import('./locales/authenticated/authenticated-es.js'),
+  fr: () => import('./locales/authenticated/authenticated-fr.js'),
+  de: () => import('./locales/authenticated/authenticated-de.js'),
+  nl: () => import('./locales/authenticated/authenticated-nl.js'),
+  pt: () => import('./locales/authenticated/authenticated-pt.js'),
+  pl: () => import('./locales/authenticated/authenticated-pl.js'),
+  ro: () => import('./locales/authenticated/authenticated-ro.js'),
+  it: () => import('./locales/authenticated/authenticated-it.js'),
+  cs: () => import('./locales/authenticated/authenticated-cs.js'),
+  sk: () => import('./locales/authenticated/authenticated-sk.js'),
+  hu: () => import('./locales/authenticated/authenticated-hu.js'),
+  uk: () => import('./locales/authenticated/authenticated-uk.js'),
+  sv: () => import('./locales/authenticated/authenticated-sv.js'),
+  da: () => import('./locales/authenticated/authenticated-da.js'),
+  fi: () => import('./locales/authenticated/authenticated-fi.js'),
+  no: () => import('./locales/authenticated/authenticated-no.js'),
+}
+
 const completionLoaders = {
   ro: () => import('./locales/completion/completion-ro.js'),
   pl: () => import('./locales/completion/completion-pl.js'),
@@ -120,7 +140,7 @@ export async function loadLocale(languageCode) {
 
   const loadPromise = Promise.all([
     localeLoaders[code](),
-    import('./locales/authenticatedTranslations.js'),
+    authenticatedLoaders[code](),
     loadLocaleCompletion(code),
     import('./locales/legalConsentTranslations.js'),
     import('./locales/legalContent.js'),
@@ -132,7 +152,7 @@ export async function loadLocale(languageCode) {
     import('./customerReviewTranslations.js'),
   ]).then(([
     { default: baseLocale },
-    { authenticatedTranslations },
+    { default: authenticatedTranslations },
     fallbackLocaleCompletion,
     { legalConsentTranslations },
     { legalPageContent },
@@ -151,7 +171,7 @@ export async function loadLocale(languageCode) {
       footerNavigationTranslations: translationPacks.footerNavigationTranslations,
       subscriptionProductTranslations: translationPacks.subscriptionProductTranslations,
       savedBusinessTranslations: translationPacks.savedBusinessTranslations,
-      authenticatedTranslations: authenticatedTranslations[code],
+      authenticatedTranslations,
       fallbackLocaleCompletionTranslations: fallbackLocaleCompletion,
       legalConsentTranslations: legalConsentTranslations[code],
       universalOperationalTranslations: universalOperationalTranslations[code],

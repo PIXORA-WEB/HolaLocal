@@ -129,11 +129,11 @@ test('each residual value has one authoritative literal across its source and co
     new URL('../src/i18n/englishAuthenticatedResidual.js', import.meta.url),
     'utf8',
   )
-  const consumer = await readFile(
-    new URL('../src/i18n/locales/authenticatedTranslations.js', import.meta.url),
-    'utf8',
-  )
-  const literals = [...stringLiterals(source), ...stringLiterals(consumer)]
+  const consumer = (await Promise.all([
+    '../src/i18n/locales/authenticated/createAuthenticatedPack.js',
+    ...Object.keys(authenticatedTranslations).map(code => `../src/i18n/locales/authenticated/authenticated-${code}.js`),
+  ].map(path => readFile(new URL(path, import.meta.url), 'utf8'))))
+  const literals = [...stringLiterals(source), ...consumer.flatMap(stringLiterals)]
   for (const value of leafMap(englishAuthenticatedResidual).values()) {
     const occurrences = literals.filter(literal => literal === value).length
     assert.equal(occurrences, 1, value)
@@ -236,7 +236,11 @@ test('runtime and checker share composition functions while authenticated locale
     assert.match(runtimeSource, new RegExp(`\\b${functionName}\\b`))
     assert.match(checkerSource, new RegExp(`\\b${functionName}\\b`))
   }
-  assert.match(runtimeSource, /import\('\.\/locales\/authenticatedTranslations\.js'\)/)
+  for (const code of Object.keys(authenticatedTranslations)) {
+    assert.ok(runtimeSource.includes(`import('./locales/authenticated/authenticated-${code}.js')`))
+  }
+  assert.doesNotMatch(runtimeSource, /import\('\.\/locales\/authenticatedTranslations\.js'\)/)
+  assert.match(runtimeSource, /authenticatedLoaders\[code\]\(\)/)
   assert.doesNotMatch(runtimeSource, /^import .*authenticatedTranslations\.js/m)
   assert.match(runtimeSource, /import \{ englishAuthenticatedResidual \} from '\.\/englishAuthenticatedResidual\.js'/)
 })

@@ -32,8 +32,6 @@ test('the initial i18n module eagerly includes only default-locale resources', a
 
   for (const aggregateModule of [
     'adminTranslations.js',
-    'authenticatedTranslations.js',
-    'fallbackLocaleCompletionTranslations.js',
     'legalContent.js',
     'universalOperationalTranslations.js',
     'nonEnglishTranslationPacks.js',
@@ -41,6 +39,14 @@ test('the initial i18n module eagerly includes only default-locale resources', a
     assert.match(source, new RegExp(`import\\(['"].*${aggregateModule.replace('.', '\\.')}['"]\\)`))
     assert.doesNotMatch(source, new RegExp(`^import .*${aggregateModule.replace('.', '\\.')}`, 'm'))
   }
+  for (const code of expectedLocales) {
+    assert.ok(source.includes(`import('./locales/authenticated/authenticated-${code}.js')`))
+  }
+  for (const code of ['ro', 'pl', 'cs', 'sk', 'hu', 'uk', 'it', 'fi', 'sv', 'da', 'no']) {
+    assert.ok(source.includes(`import('./locales/completion/completion-${code}.js')`))
+  }
+  assert.doesNotMatch(source, /^import .*locales\/(authenticated|completion)\//m)
+  assert.doesNotMatch(source, /import\(['"].*(?:authenticatedTranslations|fallbackLocaleCompletionTranslations)\.js['"]\)/)
 })
 
 test('locale loading is cached and language changes use last-selection-wins sequencing', async () => {
@@ -124,7 +130,7 @@ test('authenticated lifecycle statuses map independently in every locale', () =>
 
 test('legacy lifecycle indexes remain aligned around the independent rejected key', async () => {
   const source = await readFile(
-    new URL('../src/i18n/locales/authenticatedTranslations.js', import.meta.url),
+    new URL('../src/i18n/locales/authenticated/createAuthenticatedPack.js', import.meta.url),
     'utf8',
   )
 

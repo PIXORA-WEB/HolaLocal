@@ -1,4 +1,4 @@
-// Actual dashboard and production locale composition; synthetic service boundaries.
+// Actual language control and production locale composition; synthetic authentication boundary.
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -36,11 +36,14 @@ async function scenario(width, name, run) {
 
 
 for(const width of [1440,390])for(const initial of ['en','de','pl'])await scenario(width,initial,async p=>{
+ const profileTitles={"en": "Profile", "de": "Mein Profil", "pl": "Mój profil", "uk": "Мій профіль"};
  const titles={en:'Business insights',de:'Unternehmensstatistiken',pl:'Statystyki firmy',uk:'Статистика компанії'};
  assert.equal(await p.locator('h1').textContent(),titles[initial]);
+ assert.equal(await p.locator('[data-authenticated-title]').textContent(),profileTitles[initial]);
  for(const [code,label] of [['uk','Українська'],['de','Deutsch'],['pl','Polski']]){
   await p.locator('.select-field__button').click();await p.getByRole('option',{name:label,exact:false}).click();
   await p.waitForFunction(expected=>document.querySelector('h1').textContent===expected,titles[code]);
+  assert.equal(await p.locator('[data-authenticated-title]').textContent(),profileTitles[code]);
   assert.equal(await p.evaluate(()=>localStorage.getItem('holalocal.uiLanguage')),code);
   assert.ok((await p.locator('main').textContent()).includes('DATE-SENTINEL'));
   assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);

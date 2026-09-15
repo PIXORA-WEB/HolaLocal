@@ -9,6 +9,6 @@ await i18nReady
 window.localeFixture = { i18n }
 export function Fixture() {
  const { t }=useTranslation()
- return <main className="account-card"><LanguageSwitcher /><h1>{t('businessInsights.title')}</h1><p>{t('business.control.statusExplanation')}</p><p>{t('businessInsights.state.collectingSince',{date:'DATE-SENTINEL'})}</p></main>
+ return <main className="account-card"><LanguageSwitcher /><h2 data-authenticated-title>{t('profile.title')}</h2><h1>{t('businessInsights.title')}</h1><p>{t('business.control.statusExplanation')}</p><p>{t('businessInsights.state.collectingSince',{date:'DATE-SENTINEL'})}</p></main>
 }
 createRoot(document.getElementById('root')).render(<Fixture />)
