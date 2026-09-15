@@ -107,9 +107,12 @@ export async function cleanStagingGeneration({
   return after
 }
 
-function rawRewrite(sourceFile, destinationFile, query, body) {
+function rawRewrite(sourceFile, destinationFile, query, body, { singleAttempt = false } = {}) {
   return new Promise((resolve, reject) => {
     sourceFile.request({
+      // Coordinated profile copies must not hide an outstanding failed attempt
+      // behind a retry success. Business-media defaults are unchanged.
+      ...(singleAttempt ? { maxRetries: 0 } : {}),
       method: 'POST',
       uri: `/rewriteTo/b/${destinationFile.bucket.name}/o/${encodeURIComponent(destinationFile.name)}`,
       qs: query,
@@ -128,6 +131,7 @@ export async function promoteCleanGeneration({
   rewrite = rawRewrite,
   readMetadata = readExact,
   promotionId,
+  singleAttempt = false,
 }) {
   const sourceGeneration = exactInteger(stagingGeneration, 'invalid-media-generation')
   const sourceMetageneration = exactInteger(stagingMetageneration, 'invalid-media-metageneration')
@@ -159,6 +163,7 @@ export async function promoteCleanGeneration({
         metadata: {},
         contexts: { custom: { [PROMOTION_CONTEXT_KEY]: { value: promotionId } } },
       },
+      { singleAttempt },
     )
   } catch (error) {
     if (Number(error?.code) !== 412) throw error

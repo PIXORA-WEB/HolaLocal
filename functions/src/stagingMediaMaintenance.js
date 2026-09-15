@@ -7,6 +7,7 @@ import {
 } from './canonicalMediaStorage.js'
 import {
   checkpointStagingCleanupResponsibility,
+  hasUnsettledProfilePromotion,
   CONFLICTING_STAGING_CLEANUP_COLLECTION,
   MEDIA_SESSION_COLLECTION,
   markStagingGenerationClean,
@@ -114,7 +115,7 @@ export async function sweepExpiredMediaSessions({
     const session = snapshot.data()
     // Promotion checkpoints remain live recovery state after ordinary upload
     // expiry. Finalization, not the orphan sweeper, owns their cleanup.
-    if (['promoting', 'promoted'].includes(session.state)) continue
+    if (hasUnsettledProfilePromotion(session) || ['promoting', 'promoted'].includes(session.state)) continue
     let cleanupError = null
     const stagingPathValid = !session.stagingPath || !session.stagingGeneration
       || parseStagingMediaPath(session.stagingPath) != null
@@ -146,7 +147,8 @@ export async function sweepExpiredMediaSessions({
       await db.runTransaction(async (transaction) => {
         const ref = db.doc(`${MEDIA_SESSION_COLLECTION}/${snapshot.id}`)
         const fresh = await transaction.get(ref)
-        if (!fresh.exists || !sameCleanupCheckpoint(fresh.data(), session)) return
+        if (!fresh.exists || !sameCleanupCheckpoint(fresh.data(), session)
+          || hasUnsettledProfilePromotion(fresh.data())) return
         transaction.update(ref, {
           state: 'cleanup_retry',
           cleanupPending: true,
@@ -158,7 +160,8 @@ export async function sweepExpiredMediaSessions({
     }
     await db.runTransaction(async (transaction) => {
       const fresh = await transaction.get(db.doc(`${MEDIA_SESSION_COLLECTION}/${snapshot.id}`))
-      if (!fresh.exists || !sameCleanupCheckpoint(fresh.data(), session)) return
+      if (!fresh.exists || !sameCleanupCheckpoint(fresh.data(), session)
+          || hasUnsettledProfilePromotion(fresh.data())) return
       transaction.delete(db.doc(`${MEDIA_SESSION_COLLECTION}/${snapshot.id}`))
       expired += 1
     })

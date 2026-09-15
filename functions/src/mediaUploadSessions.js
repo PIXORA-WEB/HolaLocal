@@ -19,9 +19,18 @@ function millis(value) {
   return new Date(value).getTime()
 }
 
+// Legacy promoting/promoted (including failed publication with a generation)
+// cannot prove that no remote copy is outstanding. Never expire that evidence.
+export function hasUnsettledProfilePromotion(session) {
+  if (session?.kind !== 'profile') return false
+  if (session.promotionObligation) return session.promotionObligation !== 'settled'
+  return ['promoting', 'promoted'].includes(session.state)
+    || (session.promotedGeneration != null && session.state !== 'completed')
+}
+
 export function sessionIsActive(session, now = Date.now()) {
   if (!session) return false
-  if (session.cleanupPending === true
+  if (hasUnsettledProfilePromotion(session) || session.cleanupPending === true
     || ['cleanup_pending', 'cleanup_retry', 'promoting', 'promoted'].includes(session.state)) return true
   return (session.state === 'completed' ? false : !['failed', 'expired'].includes(session.state))
     && Number.isFinite(millis(session.expiresAt)) && millis(session.expiresAt) > now
@@ -35,6 +44,12 @@ export async function prepareBoundedMediaSession({
   const sessionRef = db.doc(`${MEDIA_SESSION_COLLECTION}/${sessionId}`)
   await db.runTransaction(async (transaction) => {
     const current = await transaction.get(sessionRef)
+    if (kind === 'profile') {
+      const user = await transaction.get(db.doc(`users/${principalUid}`))
+      if (!user.exists || user.data()?.accountStatus !== 'active' || user.data()?.deletionRequestedAt != null) {
+        throw new HttpsError('failed-precondition', 'account-not-active')
+      }
+    }
     if (current.exists && sessionIsActive(current.data(), now.getTime())) {
       throw new HttpsError('aborted', 'media-upload-already-active')
     }

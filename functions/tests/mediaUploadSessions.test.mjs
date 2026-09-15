@@ -8,7 +8,7 @@ import {
 } from '../src/mediaUploadSessions.js'
 
 test('bounded session permits one active operation and supersedes only expired state', async () => {
-  const db = new FakeFirestore()
+  const db = new FakeFirestore({ 'users/u1': { accountStatus: 'active' } })
   const input = { db, sessionId: profileSessionId('u1'), principalUid: 'u1', kind: 'profile', stagingPath: 'users/u1/staging/profile/avatar', canonicalPath: 'users/u1/profile/avatar', expectedCanonicalGeneration: 0, now: new Date(1000), requestId: 'r1' }
   assert.deepEqual(await prepareBoundedMediaSession(input), { requestId: 'r1', stagingPath: input.stagingPath })
   await assert.rejects(prepareBoundedMediaSession({ ...input, requestId: 'r2', now: new Date(2000) }), /media-upload-already-active/)
@@ -20,7 +20,7 @@ test('bounded session permits one active operation and supersedes only expired s
 })
 
 test('cleanup responsibility cannot be superseded after ordinary session expiry', async () => {
-  const db = new FakeFirestore({ 'mediaUploadSessions/profile_u1': {
+  const db = new FakeFirestore({ 'users/u1': { accountStatus: 'active' }, 'mediaUploadSessions/profile_u1': {
     requestId: 'r1', principalUid: 'u1', kind: 'profile', state: 'cleanup_retry',
     cleanupPending: true, stagingPath: 'users/u1/staging/profile/avatar', stagingGeneration: '7',
     expiresAt: new Date(1000), version: 1,
@@ -36,7 +36,7 @@ test('cleanup responsibility cannot be superseded after ordinary session expiry'
 
 test('promotion checkpoints cannot be superseded after ordinary session expiry', async () => {
   for (const state of ['promoting', 'promoted']) {
-    const db = new FakeFirestore({ 'mediaUploadSessions/profile_u1': {
+    const db = new FakeFirestore({ 'users/u1': { accountStatus: 'active' }, 'mediaUploadSessions/profile_u1': {
       requestId: 'r1', principalUid: 'u1', kind: 'profile', state,
       stagingPath: 'users/u1/staging/profile/avatar', stagingGeneration: '7',
       promotedGeneration: state === 'promoted' ? '8' : null,
@@ -52,7 +52,7 @@ test('promotion checkpoints cannot be superseded after ordinary session expiry',
 })
 
 test('the real trigger checkpoint requires the current request marker and exact event generation', async () => {
-  const db = new FakeFirestore()
+  const db = new FakeFirestore({ 'users/u1': { accountStatus: 'active' } })
   const input = { db, sessionId: profileSessionId('u1'), principalUid: 'u1', kind: 'profile',
     stagingPath: 'users/u1/staging/profile/avatar', canonicalPath: 'users/u1/profile/avatar/a',
     expectedCanonicalGeneration: 0, now: new Date(1000), requestId: 'new-request' }
@@ -81,7 +81,7 @@ test('first exact generation binding is immutable in every later session state',
   const parsedPath = { kind: 'profile', uid: 'u1' }
   const path = 'users/u1/staging/profile/avatar'
   for (const state of ['cleanup_pending', 'cleanup_retry', 'uploaded', 'promoting', 'promoted', 'completed', 'failed']) {
-    const db = new FakeFirestore({ 'mediaUploadSessions/profile_u1': {
+    const db = new FakeFirestore({ 'users/u1': { accountStatus: 'active' }, 'mediaUploadSessions/profile_u1': {
       requestId: 'request', principalUid: 'u1', kind: 'profile', state,
       cleanupPending: ['cleanup_pending', 'cleanup_retry', 'failed'].includes(state),
       stagingPath: path, stagingGeneration: '7', promotedGeneration: '70',

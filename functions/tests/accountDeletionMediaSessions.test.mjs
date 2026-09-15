@@ -7,7 +7,7 @@ import { customerReviewCleanupPath } from '../src/customerReviewDeletion.js'
 import { FakeFirestore } from './fakeFirestore.mjs'
 
 const emptyBucket = { getFiles: async () => [[]] }
-const session = uid => ({ uid, state: 'promoted', path: `users/${uid}/profile/image`, promotedGeneration: '1' })
+const session = uid => ({ uid, state: 'completed', path: `users/${uid}/profile/image`, promotedGeneration: '1' })
 function failingDeletion(db, paths, code = 14) {
   const original = db.doc.bind(db)
   db.doc = path => {

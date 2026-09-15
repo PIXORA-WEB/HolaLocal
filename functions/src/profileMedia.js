@@ -1,3 +1,4 @@
+import { compensateProfilePromotion } from './profilePromotionCoordination.js'
 import { getStorage } from 'firebase-admin/storage'
 import { FieldValue } from 'firebase-admin/firestore'
 import { HttpsError } from 'firebase-functions/v2/https'
@@ -18,6 +19,7 @@ import {
 } from './canonicalMediaStorage.js'
 import {
   assertFinalizableSession,
+  hasUnsettledProfilePromotion,
   MEDIA_SESSION_COLLECTION,
   markStagingGenerationClean,
   prepareBoundedMediaSession,
@@ -95,48 +97,90 @@ export async function finalizeProfileMedia({
     })
     session = (await sessionRef.get()).data()
   }
-  const status = assertFinalizableSession(session, {
-    requestId, principalUid: uid, stagingGeneration, now: now.getTime(),
-  })
-  if (!userSnapshot.exists || userSnapshot.data()?.accountStatus !== 'active'
-    || userSnapshot.data()?.deletionRequestedAt != null) {
-    throw new HttpsError('failed-precondition', 'account-not-active')
-  }
-  if (status === 'completed') {
-    return { ok: true, storagePath: session.canonicalPath, generation: session.promotedGeneration }
-  }
-
-  let promotedGeneration = session.promotedGeneration
-  if (!promotedGeneration) {
-    const cleaned = cleanedStaging
-      ?? await clean({ path: session.stagingPath, generation: stagingGeneration, bucket })
-    await sessionRef.update({
-      stagingGeneration: String(stagingGeneration),
-      state: 'promoting',
+  // Only uploaded -> copying admits a Storage operation. Every retry reads the
+  // durable phase; no second invocation repeats a potentially outstanding copy.
+  const admission = await db.runTransaction(async (transaction) => {
+    const [freshSession, freshUser] = await Promise.all([
+      transaction.get(sessionRef), transaction.get(userRef),
+    ])
+    const data = freshSession.data()
+    if (!data || data.requestId !== requestId || data.principalUid !== uid
+      || String(data.stagingGeneration) !== String(stagingGeneration)) {
+      throw new HttpsError('failed-precondition', 'media-session-stale')
+    }
+    if (data.promotionObligation === 'compensating') return { session: data, copy: false }
+    if (data.promotionObligation === 'copied') return { session: data, copy: false }
+    if (hasUnsettledProfilePromotion(data)) {
+      throw new HttpsError('aborted', 'media-promotion-outcome-unresolved')
+    }
+    if (!freshUser.exists || freshUser.data()?.accountStatus !== 'active'
+      || freshUser.data()?.deletionRequestedAt != null) {
+      throw new HttpsError('failed-precondition', 'account-not-active')
+    }
+    const status = assertFinalizableSession(data, {
+      requestId, principalUid: uid, stagingGeneration, now: now.getTime(),
+    })
+    if (status === 'completed') return { session: data, completed: true }
+    transaction.update(sessionRef, {
+      state: 'promoting', promotionObligation: 'copying', promotionProtocol: 1,
       updatedAt: now,
     })
+    return { session: data, copy: true }
+  })
+  session = admission.session
+  if (admission.completed) {
+    return { ok: true, storagePath: session.canonicalPath, generation: session.promotedGeneration }
+  }
+  let promotedGeneration = session.promotedGeneration
+  if (admission.copy) {
+    // Any rejection from here through checkpointing is ambiguous, including a
+    // lost success response. Keep copying pinned; never infer absence/expiry.
+    let cleaned
+    try {
+      cleaned = cleanedStaging ?? await clean({ path: session.stagingPath, generation: stagingGeneration, bucket })
+    } catch (error) {
+      // No copy was dispatched. If this write fails the pinned obligation is
+      // deliberately retained; otherwise an ordinary upload retry is safe.
+      await db.runTransaction(async (transaction) => {
+        const fresh = (await transaction.get(sessionRef)).data()
+        if (fresh?.requestId === requestId && fresh.promotionObligation === 'copying') {
+          transaction.update(sessionRef, { state: 'uploaded', promotionObligation: 'settled', updatedAt: now })
+        }
+      })
+      throw error
+    }
     const promoted = await promote({
-      stagingPath: session.stagingPath,
-      stagingGeneration,
+      stagingPath: session.stagingPath, stagingGeneration,
       stagingMetageneration: String(cleaned.metageneration),
       canonicalPath: session.canonicalPath,
       expectedCanonicalGeneration: session.expectedCanonicalGeneration,
-      promotionId: requestId,
-      bucket,
+      promotionId: requestId, singleAttempt: true, bucket,
     })
-    promotedGeneration = promoted.generation
-    await sessionRef.update({ promotedGeneration, state: 'promoted', updatedAt: now })
-  } else {
+    promotedGeneration = String(promoted.generation)
+    if (!/^[1-9][0-9]*$/.test(promotedGeneration)) {
+      throw new HttpsError('internal', 'media-promotion-result-invalid')
+    }
+    await db.runTransaction(async (transaction) => {
+      const fresh = (await transaction.get(sessionRef)).data()
+      if (fresh?.requestId !== requestId || fresh.promotionObligation !== 'copying') {
+        throw new HttpsError('aborted', 'media-session-stale')
+      }
+      transaction.update(sessionRef, {
+        promotedGeneration, state: 'promoted', promotionObligation: 'copied', updatedAt: now,
+      })
+    })
+  }
+
+  if (!admission.copy && session.promotionObligation === 'copied') {
     const [metadata] = await bucket.file(session.canonicalPath, { generation: promotedGeneration }).getMetadata()
     verifyCanonicalImageMetadata(metadata, {
       path: session.canonicalPath, generation: promotedGeneration, requireTokenFree: true,
     })
   }
 
-  await clearContext({ path: session.canonicalPath, generation: promotedGeneration, bucket })
-
-  try {
-    await db.runTransaction(async (transaction) => {
+  // Publication and selection of compensation are mutually exclusive durable
+  // decisions. A lost transaction response is safe to retry from its checkpoint.
+  const outcome = await db.runTransaction(async (transaction) => {
     const [freshSession, freshUser] = await Promise.all([
       transaction.get(sessionRef), transaction.get(userRef),
     ])
@@ -144,28 +188,33 @@ export async function finalizeProfileMedia({
     if (data?.requestId !== requestId || data?.promotedGeneration !== promotedGeneration) {
       throw new HttpsError('aborted', 'media-session-stale')
     }
-    if (!freshUser.exists || freshUser.data()?.accountStatus !== 'active'
-      || freshUser.data()?.deletionRequestedAt != null) {
-      throw new HttpsError('failed-precondition', 'account-not-active')
-    }
+    if (data.promotionObligation === 'settled') return data.state
+    if (data.promotionObligation === 'compensating') return 'compensating'
+    if (data.promotionObligation !== 'copied') throw new HttpsError('aborted', 'media-promotion-outcome-unresolved')
     const currentAuthority = isCanonicalProfileMediaPath(freshUser.data()?.profilePhoto?.storagePath, uid)
       ? freshUser.data().profilePhoto.storagePath : null
-    if (currentAuthority !== data.expectedAuthorityPath) {
-      throw new HttpsError('aborted', 'media-authority-changed')
+    if (!freshUser.exists || freshUser.data()?.accountStatus !== 'active'
+      || freshUser.data()?.deletionRequestedAt != null || currentAuthority !== data.expectedAuthorityPath) {
+      transaction.update(sessionRef, { promotionObligation: 'compensating', updatedAt: now })
+      return 'compensating'
     }
     transaction.update(userRef, {
       photoURL: null,
       profilePhoto: { storagePath: session.canonicalPath },
       updatedAt: FieldValue.serverTimestamp(),
     })
-    transaction.update(sessionRef, { state: 'completed', updatedAt: now })
+    transaction.update(sessionRef, {
+      state: 'completed', promotionObligation: 'settled', updatedAt: now,
     })
-  } catch (error) {
-    if (error instanceof HttpsError && ['failed-precondition', 'aborted', 'permission-denied'].includes(error.code)) {
-      await sessionRef.update({ state: 'failed', updatedAt: now }).catch(() => undefined)
-    }
-    throw error
+    return 'completed'
+  })
+  if (outcome !== 'completed') {
+    await compensateProfilePromotion({ db, uid, requestId, bucket, remove, now })
+    throw new HttpsError('failed-precondition', 'account-or-media-authority-changed')
   }
+  // The copy has settled and publication is durable. Context cleanup cannot
+  // create bytes; retain the context if best-effort cleanup fails.
+  await clearContext({ path: session.canonicalPath, generation: promotedGeneration, bucket }).catch(() => undefined)
   await deleteLegacyProfileMedia(userSnapshot.data(), uid, bucket)
   if (session.expectedAuthorityPath?.endsWith('/a') || session.expectedAuthorityPath?.endsWith('/b')) {
     await remove({

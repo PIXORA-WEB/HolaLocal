@@ -1,3 +1,4 @@
+import { settleProfilePromotionForDeletion } from './profilePromotionCoordination.js'
 import { initialDeletionEvidenceRetention, nextRetentionDecision, requireRetentionAdmin, retentionText, validRetentionDecision } from './recordRetention.js'
 import { customerReviewCleanupPath } from './customerReviewDeletion.js'
 import { randomUUID } from 'node:crypto'
@@ -191,6 +192,7 @@ const storageMissing = (error) => ['404', 404, 'storage/object-not-found', 'not-
 export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db = null }) {
   const safeUid = requireTrustedUid(uid); const counts = { attempted: 0, deleted: 0, alreadyMissing: 0, failed: 0 }; let files
   try {
+    if (db) await settleProfilePromotionForDeletion({ db, uid: safeUid, bucket, counts })
     ;[files] = await bucket.getFiles({ prefix: `users/${safeUid}/` })
   } catch { return { ok: false, retryable: true, counts: { ...counts, failed: 1 } } }
   for (const file of files) {

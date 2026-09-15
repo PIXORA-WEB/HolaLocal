@@ -76,9 +76,10 @@ test('profile replacements alternate A/B and a rejected authority switch preserv
   await assert.rejects(finalizeProfileMedia({
     uid: 'u1', requestId: prepared.requestId, stagingGeneration: '12', db, bucket,
     now: new Date(2000), clean: async () => ({ metageneration: '2' }),
-    promote: async () => ({ generation: '13' }),
-    clearContext: async () => db.doc('users/u1').update({ deletionRequestedAt: new Date(1500) }),
-  }), /account-not-active/)
+    promote: async () => { await db.doc('users/u1').update({ deletionRequestedAt: new Date(1500) }); return { generation: '13' } },
+    clearContext: async () => undefined,
+    remove: async () => undefined,
+  }), /account-or-media-authority-changed/)
   assert.deepEqual(db.data('users/u1').profilePhoto, { storagePath: 'users/u1/profile/avatar/a' })
   assert.equal(db.data('mediaUploadSessions/profile_u1').state, 'failed')
 
@@ -98,7 +99,7 @@ test('promotion checkpoint reconciles after a transient Firestore authority-swit
   const db = {
     doc: (...args) => backing.doc(...args),
     runTransaction: async (callback) => {
-      if (failTransaction) { failTransaction = false; throw new Error('transient-firestore') }
+      if (failTransaction && backing.data('mediaUploadSessions/profile_u1')?.promotionObligation === 'copied') { failTransaction = false; throw new Error('transient-firestore') }
       return backing.runTransaction(callback)
     },
   }

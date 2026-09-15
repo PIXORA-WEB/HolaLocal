@@ -18,17 +18,19 @@ test('Firestore persists media cleanup failure and safe finalizer resumption', {
     const stamp = Timestamp.fromMillis(1700000000000)
     await userRef.set({ businessId: null, termsAccepted: true, termsAcceptedAt: stamp, termsVersion: '1.0', privacyAccepted: true, privacyAcceptedAt: stamp, privacyVersion: '1.0' })
     await requestRef.set({ uid, state: 'requested', requestVersion: 1 })
-    await sessionRef.set({ uid, state: 'promoted', path: `users/${uid}/profile/image` })
+    await sessionRef.set({ uid, state: 'completed', path: `users/${uid}/profile/image` })
     const unrelated = db.doc('mediaUploadSessions/profile_unrelated')
     await unrelated.set({ uid: 'unrelated', state: 'promoting' })
     let rejectDelete = true
-    const mediaDb = { doc(path) {
-      assert.equal(path, sessionRef.path)
-      return { delete: async () => {
+    const mediaDb = { runTransaction: callback => db.runTransaction(callback), doc(path) {
+      assert.ok([sessionRef.path, userRef.path].includes(path))
+      const ref = db.doc(path)
+      if (path === sessionRef.path) ref.delete = async () => {
         // Controlled boundary failure, not an emulator authorization test.
         if (rejectDelete) throw Object.assign(new Error('Synthetic unavailable'), { code: 14 })
         return db.doc(path).delete()
-      } }
+      }
+      return ref
     } }
     const bucket = { getFiles: async ({ prefix }) => { assert.equal(prefix, `users/${uid}/`); return [[]] } }
     const calls = []
