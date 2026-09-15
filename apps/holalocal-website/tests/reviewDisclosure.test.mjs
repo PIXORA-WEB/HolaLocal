@@ -4,7 +4,7 @@ import {legalPageContent,reviewAvailabilityTranslations} from '../src/i18n/local
 import {englishLegalPages} from '../src/i18n/englishLegalPages.js'
 import {customerReviewTranslations} from '../src/i18n/customerReviewTranslations.js'
 import {reviewDisclosureTranslations} from '../src/i18n/reviewDisclosureTranslations.js'
-import {CURRENT_PRIVACY_VERSION} from '../../../shared/firebase-contract/legalConsent.js'
+import {CURRENT_PRIVACY_VERSION, hasValidLegalConsent, hasCurrentLegalConsent} from '../../../shared/firebase-contract/legalConsent.js'
 test('all 17 lazy legal locales and review forms have the shared disclosure without duplicated sections',()=>{
  assert.equal(Object.keys(legalPageContent).length,17)
  for(const [code,content] of Object.entries(legalPageContent)){
@@ -22,5 +22,11 @@ test('all 17 lazy legal locales and review forms have the shared disclosure with
 test('approved disclosure covers publication, embedded text, private content and scheduled cleanup without new consent requirement',()=>{
  const text=reviewDisclosureTranslations.en.join(' ')
  for(const expected of ['internal link','not automatically','proves a purchase','not sent as separate fields','Anything you include','Private or pending','Machine translations','90 days','request and audit copies','earlier','general deletion section'])assert.ok(text.includes(expected),expected)
- assert.equal(CURRENT_PRIVACY_VERSION,'1.0')
+ // Intentional current publication contract, not a legacy display-label assertion.
+ assert.equal(CURRENT_PRIVACY_VERSION,'1.1')
+ const timestamp={seconds:1,nanoseconds:0,toMillis:()=>1000}
+ const historical={termsAccepted:true,termsAcceptedAt:timestamp,termsVersion:'1.0',privacyAccepted:true,privacyAcceptedAt:timestamp,privacyVersion:'1.0'}
+ assert.equal(hasValidLegalConsent(historical),true)
+ assert.equal(hasCurrentLegalConsent(historical),false)
+ assert.equal(hasCurrentLegalConsent({...historical,termsVersion:'1.1',privacyVersion:'1.1'}),true)
 })
