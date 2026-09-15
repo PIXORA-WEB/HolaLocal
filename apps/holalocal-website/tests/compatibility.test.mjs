@@ -1711,7 +1711,7 @@ test('business creation uses the trusted callable without browser owner discover
 
 test('public directory and exact public detail use safe callable projections', async () => {
   const [businessService, functionsClient, servicesPage] = await Promise.all([
-    readFile(new URL('../src/services/businessService.js', import.meta.url), 'utf8'),
+    readFile(new URL('../src/services/publicBusinessService.js', import.meta.url), 'utf8'),
     readFile(new URL('../src/firebase/functionsClient.js', import.meta.url), 'utf8'),
     readFile(new URL('../src/pages/ServicesPage.jsx', import.meta.url), 'utf8'),
   ])

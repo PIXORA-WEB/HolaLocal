@@ -596,7 +596,7 @@ test('mobile header keeps the full brand visible while preserving controls', asy
 test('services page uses the shared directory implementation and safe states', async () => {
   const [source, businessService, publicBusinessDirectory] = await Promise.all([
     readFile(servicesPath, 'utf8'),
-    readFile(businessServicePath, 'utf8'),
+    readFile(path.resolve(__dirname, '../src/services/publicBusinessService.js'), 'utf8'),
     readFile(publicBusinessDirectoryPath, 'utf8'),
   ])
 
@@ -629,7 +629,6 @@ test('services page uses the shared directory implementation and safe states', a
   const detailPublicGetter = readExportedFunction(
     businessService,
     'getPublicBusinessById',
-    'getOwnerSubscriptionStatus',
   )
   assert.match(listPublicGetter, /loadPublicBusinessDirectory\(\{/)
   assert.match(listPublicGetter, /callPublicBusinesses: dependencies\.callPublicBusinesses \?\? listPublicBusinessesCallable/)

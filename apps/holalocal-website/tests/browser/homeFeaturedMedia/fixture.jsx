@@ -5,7 +5,7 @@ import '../../../src/i18n/index.js'
 import '../../../src/styles/tokens.css'
 import '../../../src/styles/base.css'
 import '../../../src/styles/global.css'
-import { getPublicBusinessById } from '../../../src/services/businessService.js'
+import { getPublicBusinessById } from '../../../src/services/publicBusinessService.js'
 export const Home = lazy(() => import('../../../src/pages/HomePage.jsx'))
 export const Panel = lazy(async () => { await import('../../../src/styles/servicesPresentation.css'); return import('../../../src/components/common/BusinessDetailPanel.jsx') })
 // Only the detail-route orchestration is a fixture; both rendered components and

@@ -16,7 +16,7 @@ export async function load(url, context, next) {
   return next(url,context)
 }
 `)}`, import.meta.url)
-const { getFeaturedActiveBusinesses, getPublicBusinessById, getActivePublicBusinesses } = await import('../src/services/businessService.js')
+const { getFeaturedActiveBusinesses, getPublicBusinessById, getActivePublicBusinesses } = await import(process.env.HOLALOCAL_FEATURED_BASELINE === '1' ? '../src/services/businessService.js' : '../src/services/publicBusinessService.js')
 const { clearBusinessMediaPresentationCache } = await import('../src/services/businessMediaPresentation.js')
 const business = (id) => ({ businessId: id, name: id, profileComplete: true,
   logoStoragePath: `businesses/${id}/logos/logo`, galleryStoragePaths: [0, 1].map(n => `businesses/${id}/photos/${n}`) })
@@ -94,4 +94,18 @@ test('callable rejection and retry preserve the Home error contract',async()=>{
   globalThis.featuredFixture.list=async()=>{throw Error('synthetic-callable')}
   await assert.rejects(home(),/synthetic-callable/)
   globalThis.featuredFixture.list=list;assert.equal((await home()).length,1)
+})
+
+test('exact public reads preserve null, not-found and transport error distinctions',async()=>{
+  fixture([business('one')])
+  assert.equal(await getPublicBusinessById('missing'),null)
+  globalThis.featuredFixture.detail=async({businessId})=>{
+    assert.equal(businessId,'one')
+    throw Object.assign(new Error('synthetic missing'),{code:'functions/not-found'})
+  }
+  assert.equal(await getPublicBusinessById('one'),null)
+  for(const code of ['functions/permission-denied','functions/unavailable']){
+    globalThis.featuredFixture.detail=async()=>{throw Object.assign(new Error('synthetic transport'),{code})}
+    await assert.rejects(getPublicBusinessById('one'),error=>error.code===code)
+  }
 })

@@ -8,7 +8,7 @@ import {
 import PublicBusinessCard from '../components/common/PublicBusinessCard.jsx'
 import ServiceCategoryIcon from '../components/common/ServiceCategoryIcon.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
-import { getFeaturedActiveBusinesses } from '../services/businessService.js'
+import { getFeaturedActiveBusinesses } from '../services/publicBusinessService.js'
 import { getPublicBusinessPrimaryServiceLabel } from '../utils/serviceDiscovery.js'
 import homepageCoastalCommunity from '../assets/illustrations/homepage-coastal-community.webp'
 import homepageCoastalCommunityMobile from '../assets/illustrations/homepage-coastal-community-mobile.webp'

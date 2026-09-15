@@ -23,7 +23,7 @@ const replacements = {
   'services/customerReviewService.js': 'export const customerReviewService={summaries:async({businessIds})=>businessIds.map(businessId=>({businessId,available:true,count:3,average:4.5})),listPublic:async()=>({items:[],nextCursor:null}),getOwn:async()=>null,listOwn:async()=>({items:[window.h.own],nextCursor:null})};',
   'services/adminCustomerReviewService.js': 'export const adminCustomerReviewService=()=>window.h.adminApi;',
 }
-for (const file of ['services/businessService.js','services/businessInsightsService.js','services/savedBusinessService.js','services/conversationService.js','services/reportService.js','firebase/auth.js','firebase/storageClient.js']) {
+for (const file of ['services/businessService.js','services/publicBusinessService.js','services/businessInsightsService.js','services/savedBusinessService.js','services/conversationService.js','services/reportService.js','firebase/auth.js','firebase/storageClient.js']) {
   const source=await readFile(resolve(src,file),'utf8')
   const names=[...source.matchAll(/export\s+(?:async\s+)?(?:function|const|let|class)\s+(\w+)/g)].map(m=>m[1])
   replacements[file]=names.map(name=>{
