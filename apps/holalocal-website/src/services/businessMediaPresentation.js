@@ -45,7 +45,7 @@ function safeLegacyEntry(url, businessId, kind) {
 export async function resolveBusinessMediaPresentation(
   businessId,
   business,
-  { resolveCanonicalUrl: resolver = defaultCanonicalUrlResolver } = {},
+  { resolveCanonicalUrl: resolver = defaultCanonicalUrlResolver, includeGallery = true } = {},
 ) {
   const logoStoragePath = isCanonicalBusinessLogoPath(business?.logoStoragePath, businessId)
     ? business.logoStoragePath : null
@@ -54,7 +54,7 @@ export async function resolveBusinessMediaPresentation(
       isCanonicalBusinessGalleryPath(path, businessId) && paths.indexOf(path) === index
     ))
     : []
-  const canonicalGallery = (await Promise.all(galleryStoragePaths.map(async (storagePath) => {
+  const canonicalGallery = (await Promise.all((includeGallery ? galleryStoragePaths : []).map(async (storagePath) => {
     try {
       return Object.freeze({
         downloadUrl: (await resolveCanonicalUrl(storagePath, resolver)).url,
@@ -81,7 +81,7 @@ export async function resolveBusinessMediaPresentation(
   const legacy = legacyCandidates(business)
   const legacyLogo = safeLegacyEntry(legacy.logo, businessId, 'logo')
   const seen = new Set(canonicalGallery.map(({ storagePath }) => storagePath))
-  const legacyGallery = legacy.gallery.map((url) => safeLegacyEntry(url, businessId, 'gallery'))
+  const legacyGallery = (includeGallery ? legacy.gallery : []).map((url) => safeLegacyEntry(url, businessId, 'gallery'))
     .filter((entry) => entry && !seen.has(entry.storagePath) && (seen.add(entry.storagePath), true))
   const galleryEntries = Object.freeze([...canonicalGallery, ...legacyGallery])
   const logoEntry = canonicalLogo ?? legacyLogo

@@ -62,14 +62,15 @@ export async function finalizeBusinessMedia(action, businessId, storagePath, opt
   return result.data
 }
 
-async function presentBusiness(business) {
+async function presentBusiness(business, mediaOptions) {
   return business?.businessId
-    ? resolveBusinessMediaPresentation(business.businessId, business)
+    ? resolveBusinessMediaPresentation(business.businessId, business, mediaOptions)
     : business
 }
 
-async function presentBusinessWithoutCanonicalMedia(business) {
+async function presentBusinessWithoutCanonicalMedia(business, mediaOptions) {
   return resolveBusinessMediaPresentation(business.businessId, business, {
+    ...mediaOptions,
     resolveCanonicalUrl: async () => { throw new Error('Canonical media is unavailable.') },
   })
 }
@@ -196,16 +197,22 @@ export async function getActivePublicBusinesses(maxResults = 60, dependencies = 
   const resultLimit = Math.min(Math.max(Number(maxResults) || 1, 1), 100)
   return loadPublicBusinessDirectory({
     callPublicBusinesses: dependencies.callPublicBusinesses ?? listPublicBusinessesCallable,
-    fallbackBusiness: dependencies.fallbackBusiness ?? presentBusinessWithoutCanonicalMedia,
+    fallbackBusiness: dependencies.fallbackBusiness ?? ((business) => presentBusinessWithoutCanonicalMedia(business, dependencies.mediaOptions)),
     maxResults: resultLimit,
-    presentBusiness: dependencies.presentBusiness ?? presentBusiness,
+    presentBusiness: dependencies.presentBusiness ?? ((business) => presentBusiness(business, dependencies.mediaOptions)),
+    selectBusinesses: dependencies.selectBusinesses,
     timeoutMs: dependencies.timeoutMs,
   })
 }
 
-export async function getFeaturedActiveBusinesses(maxResults = 60) {
-  const businesses = await getActivePublicBusinesses(maxResults)
-  return businesses.filter((business) => business.profileComplete)
+export async function getFeaturedActiveBusinesses(maxResults = 60, dependencies = {}) {
+  // Keep the server's eligibility/order and request window. Select the Home cards
+  // before presentation; their directory variant uses only the logo, not galleries.
+  return getActivePublicBusinesses(maxResults, {
+    ...dependencies,
+    selectBusinesses: (businesses) => businesses.filter((business) => business.profileComplete).slice(0, 3),
+    mediaOptions: { ...dependencies.mediaOptions, includeGallery: false },
+  })
 }
 
 export async function getPublicBusinessById(businessId) {

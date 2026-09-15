@@ -98,7 +98,7 @@ function HomePage() {
     getFeaturedActiveBusinesses(60)
       .then((businesses) => {
         if (isCurrent) {
-          setFeaturedBusinesses(businesses.slice(0, 3))
+          setFeaturedBusinesses(businesses)
           setDirectoryStatus('success')
         }
       })

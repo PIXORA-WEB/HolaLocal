@@ -8,6 +8,7 @@ export async function loadPublicBusinessDirectory({
   fallbackBusiness,
   maxResults,
   presentBusiness,
+  selectBusinesses = (businesses) => businesses,
   timeoutMs = PUBLIC_DIRECTORY_CALLABLE_TIMEOUT_MS,
 }) {
   const result = await withTimeout(
@@ -19,7 +20,7 @@ export async function loadPublicBusinessDirectory({
     ? result.data.businesses.filter((business) => business?.businessId && business?.name)
     : []
 
-  return Promise.all(businesses.map(async (business) => {
+  return Promise.all(selectBusinesses(businesses).map(async (business) => {
     try {
       return await presentBusiness(business)
     } catch {
