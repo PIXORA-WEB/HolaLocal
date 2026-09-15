@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import logoIcon from '../../assets/logos/logo-icon.png'
-import logoText from '../../assets/logos/logo-text.png'
+import logoIcon from '../../assets/logos/logo-icon.webp'
+import logoText from '../../assets/logos/logo-text.webp'
 import { brand } from '../../utils/brand.js'
 
 function BrandLockup({ className = '', label, linked = true, to = '/', variant = 'full' }) {
