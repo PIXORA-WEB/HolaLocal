@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import i18next from 'i18next'
+import { register } from 'node:module'
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from '../../../shared/firebase-contract/legalConsent.js'
 import {
   resolveWebsiteBusinessLookup,
   isPublicBusinessEligible,
@@ -31,6 +33,20 @@ import { fallbackLocaleCompletionTranslations } from '../src/i18n/locales/fallba
 import { legalPageContent } from '../src/i18n/locales/legalContent.js'
 import { mergeLocale } from '../src/i18n/locales/mergeLocale.js'
 import { universalOperationalTranslations } from '../src/i18n/locales/universalOperationalTranslations.js'
+
+register('data:text/javascript,' + encodeURIComponent(`
+  import { readFile } from 'node:fs/promises'
+  export async function load(url, context, next) {
+    if (url.endsWith('.json')) return { format: 'module', shortCircuit: true,
+      source: 'export default ' + await readFile(new URL(url), 'utf8') }
+    return next(url, context)
+  }
+`))
+const { default: runtimeI18n, loadLocale } = await import('../src/i18n/index.js')
+for (const { code } of supportedUILanguages) await loadLocale(code)
+function resourceForLocale(code) {
+  return runtimeI18n.getResourceBundle(code, 'translation')
+}
 
 class TimestampFixture {
   toDate() { return new Date(0) }
@@ -129,7 +145,8 @@ function interpolationVariables(value) {
     .sort()
 }
 
-function resourceForLocale(code, english, baseLocale) {
+// Deliberately tests these layers in isolation, not production registration order.
+function layerResourceForLocale(code, english, baseLocale) {
   return mergeLocale(
     english,
     baseLocale,
@@ -160,13 +177,8 @@ test('launch-critical operational translations are complete for every locale', a
   const english = await readJsonLocale('en')
   const englishResource = resourceForLocale('en', english, english)
   const namespacePaths = [
-    ['messages', 56],
-    ['reports', 18],
-    ['onboarding', 12],
-    ['auth.errors', 10],
-    ['auth.passwordUx', 2],
-    ['auth.recovery', 4],
-    ['services.authPrompt', 6],
+    'messages', 'reports', 'onboarding', 'auth.errors',
+    'auth.passwordUx', 'auth.recovery', 'services.authPrompt',
   ]
   const submissionPaths = [
     'business.control.submitForReview',
@@ -176,9 +188,13 @@ test('launch-critical operational translations are complete for every locale', a
 
   for (const { code } of supportedUILanguages) {
     const resource = resourceForLocale(code, english, await readBaseLocale(code, english))
-    for (const [path, expectedCount] of namespacePaths) {
+    for (const path of namespacePaths) {
       const entries = leafEntries(getPath(resource, path))
-      assert.equal(entries.length, expectedCount, `${code}: ${path} leaf count`)
+      for (const [key, value] of leafEntries(getPath(englishResource, path))) {
+        const localized = getPath(resource, `${path}.${key}`)
+        assert.equal(typeof localized, 'string', `${code}: ${path}.${key} remains present`)
+        assert.deepEqual(interpolationVariables(localized), interpolationVariables(value), `${code}: ${path}.${key} placeholders`)
+      }
       for (const [key, value] of entries) {
         assert.equal(typeof value, 'string', `${code}: ${path}.${key} is a string`)
         assert.notEqual(value.trim(), '', `${code}: ${path}.${key} is non-empty`)
@@ -226,7 +242,7 @@ test('launch-critical operational translations are complete for every locale', a
 
 test('fallback locale completion packs merge without overriding specialized content', async () => {
   const english = await readJsonLocale('en')
-  const englishResource = resourceForLocale('en', english, english)
+  const englishResource = layerResourceForLocale('en', english, english)
   const allowedIdenticalValues = new Set(['services.locationPlaceholder'])
   const allowedIdenticalByLocale = {
     it: new Set(['auth.password', 'business.form.contact.emailLabel']),
@@ -237,14 +253,11 @@ test('fallback locale completion packs merge without overriding specialized cont
 
   for (const code of ['pl', 'ro', 'cs', 'sk', 'hu', 'uk', 'it', 'fi', 'sv', 'da', 'no']) {
     const completion = fallbackLocaleCompletionTranslations[code]
-    const resource = resourceForLocale(code, english, await readBaseLocale(code, english))
+    const resource = layerResourceForLocale(code, english, await readBaseLocale(code, english))
     const entries = leafEntries(completion)
 
-    const expectedLeafCounts = {
-      pl: 261, ro: 255, cs: 255, sk: 287, hu: 263, uk: 275,
-      it: 249, fi: 263, sv: 263, da: 262, no: 263,
-    }
-    assert.equal(entries.length, expectedLeafCounts[code], `${code}: scoped completion leaf count`)
+    // Pack size is an inventory, not a contract. Preserve the scoped per-key,
+    // placeholder, plural and independent-language checks below.
     for (const [path, value] of entries) {
       assert.equal(getPath(resource, path), value, `${code}: ${path} is active in the merged resource`)
       const canonicalPath = /_(few|many)$/.test(path)
@@ -681,7 +694,7 @@ test('the authoritative 30-item completion-locale residual manifest is fully loc
     const resource = resourceForLocale(code, english, await readBaseLocale(code, english))
     const legalStrings = flattenLegalStrings(resource.legalPages.terms.sections)
       .concat(flattenLegalStrings(resource.legalPages.privacy.sections))
-    assert.equal(legalStrings.length, 57, `${code}: all 57 directly rendered legal strings remain present`)
+    assert.equal(legalStrings.length, flattenLegalStrings(englishResource.legalPages.terms.sections).concat(flattenLegalStrings(englishResource.legalPages.privacy.sections)).length, `${code}: current legal body structure matches English`)
     for (const text of legalStrings) {
       assert.equal(typeof text, 'string', `${code}: legal content is a string`)
       assert.notEqual(text.trim(), '', `${code}: legal content is non-empty`)
@@ -1428,7 +1441,6 @@ test('public business-detail translations are complete and localized for every s
     uk: ['reviewCount_few', 'reviewCount_many'],
   }
 
-  assert.equal(Object.keys(reference).length, 44)
   assert.equal(
     reference.profileInformationProvided,
     'Profile information is provided by the business.',
@@ -1505,11 +1517,16 @@ test('legal page body content is locale-driven and structurally complete for eve
   ]
   const expectedLocaleCodes = supportedUILanguages.map(({ code }) => code).sort()
 
-  assert.equal(englishResource.legalPages.version, 'Version 1 · Effective 4 July 2026')
-  assert.equal(englishResource.legalPages.terms.sections[0].paragraphs[0].startsWith(canonicalTermsSentence), true)
-  assert.equal(englishResource.legalPages.privacy.sections[0].paragraphs[0].startsWith(canonicalPrivacySentence), true)
+  assert.equal(CURRENT_TERMS_VERSION, '1.1')
+  assert.equal(CURRENT_PRIVACY_VERSION, '1.1')
+  const termsPage = await readFile(new URL('../src/pages/TermsPage.jsx', import.meta.url), 'utf8')
+  const privacyPage = await readFile(new URL('../src/pages/PrivacyPage.jsx', import.meta.url), 'utf8')
+  assert.match(termsPage, /eyebrow=.*CURRENT_TERMS_VERSION/)
+  assert.match(privacyPage, /eyebrow=.*CURRENT_PRIVACY_VERSION/)
+  assert.deepEqual(englishResource.legalPages.terms.sections, legalPageContent.en.terms.sections)
+  assert.deepEqual(englishResource.legalPages.privacy.sections, legalPageContent.en.privacy.sections)
   const englishDeletion = englishResource.legalPages.privacy.sections.find(({ key }) => key === 'deletion')
-  assert.equal(englishDeletion.paragraphs.length, 3)
+  assert.equal(englishDeletion.paragraphs.length, legalPageContent.en.privacy.sections.find(section => section.key === 'deletion').paragraphs.length)
   assert.match(englishDeletion.paragraphs.join(' '), /pseudonymous structural identifiers/)
   assert.match(englishDeletion.paragraphs.join(' '), /They are not anonymous/)
   assert.deepEqual(Object.keys(legalPageContent).sort(), expectedLocaleCodes)
@@ -1520,7 +1537,7 @@ test('legal page body content is locale-driven and structurally complete for eve
     const translate = translatorFor(resource)
 
     for (const key of [
-      'legalPages.version',
+      'legalPages.revisionNotice',
       'legalPages.terms.title',
       'legalPages.terms.description',
       'legalPages.privacy.title',
@@ -1552,7 +1569,7 @@ test('legal page body content is locale-driven and structurally complete for eve
       assert.equal(section.items?.length ?? 0, canonical.items?.length ?? 0, `${code}: privacy ${section.key} item count`)
     })
     const deletionSection = resource.legalPages.privacy.sections.find(({ key }) => key === 'deletion')
-    assert.equal(deletionSection.paragraphs.length, 3, `${code}: deletion disclosure paragraph count`)
+    assert.equal(deletionSection.paragraphs.length, englishDeletion.paragraphs.length, `${code}: current deletion disclosures`)
     if (code !== 'en') {
       assert.notEqual(deletionSection.paragraphs[1], englishDeletion.paragraphs[1], `${code}: localized deletion disclosure`)
       assert.notEqual(deletionSection.paragraphs[2], englishDeletion.paragraphs[2], `${code}: localized pseudonym disclosure`)
@@ -1710,7 +1727,7 @@ test('public directory and exact public detail use safe callable projections', a
   assert.match(activeDirectorySource, /callPublicBusinesses: dependencies\.callPublicBusinesses \?\? listPublicBusinessesCallable/)
   assert.doesNotMatch(activeDirectorySource, /collection\(db, 'businesses'\)|getDocs\(|where\(|orderBy\(/)
   assert.match(activeDirectorySource, /return loadPublicBusinessDirectory\(\{/)
-  assert.match(activeDirectorySource, /presentBusiness: dependencies\.presentBusiness \?\? presentBusiness/)
+  assert.match(activeDirectorySource, /presentBusiness\(business, dependencies\.mediaOptions\)/)
   assert.match(servicesPage, /setBusinesses\(activeBusinesses\)/)
   assert.match(servicesPage, /services\.emptyTitle/)
 

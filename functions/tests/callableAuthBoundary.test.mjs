@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from '../../shared/firebase-contract/legalConsent.js'
 import {
   handleAcceptLegalConsent,
   handleEnsureOwnerBusiness,
@@ -133,14 +134,13 @@ test('business media handler rejects client-controlled authority entitlement and
   }
 })
 
-test('legal consent handler rejects client-controlled identity version timestamp and profile fields', async () => {
+test('legal consent handler rejects client-controlled identity timestamp profile and Analytics fields', async () => {
   const db = forbiddenDb()
   for (const unexpected of [
     { uid: 'another-user' },
-    { termsVersion: '999' },
-    { privacyVersion: '999' },
     { termsAcceptedAt: 'client-time' },
     { role: 'admin' },
+    { analyticsConsent: true },
   ]) {
     await assert.rejects(
       () => handleAcceptLegalConsent({
@@ -149,6 +149,15 @@ test('legal consent handler rejects client-controlled identity version timestamp
       }, db),
       (error) => error.code === 'invalid-argument' && error.message === 'unexpected-request-field',
     )
+  }
+})
+
+test('legal consent rejects unsupported version values before database access', async () => {
+  for (const versions of [{ termsVersion: '999' }, { privacyVersion: '999' }]) {
+    await assert.rejects(() => handleAcceptLegalConsent({
+      auth: { uid: 'user-1', token: { email: 'user@example.test', email_verified: true } },
+      data: { acceptTerms: true, acceptPrivacy: true, termsVersion: CURRENT_TERMS_VERSION, privacyVersion: CURRENT_PRIVACY_VERSION, ...versions },
+    }, forbiddenDb()), error => error.code === 'invalid-argument' && error.message === 'unsupported-legal-version')
   }
 })
 

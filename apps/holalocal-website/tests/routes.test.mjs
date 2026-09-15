@@ -1,3 +1,5 @@
+import { protectedAccountDecision } from '../src/routes/accountRoutePolicy.js'
+import { hasValidLegalConsent, hasCurrentLegalConsent } from '../../../shared/firebase-contract/legalConsent.js'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
@@ -291,7 +293,7 @@ test('homepage preview uses only real directory businesses and canonical display
   const home = await readFile(homePath, 'utf8')
 
   assert.match(home, /getFeaturedActiveBusinesses\(60\)/)
-  assert.match(home, /setFeaturedBusinesses\(businesses\.slice\(0, 3\)\)/)
+  assert.match(home, /setFeaturedBusinesses\(businesses\)/)
   assert.match(home, /featuredBusinesses\.map\(\(business\) =>/)
   assert.match(home, /getPublicBusinessPrimaryServiceLabel\(business, taxonomyLabel\)/)
   assert.match(home, /to=\{`\/services\/\$\{business\.businessId\}`\}/)
@@ -346,20 +348,22 @@ test('homepage hero preview metadata remains row-grouped and screen-reader frien
   assert.match(styles, /\.public-business-card__hero-meta dd\s*\{[\s\S]*?flex: 1 1 auto;[\s\S]*?min-width: 0;[\s\S]*?line-height: 1\.35;/)
 })
 
-test('public business cards suppress planned ratings, reviews, and verification UI', async () => {
+test('public business cards preserve shared styling and accept only supplied review summaries', async () => {
   const [card, styles] = await Promise.all([
     readFile(path.resolve(__dirname, '../src/components/common/PublicBusinessCard.jsx'), 'utf8'),
-    readFile(globalStylesPath, 'utf8'),
+    Promise.all([readFile(globalStylesPath, 'utf8'), readFile(path.resolve(__dirname, '../src/components/common/PublicBusinessCard.css'), 'utf8')]).then(parts => parts.join('\n')),
   ])
   const heroLink = readCssBlock(styles, '.public-business-card--hero[href]')
   const heroHover = readCssBlock(styles, '.public-business-card--hero[href]:hover')
   const heroFocus = readCssBlock(styles, '.public-business-card--hero[href]:focus-visible')
-  const resultCard = readCssBlock(styles, '.public-business-card--result')
-  const resultHover = styles.match(/\.public-business-card--result:hover,[\s\S]*?\n\}/)?.[0] ?? ''
+  const resultCard = readCssBlock(styles, '.directory-business-card')
+  const resultHover = readCssBlock(styles, '.directory-business-card:hover')
 
   assert.match(card, /const CardElement = isCardLink \? Link : 'article'/)
   assert.match(card, /<dl className="public-business-card__hero-meta">/)
-  assert.match(card, /<dl className="public-business-card__result-meta">/)
+  assert.match(card, /className="directory-business-card__identity"/)
+  assert.match(card, /\{ratingSummary\}/)
+  assert.match(card, /import .*PublicBusinessCard\.css/)
   assert.doesNotMatch(card, /ratingAverage|ratingCount/)
   assert.doesNotMatch(card, /services\.(?:noReviews|verified)/)
   assert.doesNotMatch(card, /public-business-card__(?:rating|verified)/)
@@ -369,14 +373,14 @@ test('public business cards suppress planned ratings, reviews, and verification 
   assert.match(resultHover, /border-color:/)
   assert.match(resultHover, /box-shadow:/)
   assert.match(heroFocus, /outline: 3px solid/)
-  assert.match(styles, /\.public-business-card--result:focus-visible\s*\{[^}]*outline: 3px solid/)
+  assert.match(styles, /\.directory-business-card:focus-visible\s*\{[^}]*outline: 3px solid/)
 })
 
 test('public business detail uses i18n while preserving business data and action wiring', async () => {
   const [detail, services, styles] = await Promise.all([
     readFile(businessDetailPath, 'utf8'),
     readFile(servicesPath, 'utf8'),
-    readFile(globalStylesPath, 'utf8'),
+    readFile(path.resolve(__dirname, '../src/styles/servicesPresentation.css'), 'utf8'),
   ])
 
   for (const text of [
@@ -411,7 +415,7 @@ test('public business detail uses i18n while preserving business data and action
     /publicBusinessDetail\.(?:verificationComingSoon|reviews|customerFeedback|reviewsUnavailable|noReceivedReviews|noReviews|reviewCount)/,
   )
   assert.doesNotMatch(detail, /verificationStatus === 'verified'/)
-  assert.match(styles, /\.business-detail__identity h1\s*\{[\s\S]*?font-size: clamp\(1\.65rem, 4vw, 2\.25rem\);[\s\S]*?overflow-wrap: anywhere;/)
+  assert.match(styles, /\.business-detail__identity h1\s*\{[\s\S]*?font-size: clamp\(1\.7rem, 3\.4vw, 2\.75rem\);[\s\S]*?overflow-wrap: anywhere;/)
   assert.doesNotMatch(styles, /\.business-detail__identity h2/)
 
   assert.match(detail, /\{business\.name\}/)
@@ -459,9 +463,9 @@ test('footer uses a calm branded responsive layout with accessible interactions'
   const navigation = readCssBlock(styles, '.site-footer__navigation')
   const groups = readCssBlock(styles, `.site-footer__group,
 .site-footer__language`)
-  const links = readCssBlock(styles, '.site-footer__links a')
-  const neutralHover = readCssBlock(styles, '.site-footer__links a:hover')
-  const focus = readCssBlock(styles, '.site-footer__links a:focus-visible')
+  const links = readCssBlock(styles, '.site-footer__links :is(a, button)')
+  const neutralHover = readCssBlock(styles, '.site-footer__links :is(a, button):hover')
+  const focus = readCssBlock(styles, '.site-footer__links :is(a, button):focus-visible')
 
   assert.match(footer, /border-top: 3px solid/)
   assert.match(footer, /border-image: linear-gradient\([\s\S]*?var\(--product-services\)[\s\S]*?var\(--product-events\)[\s\S]*?var\(--product-community\)[\s\S]*?\) 1/)
@@ -482,7 +486,7 @@ test('footer uses a calm branded responsive layout with accessible interactions'
   assert.match(links, /min-height: 2\.75rem/)
   assert.match(links, /padding: 0\.45rem 0/)
   assert.match(links, /color: rgb\(255 255 255 \/ 76%\)/)
-  assert.match(styles, /@media \(min-width: 64rem\)[\s\S]*?\.site-footer__links a \{[\s\S]*?min-height: 2rem;[\s\S]*?padding-block: 0\.15rem;/)
+  assert.match(styles, /@media \(min-width: 64rem\)[\s\S]*?\.site-footer__links :is\(a, button\) \{[\s\S]*?min-height: 2rem;[\s\S]*?padding-block: 0\.15rem;/)
   assert.match(neutralHover, /color: #ffffff/)
   assert.match(readCssBlock(styles, '.site-footer__link--services'), /var\(--product-services\)/)
   assert.match(readCssBlock(styles, '.site-footer__link--events'), /var\(--product-events\)/)
@@ -598,7 +602,7 @@ test('services page uses the shared directory implementation and safe states', a
 
   assert.match(source, /getActivePublicBusinesses/)
   assert.match(source, /PublicBusinessCard/)
-  assert.match(source, /businesses\.find\(\(candidate\) => candidate\.businessId === businessId\)/)
+  assert.match(source, /getPublicBusinessById\(businessId\)/)
   assert.match(source, /parseServiceDiscoveryQuery\(searchParamsKey\)/)
   assert.match(source, /buildServiceSelectionSearchParams\(currentParams, serviceId\)/)
   assert.match(source, /serviceQuery\.type !== SERVICE_DISCOVERY_QUERY_TYPES\.NONE/)
@@ -710,7 +714,8 @@ test('account onboarding uses the trusted callable instead of direct role writes
   assert.match(routePolicy, /profileLoading \|\| profileStatus === 'loading'/)
   assert.match(businessRoute, /loading \|\| profileLoading \|\| profileStatus === 'loading'/)
   assert.match(profilePage, /refreshUserProfile\(user\)/)
-  assert.doesNotMatch(profilePage, /refreshUserProfile\(user, \{ background: true \}\)/)
+  // Committed photo changes refresh in the background; foreground account refresh remains above.
+  assert.match(profilePage, /setSuccess\(t\('profile\.imageUpdated'\)\)[\s\S]*?refreshUserProfile\(user, \{ background: true \}\)\.catch/)
   assert.match(businessDashboard, /\}, \[hasBusinessRole, loadAttempt, refreshUserProfile, t, userBusinessId, userId\]\)/)
   assert.match(editBusiness, /hasBusinessRole,\s*loadAttempt,\s*refreshUserProfile,\s*t,\s*userBusinessId,\s*userCity,\s*userEmail,\s*userId,\s*userPreferredLocale,/s)
   assert.doesNotMatch(editBusiness, /getBusinessByOwnerId\(|createBusinessProfile\(/)
@@ -750,9 +755,17 @@ test('profile restoration failures remain distinct from confirmed incomplete pro
   assert.match(businessRoute, /profileStatus === 'unavailable'/)
   assert.match(businessRoute, /<ProfileUnavailableScreen \/>/)
 
-  assert.ok(routePolicy.indexOf("profileStatus === 'unavailable'") < routePolicy.indexOf('!allowUnverified && !emailVerified'))
-  assert.ok(routePolicy.indexOf('!allowUnverified && !emailVerified') < routePolicy.indexOf('!allowMissingConsent && !hasCurrentLegalConsent'))
-  assert.ok(routePolicy.indexOf('!allowMissingConsent && !hasCurrentLegalConsent') < routePolicy.indexOf("userProfile?.profileCompleted !== true"))
+  // Access accepts valid historical evidence; only new acceptance targets current text.
+  const stamp = { seconds: 1, nanoseconds: 0, toMillis: () => 1000 }
+  const historical = { accountStatus: 'active', termsAccepted: true, privacyAccepted: true, termsVersion: '1.0', privacyVersion: '1.0', termsAcceptedAt: stamp, privacyAcceptedAt: stamp }
+  assert.equal(hasValidLegalConsent(historical), true)
+  assert.equal(hasCurrentLegalConsent(historical), false)
+  const options = { user: { uid: 'u' }, profileStatus: 'loaded', emailVerified: true, userProfile: historical }
+  assert.equal(protectedAccountDecision({ ...options, profileStatus: 'unavailable', emailVerified: false }), 'profile_unavailable')
+  assert.equal(protectedAccountDecision({ ...options, emailVerified: false, userProfile: null }), 'verify_email')
+  assert.equal(protectedAccountDecision({ ...options, userProfile: null }), 'legal_consent')
+  assert.equal(protectedAccountDecision(options), 'complete_profile')
+  assert.equal(protectedAccountDecision({ ...options, userProfile: { ...historical, profileCompleted: true, onboardingCompleted: true } }), 'allow')
   assert.match(protectedRoute, /decision === 'profile_unavailable'/)
   assert.match(publicRoute, /decision === 'profile_unavailable'/)
   assert.match(unavailableScreen, /retryUserProfile/)
@@ -778,7 +791,7 @@ test('profile completion cannot fabricate legal consent for an absent profile', 
     /profileStatus === 'absent'\s*\? completeAbsentUserProfile\(user, updates\)\s*: update\(user\.uid, updates\)/s,
   )
   assert.match(provider, /setUserProfile\(profile\)\s*setProfileStatus\(profile \? 'loaded' : 'absent'\)/)
-  assert.match(userService, /export async function completeAbsentUserProfile\(firebaseUser, updates\)[\s\S]*?hasCurrentLegalConsent\(existingProfile\)/s)
+  assert.match(userService, /export async function completeAbsentUserProfile\(firebaseUser, updates\)[\s\S]*?hasValidLegalConsent\(existingProfile\)/s)
   assert.doesNotMatch(userService, /completeAbsentUserProfile[\s\S]*?termsAccepted: true/)
   assert.doesNotMatch(userService, /completeAbsentUserProfile[\s\S]*?privacyAccepted: true/)
   assert.match(userService, /return updateUserProfile\(firebaseUser\.uid, updates\)/)
