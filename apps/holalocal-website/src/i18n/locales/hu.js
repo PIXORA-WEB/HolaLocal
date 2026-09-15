@@ -11,7 +11,43 @@ export default createFallbackLocale(en, {
     "year": "Év",
     "today": "Ma"
   },
-  businessInsights: { ...en.businessInsights, ...{"description": "Rögzített profilmegtekintések és kapcsolatfelvételi gombokra kattintások. Az új megkeresések az új HolaLocal-beszélgetéseket számolja, nem az elküldött üzeneteket vagy megerősített megkereséseket. A kattintás nem igazol kapcsolatfelvételt. A korábbi aktivitást nem becsüljük meg.", "historicalChannel": "Jelenleg nem érhető el", "profileViews": "Profilmegtekintések", "enquiries": "Új beszélgetések", "contactActions": "Kapcsolatfelvételi kattintások", "contactBreakdownSelected": "Kattintások a kapcsolatfelvételi gombokra a kiválasztott időszakban", "actions": {"holalocal": "Kattintások az üzenetgombra", "phone": "Kattintások a telefongombra", "email": "Kattintások az e-mail-gombra", "whatsapp": "Kattintások a WhatsApp-gombra", "website": "Weboldalkattintások"}, "subtitle": "Nézze meg, hogyan találják meg vállalkozását és lépnek vele kapcsolatba az emberek.", "about": "Ezekről a számokról", "metric": "Mutató", "exactValues": "Pontos napi értékek", "partialCoverage": "Részleges lefedettség: rögzítés kezdete {{date}}.", "activityDescription": "A napi értékek UTC-dátumokat használnak. Az adatgyűjtés kezdete előtti dátumok „Nincs rögzítve” jelölést kapnak. A nulla azt jelenti, hogy az adatgyűjtés kezdete után azon a napon nem rögzítettek aktivitást.", "emptyMetric": "Ehhez a mutatóhoz ebben az időszakban nincs rögzített aktivitás.", "notRecorded": "Nincs rögzítve"} },
+  businessInsights: { ...en.businessInsights, ...{"description": "Rögzített profilmegtekintések és kapcsolatfelvételi gombokra kattintások. Az új megkeresések az új HolaLocal-beszélgetéseket számolja, nem az elküldött üzeneteket vagy megerősített megkereséseket. A kattintás nem igazol kapcsolatfelvételt. A korábbi aktivitást nem becsüljük meg.", "historicalChannel": "Jelenleg nem érhető el", "profileViews": "Profilmegtekintések", "enquiries": "Új beszélgetések", "contactActions": "Kapcsolatfelvételi kattintások", "contactBreakdownSelected": "Kattintások a kapcsolatfelvételi gombokra a kiválasztott időszakban", "actions": {"holalocal": "Kattintások az üzenetgombra", "phone": "Kattintások a telefongombra", "email": "Kattintások az e-mail-gombra", "whatsapp": "Kattintások a WhatsApp-gombra", "website": "Weboldalkattintások"}, "subtitle": "Nézze meg, hogyan találják meg vállalkozását és lépnek vele kapcsolatba az emberek.", "about": "Ezekről a számokról", "metric": "Mutató", "exactValues": "Pontos napi értékek", "partialCoverage": "Részleges lefedettség: rögzítés kezdete {{date}}.", "activityDescription": "A napi értékek UTC-dátumokat használnak. Az adatgyűjtés kezdete előtti dátumok „Nincs rögzítve” jelölést kapnak. A nulla azt jelenti, hogy az adatgyűjtés kezdete után azon a napon nem rögzítettek aktivitást.", "emptyMetric": "Ehhez a mutatóhoz ebben az időszakban nincs rögzített aktivitás.", "notRecorded": "Nincs rögzítve"},
+    "title": "Vállalkozási statisztikák",
+    "allTimeTitle": "Összesített értékek a kezdetektől",
+    "activityTitle": "Napi aktivitás",
+    "range": {
+      ...en.businessInsights.range,
+      "label": "Dátumtartomány",
+      "from": "Kezdő dátum",
+      "to": "Záró dátum",
+      "apply": "Alkalmazás",
+      "presets": {
+        "last_7_days": "Elmúlt 7 nap",
+        "last_30_days": "Elmúlt 30 nap",
+        "this_month": "Ez a hónap",
+        "last_month": "Előző hónap",
+        "last_90_days": "Elmúlt 90 nap",
+        "custom": "Egyéni dátumok"
+      },
+      "errors": {
+        "required": "Válassza ki a kezdő és a záró dátumot is.",
+        "invalid": "Válasszon érvényes naptári dátumokat.",
+        "order": "A kezdő dátumnak a záró dátumra vagy korábbra kell esnie.",
+        "future": "A záró dátum nem lehet a jövőben.",
+        "tooLong": "Legfeljebb 366 napos tartományt válasszon."
+      }
+    },
+    "state": {
+      ...en.businessInsights.state,
+      "loading": "A vállalkozási statisztikák betöltése…",
+      "loadingRange": "A kiválasztott dátumtartomány betöltése… A korábban betöltött értékek láthatók maradnak.",
+      "error": "A vállalkozási statisztikákat nem sikerült betölteni. A vállalkozás profilja továbbra is elérhető.",
+      "notStarted": "A statisztikák gyűjtése az első, feltételeknek megfelelő nyilvános aktivitás után kezdődik.",
+      "collectingSince": "A statisztikák gyűjtése ekkor kezdődött: {{date}}.",
+      "unpublished": "A statisztikák gyűjtése akkor kezdődik, amikor a vállalkozás profilja közzétett és aktív.",
+      "inactive": "Az új nyilvános aktivitást jelenleg nem rögzítjük. A korábban gyűjtött összesített értékeket megőrizzük."
+    }
+  },
   marketing: { hero: { activeProfile: "Nyilvános profil", previousBusiness: "Előző vállalkozás", nextBusiness: "Következő vállalkozás", businessPosition: "{{current}}. vállalkozás / {{total}}" }, trust: { verified: { title: "Vállalkozás-ellenőrzés", comingSoon: "Hamarosan", description: "Olyan ellenőrzési folyamatot fejlesztünk, amely segít az ügyfeleknek felismerni azokat a vállalkozásokat, amelyek személyazonosságát és regisztrációs adatait ellenőrizték." } } },
   business: { completion: 'Az üzleti profil {{percent}}%-ban kész' },
   nav: { primary: 'Fő navigáció', home: 'Kezdőlap', findServices: 'Szolgáltatások keresése', join: 'Csatlakozz a HolaLocalhoz' }, auth: { logout: 'Kijelentkezés' }, account: { signIn: 'Bejelentkezés', getStarted: 'Kezdés', navigationLabel: 'Fióknavigáció', profile: 'Profilom', business: 'Vállalkozásom', messages: 'Üzenetek', greeting: 'Szia, {{name}}', fallback: 'Fiók' }, language: { label: 'Nyelv' },

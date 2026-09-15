@@ -11,7 +11,43 @@ export default createFallbackLocale(en, {
     "year": "Vuosi",
     "today": "Tänään"
   },
-  businessInsights: { ...en.businessInsights, ...{"description": "Tallennetut profiilin katselut ja yhteydenottopainikkeiden napsautukset. Uudet keskustelut laskee uudet HolaLocal-keskustelut, ei lähetettyjä viestejä tai vahvistettuja yhteydenottoja. Napsautus ei vahvista yhteydenottoa. Aiemmasta toiminnasta ei tehdä arvioita.", "historicalChannel": "Ei nyt käytettävissä", "profileViews": "Profiilin katselut", "enquiries": "Uudet keskustelut", "contactActions": "Yhteydenottonapsautukset", "contactBreakdownSelected": "Yhteydenottopainikkeiden napsautukset valitulla ajanjaksolla", "actions": {"holalocal": "Viestipainikkeen napsautukset", "phone": "Puhelinpainikkeen napsautukset", "email": "Sähköpostipainikkeen napsautukset", "whatsapp": "WhatsApp-painikkeen napsautukset", "website": "Verkkosivuston napsautukset"}, "subtitle": "Katso, miten ihmiset löytävät yrityksesi ja ovat siihen yhteydessä.", "about": "Tietoa näistä luvuista", "metric": "Mittari", "exactValues": "Tarkat päiväkohtaiset arvot", "partialCoverage": "Osittainen kattavuus: tallennus alkoi {{date}}.", "activityDescription": "Päivittäiset arvot käyttävät UTC-päivämääriä. Keruun alkua edeltävät päivät on merkitty tekstillä ”Ei tallennettu”. Nolla tarkoittaa, ettei kyseisenä päivänä tallennettu toimintaa keruun alettua.", "emptyMetric": "Tälle mittarille ei ole tallennettua toimintaa tältä ajanjaksolta.", "notRecorded": "Ei tallennettu"} },
+  businessInsights: { ...en.businessInsights, ...{"description": "Tallennetut profiilin katselut ja yhteydenottopainikkeiden napsautukset. Uudet keskustelut laskee uudet HolaLocal-keskustelut, ei lähetettyjä viestejä tai vahvistettuja yhteydenottoja. Napsautus ei vahvista yhteydenottoa. Aiemmasta toiminnasta ei tehdä arvioita.", "historicalChannel": "Ei nyt käytettävissä", "profileViews": "Profiilin katselut", "enquiries": "Uudet keskustelut", "contactActions": "Yhteydenottonapsautukset", "contactBreakdownSelected": "Yhteydenottopainikkeiden napsautukset valitulla ajanjaksolla", "actions": {"holalocal": "Viestipainikkeen napsautukset", "phone": "Puhelinpainikkeen napsautukset", "email": "Sähköpostipainikkeen napsautukset", "whatsapp": "WhatsApp-painikkeen napsautukset", "website": "Verkkosivuston napsautukset"}, "subtitle": "Katso, miten ihmiset löytävät yrityksesi ja ovat siihen yhteydessä.", "about": "Tietoa näistä luvuista", "metric": "Mittari", "exactValues": "Tarkat päiväkohtaiset arvot", "partialCoverage": "Osittainen kattavuus: tallennus alkoi {{date}}.", "activityDescription": "Päivittäiset arvot käyttävät UTC-päivämääriä. Keruun alkua edeltävät päivät on merkitty tekstillä ”Ei tallennettu”. Nolla tarkoittaa, ettei kyseisenä päivänä tallennettu toimintaa keruun alettua.", "emptyMetric": "Tälle mittarille ei ole tallennettua toimintaa tältä ajanjaksolta.", "notRecorded": "Ei tallennettu"},
+    "title": "Yrityksen tilastot",
+    "allTimeTitle": "Kokonaismäärät alusta lähtien",
+    "activityTitle": "Päivittäinen toiminta",
+    "range": {
+      ...en.businessInsights.range,
+      "label": "Ajanjakso",
+      "from": "Alkaen",
+      "to": "Päättyen",
+      "apply": "Käytä",
+      "presets": {
+        "last_7_days": "Viimeiset 7 päivää",
+        "last_30_days": "Viimeiset 30 päivää",
+        "this_month": "Tämä kuukausi",
+        "last_month": "Viime kuukausi",
+        "last_90_days": "Viimeiset 90 päivää",
+        "custom": "Omat päivämäärät"
+      },
+      "errors": {
+        "required": "Valitse sekä alku- että loppupäivä.",
+        "invalid": "Valitse kelvolliset kalenteripäivämäärät.",
+        "order": "Alkupäivän on oltava sama kuin loppupäivä tai sitä aiempi.",
+        "future": "Loppupäivä ei voi olla tulevaisuudessa.",
+        "tooLong": "Valitse enintään 366 päivän ajanjakso."
+      }
+    },
+    "state": {
+      ...en.businessInsights.state,
+      "loading": "Ladataan yrityksen tilastoja…",
+      "loadingRange": "Ladataan valittua ajanjaksoa… Aiemmin ladatut luvut pysyvät näkyvissä.",
+      "error": "Yrityksen tilastoja ei voitu ladata. Yrityksesi profiili on edelleen käytettävissä.",
+      "notStarted": "Tilastojen kerääminen alkaa ensimmäisen ehdot täyttävän julkisen toiminnan jälkeen.",
+      "collectingSince": "Tilastoja on kerätty alkaen {{date}}.",
+      "unpublished": "Tilastojen kerääminen alkaa, kun yrityksesi profiili on julkaistu ja aktiivinen.",
+      "inactive": "Uutta julkista toimintaa ei tällä hetkellä tallenneta. Aiemmin kerätyt kokonaismäärät säilytetään."
+    }
+  },
   marketing: { hero: { activeProfile: "Julkinen profiili", previousBusiness: "Edellinen yritys", nextBusiness: "Seuraava yritys", businessPosition: "Yritys {{current}}/{{total}}" }, trust: { verified: { title: "Yritysten vahvistus", comingSoon: "Tulossa pian", description: "Kehitämme vahvistusprosessia, joka auttaa asiakkaita tunnistamaan yritykset, joiden henkilöllisyys ja rekisteröintitiedot on tarkistettu." } } },
   business: { completion: 'Yritysprofiili on {{percent}}% valmis' },
   nav: { primary: 'Päänavigointi', home: 'Etusivu', findServices: 'Etsi palveluja', join: 'Liity HolaLocaliin' }, auth: { logout: 'Kirjaudu ulos' }, account: { signIn: 'Kirjaudu sisään', getStarted: 'Aloita', navigationLabel: 'Tilin navigointi', profile: 'Oma profiili', business: 'Oma yritys', messages: 'Viestit', greeting: 'Hei {{name}}', fallback: 'Tili' }, language: { label: 'Kieli' },

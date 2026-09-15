@@ -12,7 +12,43 @@ export default createFallbackLocale(en, {
     "year": "An",
     "today": "Astăzi"
   },
-  businessInsights: { ...en.businessInsights, ...{"description": "Vizualizări ale profilului și clicuri pe butoanele de contact înregistrate. Conversații noi numără conversațiile HolaLocal nou create, nu mesajele trimise sau solicitările confirmate. Clicurile nu confirmă un contact. Activitatea anterioară nu este estimată.", "historicalChannel": "Momentan indisponibil", "profileViews": "Vizualizări ale profilului", "enquiries": "Conversații noi", "contactActions": "Clicuri de contact", "contactBreakdownSelected": "Clicuri pe butoanele de contact în perioada selectată", "actions": {"holalocal": "Clicuri pe butonul de mesaje", "phone": "Clicuri pe butonul de telefon", "email": "Clicuri pe butonul de e-mail", "whatsapp": "Clicuri pe butonul WhatsApp", "website": "Clicuri pe site"}, "subtitle": "Vezi cum oamenii îți descoperă afacerea și interacționează cu ea.", "about": "Despre aceste cifre", "metric": "Indicator", "exactValues": "Valori zilnice exacte", "partialCoverage": "Acoperire parțială: înregistrare din {{date}}.", "activityDescription": "Valorile zilnice folosesc date UTC. Datele anterioare începerii colectării sunt marcate „Neînregistrat”. Zero înseamnă că nu s-a înregistrat activitate în acea zi după începerea colectării.", "emptyMetric": "Nicio activitate înregistrată pentru acest indicator în această perioadă.", "notRecorded": "Neînregistrat"} },
+  businessInsights: { ...en.businessInsights, ...{"description": "Vizualizări ale profilului și clicuri pe butoanele de contact înregistrate. Conversații noi numără conversațiile HolaLocal nou create, nu mesajele trimise sau solicitările confirmate. Clicurile nu confirmă un contact. Activitatea anterioară nu este estimată.", "historicalChannel": "Momentan indisponibil", "profileViews": "Vizualizări ale profilului", "enquiries": "Conversații noi", "contactActions": "Clicuri de contact", "contactBreakdownSelected": "Clicuri pe butoanele de contact în perioada selectată", "actions": {"holalocal": "Clicuri pe butonul de mesaje", "phone": "Clicuri pe butonul de telefon", "email": "Clicuri pe butonul de e-mail", "whatsapp": "Clicuri pe butonul WhatsApp", "website": "Clicuri pe site"}, "subtitle": "Vezi cum oamenii îți descoperă afacerea și interacționează cu ea.", "about": "Despre aceste cifre", "metric": "Indicator", "exactValues": "Valori zilnice exacte", "partialCoverage": "Acoperire parțială: înregistrare din {{date}}.", "activityDescription": "Valorile zilnice folosesc date UTC. Datele anterioare începerii colectării sunt marcate „Neînregistrat”. Zero înseamnă că nu s-a înregistrat activitate în acea zi după începerea colectării.", "emptyMetric": "Nicio activitate înregistrată pentru acest indicator în această perioadă.", "notRecorded": "Neînregistrat"},
+    "title": "Statisticile afacerii",
+    "allTimeTitle": "Totaluri de la început",
+    "activityTitle": "Activitate zilnică",
+    "range": {
+      ...en.businessInsights.range,
+      "label": "Interval de date",
+      "from": "De la",
+      "to": "Până la",
+      "apply": "Aplică",
+      "presets": {
+        "last_7_days": "Ultimele 7 zile",
+        "last_30_days": "Ultimele 30 de zile",
+        "this_month": "Luna aceasta",
+        "last_month": "Luna trecută",
+        "last_90_days": "Ultimele 90 de zile",
+        "custom": "Date personalizate"
+      },
+      "errors": {
+        "required": "Alegeți atât data de început, cât și data de sfârșit.",
+        "invalid": "Alegeți date calendaristice valide.",
+        "order": "Data de început trebuie să fie anterioară sau egală cu data de sfârșit.",
+        "future": "Data de sfârșit nu poate fi în viitor.",
+        "tooLong": "Alegeți un interval de cel mult 366 de zile."
+      }
+    },
+    "state": {
+      ...en.businessInsights.state,
+      "loading": "Se încarcă statisticile afacerii…",
+      "loadingRange": "Se încarcă intervalul selectat… Valorile încărcate anterior rămân vizibile.",
+      "error": "Statisticile afacerii nu au putut fi încărcate. Profilul afacerii rămâne disponibil.",
+      "notStarted": "Colectarea statisticilor va începe după prima activitate publică eligibilă.",
+      "collectingSince": "Statisticile sunt colectate din {{date}}.",
+      "unpublished": "Colectarea statisticilor începe când profilul afacerii este publicat și activ.",
+      "inactive": "Activitatea publică nouă nu este înregistrată momentan. Totalurile colectate anterior sunt păstrate."
+    }
+  },
   marketing: { hero: { activeProfile: "Profil public", previousBusiness: "Afacerea anterioară", nextBusiness: "Afacerea următoare", businessPosition: "Afacerea {{current}} din {{total}}" }, trust: { verified: { title: "Verificarea afacerilor", comingSoon: "În curând", description: "Dezvoltăm un proces de verificare care să ajute clienții să recunoască afacerile ale căror identitate și date de înregistrare au fost verificate." } } },
   business: { completion: 'Profilul afacerii este completat {{percent}}%' },
   nav: { primary: 'Navigare principală', home: 'Acasă', findServices: 'Găsește servicii', join: 'Alătură-te HolaLocal' }, auth: { logout: 'Deconectare' }, account: { signIn: 'Autentificare', getStarted: 'Începe', navigationLabel: 'Navigarea contului', profile: 'Profilul meu', business: 'Afacerea mea', messages: 'Mesaje', greeting: 'Salut, {{name}}', fallback: 'Cont' }, language: { label: 'Limbă' },

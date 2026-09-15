@@ -11,7 +11,43 @@ export default createFallbackLocale(en, {
     "year": "År",
     "today": "I dag"
   },
-  businessInsights: { ...en.businessInsights, ...{"description": "Registrerede profilvisninger og klik på kontaktknapper. Nye samtaler tæller nye HolaLocal-samtaler, ikke sendte beskeder eller bekræftede henvendelser. Klik bekræfter ikke kontakt. Tidligere aktivitet estimeres ikke.", "historicalChannel": "Ikke tilgængelig nu", "profileViews": "Profilvisninger", "enquiries": "Nye samtaler", "contactActions": "Kontaktklik", "contactBreakdownSelected": "Klik på kontaktknapper i den valgte periode", "actions": {"holalocal": "Klik på beskedknappen", "phone": "Klik på telefonknappen", "email": "Klik på e-mailknappen", "whatsapp": "Klik på WhatsApp-knappen", "website": "Klik på hjemmesiden"}, "subtitle": "Se, hvordan folk opdager og interagerer med din virksomhed.", "about": "Om disse tal", "metric": "Måling", "exactValues": "Præcise daglige værdier", "partialCoverage": "Delvis dækning: registrering fra {{date}}.", "activityDescription": "Daglige værdier bruger UTC-datoer. Datoer før indsamlingen begyndte er markeret »Ikke registreret«. Nul betyder, at der ikke blev registreret aktivitet den dag efter indsamlingens start.", "emptyMetric": "Ingen aktivitet registreret for denne måling i denne periode.", "notRecorded": "Ikke registreret"} },
+  businessInsights: { ...en.businessInsights, ...{"description": "Registrerede profilvisninger og klik på kontaktknapper. Nye samtaler tæller nye HolaLocal-samtaler, ikke sendte beskeder eller bekræftede henvendelser. Klik bekræfter ikke kontakt. Tidligere aktivitet estimeres ikke.", "historicalChannel": "Ikke tilgængelig nu", "profileViews": "Profilvisninger", "enquiries": "Nye samtaler", "contactActions": "Kontaktklik", "contactBreakdownSelected": "Klik på kontaktknapper i den valgte periode", "actions": {"holalocal": "Klik på beskedknappen", "phone": "Klik på telefonknappen", "email": "Klik på e-mailknappen", "whatsapp": "Klik på WhatsApp-knappen", "website": "Klik på hjemmesiden"}, "subtitle": "Se, hvordan folk opdager og interagerer med din virksomhed.", "about": "Om disse tal", "metric": "Måling", "exactValues": "Præcise daglige værdier", "partialCoverage": "Delvis dækning: registrering fra {{date}}.", "activityDescription": "Daglige værdier bruger UTC-datoer. Datoer før indsamlingen begyndte er markeret »Ikke registreret«. Nul betyder, at der ikke blev registreret aktivitet den dag efter indsamlingens start.", "emptyMetric": "Ingen aktivitet registreret for denne måling i denne periode.", "notRecorded": "Ikke registreret"},
+    "title": "Virksomhedsstatistik",
+    "allTimeTitle": "Samlede tal siden starten",
+    "activityTitle": "Daglig aktivitet",
+    "range": {
+      ...en.businessInsights.range,
+      "label": "Datointerval",
+      "from": "Fra",
+      "to": "Til",
+      "apply": "Anvend",
+      "presets": {
+        "last_7_days": "Seneste 7 dage",
+        "last_30_days": "Seneste 30 dage",
+        "this_month": "Denne måned",
+        "last_month": "Sidste måned",
+        "last_90_days": "Seneste 90 dage",
+        "custom": "Egne datoer"
+      },
+      "errors": {
+        "required": "Vælg både en startdato og en slutdato.",
+        "invalid": "Vælg gyldige kalenderdatoer.",
+        "order": "Startdatoen skal være før eller på samme dag som slutdatoen.",
+        "future": "Slutdatoen må ikke ligge i fremtiden.",
+        "tooLong": "Vælg et interval på højst 366 dage."
+      }
+    },
+    "state": {
+      ...en.businessInsights.state,
+      "loading": "Indlæser virksomhedsstatistik…",
+      "loadingRange": "Indlæser det valgte datointerval… Tidligere indlæste tal forbliver synlige.",
+      "error": "Virksomhedsstatistikken kunne ikke indlæses. Din virksomhedsprofil er stadig tilgængelig.",
+      "notStarted": "Indsamlingen af statistik begynder efter den første offentlige aktivitet, der opfylder kriterierne.",
+      "collectingSince": "Der er indsamlet statistik siden {{date}}.",
+      "unpublished": "Indsamlingen af statistik begynder, når din virksomhedsprofil er offentliggjort og aktiv.",
+      "inactive": "Ny offentlig aktivitet registreres ikke i øjeblikket. Tidligere indsamlede samlede tal bevares."
+    }
+  },
   marketing: { hero: { activeProfile: "Offentlig profil", previousBusiness: "Forrige virksomhed", nextBusiness: "Næste virksomhed", businessPosition: "Virksomhed {{current}} af {{total}}" }, trust: { verified: { title: "Virksomhedsverificering", comingSoon: "Kommer snart", description: "Vi udvikler en verificeringsproces, der hjælper kunder med at genkende virksomheder, hvis identitet og registreringsoplysninger er blevet kontrolleret." } } },
   business: { completion: 'Virksomhedsprofilen er {{percent}}% færdig' },
   nav: { primary: 'Primær navigation', home: 'Forside', findServices: 'Find tjenester', join: 'Deltag i HolaLocal' }, auth: { logout: 'Log ud' }, account: { signIn: 'Log ind', getStarted: 'Kom i gang', navigationLabel: 'Kontonavigation', profile: 'Min profil', business: 'Min virksomhed', messages: 'Beskeder', greeting: 'Hej {{name}}', fallback: 'Konto' }, language: { label: 'Sprog' },

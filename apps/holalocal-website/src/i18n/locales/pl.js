@@ -12,7 +12,43 @@ export default createFallbackLocale(en, {
     "year": "Rok",
     "today": "Dzisiaj"
   },
-  businessInsights: { ...en.businessInsights, ...{"description": "Zarejestrowane wyświetlenia profilu i kliknięcia przycisków kontaktu. Nowe rozmowy liczą nowo utworzone rozmowy HolaLocal, nie wysłane wiadomości ani potwierdzone zapytania. Kliknięcia nie potwierdzają kontaktu. Wcześniejsza aktywność nie jest szacowana.", "historicalChannel": "Obecnie niedostępne", "profileViews": "Wyświetlenia profilu", "enquiries": "Nowe rozmowy", "contactActions": "Kliknięcia kontaktu", "contactBreakdownSelected": "Kliknięcia przycisków kontaktu w wybranym okresie", "actions": {"holalocal": "Kliknięcia przycisku wiadomości", "phone": "Kliknięcia przycisku telefonu", "email": "Kliknięcia przycisku e-mail", "whatsapp": "Kliknięcia przycisku WhatsApp", "website": "Kliknięcia strony internetowej"}, "subtitle": "Zobacz, jak ludzie znajdują Twoją firmę i nawiązują z nią kontakt.", "about": "O tych liczbach", "metric": "Wskaźnik", "exactValues": "Dokładne wartości dzienne", "partialCoverage": "Częściowy zakres: rejestracja od {{date}}.", "activityDescription": "Wartości dzienne używają dat UTC. Daty sprzed rozpoczęcia zbierania danych są oznaczone „Nie zarejestrowano”. Zero oznacza, że tego dnia po rozpoczęciu zbierania danych nie zarejestrowano aktywności.", "emptyMetric": "Brak zarejestrowanej aktywności dla tego wskaźnika w tym okresie.", "notRecorded": "Nie zarejestrowano"} },
+  businessInsights: { ...en.businessInsights, ...{"description": "Zarejestrowane wyświetlenia profilu i kliknięcia przycisków kontaktu. Nowe rozmowy liczą nowo utworzone rozmowy HolaLocal, nie wysłane wiadomości ani potwierdzone zapytania. Kliknięcia nie potwierdzają kontaktu. Wcześniejsza aktywność nie jest szacowana.", "historicalChannel": "Obecnie niedostępne", "profileViews": "Wyświetlenia profilu", "enquiries": "Nowe rozmowy", "contactActions": "Kliknięcia kontaktu", "contactBreakdownSelected": "Kliknięcia przycisków kontaktu w wybranym okresie", "actions": {"holalocal": "Kliknięcia przycisku wiadomości", "phone": "Kliknięcia przycisku telefonu", "email": "Kliknięcia przycisku e-mail", "whatsapp": "Kliknięcia przycisku WhatsApp", "website": "Kliknięcia strony internetowej"}, "subtitle": "Zobacz, jak ludzie znajdują Twoją firmę i nawiązują z nią kontakt.", "about": "O tych liczbach", "metric": "Wskaźnik", "exactValues": "Dokładne wartości dzienne", "partialCoverage": "Częściowy zakres: rejestracja od {{date}}.", "activityDescription": "Wartości dzienne używają dat UTC. Daty sprzed rozpoczęcia zbierania danych są oznaczone „Nie zarejestrowano”. Zero oznacza, że tego dnia po rozpoczęciu zbierania danych nie zarejestrowano aktywności.", "emptyMetric": "Brak zarejestrowanej aktywności dla tego wskaźnika w tym okresie.", "notRecorded": "Nie zarejestrowano"},
+    "title": "Statystyki firmy",
+    "allTimeTitle": "Łączne wyniki od początku",
+    "activityTitle": "Aktywność dzienna",
+    "range": {
+      ...en.businessInsights.range,
+      "label": "Zakres dat",
+      "from": "Od",
+      "to": "Do",
+      "apply": "Zastosuj",
+      "presets": {
+        "last_7_days": "Ostatnie 7 dni",
+        "last_30_days": "Ostatnie 30 dni",
+        "this_month": "Ten miesiąc",
+        "last_month": "Poprzedni miesiąc",
+        "last_90_days": "Ostatnie 90 dni",
+        "custom": "Własne daty"
+      },
+      "errors": {
+        "required": "Wybierz datę początkową i końcową.",
+        "invalid": "Wybierz prawidłowe daty kalendarzowe.",
+        "order": "Data początkowa musi przypadać przed datą końcową lub w tym samym dniu.",
+        "future": "Data końcowa nie może przypadać w przyszłości.",
+        "tooLong": "Wybierz zakres nieprzekraczający 366 dni."
+      }
+    },
+    "state": {
+      ...en.businessInsights.state,
+      "loading": "Ładowanie statystyk firmy…",
+      "loadingRange": "Ładowanie wybranego zakresu dat… Wcześniej załadowane wartości pozostają widoczne.",
+      "error": "Nie udało się załadować statystyk firmy. Profil Twojej firmy jest nadal dostępny.",
+      "notStarted": "Zbieranie statystyk rozpocznie się po pierwszej kwalifikującej się aktywności publicznej.",
+      "collectingSince": "Statystyki są zbierane od {{date}}.",
+      "unpublished": "Zbieranie statystyk rozpocznie się, gdy profil Twojej firmy będzie opublikowany i aktywny.",
+      "inactive": "Nowa aktywność publiczna nie jest obecnie rejestrowana. Wcześniej zebrane wartości łączne są zachowywane."
+    }
+  },
   marketing: { hero: { activeProfile: "Profil publiczny", previousBusiness: "Poprzednia firma", nextBusiness: "Następna firma", businessPosition: "Firma {{current}} z {{total}}" }, trust: { verified: { title: "Weryfikacja firm", comingSoon: "Wkrótce", description: "Opracowujemy proces weryfikacji, który pomoże klientom rozpoznawać firmy, których tożsamość i dane rejestrowe zostały sprawdzone." } } },
   business: { completion: 'Profil firmy ukończony w {{percent}}%' },
   nav: { primary: 'Główna nawigacja', home: 'Strona główna', findServices: 'Znajdź usługi', join: 'Dołącz do HolaLocal' },

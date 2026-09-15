@@ -554,6 +554,39 @@
     "poweredBy": "Mogelijk gemaakt door PIXORA"
   },
   "businessInsights": {
+    "title": "Bedrijfsstatistieken",
+    "allTimeTitle": "Totalen sinds het begin",
+    "activityTitle": "Dagelijkse activiteit",
+    "range": {
+      "label": "Datumbereik",
+      "from": "Van",
+      "to": "Tot",
+      "apply": "Toepassen",
+      "presets": {
+        "last_7_days": "Afgelopen 7 dagen",
+        "last_30_days": "Afgelopen 30 dagen",
+        "this_month": "Deze maand",
+        "last_month": "Vorige maand",
+        "last_90_days": "Afgelopen 90 dagen",
+        "custom": "Aangepaste datums"
+      },
+      "errors": {
+        "required": "Kies zowel een begin- als een einddatum.",
+        "invalid": "Kies geldige kalenderdatums.",
+        "order": "De begindatum moet op of vóór de einddatum liggen.",
+        "future": "De einddatum mag niet in de toekomst liggen.",
+        "tooLong": "Kies een periode van maximaal 366 dagen."
+      }
+    },
+    "state": {
+      "loading": "Bedrijfsstatistieken laden…",
+      "loadingRange": "Het geselecteerde datumbereik wordt geladen… Eerder geladen cijfers blijven zichtbaar.",
+      "error": "De bedrijfsstatistieken konden niet worden geladen. Je bedrijfsprofiel blijft beschikbaar.",
+      "notStarted": "De verzameling van statistieken begint na de eerste openbare activiteit die aan de criteria voldoet.",
+      "collectingSince": "Statistieken worden verzameld sinds {{date}}.",
+      "unpublished": "Statistieken worden verzameld zodra je bedrijfsprofiel gepubliceerd en actief is.",
+      "inactive": "Nieuwe openbare activiteit wordt momenteel niet geregistreerd. Eerder verzamelde totalen blijven bewaard."
+    },
     "description": "Geregistreerde profielweergaven en klikken op contactknoppen. Nieuwe gesprekken telt nieuw aangemaakte HolaLocal-gesprekken, geen verzonden berichten of bevestigde aanvragen. Klikken bevestigen geen contact. Eerdere activiteit wordt niet geschat.",
     "historicalChannel": "Momenteel niet beschikbaar",
     "profileViews": "Profielweergaven",

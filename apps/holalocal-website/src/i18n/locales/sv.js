@@ -11,7 +11,43 @@ export default createFallbackLocale(en, {
     "year": "År",
     "today": "Idag"
   },
-  businessInsights: { ...en.businessInsights, ...{"description": "Registrerade profilvisningar och klick på kontaktknappar. Nya konversationer räknar nya HolaLocal-konversationer, inte skickade meddelanden eller bekräftade förfrågningar. Klick bekräftar inte kontakt. Tidigare aktivitet uppskattas inte.", "historicalChannel": "Inte tillgänglig nu", "profileViews": "Profilvisningar", "enquiries": "Nya konversationer", "contactActions": "Kontaktklick", "contactBreakdownSelected": "Klick på kontaktknappar under vald period", "actions": {"holalocal": "Klick på meddelandeknappen", "phone": "Klick på telefonknappen", "email": "Klick på e-postknappen", "whatsapp": "Klick på WhatsApp-knappen", "website": "Klick på webbplatsen"}, "subtitle": "Se hur människor upptäcker och interagerar med ditt företag.", "about": "Om dessa siffror", "metric": "Mätvärde", "exactValues": "Exakta dagliga värden", "partialCoverage": "Delvis täckning: registrering från {{date}}.", "activityDescription": "Dagliga värden använder UTC-datum. Datum före insamlingens början markeras ”Inte registrerat”. Noll betyder att ingen aktivitet registrerades den dagen efter att insamlingen började.", "emptyMetric": "Ingen aktivitet registrerad för detta mätvärde under denna period.", "notRecorded": "Inte registrerat"} },
+  businessInsights: { ...en.businessInsights, ...{"description": "Registrerade profilvisningar och klick på kontaktknappar. Nya konversationer räknar nya HolaLocal-konversationer, inte skickade meddelanden eller bekräftade förfrågningar. Klick bekräftar inte kontakt. Tidigare aktivitet uppskattas inte.", "historicalChannel": "Inte tillgänglig nu", "profileViews": "Profilvisningar", "enquiries": "Nya konversationer", "contactActions": "Kontaktklick", "contactBreakdownSelected": "Klick på kontaktknappar under vald period", "actions": {"holalocal": "Klick på meddelandeknappen", "phone": "Klick på telefonknappen", "email": "Klick på e-postknappen", "whatsapp": "Klick på WhatsApp-knappen", "website": "Klick på webbplatsen"}, "subtitle": "Se hur människor upptäcker och interagerar med ditt företag.", "about": "Om dessa siffror", "metric": "Mätvärde", "exactValues": "Exakta dagliga värden", "partialCoverage": "Delvis täckning: registrering från {{date}}.", "activityDescription": "Dagliga värden använder UTC-datum. Datum före insamlingens början markeras ”Inte registrerat”. Noll betyder att ingen aktivitet registrerades den dagen efter att insamlingen började.", "emptyMetric": "Ingen aktivitet registrerad för detta mätvärde under denna period.", "notRecorded": "Inte registrerat"},
+    "title": "Företagsstatistik",
+    "allTimeTitle": "Totalsiffror sedan starten",
+    "activityTitle": "Daglig aktivitet",
+    "range": {
+      ...en.businessInsights.range,
+      "label": "Datumintervall",
+      "from": "Från",
+      "to": "Till",
+      "apply": "Tillämpa",
+      "presets": {
+        "last_7_days": "Senaste 7 dagarna",
+        "last_30_days": "Senaste 30 dagarna",
+        "this_month": "Den här månaden",
+        "last_month": "Förra månaden",
+        "last_90_days": "Senaste 90 dagarna",
+        "custom": "Egna datum"
+      },
+      "errors": {
+        "required": "Välj både ett startdatum och ett slutdatum.",
+        "invalid": "Välj giltiga kalenderdatum.",
+        "order": "Startdatumet måste vara före eller samma dag som slutdatumet.",
+        "future": "Slutdatumet får inte ligga i framtiden.",
+        "tooLong": "Välj ett intervall på högst 366 dagar."
+      }
+    },
+    "state": {
+      ...en.businessInsights.state,
+      "loading": "Laddar företagsstatistik…",
+      "loadingRange": "Laddar det valda datumintervallet… Tidigare inlästa siffror visas fortfarande.",
+      "error": "Företagsstatistiken kunde inte laddas. Din företagsprofil är fortfarande tillgänglig.",
+      "notStarted": "Insamlingen av statistik börjar efter den första offentliga aktivitet som uppfyller kriterierna.",
+      "collectingSince": "Statistik har samlats in sedan {{date}}.",
+      "unpublished": "Insamlingen av statistik börjar när din företagsprofil är publicerad och aktiv.",
+      "inactive": "Ny offentlig aktivitet registreras inte för närvarande. Tidigare insamlade totalsiffror bevaras."
+    }
+  },
   marketing: { hero: { activeProfile: "Offentlig profil", previousBusiness: "Föregående företag", nextBusiness: "Nästa företag", businessPosition: "Företag {{current}} av {{total}}" }, trust: { verified: { title: "Företagsverifiering", comingSoon: "Kommer snart", description: "Vi utvecklar en verifieringsprocess som hjälper kunder att känna igen företag vars identitet och registreringsuppgifter har kontrollerats." } } },
   business: { completion: 'Företagsprofilen är {{percent}}% klar' },
   nav: { primary: 'Huvudnavigering', home: 'Hem', findServices: 'Hitta tjänster', join: 'Gå med i HolaLocal' }, auth: { logout: 'Logga ut' }, account: { signIn: 'Logga in', getStarted: 'Kom igång', navigationLabel: 'Kontonavigering', profile: 'Min profil', business: 'Mitt företag', messages: 'Meddelanden', greeting: 'Hej {{name}}', fallback: 'Konto' }, language: { label: 'Språk' },

@@ -12,7 +12,43 @@ export default createFallbackLocale(en, {
     "year": "Rok",
     "today": "Dnes"
   },
-  businessInsights: { ...en.businessInsights, ...{"description": "Zaznamenaná zobrazení profilu a kliknutí na kontaktní tlačítka. Nové konverzace počítají nově vytvořené konverzace HolaLocal, nikoli odeslané zprávy nebo potvrzené poptávky. Kliknutí nepotvrzuje kontakt. Dřívější aktivita se neodhaduje.", "historicalChannel": "Nyní nedostupné", "profileViews": "Zobrazení profilu", "enquiries": "Nové konverzace", "contactActions": "Kliknutí na kontakt", "contactBreakdownSelected": "Kliknutí na kontaktní tlačítka ve vybraném období", "actions": {"holalocal": "Kliknutí na tlačítko zpráv", "phone": "Kliknutí na tlačítko telefonu", "email": "Kliknutí na tlačítko e-mailu", "whatsapp": "Kliknutí na tlačítko WhatsApp", "website": "Kliknutí na web"}, "subtitle": "Podívejte se, jak lidé objevují vaši firmu a navazují s ní kontakt.", "about": "O těchto číslech", "metric": "Ukazatel", "exactValues": "Přesné denní hodnoty", "partialCoverage": "Částečné pokrytí: záznam od {{date}}.", "activityDescription": "Denní hodnoty používají data UTC. Data před začátkem sběru jsou označena „Nezaznamenáno“. Nula znamená, že v daný den po zahájení sběru nebyla zaznamenána žádná aktivita.", "emptyMetric": "Pro tento ukazatel nebyla v tomto období zaznamenána žádná aktivita.", "notRecorded": "Nezaznamenáno"} },
+  businessInsights: { ...en.businessInsights, ...{"description": "Zaznamenaná zobrazení profilu a kliknutí na kontaktní tlačítka. Nové konverzace počítají nově vytvořené konverzace HolaLocal, nikoli odeslané zprávy nebo potvrzené poptávky. Kliknutí nepotvrzuje kontakt. Dřívější aktivita se neodhaduje.", "historicalChannel": "Nyní nedostupné", "profileViews": "Zobrazení profilu", "enquiries": "Nové konverzace", "contactActions": "Kliknutí na kontakt", "contactBreakdownSelected": "Kliknutí na kontaktní tlačítka ve vybraném období", "actions": {"holalocal": "Kliknutí na tlačítko zpráv", "phone": "Kliknutí na tlačítko telefonu", "email": "Kliknutí na tlačítko e-mailu", "whatsapp": "Kliknutí na tlačítko WhatsApp", "website": "Kliknutí na web"}, "subtitle": "Podívejte se, jak lidé objevují vaši firmu a navazují s ní kontakt.", "about": "O těchto číslech", "metric": "Ukazatel", "exactValues": "Přesné denní hodnoty", "partialCoverage": "Částečné pokrytí: záznam od {{date}}.", "activityDescription": "Denní hodnoty používají data UTC. Data před začátkem sběru jsou označena „Nezaznamenáno“. Nula znamená, že v daný den po zahájení sběru nebyla zaznamenána žádná aktivita.", "emptyMetric": "Pro tento ukazatel nebyla v tomto období zaznamenána žádná aktivita.", "notRecorded": "Nezaznamenáno"},
+    "title": "Statistiky firmy",
+    "allTimeTitle": "Souhrnné hodnoty od začátku",
+    "activityTitle": "Denní aktivita",
+    "range": {
+      ...en.businessInsights.range,
+      "label": "Rozsah dat",
+      "from": "Od",
+      "to": "Do",
+      "apply": "Použít",
+      "presets": {
+        "last_7_days": "Posledních 7 dní",
+        "last_30_days": "Posledních 30 dní",
+        "this_month": "Tento měsíc",
+        "last_month": "Minulý měsíc",
+        "last_90_days": "Posledních 90 dní",
+        "custom": "Vlastní data"
+      },
+      "errors": {
+        "required": "Vyberte počáteční i koncové datum.",
+        "invalid": "Vyberte platná kalendářní data.",
+        "order": "Počáteční datum musí být před koncovým datem nebo ve stejný den.",
+        "future": "Koncové datum nesmí být v budoucnosti.",
+        "tooLong": "Vyberte rozsah nejvýše 366 dní."
+      }
+    },
+    "state": {
+      ...en.businessInsights.state,
+      "loading": "Načítání statistik firmy…",
+      "loadingRange": "Načítání vybraného rozsahu dat… Dříve načtené hodnoty zůstávají viditelné.",
+      "error": "Statistiky firmy se nepodařilo načíst. Profil vaší firmy je stále dostupný.",
+      "notStarted": "Sběr statistik začne po první veřejné aktivitě splňující podmínky.",
+      "collectingSince": "Statistiky se shromažďují od {{date}}.",
+      "unpublished": "Sběr statistik začne, až bude profil vaší firmy zveřejněný a aktivní.",
+      "inactive": "Nová veřejná aktivita se nyní nezaznamenává. Dříve shromážděné souhrnné hodnoty zůstávají zachovány."
+    }
+  },
   marketing: { hero: { activeProfile: "Veřejný profil", previousBusiness: "Předchozí firma", nextBusiness: "Další firma", businessPosition: "Firma {{current}} z {{total}}" }, trust: { verified: { title: "Ověření firem", comingSoon: "Již brzy", description: "Vyvíjíme ověřovací proces, který zákazníkům pomůže rozpoznat firmy, jejichž totožnost a registrační údaje byly zkontrolovány." } } },
   business: { completion: 'Firemní profil je dokončen z {{percent}} %' },
   nav: { primary: 'Hlavní navigace', home: 'Domů', findServices: 'Najít služby', join: 'Přidat se k HolaLocal' }, auth: { logout: 'Odhlásit se' }, account: { signIn: 'Přihlásit se', getStarted: 'Začít', navigationLabel: 'Navigace účtu', profile: 'Můj profil', business: 'Moje firma', messages: 'Zprávy', greeting: 'Ahoj {{name}}', fallback: 'Účet' }, language: { label: 'Jazyk' },

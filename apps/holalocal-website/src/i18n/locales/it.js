@@ -11,7 +11,43 @@ export default createFallbackLocale(en, {
     "year": "Anno",
     "today": "Oggi"
   },
-  businessInsights: { ...en.businessInsights, ...{"description": "Visualizzazioni del profilo e clic sui pulsanti di contatto registrati. Nuove conversazioni conta le nuove conversazioni HolaLocal, non i messaggi inviati o le richieste confermate. I clic non confermano un contatto. L’attività precedente non viene stimata.", "historicalChannel": "Attualmente non disponibile", "profileViews": "Visualizzazioni del profilo", "enquiries": "Nuove conversazioni", "contactActions": "Clic di contatto", "contactBreakdownSelected": "Clic sui pulsanti di contatto nel periodo selezionato", "actions": {"holalocal": "Clic sul pulsante messaggi", "phone": "Clic sul pulsante telefono", "email": "Clic sul pulsante e-mail", "whatsapp": "Clic sul pulsante WhatsApp", "website": "Clic sul sito web"}, "subtitle": "Scopri come le persone trovano la tua attività e interagiscono con essa.", "about": "Informazioni su questi numeri", "metric": "Metrica", "exactValues": "Valori giornalieri esatti", "partialCoverage": "Copertura parziale: registrazione dal {{date}}.", "activityDescription": "I valori giornalieri usano date UTC. Le date precedenti all’inizio della raccolta sono indicate come «Non registrato». Zero significa che quel giorno, dopo l’inizio della raccolta, non è stata registrata attività.", "emptyMetric": "Nessuna attività registrata per questa metrica nel periodo selezionato.", "notRecorded": "Non registrato"} },
+  businessInsights: { ...en.businessInsights, ...{"description": "Visualizzazioni del profilo e clic sui pulsanti di contatto registrati. Nuove conversazioni conta le nuove conversazioni HolaLocal, non i messaggi inviati o le richieste confermate. I clic non confermano un contatto. L’attività precedente non viene stimata.", "historicalChannel": "Attualmente non disponibile", "profileViews": "Visualizzazioni del profilo", "enquiries": "Nuove conversazioni", "contactActions": "Clic di contatto", "contactBreakdownSelected": "Clic sui pulsanti di contatto nel periodo selezionato", "actions": {"holalocal": "Clic sul pulsante messaggi", "phone": "Clic sul pulsante telefono", "email": "Clic sul pulsante e-mail", "whatsapp": "Clic sul pulsante WhatsApp", "website": "Clic sul sito web"}, "subtitle": "Scopri come le persone trovano la tua attività e interagiscono con essa.", "about": "Informazioni su questi numeri", "metric": "Metrica", "exactValues": "Valori giornalieri esatti", "partialCoverage": "Copertura parziale: registrazione dal {{date}}.", "activityDescription": "I valori giornalieri usano date UTC. Le date precedenti all’inizio della raccolta sono indicate come «Non registrato». Zero significa che quel giorno, dopo l’inizio della raccolta, non è stata registrata attività.", "emptyMetric": "Nessuna attività registrata per questa metrica nel periodo selezionato.", "notRecorded": "Non registrato"},
+    "title": "Statistiche dell’attività",
+    "allTimeTitle": "Totali dall’inizio",
+    "activityTitle": "Attività giornaliera",
+    "range": {
+      ...en.businessInsights.range,
+      "label": "Intervallo di date",
+      "from": "Dal",
+      "to": "Al",
+      "apply": "Applica",
+      "presets": {
+        "last_7_days": "Ultimi 7 giorni",
+        "last_30_days": "Ultimi 30 giorni",
+        "this_month": "Questo mese",
+        "last_month": "Mese scorso",
+        "last_90_days": "Ultimi 90 giorni",
+        "custom": "Date personalizzate"
+      },
+      "errors": {
+        "required": "Scegli sia la data di inizio sia quella di fine.",
+        "invalid": "Scegli date di calendario valide.",
+        "order": "La data di inizio deve precedere o coincidere con la data di fine.",
+        "future": "La data di fine non può essere futura.",
+        "tooLong": "Scegli un intervallo non superiore a 366 giorni."
+      }
+    },
+    "state": {
+      ...en.businessInsights.state,
+      "loading": "Caricamento delle statistiche dell’attività…",
+      "loadingRange": "Caricamento dell’intervallo selezionato… I dati già caricati restano visibili.",
+      "error": "Impossibile caricare le statistiche. Il profilo della tua attività è ancora disponibile.",
+      "notStarted": "La raccolta delle statistiche inizierà dopo la prima attività pubblica idonea.",
+      "collectingSince": "Le statistiche vengono raccolte dal {{date}}.",
+      "unpublished": "La raccolta delle statistiche inizia quando il profilo della tua attività è pubblicato e attivo.",
+      "inactive": "Al momento non viene registrata nuova attività pubblica. I totali raccolti in precedenza vengono conservati."
+    }
+  },
   marketing: { hero: { activeProfile: "Profilo pubblico", previousBusiness: "Attività precedente", nextBusiness: "Attività successiva", businessPosition: "Attività {{current}} di {{total}}" }, trust: { verified: { title: "Verifica delle attività", comingSoon: "Prossimamente", description: "Stiamo sviluppando un processo di verifica per aiutare i clienti a riconoscere le attività di cui sono stati controllati identità e dati di registrazione." } } },
   business: { completion: 'Profilo attività completato al {{percent}}%' },
   nav: { primary: 'Navigazione principale', home: 'Home', findServices: 'Trova servizi', join: 'Unisciti a HolaLocal' }, auth: { logout: 'Esci' }, account: { signIn: 'Accedi', getStarted: 'Inizia', navigationLabel: 'Navigazione account', profile: 'Il mio profilo', business: 'La mia attività', messages: 'Messaggi', greeting: 'Ciao {{name}}', fallback: 'Account' }, language: { label: 'Lingua' },

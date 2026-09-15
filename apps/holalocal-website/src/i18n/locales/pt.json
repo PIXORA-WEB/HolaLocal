@@ -554,6 +554,39 @@
     "poweredBy": "Criado por PIXORA"
   },
   "businessInsights": {
+    "title": "Estatísticas do negócio",
+    "allTimeTitle": "Totais desde o início",
+    "activityTitle": "Atividade diária",
+    "range": {
+      "label": "Intervalo de datas",
+      "from": "De",
+      "to": "Até",
+      "apply": "Aplicar",
+      "presets": {
+        "last_7_days": "Últimos 7 dias",
+        "last_30_days": "Últimos 30 dias",
+        "this_month": "Este mês",
+        "last_month": "Mês passado",
+        "last_90_days": "Últimos 90 dias",
+        "custom": "Datas personalizadas"
+      },
+      "errors": {
+        "required": "Escolha uma data de início e uma data de fim.",
+        "invalid": "Escolha datas válidas do calendário.",
+        "order": "A data de início deve ser anterior ou igual à data de fim.",
+        "future": "A data de fim não pode ser futura.",
+        "tooLong": "Escolha um intervalo de, no máximo, 366 dias."
+      }
+    },
+    "state": {
+      "loading": "A carregar as estatísticas do negócio…",
+      "loadingRange": "A carregar o intervalo selecionado… Os valores carregados anteriormente continuam visíveis.",
+      "error": "Não foi possível carregar as estatísticas. O perfil do seu negócio continua disponível.",
+      "notStarted": "A recolha de estatísticas começará após a primeira atividade pública elegível.",
+      "collectingSince": "As estatísticas são recolhidas desde {{date}}.",
+      "unpublished": "As estatísticas começam quando o perfil do seu negócio está publicado e ativo.",
+      "inactive": "Atualmente, não é registada nova atividade pública. Os totais recolhidos anteriormente são preservados."
+    },
     "description": "Visualizações do perfil e cliques nos botões de contacto registados. Novas conversas conta novas conversas HolaLocal, não mensagens enviadas nem pedidos confirmados. Os cliques não confirmam contacto. A atividade anterior não é estimada.",
     "historicalChannel": "Atualmente indisponível",
     "profileViews": "Visualizações do perfil",

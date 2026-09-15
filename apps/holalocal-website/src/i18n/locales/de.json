@@ -554,6 +554,39 @@
     "poweredBy": "Bereitgestellt von PIXORA"
   },
   "businessInsights": {
+    "title": "Unternehmensstatistiken",
+    "allTimeTitle": "Gesamtwerte seit Beginn",
+    "activityTitle": "Tägliche Aktivität",
+    "range": {
+      "label": "Zeitraum",
+      "from": "Von",
+      "to": "Bis",
+      "apply": "Anwenden",
+      "presets": {
+        "last_7_days": "Letzte 7 Tage",
+        "last_30_days": "Letzte 30 Tage",
+        "this_month": "Dieser Monat",
+        "last_month": "Letzter Monat",
+        "last_90_days": "Letzte 90 Tage",
+        "custom": "Benutzerdefinierte Daten"
+      },
+      "errors": {
+        "required": "Wählen Sie ein Anfangs- und ein Enddatum.",
+        "invalid": "Wählen Sie gültige Kalenderdaten.",
+        "order": "Das Anfangsdatum muss vor oder am Enddatum liegen.",
+        "future": "Das Enddatum darf nicht in der Zukunft liegen.",
+        "tooLong": "Wählen Sie einen Zeitraum von höchstens 366 Tagen."
+      }
+    },
+    "state": {
+      "loading": "Unternehmensstatistiken werden geladen…",
+      "loadingRange": "Der ausgewählte Zeitraum wird geladen… Bereits geladene Zahlen bleiben sichtbar.",
+      "error": "Die Unternehmensstatistiken konnten nicht geladen werden. Ihr Unternehmensprofil ist weiterhin verfügbar.",
+      "notStarted": "Die Erfassung beginnt nach der ersten öffentlichen Aktivität, die die Erfassungskriterien erfüllt.",
+      "collectingSince": "Statistiken werden seit dem {{date}} erfasst.",
+      "unpublished": "Die Erfassung beginnt, sobald Ihr Unternehmensprofil veröffentlicht und aktiv ist.",
+      "inactive": "Neue öffentliche Aktivitäten werden derzeit nicht erfasst. Bereits erfasste Gesamtwerte bleiben erhalten."
+    },
     "description": "Erfasste Profilaufrufe und Klicks auf Kontaktbuttons. Neue Unterhaltungen zählt neu erstellte HolaLocal-Unterhaltungen, keine gesendeten Nachrichten oder bestätigten Anfragen. Klicks bestätigen keine Kontaktaufnahme. Frühere Aktivitäten werden nicht geschätzt.",
     "historicalChannel": "Derzeit nicht verfügbar",
     "profileViews": "Profilaufrufe",

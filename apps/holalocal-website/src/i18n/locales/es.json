@@ -554,6 +554,39 @@
     "poweredBy": "Impulsado por PIXORA"
   },
   "businessInsights": {
+    "title": "Estadísticas del negocio",
+    "allTimeTitle": "Totales históricos",
+    "activityTitle": "Actividad diaria",
+    "range": {
+      "label": "Intervalo de fechas",
+      "from": "Desde",
+      "to": "Hasta",
+      "apply": "Aplicar",
+      "presets": {
+        "last_7_days": "Últimos 7 días",
+        "last_30_days": "Últimos 30 días",
+        "this_month": "Este mes",
+        "last_month": "Mes pasado",
+        "last_90_days": "Últimos 90 días",
+        "custom": "Fechas personalizadas"
+      },
+      "errors": {
+        "required": "Selecciona una fecha de inicio y una de fin.",
+        "invalid": "Selecciona fechas válidas del calendario.",
+        "order": "La fecha de inicio debe ser anterior o igual a la fecha de fin.",
+        "future": "La fecha de fin no puede ser futura.",
+        "tooLong": "Selecciona un intervalo de un máximo de 366 días."
+      }
+    },
+    "state": {
+      "loading": "Cargando estadísticas del negocio…",
+      "loadingRange": "Cargando el intervalo seleccionado… Las cifras cargadas anteriormente siguen visibles.",
+      "error": "No se pudieron cargar las estadísticas. El perfil de tu negocio sigue disponible.",
+      "notStarted": "La recopilación de estadísticas comenzará tras la primera actividad pública que cumpla los requisitos.",
+      "collectingSince": "Se recopilan estadísticas desde el {{date}}.",
+      "unpublished": "Las estadísticas comienzan cuando el perfil de tu negocio está publicado y activo.",
+      "inactive": "Actualmente no se registra nueva actividad pública. Se conservan los totales recopilados anteriormente."
+    },
     "description": "Visitas al perfil y clics en botones de contacto registrados. Nuevas conversaciones cuenta las conversaciones nuevas de HolaLocal, no mensajes enviados ni consultas confirmadas. Los clics no confirman un contacto. No se estima la actividad anterior.",
     "historicalChannel": "Actualmente no disponible",
     "profileViews": "Visitas al perfil",

@@ -554,6 +554,39 @@
     "poweredBy": "Propulsé par PIXORA"
   },
   "businessInsights": {
+    "title": "Statistiques de l’entreprise",
+    "allTimeTitle": "Totaux depuis le début",
+    "activityTitle": "Activité quotidienne",
+    "range": {
+      "label": "Période",
+      "from": "Du",
+      "to": "Au",
+      "apply": "Appliquer",
+      "presets": {
+        "last_7_days": "7 derniers jours",
+        "last_30_days": "30 derniers jours",
+        "this_month": "Ce mois-ci",
+        "last_month": "Mois dernier",
+        "last_90_days": "90 derniers jours",
+        "custom": "Dates personnalisées"
+      },
+      "errors": {
+        "required": "Choisissez une date de début et une date de fin.",
+        "invalid": "Choisissez des dates valides.",
+        "order": "La date de début doit être antérieure ou égale à la date de fin.",
+        "future": "La date de fin ne peut pas être dans le futur.",
+        "tooLong": "Choisissez une période de 366 jours maximum."
+      }
+    },
+    "state": {
+      "loading": "Chargement des statistiques de l’entreprise…",
+      "loadingRange": "Chargement de la période sélectionnée… Les chiffres déjà chargés restent visibles.",
+      "error": "Les statistiques n’ont pas pu être chargées. Le profil de votre entreprise reste disponible.",
+      "notStarted": "La collecte des statistiques commencera après la première activité publique remplissant les critères.",
+      "collectingSince": "Les statistiques sont collectées depuis le {{date}}.",
+      "unpublished": "Les statistiques commencent lorsque le profil de votre entreprise est publié et actif.",
+      "inactive": "Aucune nouvelle activité publique n’est enregistrée pour le moment. Les totaux précédemment collectés sont conservés."
+    },
     "description": "Vues du profil et clics sur les boutons de contact enregistrés. Les nouvelles demandes comptent les nouvelles conversations HolaLocal, pas les messages envoyés ni les demandes confirmées. Un clic ne confirme pas un contact. L’activité antérieure n’est pas estimée.",
     "historicalChannel": "Actuellement indisponible",
     "profileViews": "Vues du profil",
