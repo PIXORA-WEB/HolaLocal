@@ -1,4 +1,4 @@
-import { reviewDisclosureTranslations } from './reviewDisclosureTranslations.js'
+import { reviewNoticeEnglish } from './legalDisclosures/reviewNoticeEnglish.js'
 
 // Eager English fallback; other review languages load with the existing locale loader.
 export const customerReviewEnglishTranslations = {
@@ -79,6 +79,6 @@ export const customerReviewEnglishTranslations = {
   "originalText": "Original text",
   "showOriginal": "Show original",
   "showTranslation": "Show translation",
-  translationNotice: reviewDisclosureTranslations.en[4],
-  privacyLink: reviewDisclosureTranslations.en[5],
+  translationNotice: reviewNoticeEnglish[0],
+  privacyLink: reviewNoticeEnglish[1],
 }

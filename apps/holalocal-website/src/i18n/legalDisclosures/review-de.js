@@ -1,0 +1,6 @@
+export default [
+"Bewertungen und Übersetzung",
+"Ihr gewählter Anzeigename und der freigegebene Bewertungstext sind öffentlich. Zur Moderation bleibt eine interne Kontoverknüpfung bestehen; Kontoname und E-Mail werden nicht automatisch als öffentlicher Name verwendet. Ein Anzeigename oder eine bestätigte E-Mail belegt keinen Kauf und keine Dienstleistung.",
+"Google Cloud Translation kann veröffentlichte Texte über den EU-Endpunkt und europe-west1 übersetzen. Übermittelt werden Text und Spracheinstellungen; Kontokennungen und Anzeigenamen werden nicht als separate Felder gesendet. Alles im veröffentlichten Text ist enthalten. Private oder noch nicht freigegebene Texte werden nicht über diesen öffentlichen Dienst gesendet. Namen bleiben unverändert. Maschinelle Übersetzungen sind gekennzeichnet; das Original bleibt abrufbar.",
+"Meldungen sind privat. Offene Meldungen bleiben bis zur Bearbeitung erhalten. Text, meldende Identität und private Notizen erledigter Meldungen samt verknüpften Anfrage- und Auditkopien sind 90 Tage nach Erledigung zur Löschung vorgesehen. Kontolöschung entfernt verknüpfte identifizierende Bewertungs- und Meldedaten früher. Diese speziellen Regeln gelten auch für Bewertungsdaten im allgemeinen Löschungsabschnitt."
+]

@@ -1,0 +1,6 @@
+export default [
+"Recensioni e traduzione",
+"Il nome pubblico scelto e il testo approvato sono pubblici. Conserviamo un collegamento interno all’account per la moderazione; nome ed email dell’account non diventano automaticamente il nome pubblico. Un nome pubblico o un’email verificata non prova un acquisto o un servizio.",
+"Google Cloud Translation può tradurre il testo pubblicato tramite l’endpoint UE e europe-west1. Vengono inviati testo e impostazioni linguistiche; identificativi dell’account e nomi pubblici non sono campi separati. Tutto ciò che scrivi nel testo pubblicato è incluso. Testi privati o in attesa non passano per questo servizio pubblico. I nomi non cambiano. Le traduzioni automatiche sono indicate e l’originale resta disponibile.",
+"Le segnalazioni sono private. Quelle aperte sono conservate fino alla gestione. Testo, identità del segnalante e note private delle segnalazioni risolte, incluse copie collegate di richieste e audit, sono programmati per l’eliminazione 90 giorni dopo la risoluzione. L’eliminazione dell’account rimuove prima i dati identificativi collegati di recensioni e segnalazioni. Queste regole specifiche valgono anche per le recensioni citate nella sezione generale sull’eliminazione."
+]

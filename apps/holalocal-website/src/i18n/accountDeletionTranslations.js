@@ -1,11 +1,11 @@
-import { deletionDisclosureTranslations } from './deletionDisclosureTranslations.js'
+import { deletionRequests } from './legalDisclosures/deletionRequests.js'
 
 function pack(d, code) {
   return { accountDeletion: {
     request: {
       eyebrow: d[0], title: d[1], description: d[2], open: d[3], dialogTitle: d[4],
       warning: d[5], password: d[6], confirm: d[7], confirmationRequired: d[8],
-      retainedRecords: deletionDisclosureTranslations[code].request,
+      retainedRecords: deletionRequests[code],
       submit: d[9], submitting: d[10], ownedBusinessBlock: d[11],
     },
     status: {

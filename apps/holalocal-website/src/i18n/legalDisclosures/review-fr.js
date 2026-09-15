@@ -1,0 +1,6 @@
+export default [
+"Avis et traduction",
+"Le nom public choisi et le texte approuvé de votre avis sont publics. Un lien interne avec votre compte sert à la modération ; votre nom de compte et votre e-mail ne deviennent pas automatiquement votre nom public. Un nom public ou un e-mail vérifié ne prouve pas un achat ou une prestation.",
+"Google Cloud Translation peut traduire le texte publié via son point de terminaison UE et europe-west1. Le texte et les paramètres de langue sont transmis, sans identifiant de compte ni nom public dans des champs séparés. Tout ce que vous incluez dans le texte publié est transmis. Aucun avis privé ou en attente ne passe par ce service public. Les noms restent inchangés. Les traductions automatiques sont signalées et le texte original reste consultable.",
+"Les signalements sont privés. Les signalements ouverts sont conservés jusqu’à leur traitement. Le texte, l’identité de l’auteur du signalement et les notes privées des signalements résolus, y compris les copies liées de requêtes et d’audit, sont programmés pour suppression 90 jours après résolution. L’effacement du compte supprime plus tôt les données identifiantes liées aux avis et signalements. Ces règles spécifiques s’appliquent aussi aux avis mentionnés dans la section générale sur la suppression."
+]

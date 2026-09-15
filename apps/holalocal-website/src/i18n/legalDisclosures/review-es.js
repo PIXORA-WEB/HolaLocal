@@ -1,0 +1,6 @@
+export default [
+"Reseñas y traducción",
+"El nombre público que elijas y el texto aprobado de tu reseña son públicos. Conservamos un vínculo interno con tu cuenta para moderación; no usamos automáticamente el nombre ni el correo de tu cuenta como nombre público. Ni un nombre público ni un correo verificado prueban una compra o un servicio.",
+"Google Cloud Translation puede traducir el texto publicado mediante su endpoint de la UE y la ubicación europe-west1. Se envían el texto y los ajustes de idioma; los identificadores de cuenta y los nombres públicos no se envían como campos separados. Se incluye todo lo que escribas en el texto publicado. Este servicio público no recibe reseñas privadas ni pendientes. Los nombres no cambian. Las traducciones automáticas se identifican y puedes mostrar el original.",
+"Los reportes de reseñas son privados. Los abiertos se conservan hasta su gestión. El texto, la identidad del informante y las notas privadas de los reportes resueltos, incluidas las copias vinculadas de solicitudes y auditoría, se programan para su eliminación 90 días después de la resolución. La eliminación de la cuenta retira antes los datos identificativos vinculados de reseñas y reportes. Estas reglas específicas también se aplican a los registros de reseñas citados en la sección general de eliminación."
+]

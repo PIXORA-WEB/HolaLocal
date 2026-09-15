@@ -94,6 +94,26 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 })
 
+const legalLoaders = {
+  en: () => import('./locales/legal/legal-en.js'),
+  es: () => import('./locales/legal/legal-es.js'),
+  fr: () => import('./locales/legal/legal-fr.js'),
+  de: () => import('./locales/legal/legal-de.js'),
+  nl: () => import('./locales/legal/legal-nl.js'),
+  pt: () => import('./locales/legal/legal-pt.js'),
+  pl: () => import('./locales/legal/legal-pl.js'),
+  ro: () => import('./locales/legal/legal-ro.js'),
+  cs: () => import('./locales/legal/legal-cs.js'),
+  sk: () => import('./locales/legal/legal-sk.js'),
+  hu: () => import('./locales/legal/legal-hu.js'),
+  uk: () => import('./locales/legal/legal-uk.js'),
+  it: () => import('./locales/legal/legal-it.js'),
+  sv: () => import('./locales/legal/legal-sv.js'),
+  da: () => import('./locales/legal/legal-da.js'),
+  fi: () => import('./locales/legal/legal-fi.js'),
+  no: () => import('./locales/legal/legal-no.js'),
+}
+
 const authenticatedLoaders = {
   en: () => import('./locales/authenticated/authenticated-en.js'),
   es: () => import('./locales/authenticated/authenticated-es.js'),
@@ -143,7 +163,7 @@ export async function loadLocale(languageCode) {
     authenticatedLoaders[code](),
     loadLocaleCompletion(code),
     import('./locales/legalConsentTranslations.js'),
-    import('./locales/legalContent.js'),
+    legalLoaders[code](),
     import('./locales/universalOperationalTranslations.js'),
     import('./adminTranslations.js'),
     import('./accountDeletionTranslations.js'),
@@ -155,7 +175,7 @@ export async function loadLocale(languageCode) {
     { default: authenticatedTranslations },
     fallbackLocaleCompletion,
     { legalConsentTranslations },
-    { legalPageContent },
+    { default: legalPageContent },
     { universalOperationalTranslations },
     { ownerRejectionTranslations },
     { accountDeletionTranslations },
@@ -185,7 +205,7 @@ export async function loadLocale(languageCode) {
       serviceBrowseTranslations: translationPacks.serviceBrowseTranslations,
       homepagePlatformTranslations: translationPacks.homepagePlatformTranslations,
       productLandingTranslations: translationPacks.productLandingTranslations,
-      legalPageContent: { legalPages: legalPageContent[code] },
+      legalPageContent: { legalPages: legalPageContent },
       serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
     })
     resource.analytics = analyticsTranslations[code]

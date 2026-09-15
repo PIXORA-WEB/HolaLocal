@@ -1,0 +1,6 @@
+export default [
+"Reviews and translation",
+"Your chosen review display name and approved review text are public. We keep an internal link to your account for moderation; your account name and email are not automatically used as your public review name. Neither a display name nor verified email proves a purchase or service.",
+"Published review text may be translated by Google Cloud Translation using its EU endpoint and europe-west1 location. The text and language settings are sent for translation; account identifiers and display names are not sent as separate fields. Anything you include in the published text is included. Private or pending review text is not sent through this public translation service. Display names remain unchanged. Machine translations are labelled, and you can show the original text.",
+"Review reports are private. Open reports are kept until handled. Resolved report text, reporter identity and private notes, including linked request and audit copies, are scheduled for deletion 90 days after resolution. Account erasure removes linked identifying review and report data earlier. These review-specific rules also apply to review records mentioned in the general deletion section."
+]

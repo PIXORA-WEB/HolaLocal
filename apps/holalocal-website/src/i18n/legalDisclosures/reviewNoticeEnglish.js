@@ -1,0 +1,1 @@
+export const reviewNoticeEnglish = ["Before submitting: approved review text may be sent to Google Cloud Translation in the EU for machine translation. Anything you include in that text is included. Your display name stays unchanged, and the original text remains available.", "Privacy Policy"]

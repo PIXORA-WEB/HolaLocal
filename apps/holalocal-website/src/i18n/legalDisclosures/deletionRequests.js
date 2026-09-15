@@ -1,0 +1,18 @@
+export const deletionRequests = {
+es: "Al eliminar tu cuenta se eliminan el perfil de la cuenta y sus archivos multimedia. Pueden conservarse registros limitados, incluidos registros de consentimiento, informes de moderación o seguridad y conversaciones históricas, según se explica en la",
+fr: "La suppression de votre compte retire votre profil et ses médias. Des dossiers limités peuvent subsister, notamment les preuves de consentement, les signalements de modération ou de sécurité et l’historique des conversations, comme expliqué dans la",
+de: "Beim Löschen Ihres Kontos werden Ihr Kontoprofil und Ihre Profilmedien entfernt. Begrenzte Datensätze können bestehen bleiben, darunter Einwilligungsnachweise, Moderations- oder Sicherheitsmeldungen und historische Unterhaltungen, wie erläutert in der",
+nl: "Als je je account verwijdert, worden je accountprofiel en profielmedia verwijderd. Beperkte gegevens kunnen bewaard blijven, waaronder toestemmingsregistraties, moderatie- of veiligheidsmeldingen en historische gesprekken, zoals uitgelegd in het",
+pt: "A eliminação da conta remove o perfil e os respetivos ficheiros multimédia. Podem permanecer registos limitados, incluindo registos de consentimento, denúncias de moderação ou segurança e conversas históricas, conforme explicado na",
+it: "L’eliminazione dell’account rimuove il profilo e i relativi contenuti multimediali. Possono rimanere registrazioni limitate, tra cui consensi, segnalazioni di moderazione o sicurezza e conversazioni storiche, come spiegato nell’",
+pl: "Usunięcie konta usuwa profil konta i multimedia profilowe. Ograniczone rejestry mogą pozostać, w tym rejestry zgód, zgłoszenia moderacyjne lub dotyczące bezpieczeństwa oraz historyczne rozmowy, zgodnie z wyjaśnieniem w",
+ro: "Ștergerea contului elimină profilul și fișierele media ale profilului. Pot rămâne evidențe limitate, inclusiv evidențe de consimțământ, rapoarte de moderare sau siguranță și conversații istorice, conform explicațiilor din",
+cs: "Smazáním účtu se odstraní profil účtu a profilová média. Omezené záznamy mohou zůstat zachovány, včetně záznamů souhlasu, hlášení o moderování nebo bezpečnosti a historických konverzací, jak vysvětlují",
+sk: "Odstránením účtu sa odstráni profil účtu a profilové médiá. Obmedzené záznamy môžu zostať zachované vrátane záznamov súhlasu, hlásení o moderovaní alebo bezpečnosti a historických konverzácií, ako vysvetľujú",
+hu: "A fiók törlése eltávolítja a fiókprofilt és a profilmédiát. Korlátozott nyilvántartások megmaradhatnak, például hozzájárulási adatok, moderációs vagy biztonsági jelentések és korábbi beszélgetések, az alábbiak szerint:",
+uk: "Видалення облікового запису видаляє профіль і медіафайли профілю. Обмежені записи можуть залишатися, зокрема записи згоди, звіти про модерацію чи безпеку та історичні розмови, як пояснено в",
+sv: "När du raderar kontot tas kontoprofilen och profilmedierna bort. Begränsade poster kan finnas kvar, bland annat samtyckesposter, modererings- eller säkerhetsrapporter och historiska konversationer, enligt förklaringen i",
+da: "Når du sletter din konto, fjernes kontoprofilen og profilmedierne. Begrænsede registreringer kan forblive, herunder samtykkeregistreringer, moderations- eller sikkerhedsrapporter og historiske samtaler, som forklaret i",
+fi: "Tilin poistaminen poistaa tiliprofiilin ja profiilimedian. Rajallisia tietueita voidaan säilyttää, mukaan lukien suostumustiedot, moderointi- tai turvallisuusraportit ja historialliset keskustelut, kuten selitetään kohdassa",
+no: "Når du sletter kontoen, fjernes kontoprofilen og profilmediene. Begrensede registre kan bli værende, blant annet samtykkeregistre, modererings- eller sikkerhetsrapporter og historiske samtaler, som forklart i"
+}
