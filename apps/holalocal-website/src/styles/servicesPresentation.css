@@ -109,7 +109,6 @@
   display: flex;
   gap: 0.25rem;
   padding: 0.75rem 1rem;
-  overflow-x: auto;
   border-bottom: 1px solid #e8eef3;
   scrollbar-width: none;
   border-radius: 1.4rem 1.4rem 0 0;
@@ -276,7 +275,7 @@
 
 .business-detail__service-list li {
   padding: 0.5rem 0.7rem;
-  border: 1px solid rgb(8 125 242 / 15%);
+  border: 1px solid;
   border-radius: .7rem;
   color: #783a0c;
   background: #fff3e8;
@@ -330,7 +329,6 @@
 }
 
 .services-results__grid {
-  grid-auto-rows: 1fr;
   display: grid;
   grid-auto-rows: auto;
   min-width: 0;
