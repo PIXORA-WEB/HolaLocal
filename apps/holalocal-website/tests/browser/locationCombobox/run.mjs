@@ -14,6 +14,8 @@ const website = resolve(here, '../../..')
 const src = resolve(website, 'src')
 const out = await mkdtemp(resolve(tmpdir(), 'holalocal-location-'))
 const baseline = process.argv.includes('--baseline')
+// Token comparison keeps the reviewed component and substitutes only approved-base CSS.
+const tokenBaseline = process.argv.includes('--token-baseline')
 const replacements = {
   'firebase/config.js': 'export const getFirebaseApp=()=>({});export const getFirebaseAuth=()=>({});',
   'hooks/useAuthentication.js': 'const refreshUserProfile=async()=>{};const signOutUser=async()=>{};export default ()=>({user:window.h.user,userProfile:window.h.profile,refreshUserProfile,signOutUser});',
@@ -25,6 +27,7 @@ for (const file of ['services/businessService.js', 'firebase/auth.js', 'firebase
   replacements[file] = names.map(name => `export const ${name}=${name === 'ensureBusinessProfile' || name === 'getBusinessById' ? 'async()=>window.h.business' : name === 'getAuthenticationErrorMessage' ? '()=>"Synthetic error"' : '()=>{throw new Error("Unexpected synthetic service call")}'};`).join('')
 }
 if (baseline) replacements['components/business/LocationCombobox.jsx'] = execFileSync('git', ['show', '17d1aed1cb7b2855917e87e696e39f7a26d3ceb4:apps/holalocal-website/src/components/business/LocationCombobox.jsx'], { cwd: website, encoding: 'utf8' })
+if (tokenBaseline) replacements['styles/global.css'] = execFileSync('git', ['show', 'ebffceb5591e508b248158eb6b08441a77c4c4fb:apps/holalocal-website/src/styles/global.css'], { cwd: website, encoding: 'utf8' })
 await writeFile(resolve(out, 'index.html'), `<div id="root"></div><script type="module" src="${resolve(here, 'fixture.jsx')}"></script>`)
 await build({ root: out, configFile: false, envDir: false, define: { 'process.env.NODE_ENV': JSON.stringify('development') }, plugins: [{ name: 'synthetic-auth-boundaries', enforce: 'pre', transform(code, id) { for (const [path, replacement] of Object.entries(replacements)) if (id === resolve(src, path)) return replacement } }], esbuild: { jsx: 'automatic' }, build: { outDir: resolve(out, 'dist'), minify: false } })
 const results = [], blocked = []
@@ -70,6 +73,62 @@ async function visibleActive(p) {
   return measurement
 }
 for (const width of [1440, 390]) {
+  await scenario(width, 'editor instruction and Clear use legible muted color', async p => {
+    const control = p.locator('.location-combobox input')
+    await control.waitFor()
+    await p.locator('.location-combobox').scrollIntoViewIfNeeded()
+    const metrics = await p.locator('.location-combobox').evaluate(root => {
+      function inspect(el, paintedBehind = el) {
+        const style = getComputedStyle(el)
+        let background = 'rgba(0, 0, 0, 0)'
+        for (let parent = paintedBehind; parent; parent = parent.parentElement) {
+          background = getComputedStyle(parent).backgroundColor
+          if (background !== 'rgba(0, 0, 0, 0)') break
+        }
+        const lum = color => {
+          const values = color.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => {
+            v /= 255
+            return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+          })
+          return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722
+        }
+        const a = lum(style.color), b = lum(background)
+        return { color: style.color, background, contrast: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05), fontSize: style.fontSize, rect: el.getBoundingClientRect().toJSON() }
+      }
+      return { instruction: inspect(root.querySelector(':scope > p')), // Clear is transparent and positioned over its sibling input.
+        clear: inspect(root.querySelector('button'), root.querySelector('input')), input: root.querySelector('input').getBoundingClientRect().toJSON() }
+    })
+    results.push({ width, textMetrics: metrics })
+    for (const element of [metrics.instruction, metrics.clear]) {
+      assert.equal(element.color, 'rgb(101, 115, 134)')
+      assert.ok(element.contrast >= 4.5, JSON.stringify(element))
+    }
+    await control.click(); await control.press('Tab')
+    const focus = await p.locator('.location-combobox button').evaluate(el => ({ focused: document.activeElement === el, outline: getComputedStyle(el).outlineWidth, visible: el.getBoundingClientRect().width > 0 }))
+    assert.deepEqual(focus, { focused: true, outline: '3px', visible: true })
+    await p.keyboard.press('Enter'); await closed(p)
+    assert.equal(await control.inputValue(), '')
+  }, true)
+  await scenario(width, 'rounded suggestion states preserve geometry and keyboard visibility', async p => {
+    await input(p).click()
+    const option = p.getByRole('option').nth(1)
+    const idle = await option.evaluate(el => ({ radius: getComputedStyle(el).borderRadius, background: getComputedStyle(el).backgroundColor, rect: el.getBoundingClientRect().toJSON() }))
+    await option.hover()
+    const hover = await option.evaluate(el => ({ radius: getComputedStyle(el).borderRadius, background: getComputedStyle(el).backgroundColor, rect: el.getBoundingClientRect().toJSON() }))
+    const y = await p.evaluate(() => window.scrollY)
+    for (let i = 0; i < 9; i++) await input(p).press('ArrowDown')
+    const active = await visibleActive(p)
+    results.push({ width, optionMetrics: { idle, hover, active } })
+    assert.equal(idle.radius, '10.4px')
+    assert.equal(hover.radius, idle.radius)
+    assert.notEqual(hover.background, idle.background)
+    assert.equal(hover.background, 'rgb(238, 245, 255)')
+    assert.deepEqual(hover.rect, idle.rect)
+    assert.equal(active.pageY, y)
+    await input(p).press('Enter'); await closed(p)
+    assert.ok((await form(p)).primaryLocationId)
+  })
+
   for (const key of ['Tab', 'Shift+Tab']) await scenario(width, key + ' departs and closes', async p => {
     await input(p).click(); await input(p).press(key); await closed(p)
     assert.equal(await p.locator(key === 'Tab' ? '#after' : '#before').evaluate(el => el === document.activeElement), true)
@@ -144,7 +203,7 @@ for (const width of [1440, 390]) {
 }
 await browser.close()
 const scenarios = results.filter(r => 'pass' in r)
-await writeFile(resolve(out, 'results.json'), JSON.stringify({ baseline, results, blocked }, null, 2))
+await writeFile(resolve(out, 'results.json'), JSON.stringify({ baseline, tokenBaseline, results, blocked }, null, 2))
 for (const result of scenarios) console.log(result.pass ? 'PASS' : 'FAIL', result.width, result.name, result.pass ? '' : result.error)
 console.log('Artifacts:', out)
 console.log(`${scenarios.filter(r => r.pass).length}/${scenarios.length} passed; external requests: ${blocked.length}`)

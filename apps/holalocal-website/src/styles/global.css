@@ -2306,7 +2306,7 @@
 
 .location-combobox > p {
   margin: 0.35rem 0 0.65rem;
-  color: var(--text-muted);
+  color: var(--muted);
 }
 
 .location-combobox__input {
@@ -2326,7 +2326,7 @@
   transform: translateY(-50%);
   border: 0;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--muted);
   cursor: pointer;
 }
 
@@ -2350,7 +2350,7 @@
 .location-combobox__listbox li {
   padding: 0.7rem 0.8rem;
   overflow-wrap: anywhere;
-  border-radius: var(--radius-sm);
+  border-radius: 0.65rem;
   cursor: pointer;
 }
 
