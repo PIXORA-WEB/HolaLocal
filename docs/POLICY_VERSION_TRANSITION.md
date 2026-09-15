@@ -1,4 +1,20 @@
-# Nonblocking policy transition — candidate, not published
+# Policy transition: current source and historical rollout instructions
+
+Documentation reconciliation: 15 September 2026. The candidate plan below is retained as history, **not an executable pending deployment/activation checklist**. Its null effective dates, unpublished pages, SiteLayout notice and “requires final approval” instructions predate successor publication and banner removal.
+
+The retained 13 September 2026 publication/activation acceptance records Terms/Privacy **1.1**, effective **2026-09-13**, published in all 17 languages. PR #44/#47 publication and the scoped activation were recorded complete. Supplied operator particulars were retained; this is not legal-compliance or native-editorial certification. The current [shared legal contract](../shared/firebase-contract/legalConsent.js) carries those versions/dates and distinguishes valid historical acknowledgment from current-version evidence.
+
+The automatic informational notice described below was subsequently removed from the original SiteLayout. [Banner-removal source evidence](policy-banner-removal/README.md) documents the unchanged acknowledgments, footer policy links and independent Analytics controls. Its candidate-stage approval wording is superseded by the retained PR #49 release result, which identifies audited production commit `7496c8cd14afc2b1165a267daa924f5c5886bfd2`. The undated release summary is historical deployment evidence, not a current cloud check.
+
+For evidence paths and exact acceptance timestamps, see [Operational status and evidence provenance](PAUSED_WORK_STATUS.md). The authoritative successor rollout record is external local evidence: `legal-review-launch/publication-activation/ROLLOUT_STATUS.md` beneath the evidence root identified there. It records reviews/EU review translation and both scheduled report-retention controls enabled, while manual conversation/acknowledgment cleanup and automatic deletion recovery remained closed. These are separately recorded historical states, not an instruction to replay activation or proof of today's configuration. The linked [launch package](REVIEWS_FINAL_LAUNCH_PACKAGE.md) is an earlier preparation record, not successor acceptance.
+
+Preserve the transition's lasting safeguards: historical 1.0/1.1 evidence and timestamps, rejection of unsupported/malformed evidence, no fabricated acknowledgment, separate Analytics choice, and compatible rollback validators. The successor rollout's rollback compatibility correction supersedes any implication below that an old pre-publication website can simply be restored. Preserve all rollback snapshots, recovery records, paused upload/retry work, approved-business maintenance work and backups. No cleanup/recovery gate is authorized to open.
+
+Local audit-fix commits through the approved base `8641028ec8769153cf498663d95ba26c93c3361d` are awaiting release; neither these fixes nor this documentation change establish deployed behavior. Original test totals below are historical runs, not fresh acceptance or totals to combine with later audit suites.
+
+---
+
+# Historical candidate plan — nonblocking policy transition (superseded rollout instructions)
 
 Approved behavior: preserve valid historical acknowledgments and timestamps for access and account deletion; an informational notice is not agreement. New registrations record candidate1.1, while final publication/effective dates remain pending (null, never backdated). Draft pages remain explicitly not effective. Versions1.0 and1.1 are an explicit compatibility set; unknown/malformed evidence is rejected. Existing1.0 clients remain supported by rules. Accepted fields cannot be rewritten/downgraded by clients.
 
