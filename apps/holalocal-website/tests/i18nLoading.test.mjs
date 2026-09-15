@@ -61,8 +61,13 @@ test('locale loading is cached and language changes use last-selection-wins sequ
   assert.match(source, /requestSequence !== languageChangeSequence/)
 })
 
-test('the synchronous English fallback matches the complete translation source', () => {
-  assert.deepEqual(adminEnglishTranslations, legacyAdminEnglishTranslations)
+test('active and compatibility admin completion wording preserve the completion and verification contracts', () => {
+  for (const source of [adminEnglishTranslations, legacyAdminEnglishTranslations]) {
+    assert.equal(source.admin.review.readinessEyebrow, 'Profile completeness')
+    assert.equal(source.admin.review.requirementsPresent, '{{complete}} of {{total}} profile items complete')
+    assert.equal(source.admin.review.checklistNote, 'Profile completeness and publication eligibility are separate. Logos and images are optional. The backend performs the authoritative publication eligibility check.')
+    assert.equal(source.admin.review.publishNotVerify, 'Publishing this profile does not mark the business as verified.')
+  }
   assert.deepEqual(
     ownerEnglishRejectionTranslations.rejection,
     ownerRejectionTranslations.en.rejection,
