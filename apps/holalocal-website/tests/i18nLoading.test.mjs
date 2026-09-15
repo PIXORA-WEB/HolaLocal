@@ -32,7 +32,6 @@ test('the initial i18n module eagerly includes only default-locale resources', a
 
   for (const aggregateModule of [
     'adminTranslations.js',
-    'universalOperationalTranslations.js',
     'nonEnglishTranslationPacks.js',
   ]) {
     assert.match(source, new RegExp(`import\\(['"].*${aggregateModule.replace('.', '\\.')}['"]\\)`))
@@ -42,11 +41,14 @@ test('the initial i18n module eagerly includes only default-locale resources', a
     assert.ok(source.includes(`import('./locales/authenticated/authenticated-${code}.js')`))
     assert.ok(source.includes(`import('./locales/legal/legal-${code}.js')`))
   }
+  for (const code of expectedLocales.filter(code => code !== 'en')) {
+    assert.ok(source.includes(`import('./locales/operational/operational-${code}.js')`))
+  }
   for (const code of ['ro', 'pl', 'cs', 'sk', 'hu', 'uk', 'it', 'fi', 'sv', 'da', 'no']) {
     assert.ok(source.includes(`import('./locales/completion/completion-${code}.js')`))
   }
-  assert.doesNotMatch(source, /^import .*locales\/(authenticated|completion|legal)\//m)
-  assert.doesNotMatch(source, /import\(['"].*(?:authenticatedTranslations|fallbackLocaleCompletionTranslations|legalContent)\.js['"]\)/)
+  assert.doesNotMatch(source, /^import .*locales\/(authenticated|completion|legal|operational)\//m)
+  assert.doesNotMatch(source, /import\(['"].*(?:authenticatedTranslations|fallbackLocaleCompletionTranslations|legalContent|universalOperationalTranslations)\.js['"]\)/)
 })
 
 test('locale loading is cached and language changes use last-selection-wins sequencing', async () => {

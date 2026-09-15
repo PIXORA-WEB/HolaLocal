@@ -94,6 +94,30 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 })
 
+const operationalLoaders = {
+  sv: () => import('./locales/operational/operational-sv.js'),
+  da: () => import('./locales/operational/operational-da.js'),
+  fi: () => import('./locales/operational/operational-fi.js'),
+  no: () => import('./locales/operational/operational-no.js'),
+  uk: () => import('./locales/operational/operational-uk.js'),
+  it: () => import('./locales/operational/operational-it.js'),
+  cs: () => import('./locales/operational/operational-cs.js'),
+  sk: () => import('./locales/operational/operational-sk.js'),
+  hu: () => import('./locales/operational/operational-hu.js'),
+  es: () => import('./locales/operational/operational-es.js'),
+  pl: () => import('./locales/operational/operational-pl.js'),
+  ro: () => import('./locales/operational/operational-ro.js'),
+  fr: () => import('./locales/operational/operational-fr.js'),
+  de: () => import('./locales/operational/operational-de.js'),
+  nl: () => import('./locales/operational/operational-nl.js'),
+  pt: () => import('./locales/operational/operational-pt.js'),
+}
+
+async function loadOperationalLocale(code) {
+  const load = operationalLoaders[code]
+  return load ? (await load()).default : undefined
+}
+
 const consentLoaders = {
   es: () => import('./locales/consent/consent-es.js'),
   fr: () => import('./locales/consent/consent-fr.js'),
@@ -188,7 +212,7 @@ export async function loadLocale(languageCode) {
     loadLocaleCompletion(code),
     loadConsentLocale(code),
     legalLoaders[code](),
-    import('./locales/universalOperationalTranslations.js'),
+    loadOperationalLocale(code),
     import('./adminTranslations.js'),
     import('./accountDeletionTranslations.js'),
     import('./locales/nonEnglishTranslationPacks.js'),
@@ -200,7 +224,7 @@ export async function loadLocale(languageCode) {
     fallbackLocaleCompletion,
     legalConsentTranslations,
     { default: legalPageContent },
-    { universalOperationalTranslations },
+    universalOperationalTranslations,
     { ownerRejectionTranslations },
     { accountDeletionTranslations },
     { getNonEnglishTranslationSlices },
@@ -218,7 +242,7 @@ export async function loadLocale(languageCode) {
       authenticatedTranslations,
       fallbackLocaleCompletionTranslations: fallbackLocaleCompletion,
       legalConsentTranslations,
-      universalOperationalTranslations: universalOperationalTranslations[code],
+      universalOperationalTranslations,
       adminEnglishTranslations,
       ownerRejectionTranslations: ownerRejectionTranslations[code],
       accountDeletionTranslations: accountDeletionTranslations[code],
