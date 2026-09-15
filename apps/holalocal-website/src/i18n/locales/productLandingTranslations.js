@@ -15,7 +15,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Eventos',
       title: 'Descubre qué ocurre cerca de ti.',
-      description: 'Una forma sencilla de descubrir eventos, actividades y todo lo que ocurre en tu zona.',
+      description: 'Próximamente. Una forma sencilla de descubrir eventos, actividades y todo lo que ocurre en tu zona.',
       supportingMessage: 'HolaLocal Eventos se está creando para ayudar a los organizadores locales a compartir eventos y facilitar que las personas cercanas los descubran.',
     },
     community: {
@@ -31,7 +31,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Événements',
       title: 'Découvrez ce qui se passe près de chez vous.',
-      description: 'Une façon simple de découvrir les événements, les activités et tout ce qui se passe dans votre région.',
+      description: 'Bientôt disponible. Une façon simple de découvrir les événements, les activités et tout ce qui se passe dans votre région.',
       supportingMessage: 'HolaLocal Événements est en cours de création pour aider les organisateurs locaux à partager leurs événements et permettre aux habitants de les découvrir plus facilement.',
     },
     community: {
@@ -47,7 +47,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Veranstaltungen',
       title: 'Entdecken Sie, was vor Ort passiert.',
-      description: 'Eine einfache Möglichkeit, lokale Veranstaltungen, Aktivitäten und Angebote in Ihrer Umgebung zu entdecken.',
+      description: 'Demnächst. Eine einfache Möglichkeit, lokale Veranstaltungen, Aktivitäten und Angebote in Ihrer Umgebung zu entdecken.',
       supportingMessage: 'HolaLocal Veranstaltungen wird entwickelt, damit lokale Veranstalter ihre Events teilen können und Menschen in der Nähe sie leichter finden.',
     },
     community: {
@@ -63,7 +63,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Evenementen',
       title: 'Ontdek wat er bij jou in de buurt gebeurt.',
-      description: 'Een eenvoudige manier om lokale evenementen, activiteiten en andere gebeurtenissen in jouw omgeving te ontdekken.',
+      description: 'Binnenkort. Een eenvoudige manier om lokale evenementen, activiteiten en andere gebeurtenissen in jouw omgeving te ontdekken.',
       supportingMessage: 'HolaLocal Evenementen wordt gebouwd om lokale organisatoren te helpen evenementen te delen en ze makkelijker vindbaar te maken voor mensen in de buurt.',
     },
     community: {
@@ -79,7 +79,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Eventos',
       title: 'Descubra o que acontece perto de si.',
-      description: 'Uma forma simples de descobrir eventos, atividades e tudo o que acontece na sua zona.',
+      description: 'Em breve. Uma forma simples de descobrir eventos, atividades e tudo o que acontece na sua zona.',
       supportingMessage: 'O HolaLocal Eventos está a ser desenvolvido para ajudar organizadores locais a partilhar eventos e facilitar a sua descoberta por pessoas próximas.',
     },
     community: {
@@ -95,7 +95,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Wydarzenia',
       title: 'Odkrywaj, co dzieje się w Twojej okolicy.',
-      description: 'Prosty sposób na odkrywanie lokalnych wydarzeń, aktywności i tego, co dzieje się w pobliżu.',
+      description: 'Wkrótce. Prosty sposób na odkrywanie lokalnych wydarzeń, aktywności i tego, co dzieje się w pobliżu.',
       supportingMessage: 'HolaLocal Wydarzenia powstaje, aby pomóc lokalnym organizatorom udostępniać wydarzenia i ułatwić mieszkańcom ich odkrywanie.',
     },
     community: {
@@ -111,7 +111,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Evenimente',
       title: 'Descoperă ce se întâmplă în apropiere.',
-      description: 'O modalitate simplă de a descoperi evenimente, activități și lucruri care se întâmplă în zona ta.',
+      description: 'În curând. O modalitate simplă de a descoperi evenimente, activități și lucruri care se întâmplă în zona ta.',
       supportingMessage: 'HolaLocal Evenimente este în curs de dezvoltare pentru a ajuta organizatorii locali să distribuie evenimente și pentru ca oamenii din apropiere să le descopere mai ușor.',
     },
     community: {
@@ -127,7 +127,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Události',
       title: 'Objevte, co se děje ve vašem okolí.',
-      description: 'Jednoduchý způsob, jak objevovat místní události, aktivity a dění ve vašem okolí.',
+      description: 'Již brzy. Jednoduchý způsob, jak objevovat místní události, aktivity a dění ve vašem okolí.',
       supportingMessage: 'HolaLocal Události vznikají, aby místním pořadatelům pomohly sdílet události a lidem v okolí usnadnily jejich objevování.',
     },
     community: {
@@ -143,7 +143,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Podujatia',
       title: 'Objavte, čo sa deje vo vašom okolí.',
-      description: 'Jednoduchý spôsob, ako objavovať miestne podujatia, aktivity a dianie vo vašom okolí.',
+      description: 'Už čoskoro. Jednoduchý spôsob, ako objavovať miestne podujatia, aktivity a dianie vo vašom okolí.',
       supportingMessage: 'HolaLocal Podujatia vznikajú, aby miestnym organizátorom pomohli zdieľať podujatia a ľuďom v okolí uľahčili ich objavovanie.',
     },
     community: {
@@ -159,7 +159,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Események',
       title: 'Fedezze fel, mi történik a környéken.',
-      description: 'Egyszerű módja a helyi események, programok és környékbeli történések felfedezésének.',
+      description: 'Hamarosan. Egyszerű módja a helyi események, programok és környékbeli történések felfedezésének.',
       supportingMessage: 'A HolaLocal Események azért készül, hogy segítse a helyi szervezőket eseményeik megosztásában, és megkönnyítse azok felfedezését a közelben élők számára.',
     },
     community: {
@@ -175,7 +175,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Події',
       title: 'Дізнавайтеся, що відбувається поруч.',
-      description: 'Простий спосіб знаходити місцеві події, заходи та все, що відбувається у вашому районі.',
+      description: 'Незабаром. Простий спосіб знаходити місцеві події, заходи та все, що відбувається у вашому районі.',
       supportingMessage: 'HolaLocal Події створюється, щоб допомогти місцевим організаторам ділитися подіями, а людям поблизу — легше їх знаходити.',
     },
     community: {
@@ -191,7 +191,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Eventi',
       title: 'Scopri cosa succede vicino a te.',
-      description: 'Un modo semplice per scoprire eventi, attività e tutto ciò che accade nella tua zona.',
+      description: 'Prossimamente. Un modo semplice per scoprire eventi, attività e tutto ciò che accade nella tua zona.',
       supportingMessage: 'HolaLocal Eventi è in fase di sviluppo per aiutare gli organizzatori locali a condividere gli eventi e renderli più facili da scoprire per le persone nelle vicinanze.',
     },
     community: {
@@ -207,7 +207,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Evenemang',
       title: 'Upptäck vad som händer lokalt.',
-      description: 'Ett enkelt sätt att upptäcka lokala evenemang, aktiviteter och sådant som händer i ditt område.',
+      description: 'Kommer snart. Ett enkelt sätt att upptäcka lokala evenemang, aktiviteter och sådant som händer i ditt område.',
       supportingMessage: 'HolaLocal Evenemang utvecklas för att hjälpa lokala arrangörer att dela evenemang och göra dem enklare för människor i närheten att upptäcka.',
     },
     community: {
@@ -223,7 +223,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Begivenheder',
       title: 'Opdag, hvad der sker lokalt.',
-      description: 'En enkel måde at opdage lokale begivenheder, aktiviteter og det, der sker i dit område.',
+      description: 'Kommer snart. En enkel måde at opdage lokale begivenheder, aktiviteter og det, der sker i dit område.',
       supportingMessage: 'HolaLocal Begivenheder udvikles for at hjælpe lokale arrangører med at dele begivenheder og gøre dem lettere at opdage for folk i nærheden.',
     },
     community: {
@@ -239,7 +239,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Tapahtumat',
       title: 'Tutustu lähialueesi tapahtumiin.',
-      description: 'Helppo tapa löytää paikallisia tapahtumia, aktiviteetteja ja muuta lähialueesi toimintaa.',
+      description: 'Tulossa pian. Helppo tapa löytää paikallisia tapahtumia, aktiviteetteja ja muuta lähialueesi toimintaa.',
       supportingMessage: 'HolaLocal Tapahtumat auttaa paikallisia järjestäjiä jakamaan tapahtumia ja tekee niiden löytämisestä helpompaa lähialueen ihmisille.',
     },
     community: {
@@ -255,7 +255,7 @@ export const productLandingTranslations = Object.freeze({
     events: {
       eyebrow: 'Arrangementer',
       title: 'Oppdag hva som skjer lokalt.',
-      description: 'En enkel måte å oppdage lokale arrangementer, aktiviteter og ting som skjer i området ditt.',
+      description: 'Kommer snart. En enkel måte å oppdage lokale arrangementer, aktiviteter og ting som skjer i området ditt.',
       supportingMessage: 'HolaLocal Arrangementer utvikles for å hjelpe lokale arrangører med å dele arrangementer og gjøre dem lettere å oppdage for folk i nærheten.',
     },
     community: {

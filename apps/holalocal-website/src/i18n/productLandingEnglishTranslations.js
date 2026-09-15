@@ -4,7 +4,7 @@ export const productLandingEnglishTranslations = Object.freeze({
     "events": {
       "eyebrow": "Events",
       "title": "Discover what’s happening locally.",
-      "description": "A simple way to discover local events, activities and things happening around your area.",
+      "description": "Coming soon. A simple way to discover local events, activities and things happening around your area.",
       "supportingMessage": "HolaLocal Events is being built to help local organisers share events and make them easier for nearby people to discover."
     },
     "community": {
