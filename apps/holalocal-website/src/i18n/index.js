@@ -94,6 +94,25 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 })
 
+const completionLoaders = {
+  ro: () => import('./locales/completion/completion-ro.js'),
+  pl: () => import('./locales/completion/completion-pl.js'),
+  cs: () => import('./locales/completion/completion-cs.js'),
+  sk: () => import('./locales/completion/completion-sk.js'),
+  hu: () => import('./locales/completion/completion-hu.js'),
+  uk: () => import('./locales/completion/completion-uk.js'),
+  it: () => import('./locales/completion/completion-it.js'),
+  fi: () => import('./locales/completion/completion-fi.js'),
+  sv: () => import('./locales/completion/completion-sv.js'),
+  da: () => import('./locales/completion/completion-da.js'),
+  no: () => import('./locales/completion/completion-no.js'),
+}
+
+async function loadLocaleCompletion(code) {
+  const load = completionLoaders[code]
+  return load ? (await load()).default : undefined
+}
+
 export async function loadLocale(languageCode) {
   const code = supportedLanguageCodes.includes(languageCode) ? languageCode : 'en'
   if (loadedLocales.has(code)) return code
@@ -102,7 +121,7 @@ export async function loadLocale(languageCode) {
   const loadPromise = Promise.all([
     localeLoaders[code](),
     import('./locales/authenticatedTranslations.js'),
-    import('./locales/fallbackLocaleCompletionTranslations.js'),
+    loadLocaleCompletion(code),
     import('./locales/legalConsentTranslations.js'),
     import('./locales/legalContent.js'),
     import('./locales/universalOperationalTranslations.js'),
@@ -114,7 +133,7 @@ export async function loadLocale(languageCode) {
   ]).then(([
     { default: baseLocale },
     { authenticatedTranslations },
-    { fallbackLocaleCompletionTranslations },
+    fallbackLocaleCompletion,
     { legalConsentTranslations },
     { legalPageContent },
     { universalOperationalTranslations },
@@ -133,7 +152,7 @@ export async function loadLocale(languageCode) {
       subscriptionProductTranslations: translationPacks.subscriptionProductTranslations,
       savedBusinessTranslations: translationPacks.savedBusinessTranslations,
       authenticatedTranslations: authenticatedTranslations[code],
-      fallbackLocaleCompletionTranslations: fallbackLocaleCompletionTranslations[code],
+      fallbackLocaleCompletionTranslations: fallbackLocaleCompletion,
       legalConsentTranslations: legalConsentTranslations[code],
       universalOperationalTranslations: universalOperationalTranslations[code],
       adminEnglishTranslations,
