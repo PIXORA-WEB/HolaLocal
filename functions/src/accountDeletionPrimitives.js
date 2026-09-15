@@ -197,7 +197,13 @@ export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db
     counts.attempted += 1
     try { await file.delete(); counts.deleted += 1 } catch (error) { if (storageMissing(error)) counts.alreadyMissing += 1; else counts.failed += 1 }
   }
-  if (db) await db.doc(`mediaUploadSessions/profile_${safeUid}`).delete().catch(() => undefined)
+  if (db) {
+    counts.attempted += 1
+    // Count acknowledged delete operations: Firestore also succeeds when the
+    // document is absent. A rejected delete is not evidence of absence.
+    try { await db.doc(`mediaUploadSessions/profile_${safeUid}`).delete(); counts.deleted += 1 }
+    catch { counts.failed += 1 }
+  }
   return { ok: counts.failed === 0, retryable: counts.failed > 0, counts }
 }
 

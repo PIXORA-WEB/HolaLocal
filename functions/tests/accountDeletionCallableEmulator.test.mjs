@@ -406,9 +406,12 @@ test('real callable completes customer account deletion across Firestore Storage
     assert.equal(result.blockerCode, null)
     assert.equal(result.idempotent, false)
     assert.equal(isSanitizedAccountDeletionCleanupCounts(result.cleanupCounts), true)
+    // One target Storage object plus its canonical session metadata: counts are
+    // attempted/acknowledged cleanup operations, not image bytes or records
+    // proven to have existed (an absent session delete is also acknowledged).
     assert.deepEqual(result.cleanupCounts, {
-      attempted: 1,
-      deleted: 1,
+      attempted: 2,
+      deleted: 2,
       alreadyMissing: 0,
       failed: 0,
       savedBusinessesDeleted: 1,
@@ -425,9 +428,12 @@ test('real callable completes customer account deletion across Firestore Storage
     assert.equal(request.requestVersion, completedVersion)
     assert.equal(request.leaseId, null)
     assert.equal(request.leaseExpiresAt, null)
+    // One target Storage object plus its canonical session metadata: counts are
+    // attempted/acknowledged cleanup operations, not image bytes or records
+    // proven to have existed (an absent session delete is also acknowledged).
     assert.deepEqual(request.cleanupCounts, {
-      attempted: 1,
-      deleted: 1,
+      attempted: 2,
+      deleted: 2,
       alreadyMissing: 0,
       failed: 0,
       savedBusinessesDeleted: 1,
