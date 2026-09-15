@@ -52,16 +52,16 @@ test('separate UID cleanup attempts preserve partial session progress and unrela
   failures.clear()
   assert.equal((await cleanupUserMedia({ uid: 'two', bucket: emptyBucket, db })).ok, true)
 })
-test('Storage failures and successful session deletion retain partial failure reporting', async () => {
+test('Storage failures retain the session owner and report only attempted object operations', async () => {
   const db = new FakeFirestore({ 'mediaUploadSessions/profile_target': session('target') })
   const bucket = { getFiles: async ({ prefix }) => {
     assert.equal(prefix, 'users/target/')
     return [[{ delete: async () => {} }, { delete: async () => { throw { code: 404 } } }, { delete: async () => { throw { code: 503 } } }]]
   } }
   assert.deepEqual(await cleanupUserMedia({ uid: 'target', bucket, db }), {
-    ok: false, retryable: true, counts: { attempted: 4, deleted: 2, alreadyMissing: 1, failed: 1 },
+    ok: false, retryable: true, counts: { attempted: 3, deleted: 1, alreadyMissing: 1, failed: 1 },
   })
-  assert.equal(db.data('mediaUploadSessions/profile_target'), undefined)
+  assert.deepEqual(db.data('mediaUploadSessions/profile_target'), session('target'))
 })
 test('real finalizer persists retry state before profile/Auth removal, then resumes with real cleanup', async () => {
   const stamp = Timestamp.fromMillis(1700000000000)

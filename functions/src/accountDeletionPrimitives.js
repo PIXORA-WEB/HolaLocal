@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util'
+import { hasUnsettledProfilePromotion } from './mediaUploadSessions.js'
 import { assertMediaCutover, checkMediaCutover } from './mediaCutoverControls.js'
 import { settleProfilePromotionForDeletion } from './profilePromotionCoordination.js'
 import { initialDeletionEvidenceRetention, nextRetentionDecision, requireRetentionAdmin, retentionText, validRetentionDecision } from './recordRetention.js'
@@ -192,9 +194,14 @@ export async function cleanupUserSavedBusinesses({ uid, db }) {
 
 const storageMissing = (error) => ['404', 404, 'storage/object-not-found', 'not-found'].includes(error?.code)
 export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db = null }) {
-  const safeUid = requireTrustedUid(uid); const counts = { attempted: 0, deleted: 0, alreadyMissing: 0, failed: 0 }; let files
+  const safeUid = requireTrustedUid(uid); const counts = { attempted: 0, deleted: 0, alreadyMissing: 0, failed: 0 }; let files, observedSession
+  const sessionRef = db?.doc(`mediaUploadSessions/profile_${safeUid}`)
   try {
     await settleProfilePromotionForDeletion({ db, uid: safeUid, bucket, counts })
+    observedSession = await sessionRef.get()
+    if (hasUnsettledProfilePromotion(observedSession.exists ? { ...observedSession.data(), kind: 'profile' } : null)) {
+      throw new Error('media-promotion-outcome-unresolved')
+    }
     ;[files] = await bucket.getFiles({ prefix: `users/${safeUid}/` })
   } catch { return { ok: false, retryable: true, counts: { ...counts, failed: 1 } } }
   for (const file of files) {
@@ -203,17 +210,30 @@ export async function cleanupUserMedia({ uid, bucket = getStorage().bucket(), db
     counts.attempted += 1
     try { await file.delete(); counts.deleted += 1 } catch (error) { if (storageMissing(error)) counts.alreadyMissing += 1; else counts.failed += 1 }
   }
+  // A failed required object removal must not discard its durable cleanup owner.
+  // Skipping metadata deletion is neither an attempted nor acknowledged delete.
+  if (counts.failed > 0) return { ok: false, retryable: true, counts }
   if (db) {
-    counts.attempted += 1
-    // Count acknowledged delete operations: Firestore also succeeds when the
-    // document is absent. A rejected delete is not evidence of absence.
+    let attemptedSessionDelete = false
     try {
-      await db.runTransaction(async transaction => {
+      const removed = await db.runTransaction(async transaction => {
         await assertMediaCutover(transaction, db, 'accountDeletion', safeUid)
-        transaction.delete(db.doc(`mediaUploadSessions/profile_${safeUid}`))
-      }); counts.deleted += 1
-    }
-    catch { counts.failed += 1 }
+        const fresh = await transaction.get(sessionRef)
+        const unchanged = fresh.exists === observedSession.exists
+          && (observedSession.updateTime
+            ? fresh.updateTime?.isEqual(observedSession.updateTime)
+            : isDeepStrictEqual(fresh.data(), observedSession.data()))
+        // The snapshot includes request/version, generations and cleanup evidence.
+        // Firestore updateTime additionally catches a write-and-restore (ABA).
+        if (!unchanged || hasUnsettledProfilePromotion(fresh.exists ? { ...fresh.data(), kind: 'profile' } : null)) return false
+        attemptedSessionDelete = true
+        transaction.delete(sessionRef)
+        return true
+      })
+      if (removed) counts.deleted += 1
+      else counts.failed += 1 // Changed owner: retry, without counting a delete.
+    } catch { counts.failed += 1 }
+    finally { if (attemptedSessionDelete) counts.attempted += 1 }
   }
   return { ok: counts.failed === 0, retryable: counts.failed > 0, counts }
 }

@@ -103,12 +103,13 @@ test('closed events are durably deduplicated and replay with compatible schedule
   assert.deepEqual(await cleanFinalizedStagingObject({ db, object: event, bucket }), { status: 'deferred' })
   assert.deepEqual(await cleanFinalizedStagingObject({ db, object: event, bucket }), { status: 'deferred' })
   const rows = () => [...db.store.entries()].filter(([key]) => key.startsWith(DEFERRED_STAGING_EVENTS+'/'))
-  assert.equal(rows().length, 1); assert.equal(rows()[0][1].version, 1)
+  assert.equal(rows().length, 1); assert.equal(rows()[0][1].version, 3) // Two blocked-processing evidence checkpoints.
+  assert.equal(rows()[0][1].evidence.disposition, 'blocked')
   db.store.set(MEDIA_CUTOVER_CONTROL, openCutoverControl())
   db.store.set(sessionPath, { kind: 'profile', principalUid: 'u1', requestId: 'request-12345678', state: 'uploaded', stagingPath: event.name, stagingGeneration: '12', expiresAt: new Date(Date.now()+100000) })
   await sweepExpiredMediaSessions({ db, bucket }) // already-clean session needs no Storage operation
   assert.equal(rows()[0][1].state, 'completed')
-  assert.equal(rows()[0][1].version, 2)
+  assert.equal(rows()[0][1].version, 4)
   assert.deepEqual(await cleanFinalizedStagingObject({ db, object: event, bucket }), { status: 'already-clean' })
 })
 

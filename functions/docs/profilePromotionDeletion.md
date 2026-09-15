@@ -227,3 +227,92 @@ inventory/production holds, authorized evidence-based reconciliation, and approv
 outage/backlog/indefinite-hold operator procedures. Automatic deletion recovery stays
 disabled. No production control documents, holds, reconciliation or gate changes
 were made by this implementation.
+
+## Deferred-event completion evidence (local prerequisite, not retention authority)
+
+Envelope schema 1 and pending/completed replay states remain. New transitions add
+`evidence: {schemaVersion: 1, disposition, reason, dependency, recordedAt}`.
+`recordedAt`, `updatedAt` and terminal `completedAt` use Firestore server timestamp
+transforms in the durable transition, not the handler's earlier `now` argument.
+Existing immutable event identity and raw fields are retained. Reasons are a fixed
+allowlist; no exception message or stack is stored. Record version increments on
+pending failure/block evidence as well as completion.
+
+| Disposition | Replay state | Meaning at the evidence transaction |
+| --- | --- | --- |
+| settled | completed | Actual cleaned/already-clean result, exact marker/path/generation/principal/session-version binding, fresh open control/no hold, uploaded/completed session without cleanup pending or unresolved promotion, and no exact conflict record. No known outstanding responsibility at that observation. |
+| transferred | completed | Exact bound canonical session exists in cleanup_retry with cleanupPending true; that session owns retry responsibility. This is not cleanup completion. |
+| protected | completed | Current account session has an unresolved promotion; no replay-driven settlement is authorized. Exact dependency is included only when event/session binding can be proven. |
+| unclassified | completed | Processing returned but dependency-free status was not established (including absent/replaced/unversioned session, ignored result, or removed conflict without sufficient remaining binding). Preserve conservatively. |
+| blocked | pending | Held, controls closed, or unattributable business principal. Fair replay never overrides this decision. |
+| failed | pending | Processing/control read failed. Bounded reason only; partial durable session work remains retryable. |
+
+Dependency evidence contains collection/document ID, requestId, sessionVersion,
+stagingGeneration, observedState, promotionObligation and promotedGeneration.
+Session version identifies the incarnation, not every state transition. Request and
+source generation are mandatory for a claimed handoff. A replaceable document path
+alone is never evidence of transfer. Completion reads the authoritative record and
+control/hold in its transaction; absence/replacement or missing version cannot
+produce transferred or settled. A conflict-removal return is deliberately not
+classified settled solely from success/absence. Only canonical-session cleanup_retry
+handoffs are currently classified transferred; other outcomes remain conservative.
+
+The completion write compares the event version observed by intake. Concurrent
+attempts cannot overwrite newer pending or terminal evidence. If another attempt
+wins with pending evidence, replay revisits it. A failed read/timestamp/checkpoint
+write does not complete the row. A lost successful write response is safe: duplicate
+intake and terminal short-circuit preserve the committed evidence. Pending failures
+may be recorded after closure; such checkpoints do not authorize more work.
+
+Legacy completed rows without evidence remain unmodified and unclassified; no
+backfill is performed. Known schema-1 pending rows can receive evidence on a new
+attempt. Unknown envelope/evidence schemas are deferred unchanged. API return
+statuses remain compatible and are not substitutes for the evidence record.
+A terminal protected/unclassified row does not restart destructive processing merely
+to improve its label. Later authoritative dependency settlement does not automatically
+rewrite this historical observation.
+
+Future minimization must transactionally recheck current holds/dependencies and
+approved policy, even for settled evidence. All raw fields and completed records
+remain retained. No retention period, expiry, hold release, discovery worker,
+reconciliation or administrative endpoint is added. Finite intake delivery/recovery,
+retention/minimization decisions, uncertainty inventory, old-invocation containment
+and authorized ambiguity reconciliation remain release blockers.
+
+Release/rollback: deploy evidence-aware staging intake and sweep together after the
+existing mixed-version containment prerequisites. Older envelope-schema-1 code can
+still read rows but does not create or preserve the new evidence contract for future
+transitions. Do not rely on evidence coverage while older writers remain, and do not
+treat rollback to an evidence-unaware build as preserving that coverage. The earlier
+closed-control compatibility constraints and independently disabled automatic account
+recovery remain unchanged. These observations do not prove remote copy termination.
+
+### Preserving a transferred owner during account media cleanup
+
+Required Storage failure now stops canonical-session deletion. The entire session,
+including request/version, exact generations and cleanup evidence, remains intact.
+The completed/transferred event is not reactivated; scheduled exact-generation
+cleanup can retry its retained owner. Repeated failures retain that owner, and the
+existing successful sweep deletes it only after its cleanup targets settle.
+Successful account media cleanup retains normal session-removal behavior.
+
+Account cleanup snapshots the session after promotion settlement and before listing
+objects. Its removal transaction rechecks controls/holds and the observed document
+identity: Firestore updateTime protects request/version/generation/evidence changes
+and write-and-restore races; adapter snapshots compare the full data. Changed or
+new unresolved sessions are preserved and return retryable incompleteness. This
+is not permission to admit a new upload during deletion and does not cancel issued
+Storage operations.
+
+Counts describe operations: skipped session deletion after Storage failure adds no
+attempt or acknowledgement. A changed session detected before a delete also adds
+no delete attempt, but adds a failure so callers cannot complete deletion. An
+actually attempted metadata deletion remains counted once across transaction retries;
+a rejected delete is retryable, not confirmed absence. A successful acknowledged
+delete, including of an absent document, retains the existing count contract.
+
+This extends the release surface to account-deletion cleanup as well as staging
+writers. The handoff contract requires the preserving cleanup implementation; an
+older cleanup binary can still discard the owner after Storage failure. Containment
+of old invocations remains necessary. No retention, recovery or reconciliation
+blocker is cleared by this correction.

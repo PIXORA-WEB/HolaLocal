@@ -29,21 +29,40 @@ export async function cleanFinalizedStagingObject(args) {
   const parsed = parseStagingMediaPath(object?.name)
   if (!parsed || !object?.generation) return { status: 'ignored' }
   const retained = await retainStagingEvent({ db, object, marker: uploadSessionMarker(object), now })
+  if (retained.work.schemaVersion !== 1
+    || (retained.work.evidence != null && retained.work.evidence.schemaVersion !== 1)
+    || !Number.isSafeInteger(retained.work.version)
+    || retained.work.version < 1) return { status: 'deferred' }
   if (retained.work.state === 'completed') return { status: 'already-clean' }
+  if (retained.work.state !== 'pending') return { status: 'deferred' }
   let uid
+  const evidence = extra => finishStagingEvent({ db, ref: retained.ref,
+    expectedVersion: retained.work.version, parsed, object,
+    marker: uploadSessionMarker(object), uid, ...extra })
   try {
     uid = await stagingAccount(db, parsed)
     await checkStagingWork(db, uid)
-  } catch { return { status: 'deferred' } }
+  } catch (error) {
+    const failure = !uid ? 'unattributable' : error?.message === 'media-cutover-held' ? 'held'
+      : error?.message === 'media-cutover-closed' ? 'controls-closed' : 'control-read-failed'
+    await evidence({ failure })
+    return { status: 'deferred' }
+  }
   const checked = operation => async input => {
     await checkStagingWork(db, uid)
     return operation(input)
   }
-  const result = await processFinalizedStagingObject({ ...args,
-    clean: checked(args.clean ?? cleanStagingGeneration),
-    remove: checked(args.remove ?? deleteExactGeneration),
-  })
-  await finishStagingEvent({ db, ref: retained.ref, now })
+  let result
+  try {
+    result = await processFinalizedStagingObject({ ...args,
+      clean: checked(args.clean ?? cleanStagingGeneration),
+      remove: checked(args.remove ?? deleteExactGeneration),
+    })
+  } catch (error) {
+    await evidence({ failure: 'processing-failed' })
+    throw error
+  }
+  await evidence({ result })
   return result
 }
 

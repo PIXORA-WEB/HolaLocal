@@ -1,8 +1,8 @@
-import { FieldPath } from 'firebase-admin/firestore'
+import { FieldPath, FieldValue } from 'firebase-admin/firestore'
 import { createHash } from 'node:crypto'
 import { HttpsError } from 'firebase-functions/v2/https'
-import { checkMediaCutover } from './mediaCutoverControls.js'
-import { businessSessionId, MEDIA_SESSION_COLLECTION } from './mediaUploadSessions.js'
+import { assertMediaCutover, checkMediaCutover } from './mediaCutoverControls.js'
+import { businessSessionId, profileSessionId, hasUnsettledProfilePromotion, CONFLICTING_STAGING_CLEANUP_COLLECTION, MEDIA_SESSION_COLLECTION } from './mediaUploadSessions.js'
 export const DEFERRED_STAGING_EVENTS = 'mediaStagingDeferredEvents'
 
 export async function stagingAccount(db, parsed) {
@@ -34,11 +34,73 @@ export async function retainStagingEvent({ db, object, marker, now }) {
   return { ref, work }
 }
 
-export async function finishStagingEvent({ db, ref, now }) {
-  await db.runTransaction(async transaction => {
+// Evidence is observational, never a deletion/minimization authorization.
+// Old completed records remain unclassified; never infer/backfill their outcome.
+export async function finishStagingEvent({ db, ref, expectedVersion, parsed, object,
+  marker, uid, result = null, failure = null }) {
+  return db.runTransaction(async transaction => {
     const current = (await transaction.get(ref)).data()
-    if (!current || current.state === 'completed') return
-    transaction.update(ref, { state: 'completed', version: current.version + 1, updatedAt: now })
+    if (!current || current.schemaVersion !== 1 || current.state !== 'pending'
+      || (current.evidence != null && current.evidence.schemaVersion !== 1)
+      || !Number.isSafeInteger(current.version) || current.version !== expectedVersion) return false
+    let disposition = 'failed', reason = failure ?? 'processing-failed', dependency = null
+    let state = 'pending'
+    if (result) {
+      const sessionId = parsed.kind === 'profile' ? profileSessionId(parsed.uid)
+        : businessSessionId(parsed.businessId, parsed.kind, parsed.slot ?? null)
+      const session = (await transaction.get(db.doc(`${MEDIA_SESSION_COLLECTION}/${sessionId}`))).data()
+      // Control/hold reads serialize classification with new restrictions. Evidence
+      // of a closed/held result is safe to persist; unavailable reads abort instead.
+      let blocked = null
+      try { await assertMediaCutover(transaction, db, 'stagingProcessing', uid) }
+      catch (error) {
+        if (error?.message === 'media-cutover-held') blocked = 'held'
+        else if (error?.message === 'media-cutover-closed') blocked = 'controls-closed'
+        else throw error
+      }
+      disposition = 'unclassified'; reason = 'unproven-responsibility'; state = 'completed'
+      const identityMatches = current.object?.name === object.name
+        && String(current.object?.generation) === String(object.generation)
+        && (current.object?.bucket ?? null) === (object.bucket ?? null)
+        && (current.object?.metadata?.holalocalUploadSession ?? null) === marker
+      const bound = identityMatches && session && session.principalUid === uid && typeof marker === 'string' && session.requestId === marker
+        && session.stagingPath === object.name && String(session.stagingGeneration) === String(object.generation)
+        && Number.isSafeInteger(session.version) && session.version >= 1
+      if (blocked) { disposition = 'blocked'; reason = blocked; state = 'pending' }
+      else if (!bound && hasUnsettledProfilePromotion(session)) {
+        disposition = 'protected'; reason = 'promotion-unresolved'
+      } else if (bound) {
+        dependency = { collection: MEDIA_SESSION_COLLECTION, documentId: sessionId,
+          requestId: session.requestId, sessionVersion: session.version,
+          stagingGeneration: String(session.stagingGeneration), observedState: session.state,
+          promotionObligation: session.promotionObligation ?? null,
+          promotedGeneration: session.promotedGeneration == null ? null : String(session.promotedGeneration) }
+        if (hasUnsettledProfilePromotion(session)) {
+          disposition = 'protected'; reason = 'promotion-unresolved'
+        } else if (session.state === 'cleanup_retry' && session.cleanupPending === true) {
+          disposition = 'transferred'; reason = 'session-cleanup-retry'
+        } else {
+          const conflict = (await transaction.get(db.doc(`${CONFLICTING_STAGING_CLEANUP_COLLECTION}/${marker}_${object.generation}`))).data()
+          if (!conflict && session.cleanupPending !== true
+            && ['uploaded', 'completed'].includes(session.state)
+            && ['cleaned', 'already-clean'].includes(result.status)) {
+            disposition = 'settled'; reason = 'no-known-outstanding-responsibility'; dependency = null
+          }
+        }
+      }
+    } else if (['held', 'controls-closed', 'unattributable'].includes(reason)) {
+      disposition = 'blocked'
+    }
+    if (!['processing-failed', 'held', 'controls-closed',
+      'unattributable', 'control-read-failed', 'unproven-responsibility', 'promotion-unresolved',
+      'session-cleanup-retry', 'no-known-outstanding-responsibility'].includes(reason)) {
+      throw new Error('invalid-staging-evidence-reason')
+    }
+    const stamp = FieldValue.serverTimestamp()
+    transaction.update(ref, { state, version: current.version + 1,
+      evidence: { schemaVersion: 1, disposition, reason, dependency, recordedAt: stamp },
+      ...(state === 'completed' ? { completedAt: stamp } : {}), updatedAt: stamp })
+    return true
   })
 }
 
