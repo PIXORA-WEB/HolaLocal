@@ -316,3 +316,136 @@ writers. The handoff contract requires the preserving cleanup implementation; an
 older cleanup binary can still discard the owner after Storage failure. Containment
 of old invocations remains necessary. No retention, recovery or reconciliation
 blocker is cleared by this correction.
+
+## Discovery-only staging intake observations (local, non-executable)
+
+`stagingIntakeDiscovery.js` exports an injected core only. It is not imported by
+`index.js` and adds no callable, scheduler, production CLI or gate. It has no default
+Firebase client or Storage adapter. Explicit scope must have schemaVersion 1,
+mode `observe-only`, an explicit bucket name, and prefix `users/` or `businesses/`.
+Missing/malformed scope or unsupported adapter protocol fails closed. No object
+mutation, cleanup processing, promotion settlement or hold release is invoked.
+
+The injected `staging-live-inventory-v1` adapter accepts bucket, prefix, opaque
+pageToken, maxResults 25 and inventoryMode `live-only`. Its response must echo
+protocol/bucket/prefix/mode, contain at most 25 items and an explicit null-or-bounded
+nextPageToken. Every item must carry its exact bucket/path/string generation and
+metadata from that generation. No latest-generation lookup/substitution is made.
+Malformed responses, duplicate identities/live names, oversized pages or nonprogressing
+tokens fail without advancing. Only recognized paths from the shared contract become
+candidates. Unrecognized paths are durably counted as skipped in the page checkpoint.
+
+This is an injected adapter contract, NOT a verified Google Storage listing adapter.
+Production page-token lifetime, traversal under deletion/insertion, generation-bound
+metadata and live-versus-version inventory semantics must be verified before adding
+one. The tests model these behaviors; emulator Firestore acceptance does not establish
+Storage inventory coverage. A rejected/expired token remains blocked: no automatic
+reset conceals an incomplete cycle. Remote rewrites and unlisted/noncurrent/deleted
+objects remain outside this discovery evidence.
+
+### Candidate schema and attribution
+
+`mediaStagingDiscoveryCandidates/{hash(bucket,path,generation)}` is separate from
+`mediaStagingDeferredEvents`. Shared `stagingEventIdentity` preserves the existing
+intake hash exactly. Candidates have schemaVersion/version, state `observation-only`,
+executable false, exact object identity, validated marker or null, markerStatus,
+fixed provenance, firstObservedAt and a bounded observation. Raw metadata and
+exception text are not stored. Markers use the existing promotion request syntax;
+missing/invalid markers are not repaired or inferred. Once a marker change is
+observed, uncertainty remains latched even if the original value reappears.
+
+Observations include session binding category, exact-intake state/disposition,
+nullable-bucket-intake presence, hold presence, protected-promotion/cleanup indicators,
+scan revision and observation interval. Verified binding requires matching marker,
+path, source generation, session version, kind/slot/business identity and valid
+principal (also matching the path UID for profiles). Only verified bindings include
+principal/request/session-version/generation dependency identity. Current business
+ownership is never queried as a substitute. Released hold records are still reported
+as present: this is not an authorization decision. Absence is `no-record-observed`,
+not account-deletion safety. Missing fields or unresolved provenance remain uncertain.
+
+Null-bucket legacy intake is read under its original distinct hash and reported as
+`present-unresolved-bucket`; no equivalence to the explicit bucket is assumed. Live
+intake rows, their dispositions and canonical ownership records are never changed.
+An intake state is only a transaction-time observation: a live event can arrive
+later. Normal replay queries only the deferred collection, never candidates.
+
+### Atomic bounded scan progress
+
+`maintenanceProgress/stagingDiscovery_{scopeHash}` records schema, exact scope,
+protocol, revision, cycle number, opaque page token, cycleStartedAt and the latest
+page's requestStartedAt/receivedAt/server recordedAt, counts and endObserved flag.
+The local request/receive interval records what the scanner observed, not an atomic
+bucket snapshot or exact object lifetime. Server time records persistence only.
+There is no claim that all missed events were recovered, even at endObserved.
+
+One call reads progress and fetches one bounded page. One Firestore transaction
+rechecks the revision and reads all relevant candidates, exact and nullable intake,
+sessions and attributable holds before writing any candidate and the checkpoint.
+At most 25 candidates plus one progress document are written atomically. Maximum
+transaction document reads are 1 + 5 per recognized item (126), plus the initial
+progress read; SDK transaction retries may repeat those reads. Stale scanners write
+nothing. Failed page/commit attempts do not advance. A lost commit response is safe
+because the next invocation reads persisted progress. Unknown progress/candidate
+schemas stop rather than overwrite evidence.
+
+At an observed end, the next explicit invocation starts a new cycle with null token.
+Objects inserted behind a traversal boundary require a later cycle; concurrent
+uploads and deleted boundaries depend on the adapter's verified token semantics.
+Fair coverage assumes repeated invocations, functioning persistence and a provider
+traversal that reaches an end. There is no deadline or unattended worker here.
+Candidates retain first identity/provenance, versioned latest observations and the
+bounded historical evidence described below; page histories are not accumulated. No custom Firestore index is needed (all
+reads are by document ID). Existing rules' default deny applies to candidates and
+progress, including client-admin claims. Trusted local setup is separate.
+
+### Outstanding decisions
+
+A separate authorization/processing contract is required before any candidate can
+be acted upon. Discovery creates no cleanup owner and proves neither rewrite
+termination nor promotion settlement. Candidate/progress retention and minimization,
+production intake recovery coverage, operator authority/escalation, old-invocation
+containment, uncertainty inventory and authorized ambiguity reconciliation remain
+open. No retention duration, TTL, deletion, production backfill or automatic account
+recovery activation is introduced. This local core is a prerequisite, not release
+readiness or a production recovery mechanism.
+
+### Repeat-scan evidence preservation
+
+Discovery candidate schema 2 separates `observation` (latest transaction-time
+observation) from `history` (schema 1, historical observations only). Neither is
+current authorization, ownership, remote-copy termination or cleanup authority.
+Session absence/replacement does not prove that an earlier obligation settled.
+
+History retains the first **four distinct exact bindings** in first-seen order.
+Each entry contains the previously verified session ID, request, session version,
+principal, source generation, optional observed destination path/generation checkpoint,
+and sticky protection/cleanup-observed flags. Equality is by explicit identity
+fields, independent of Firestore map-key order. Repeated identical observations
+merge flags without adding entries. Global sticky flags retain protection, cleanup,
+hold and nullable-bucket uncertainty even when no binding can be established.
+The finite set of observed intake categories also survives later absence. These
+flags mean “observed previously, not resolved by discovery,” not “currently active.”
+
+A different binding or contradictory/missing later binding sets `conflict`. Marker
+changes remain sticky as before. On a fifth distinct binding, `overflow` and
+`conflict` latch; existing entries are never evicted. The latest observation still
+records the new binding, but later scans may replace that latest observation.
+Thus overflow explicitly means the record cannot enumerate all observed bindings;
+inspection must not treat the retained set as complete. Discovery cannot resolve
+conflicts or clear these flags. Storage is bounded to four binding entries, seven
+possible intake categories and fixed flags, plus one latest observation; no growing
+history, counter of conflicts, raw exception or arbitrary metadata is introduced.
+
+Schema-1 candidates can preserve their surviving latest observation on upgrade,
+with `priorHistoryUnknown: true`: already erased history cannot be reconstructed.
+New candidates start with that flag false; this is not a claim about pre-discovery
+history. Unknown/incompatible history schemas stop the atomic page commit. All
+history and latest observations commit with the existing revision-protected scan
+checkpoint, using the same transactional session/intake/hold reads and work bounds.
+
+Schema-1 discovery writers reject schema-2 candidates and must not be used to write
+this format. Readers must distinguish historical evidence from latest state and
+respect overflow/prior-history limits. No deployed consumer or processing path is
+added. This does not resolve retention/minimization, failed-intake recovery,
+production inventory semantics, operator inspection, cutover or reconciliation.

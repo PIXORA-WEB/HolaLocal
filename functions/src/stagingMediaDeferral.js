@@ -17,9 +17,13 @@ export async function checkStagingWork(db, uid) {
   await checkMediaCutover({ db, scope: 'stagingProcessing', uid })
 }
 
+export function stagingEventIdentity(object) {
+  return createHash('sha256').update(JSON.stringify([object.bucket ?? null, object.name, String(object.generation)])).digest('hex')
+}
+
 export async function retainStagingEvent({ db, object, marker, now }) {
   if (!db) throw new HttpsError('failed-precondition', 'media-cutover-closed')
-  const id = createHash('sha256').update(JSON.stringify([object.bucket ?? null, object.name, String(object.generation)])).digest('hex')
+  const id = stagingEventIdentity(object)
   const ref = db.doc(`${DEFERRED_STAGING_EVENTS}/${id}`)
   const work = await db.runTransaction(async transaction => {
     const snapshot = await transaction.get(ref)
