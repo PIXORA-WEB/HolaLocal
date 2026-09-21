@@ -294,13 +294,19 @@
   margin-top: 0.9rem;
 }
 
-.business-detail__gallery img {
+.business-detail__gallery img,
+.business-detail__gallery-placeholder {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   border: 1px solid var(--line);
   border-radius: 0.85rem;
   background: #eef2f7;
+}
+
+.business-detail__gallery-placeholder {
+  display: grid;
+  place-items: center;
 }
 
 .business-detail__empty--panel {

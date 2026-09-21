@@ -20,6 +20,7 @@ function SavedBusinessIcon() {
 function BusinessDetailPanel({
   business,
   messaging,
+  mediaLoading = false,
   onBack,
   onContactAction,
   onMessage,
@@ -139,7 +140,15 @@ function BusinessDetailPanel({
       <section className="business-detail__section" id="business-photos">
         <p className="account-card__eyebrow">{t('publicBusinessDetail.photos')}</p>
         <h2>{t('publicBusinessDetail.workGallery')}</h2>
-        {business.galleryUrls.length > 0 ? (
+        {mediaLoading && business.galleryStoragePaths.length > 0 ? (
+          <div className="business-detail__gallery" aria-busy="true" aria-label={t('common.loading')}>
+            {business.galleryStoragePaths.map((path) => (
+              <div className="business-detail__gallery-placeholder" key={path}>
+                {t('common.loading')}
+              </div>
+            ))}
+          </div>
+        ) : business.galleryUrls.length > 0 ? (
           <div className="business-detail__gallery">
             {business.galleryUrls.map((url, index) => (
               <img

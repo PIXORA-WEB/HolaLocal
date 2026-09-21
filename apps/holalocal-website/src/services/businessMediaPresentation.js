@@ -42,10 +42,11 @@ function safeLegacyEntry(url, businessId, kind) {
     : null
 }
 
-export async function resolveBusinessMediaPresentation(
+// Apply the same path/legacy URL filtering without downloading canonical media.
+export function prepareBusinessMediaPresentation(
   businessId,
   business,
-  { resolveCanonicalUrl: resolver = defaultCanonicalUrlResolver, includeGallery = true } = {},
+  { includeGallery = true, canonicalGallery = [], canonicalLogo = null } = {},
 ) {
   const logoStoragePath = isCanonicalBusinessLogoPath(business?.logoStoragePath, businessId)
     ? business.logoStoragePath : null
@@ -54,30 +55,6 @@ export async function resolveBusinessMediaPresentation(
       isCanonicalBusinessGalleryPath(path, businessId) && paths.indexOf(path) === index
     ))
     : []
-  const canonicalGallery = (await Promise.all((includeGallery ? galleryStoragePaths : []).map(async (storagePath) => {
-    try {
-      return Object.freeze({
-        downloadUrl: (await resolveCanonicalUrl(storagePath, resolver)).url,
-        kind: 'canonical',
-        storagePath,
-      })
-    } catch {
-      return null
-    }
-  }))).filter(Boolean)
-  let canonicalLogo = null
-  if (logoStoragePath) {
-    try {
-      canonicalLogo = Object.freeze({
-        downloadUrl: (await resolveCanonicalUrl(logoStoragePath, resolver)).url,
-        kind: 'canonical',
-        storagePath: logoStoragePath,
-      })
-    } catch {
-      canonicalLogo = null
-    }
-  }
-
   const legacy = legacyCandidates(business)
   const legacyLogo = safeLegacyEntry(legacy.logo, businessId, 'logo')
   const seen = new Set(canonicalGallery.map(({ storagePath }) => storagePath))
@@ -101,6 +78,56 @@ export async function resolveBusinessMediaPresentation(
     legacyGalleryEntries: Object.freeze([...legacyGallery]),
     galleryUrls: Object.freeze(galleryEntries.map(({ downloadUrl }) => downloadUrl)),
   }
+}
+
+export async function resolveBusinessMediaPresentation(
+  businessId,
+  business,
+  { resolveCanonicalUrl: resolver = defaultCanonicalUrlResolver, includeGallery = true, signal } = {},
+) {
+  const { logoStoragePath, galleryStoragePaths } = prepareBusinessMediaPresentation(businessId, business)
+  // Progressive detail requests own their URLs. The route-wide cache can be
+  // cleared while these downloads are still running; it must not own them.
+  const ownedPresentations = new Set()
+  signal?.addEventListener('abort', () => {
+    for (const presentation of ownedPresentations) presentation.revoke?.()
+    ownedPresentations.clear()
+  }, { once: true })
+  async function resolveUrl(storagePath) {
+    if (!signal) return resolveCanonicalUrl(storagePath, resolver)
+    signal.throwIfAborted()
+    const presentation = await resolver(storagePath)
+    if (signal.aborted) {
+      presentation.revoke?.()
+      signal.throwIfAborted()
+    }
+    ownedPresentations.add(presentation)
+    return presentation
+  }
+  const canonicalGallery = (await Promise.all((includeGallery ? galleryStoragePaths : []).map(async (storagePath) => {
+    try {
+      return Object.freeze({
+        downloadUrl: (await resolveUrl(storagePath)).url,
+        kind: 'canonical',
+        storagePath,
+      })
+    } catch {
+      return null
+    }
+  }))).filter(Boolean)
+  let canonicalLogo = null
+  if (logoStoragePath) {
+    try {
+      canonicalLogo = Object.freeze({
+        downloadUrl: (await resolveUrl(logoStoragePath)).url,
+        kind: 'canonical',
+        storagePath: logoStoragePath,
+      })
+    } catch {
+      canonicalLogo = null
+    }
+  }
+  return prepareBusinessMediaPresentation(businessId, business, { includeGallery, canonicalGallery, canonicalLogo })
 }
 
 // In-place refreshes may still display prior URLs until new metadata arrives.

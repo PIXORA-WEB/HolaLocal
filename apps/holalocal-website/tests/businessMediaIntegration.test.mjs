@@ -361,3 +361,51 @@ test('in-place cache refresh retains displayed URLs until route disposal', async
   await Promise.resolve()
   assert.deepEqual(revoked.sort(), ['blob:revision-1', 'blob:revision-2'])
 })
+
+
+test('progressive detail releases late URLs and does not start the next media stage after abort', async () => {
+  const controller = new AbortController(), calls = [], revoked = []
+  let finish
+  const pending = resolveBusinessMediaPresentation(businessId, {
+    logoStoragePath: `businesses/${businessId}/logos/logo/a`,
+    galleryStoragePaths: [`businesses/${businessId}/photos/0/a`],
+  }, { signal: controller.signal, resolveCanonicalUrl: path => {
+    calls.push(path)
+    return new Promise(resolve => { finish = () => resolve({ url: 'blob:late', revoke: () => revoked.push('late') }) })
+  } })
+  controller.abort()
+  finish()
+  await pending
+  assert.equal(calls.length, 1)
+  assert.deepEqual(revoked, ['late'])
+})
+
+test('progressive detail URL lifetime belongs to its request, not another route or request', async () => {
+  const a = new AbortController(), b = new AbortController(), revoked = []
+  const input = { logoStoragePath: `businesses/${businessId}/logos/logo/a` }
+  const resolve = (controller, label) => resolveBusinessMediaPresentation(businessId, input, {
+    signal: controller.signal,
+    resolveCanonicalUrl: async () => ({ url: `blob:${label}`, revoke: () => revoked.push(label) }),
+  })
+  const first = await resolve(a, 'a'), second = await resolve(b, 'b')
+  clearBusinessMediaPresentationCache()
+  await Promise.resolve()
+  assert.deepEqual(revoked, [])
+  assert.equal(first.logoUrl, 'blob:a'); assert.equal(second.logoUrl, 'blob:b')
+  a.abort(); a.abort()
+  assert.deepEqual(revoked, ['a'])
+  b.abort()
+  assert.deepEqual(revoked, ['a', 'b'])
+})
+
+test('progressive detail retains fallback feedback and skips downloads for an already stale request', async () => {
+  const controller = new AbortController()
+  controller.abort()
+  const result = await resolveBusinessMediaPresentation(businessId, {
+    name: 'Available text', logoStoragePath: `businesses/${businessId}/logos/logo/a`,
+    galleryStoragePaths: [`businesses/${businessId}/photos/0/a`], logoUrl: legacy('logos'),
+  }, { signal: controller.signal, resolveCanonicalUrl: () => { throw Error('Must not start') } })
+  assert.equal(result.name, 'Available text')
+  assert.equal(result.logoUrl, legacy('logos'))
+  assert.deepEqual(result.galleryUrls, [])
+})

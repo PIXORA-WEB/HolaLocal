@@ -18,6 +18,7 @@ import BusinessReportDialog from '../components/common/BusinessReportDialog.jsx'
 import PublicBusinessCard from '../components/common/PublicBusinessCard.jsx'
 import ServiceCategoryIcon from '../components/common/ServiceCategoryIcon.jsx'
 import useAuthentication from '../hooks/useAuthentication.js'
+import { resolveBusinessMediaPresentation } from '../services/businessMediaPresentation.js'
 import { getActivePublicBusinesses, getPublicBusinessById } from '../services/publicBusinessService.js'
 import { getOrCreateConversationForBusiness } from '../services/conversationService.js'
 import { createBusinessReport } from '../services/reportService.js'
@@ -58,6 +59,7 @@ function ServicesPage() {
   const [error, setError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [detail, setDetail] = useState({ key: null, business: null, status: 'loading' })
+  const [detailMedia, setDetailMedia] = useState(null)
   const detailKey = `${businessId ?? ''}:${loadAttempt}`
   const detailStatus = detail.key === detailKey ? detail.status : 'loading'
   const [authPromptReason, setAuthPromptReason] = useState(null)
@@ -136,15 +138,27 @@ function ServicesPage() {
 
   useEffect(() => {
     if (!businessId) return undefined
-    let isCurrent = true
+    const controller = new AbortController()
+    const { signal } = controller
     getPublicBusinessById(businessId)
       .then((business) => {
-        if (isCurrent) setDetail({ key: detailKey, business, status: business ? 'ready' : 'unavailable' })
+        if (signal.aborted) return
+        setDetail({ key: detailKey, business, status: business ? 'ready' : 'unavailable' })
+        if (!business) return
+        // Only optional media waits for downloads. Keep the authoritative
+        // response separate so a late media result cannot replace newer text.
+        void resolveBusinessMediaPresentation(businessId, business, { signal })
+          .then((presentation) => {
+            if (!signal.aborted) setDetailMedia({ business, presentation, signal })
+          })
+          .catch(() => {
+            if (!signal.aborted) setDetailMedia({ business, presentation: business, signal })
+          })
       })
       .catch(() => {
-        if (isCurrent) setDetail({ key: detailKey, business: null, status: 'error' })
+        if (!signal.aborted) setDetail({ key: detailKey, business: null, status: 'error' })
       })
-    return () => { isCurrent = false }
+    return () => controller.abort()
   }, [businessId, detailKey])
 
   function retryDirectoryLoad() {
@@ -172,13 +186,23 @@ function ServicesPage() {
     query: serviceQuery,
     searchTerm,
   }), [businesses, language, locationFilter, searchTerm, serviceQuery, taxonomyLabel])
+  const activeDetailMedia = detailMedia?.business === detail.business && !detailMedia.signal.aborted
+    ? detailMedia.presentation : null
   const selectedBusiness = useMemo(() => {
     const business = detail.key === detailKey ? detail.business : null
     return business ? {
       ...business,
+      // Media completion cannot overwrite authoritative fields or their identity.
+      logoUrl: activeDetailMedia?.logoUrl ?? business.logoUrl,
+      galleryUrls: activeDetailMedia?.galleryUrls ?? business.galleryUrls,
+      galleryEntries: activeDetailMedia?.galleryEntries ?? business.galleryEntries,
+      legacyGalleryEntries: activeDetailMedia?.legacyGalleryEntries ?? business.legacyGalleryEntries,
       category: getPublicBusinessPrimaryServiceLabel(business, taxonomyLabel),
     } : null
-  }, [detail, detailKey, taxonomyLabel])
+  }, [detail, detailKey, activeDetailMedia, taxonomyLabel])
+  const detailMediaLoading = Boolean(selectedBusiness && !activeDetailMedia && (
+    selectedBusiness.logoStoragePath || selectedBusiness.galleryStoragePaths.length
+  ))
   const canSaveBusinesses = Boolean(
     user
     && !profileLoading
@@ -429,6 +453,7 @@ function ServicesPage() {
           <>
             {messagingError && <p className="form-message form-message--error" role="alert">{messagingError}</p>}
             <BusinessDetailPanel
+              mediaLoading={detailMediaLoading}
               ratingSummary={customerReviewsEnabled ? <ReviewRatingSummary summary={summaries[businessId]} /> : null}
               reviews={customerReviewsEnabled ? <CustomerReviews key={`${businessId}:${user?.uid ?? "anonymous"}:${currentLocation.key}`} api={customerReviewService} businessId={businessId} user={user} profile={userProfile} onMutation={refreshSummaries} /> : null}
               business={selectedBusiness}

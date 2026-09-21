@@ -17,7 +17,7 @@ export async function load(url, context, next) {
 }
 `)}`, import.meta.url)
 const { getFeaturedActiveBusinesses, getPublicBusinessById, getActivePublicBusinesses } = await import(process.env.HOLALOCAL_FEATURED_BASELINE === '1' ? '../src/services/businessService.js' : '../src/services/publicBusinessService.js')
-const { clearBusinessMediaPresentationCache } = await import('../src/services/businessMediaPresentation.js')
+const { clearBusinessMediaPresentationCache, resolveBusinessMediaPresentation } = await import('../src/services/businessMediaPresentation.js')
 const business = (id) => ({ businessId: id, name: id, profileComplete: true,
   logoStoragePath: `businesses/${id}/logos/logo`, galleryStoragePaths: [0, 1].map(n => `businesses/${id}/photos/${n}`) })
 let calls, data
@@ -73,7 +73,9 @@ test('failed logo retains legacy/initials fallback and retries',async()=>{
 test('card then detail resolves full galleries without poisoning the cache',async()=>{
   fixture([business('one')]);const card=(await home())[0]
   assert.equal(calls.length,1)
-  const detail=await getPublicBusinessById('one')
+  const information=await getPublicBusinessById('one')
+  assert.equal(information.galleryUrls.length,0);assert.equal(calls.length,1)
+  const detail=await resolveBusinessMediaPresentation('one',information)
   assert.equal(detail.galleryUrls.length,2);assert.equal(detail.logoUrl,card.logoUrl);assert.equal(calls.length,3)
   assert.equal((await getActivePublicBusinesses(60))[0].galleryUrls.length,2);assert.equal(calls.length,3)
 })
@@ -81,7 +83,7 @@ test('detail then card shares live URLs and preserves deferred revocation',async
   fixture([business('one')]);const revoke=URL.revokeObjectURL, retired=[]
   URL.revokeObjectURL=(url)=>{retired.push(url);revoke(url)}
   try {
-    const detail=await getPublicBusinessById('one');const card=(await home())[0]
+    const detail=await resolveBusinessMediaPresentation('one',await getPublicBusinessById('one'));const card=(await home())[0]
     assert.equal(card.logoUrl,detail.logoUrl);assert.equal(calls.length,3);assert.deepEqual(retired,[])
     clearBusinessMediaPresentationCache({deferRevocation:true});await Promise.resolve();assert.deepEqual(retired,[])
     const fresh=(await home())[0];assert.notEqual(fresh.logoUrl,card.logoUrl)
@@ -108,4 +110,23 @@ test('exact public reads preserve null, not-found and transport error distinctio
     globalThis.featuredFixture.detail=async()=>{throw Object.assign(new Error('synthetic transport'),{code})}
     await assert.rejects(getPublicBusinessById('one'),error=>error.code===code)
   }
+})
+
+test('public detail returns filtered information without starting canonical downloads', async () => {
+  fixture([{ ...business('one'), description: 'Fresh text', contact: { phone: 'fixture' },
+    logoStoragePath: 'businesses/one/logos/logo/a',
+    galleryStoragePaths: ['businesses/one/photos/0/a', 'businesses/other/photos/0/a'],
+    logoUrl: 'https://untrusted.invalid/logo', galleryUrls: ['https://untrusted.invalid/gallery'],
+    profilePhoto: { downloadUrl: 'https://untrusted.invalid/photo' },
+  }])
+  globalThis.featuredFixture.blob = () => { throw Error('Detail text must not start media') }
+  const detail = await getPublicBusinessById('one')
+  assert.equal(detail.description, 'Fresh text')
+  assert.deepEqual(detail.contact, { phone: 'fixture' })
+  assert.equal(detail.logoStoragePath, 'businesses/one/logos/logo/a')
+  assert.deepEqual(detail.galleryStoragePaths, ['businesses/one/photos/0/a'])
+  assert.equal(detail.logoUrl, null)
+  assert.deepEqual(detail.galleryUrls, [])
+  assert.equal('profilePhoto' in detail, false)
+  assert.equal(calls.length, 0)
 })

@@ -1,6 +1,6 @@
 // Public callable reads; managed Firestore operations belong to businessService.js.
 import { getPublicBusinessCallable, listPublicBusinessesCallable } from '../firebase/functionsClient.js'
-import { resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
+import { prepareBusinessMediaPresentation, resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
 import { loadPublicBusinessDirectory } from './publicBusinessDirectoryLoader.js'
 
 async function presentBusiness(business, mediaOptions) {
@@ -41,7 +41,10 @@ export async function getFeaturedActiveBusinesses(maxResults = 60, dependencies 
 export async function getPublicBusinessById(businessId) {
   try {
     const result = await getPublicBusinessCallable({ businessId })
-    return presentBusiness(result.data?.business ?? null)
+    const business = result.data?.business ?? null
+    return business?.businessId
+      ? prepareBusinessMediaPresentation(business.businessId, business)
+      : business
   } catch (error) {
     if (error?.code?.includes('not-found')) return null
     throw error
