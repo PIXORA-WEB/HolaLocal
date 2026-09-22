@@ -55,10 +55,10 @@
 .directory-business-card h3 {
   margin: 0;
   color: var(--brand-navy);
-  font-size: 1.15rem;
-  font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: -.025em;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: normal;
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -68,9 +68,9 @@
 
 .directory-business-card__category {
   margin: .4rem 0 0;
-  font-size: .72rem;
+  font-size: .8125rem;
   font-weight: 750;
-  line-height: 1.4;
+  line-height: 1.5;
   color: #954509;
   overflow-wrap: anywhere;
 }
@@ -78,7 +78,7 @@
 .directory-business-card__excerpt {
   margin: 0;
   color: var(--muted);
-  font-size: .875rem;
+  font-size: 1rem;
   line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -93,7 +93,7 @@
   display: grid;
   gap: .45rem;
   align-content: start;
-  font-size: .8rem;
+  font-size: .875rem;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -133,10 +133,11 @@
   gap: 1rem;
   padding-top: .85rem;
   border-top: 1px solid #e8edf3;
-  font-size: .85rem;
+  font-size: .9375rem;
   font-weight: 750;
   color: var(--brand-blue);
   overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 
 .directory-business-card__footer > span {
@@ -150,7 +151,7 @@
   background: rgb(37 189 73 / 11%);
   padding: .2rem .5rem;
   border-radius: .5rem;
-  font-size: .68rem;
+  font-size: .75rem;
   line-height: 1.5;
   font-weight: 700;
   overflow-wrap: anywhere;

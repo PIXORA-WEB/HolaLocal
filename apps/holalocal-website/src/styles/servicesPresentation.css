@@ -17,9 +17,10 @@
   border-radius: 0.65rem;
   color: var(--brand-blue);
   background: white;
-  font-size: .85rem;
+  font-size: .9375rem;
   font-weight: 800;
   cursor: pointer;
+  line-height: 1.4;
 }
 
 .business-detail__hero {
@@ -49,7 +50,7 @@
 .business-detail__identity p {
   margin: 0 0 0.3rem;
   color: #954509;
-  font-size: 0.72rem;
+  font-size: .8125rem;
   font-weight: 800;
   text-transform: uppercase;
   line-height: 1.5;
@@ -59,17 +60,19 @@
 .business-detail__identity h1 {
   margin: 0;
   color: var(--brand-navy);
-  font-size: clamp(1.7rem, 3.4vw, 2.75rem);
-  letter-spacing: -0.04em;
+  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+  letter-spacing: normal;
   overflow-wrap: anywhere;
-  line-height: 1.17;
+  line-height: 1.2;
+  font-weight: 700;
 }
 
 .business-detail__identity > span {
   display: block;
   margin-top: 0.4rem;
   color: #64748b;
-  font-size: 0.85rem;
+  font-size: .9375rem;
+  line-height: 1.5;
 }
 
 .business-detail__badges {
@@ -84,11 +87,12 @@
   border-radius: 999px;
   color: #475569;
   background: #f1f5f9;
-  font-size: 0.65rem;
+  font-size: .75rem;
   font-weight: 800;
   text-transform: capitalize;
   max-width: 100%;
   overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 
 .business-detail__badges .is-active,
@@ -101,7 +105,7 @@
   grid-column: 1 / -1;
   margin: 0;
   color: #64748b;
-  font-size: 0.75rem;
+  font-size: .875rem;
   line-height: 1.5;
 }
 
@@ -145,7 +149,9 @@
 .business-detail__actions .button {
   min-height: 2.75rem;
   margin: 0;
-  font-size: .85rem;
+  font-size: 1rem;
+  line-height: 1.4;
+  font-weight: 600;
 }
 
 .business-detail__save {
@@ -213,14 +219,14 @@
   margin: 0.3rem 0 0;
   color: var(--brand-navy);
   font-size: 1.15rem;
-  letter-spacing: -0.025em;
+  letter-spacing: normal;
 }
 
 .business-detail__section > p:last-child {
   margin: 0.65rem 0 0;
   color: #64748b;
-  font-size: 0.875rem;
-  line-height: 1.65;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .business-detail__facts,
@@ -246,17 +252,19 @@
 .business-detail__facts dt,
 .business-detail__contact dt {
   color: #64748b;
-  font-size: 0.68rem;
+  font-size: .8125rem;
   font-weight: 800;
   text-transform: uppercase;
+  line-height: 1.5;
 }
 
 .business-detail__facts dd,
 .business-detail__contact dd {
   margin: 0;
   color: var(--ink);
-  font-size: 0.875rem;
+  font-size: 1rem;
   overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 
 .business-detail__contact a {
@@ -371,7 +379,7 @@
   font-size: 1.15rem;
   color: var(--brand-navy);
   margin: 0 0 .85rem;
-  letter-spacing: -.02em;
+  letter-spacing: normal;
   overflow-wrap: anywhere;
 }
 
