@@ -28,13 +28,16 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 1.25rem;
   align-items: center;
-  padding: 0;
+  padding: 1.25rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
   margin: 1rem 0 1.5rem;
 }
 
 .image-avatar--business-detail {
-  width: 6.5rem;
-  height: 6.5rem;
+  width: 7.5rem;
+  height: 7.5rem;
   border-radius: 1.25rem;
   font-size: 2rem;
   box-shadow: 0 3px 12px rgb(16 40 72 / 5%);
@@ -70,7 +73,7 @@
 .business-detail__identity > span {
   display: block;
   margin-top: 0.4rem;
-  color: #64748b;
+  color: #52667a;
   font-size: .9375rem;
   line-height: 1.5;
 }
@@ -104,7 +107,7 @@
 .business-detail__disclosure {
   grid-column: 1 / -1;
   margin: 0;
-  color: #64748b;
+  color: #52667a;
   font-size: .875rem;
   line-height: 1.5;
 }
@@ -400,7 +403,7 @@
 }
 @media (min-width: 48rem) {
   .services-results__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .image-avatar--business-detail { width: 8.5rem; height: 8.5rem; font-size: 2.5rem; }
+  .image-avatar--business-detail { width: 10rem; height: 10rem; font-size: 2.5rem; }
 }
 @media (min-width: 64rem) {
   .business-detail__columns { grid-template-columns: minmax(0, 1fr) 20rem; }

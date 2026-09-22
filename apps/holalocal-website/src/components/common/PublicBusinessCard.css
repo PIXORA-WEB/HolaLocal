@@ -28,6 +28,11 @@
   align-items: center;
   gap: 1rem;
   min-width: 0;
+  margin: -1.25rem -1.25rem 0;
+  padding: 1.25rem;
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--line);
+  border-radius: 1.25rem 1.25rem 0 0;
 }
 
 .directory-business-card__identity > div:last-child {
@@ -35,9 +40,9 @@
 }
 
 .directory-business-card__identity > .image-avatar {
-  width: 4.5rem;
-  height: 4.5rem;
-  flex: 0 0 4.5rem;
+  width: 5.5rem;
+  height: 5.5rem;
+  flex: 0 0 5.5rem;
   border: 1px solid #dce3ec;
   border-radius: 1rem;
   background: #f3f6fa;
@@ -169,6 +174,6 @@
 
 @media (max-width: 35rem) {
   .directory-business-card { padding: 1.1rem; }
-  .directory-business-card__identity { gap: .85rem; }
-  .directory-business-card__identity > .image-avatar { width: 4rem; height: 4rem; flex-basis: 4rem; }
+  .directory-business-card__identity { gap: .75rem; margin: -1.1rem -1.1rem 0; padding: 1.1rem; }
+  .directory-business-card__identity > .image-avatar { width: clamp(4rem, 20vw, 4.5rem); height: clamp(4rem, 20vw, 4.5rem); flex-basis: clamp(4rem, 20vw, 4.5rem); }
 }
