@@ -22,7 +22,9 @@ export async function getActivePublicBusinesses(maxResults = 60, dependencies = 
     callPublicBusinesses: dependencies.callPublicBusinesses ?? listPublicBusinessesCallable,
     fallbackBusiness: dependencies.fallbackBusiness ?? ((business) => presentBusinessWithoutCanonicalMedia(business, dependencies.mediaOptions)),
     maxResults: resultLimit,
-    presentBusiness: dependencies.presentBusiness ?? ((business) => presentBusiness(business, dependencies.mediaOptions)),
+    presentBusiness: dependencies.presentBusiness ?? (dependencies.deferMedia
+      ? ((business) => prepareBusinessMediaPresentation(business.businessId, business, dependencies.mediaOptions))
+      : ((business) => presentBusiness(business, dependencies.mediaOptions))),
     selectBusinesses: dependencies.selectBusinesses,
     timeoutMs: dependencies.timeoutMs,
   })

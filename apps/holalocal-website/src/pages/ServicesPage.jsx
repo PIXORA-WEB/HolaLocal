@@ -51,13 +51,29 @@ function ServicesPage() {
   const navigate = useNavigate()
   const { businessId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [businesses, setBusinesses] = useState([])
+  const [directoryRows, setDirectoryRows] = useState([])
+  const [directoryMedia, setDirectoryMedia] = useState(null)
   const [summaryAttempt, setSummaryAttempt] = useState(0)
   const refreshSummaries = useCallback(() => setSummaryAttempt(value => value + 1), [])
-  const summaries = useReviewSummaries(businessId ? [businessId] : businesses.map(row => row.businessId), summaryAttempt)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
+  // A new request renders retained text with safe placeholders before the old
+  // effect releases its URLs. Never retain a blob URL in authoritative rows.
+  const directoryRequest = useMemo(() => ({ businessId, loadAttempt, t }), [businessId, loadAttempt, t])
+  const businesses = useMemo(() => directoryRows.map((business) => {
+    const media = directoryMedia?.request === directoryRequest
+      && directoryMedia.rows === directoryRows
+      ? directoryMedia.presentations.get(business) : null
+    return media ? {
+      ...business,
+      logoUrl: media.logoUrl,
+      galleryUrls: media.galleryUrls,
+      galleryEntries: media.galleryEntries,
+      legacyGalleryEntries: media.legacyGalleryEntries,
+    } : business
+  }), [directoryRows, directoryMedia, directoryRequest])
+  const summaries = useReviewSummaries(businessId ? [businessId] : businesses.map(row => row.businessId), summaryAttempt)
   const [detail, setDetail] = useState({ key: null, business: null, status: 'loading' })
   const [detailMedia, setDetailMedia] = useState(null)
   const detailKey = `${businessId ?? ''}:${loadAttempt}`
@@ -118,23 +134,40 @@ function ServicesPage() {
 
   useEffect(() => {
     if (businessId) return undefined
-    let isCurrent = true
+    const controller = new AbortController()
+    const { signal } = controller
 
-    getActivePublicBusinesses()
-      .then((activeBusinesses) => {
-        if (isCurrent) setBusinesses(activeBusinesses)
+    getActivePublicBusinesses(60, { deferMedia: true })
+      .then((rows) => {
+        if (signal.aborted) return
+        setDirectoryRows(rows)
+        setDirectoryMedia({ request: directoryRequest, rows, presentations: new Map() })
+        setLoading(false)
+        for (const business of rows) {
+          void resolveBusinessMediaPresentation(business.businessId, business, { signal })
+            .then((presentation) => {
+              if (signal.aborted) return
+              setDirectoryMedia((current) => {
+                if (signal.aborted || current?.request !== directoryRequest || current.rows !== rows) return current
+                const presentations = new Map(current.presentations)
+                presentations.set(business, presentation)
+                return { ...current, presentations }
+              })
+            })
+            // The resolver handles per-image failures using existing fallbacks.
+            // An unexpected media failure must also leave the prepared cards usable.
+            .catch(() => undefined)
+        }
       })
       .catch(() => {
-        if (isCurrent) setError(t('services.loadError'))
+        if (!signal.aborted) setError(t('services.loadError'))
       })
       .finally(() => {
-        if (isCurrent) setLoading(false)
+        if (!signal.aborted) setLoading(false)
       })
 
-    return () => {
-      isCurrent = false
-    }
-  }, [businessId, loadAttempt, t])
+    return () => controller.abort()
+  }, [businessId, directoryRequest, t])
 
   useEffect(() => {
     if (!businessId) return undefined
