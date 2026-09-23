@@ -105,7 +105,13 @@ function MessagesPage() {
       (items) => {
         const currentRequest = requestId + 1
         requestId = currentRequest
-        enrichConversationSummaries(items, getParticipantBusinessContext)
+        // Reconcile membership/order without unmounting compatible keyed rows.
+        dispatchInbox({ type: 'snapshotReceived', items, userId: user.uid })
+        enrichConversationSummaries(items, getParticipantBusinessContext, (summaries, settledIds) => {
+          if (active && currentRequest === requestId) {
+            dispatchInbox({ type: 'loadProgress', items: summaries, settledIds, userId: user.uid })
+          }
+        })
           .then((summaries) => {
             if (active && currentRequest === requestId) {
               dispatchInbox({
@@ -130,6 +136,7 @@ function MessagesPage() {
           })
       },
       (loadError) => {
+        requestId += 1
         if (active) {
           dispatchInbox({
             type: 'loadFailed',
@@ -410,9 +417,10 @@ function MessagesPage() {
             <h2 ref={conversationListHeadingRef} tabIndex="-1">{t('messages.conversations')}</h2>
             <span>{conversations.length}</span>
           </header>
-          {inboxStatus === 'loading' ? (
+          {inboxStatus === 'loading' && (
             <LoadingScreen message={t('messages.loadingConversations')} />
-          ) : inboxStatus === 'failed' ? (
+          )}
+          {inboxStatus === 'failed' ? (
             <div className="conversation-list__empty">
               <p>{t('messages.errors.loadConversations')}</p>
             </div>
@@ -453,6 +461,9 @@ function MessagesPage() {
               ))}
             </nav>
           ) : null}
+          {inboxStatus === 'enriching' && (
+            <LoadingScreen message={t('messages.loadingConversations')} />
+          )}
         </aside>
 
         <section className="conversation-view">
