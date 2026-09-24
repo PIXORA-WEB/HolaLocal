@@ -25,7 +25,7 @@ import {
 } from '../firebase/functionsClient.js'
 import { db } from '../firebase/firestoreClient.js'
 import { createApplicationError } from '../utils/frontendErrors.js'
-import { resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
+import { prepareBusinessMediaPresentation, resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
 
 const MAX_MESSAGES = 100
 
@@ -102,11 +102,13 @@ export async function getConversationForUser(conversationId, userId) {
   return { conversationId: snapshot.id, ...conversation }
 }
 
-export async function getParticipantBusinessContext(conversationId) {
+export async function getParticipantBusinessContext(conversationId, { deferMedia = false } = {}) {
   const result = await getConversationBusinessContextCallable({ conversationId })
   const context = result.data?.businessContext ?? null
   return context?.businessId
-    ? resolveBusinessMediaPresentation(context.businessId, context)
+    ? (deferMedia
+      ? prepareBusinessMediaPresentation(context.businessId, context)
+      : resolveBusinessMediaPresentation(context.businessId, context))
     : context
 }
 

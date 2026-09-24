@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -23,6 +23,7 @@ import {
   subscribeToConversationsForUser,
   subscribeToMessages,
 } from '../services/conversationService.js'
+import { resolveBusinessMediaPresentation } from '../services/businessMediaPresentation.js'
 import { conversationParticipantPresentation } from '../utils/conversationPresentation.js'
 import { classifyFrontendError } from '../utils/frontendErrors.js'
 import {
@@ -74,6 +75,10 @@ function MessagesPage() {
   const [success, setSuccess] = useState('')
   const [inboxAttempt, setInboxAttempt] = useState(0)
   const [conversationAttempt, setConversationAttempt] = useState(0)
+  const [conversationMedia, setConversationMedia] = useState(null)
+  // Project stale media out during render before effect cleanup revokes its URLs.
+  const conversationRequest = useMemo(() => ({ conversationId, userId: user.uid, conversationAttempt, t }),
+    [conversationId, user.uid, conversationAttempt, t])
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [originalMessageIds, setOriginalMessageIds] = useState(() => new Set())
   const activeInboxState = selectInboxView(inboxState, user.uid)
@@ -84,7 +89,7 @@ function MessagesPage() {
   } = activeInboxState
   const activeConversationState = selectConversationView(conversationState, conversationId)
   const {
-    business,
+    business: validatedBusiness,
     conversation,
     draft: messageText,
     error: conversationError,
@@ -93,6 +98,10 @@ function MessagesPage() {
     messages,
     sending,
   } = activeConversationState
+  const business = validatedBusiness && conversationMedia?.request === conversationRequest
+    && conversationMedia.business === validatedBusiness
+    ? { ...validatedBusiness, logoUrl: conversationMedia.logoUrl }
+    : validatedBusiness
   const error = conversationId ? conversationError : inboxError
 
   useEffect(() => {
@@ -164,12 +173,13 @@ function MessagesPage() {
     }
 
     let active = true
+    const controller = new AbortController()
     let unsubscribe = () => undefined
     dispatchConversation({ type: 'loadStarted', conversationId })
 
     Promise.all([
       getConversationForUser(conversationId, user.uid),
-      getParticipantBusinessContext(conversationId),
+      getParticipantBusinessContext(conversationId, { deferMedia: true }),
     ])
       .then(([loadedConversation, loadedBusiness]) => {
         if (!active) return
@@ -215,6 +225,15 @@ function MessagesPage() {
             }
           },
         )
+        // Document and validated context have both succeeded. Optional media
+        // cannot delay subscription or change eligibility/history state.
+        void resolveBusinessMediaPresentation(loadedBusiness.businessId, loadedBusiness, { signal: controller.signal })
+          .then((presentation) => {
+            if (active) setConversationMedia({
+              request: conversationRequest, business: loadedBusiness, logoUrl: presentation.logoUrl,
+            })
+          })
+          .catch(() => undefined)
       })
       .catch((loadError) => {
         if (active) {
@@ -232,8 +251,9 @@ function MessagesPage() {
     return () => {
       active = false
       unsubscribe()
+      controller.abort()
     }
-  }, [conversationAttempt, conversationId, t, user.uid])
+  }, [conversationAttempt, conversationId, conversationRequest, t, user.uid])
 
   useEffect(() => {
     const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
