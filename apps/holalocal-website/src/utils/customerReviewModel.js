@@ -40,11 +40,22 @@ export function createReviewController({api,businessId,ownOnly=false,authenticat
     if(state.loading)return
     const e=++epoch;emit({loading:true,error:'',...(more?{}:{cursor:null})})
     try {
-      const result=await (ownOnly?api.listOwn({cursor:more?state.cursor:null}):api.listPublic({businessId,cursor:more?state.cursor:null}))
+      const publicRead=ownOnly?api.listOwn({cursor:more?state.cursor:null}):api.listPublic({businessId,cursor:more?state.cursor:null})
+      // Observe own-read failures immediately, even if the public read fails first.
+      // Publish public data first and retain public-error precedence.
+      const ownRead=authenticated&&!ownOnly
+        ? Promise.resolve().then(()=>api.getOwn({businessId})).then(value=>({value}),error=>({failed:true,error}))
+        : null
+      const result=await publicRead
       if(!valid(e))return
       const items=[...(more?state.items:[]),...result.items]
       emit({items:[...new Map(items.map(item=>[item.publicReviewId,item])).values()],cursor:result.nextCursor})
-      if(authenticated&&!ownOnly){const own=await api.getOwn({businessId});if(valid(e))emit({own})}
+      if(ownRead){
+        const own=await ownRead
+        if(!valid(e))return
+        if(own.failed)throw own.error
+        emit({own:own.value})
+      }
     }catch(error){if(valid(e))emit({error:reviewError(error),...(reviewError(error)==='refresh'?{items:[],cursor:null}:{})})}
     finally{if(valid(e))emit({loading:false,ready:true})}
   }
