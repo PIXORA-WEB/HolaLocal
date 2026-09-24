@@ -1,6 +1,6 @@
 import AnalyticsConsent from '../components/common/AnalyticsConsent.jsx'
 import { lazy, Suspense, useLayoutEffect } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, matchPath, useLocation, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import AuthLayout from '../components/layout/AuthLayout.jsx'
 import MetadataManager from '../components/common/MetadataManager.jsx'
@@ -56,7 +56,10 @@ function RouteLoadingFallback() {
 
 function BusinessMediaPresentationCleanup() {
   const { pathname } = useLocation()
-  useLayoutEffect(() => () => clearBusinessMediaPresentationCache(), [pathname])
+  // The inbox stays mounted while navigating between Messages conversations.
+  const mediaScope = matchPath('/messages', pathname) || matchPath('/messages/:conversationId', pathname)
+    ? '/messages' : pathname
+  useLayoutEffect(() => () => clearBusinessMediaPresentationCache(), [mediaScope])
   return null
 }
 
