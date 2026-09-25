@@ -55,7 +55,7 @@ function MessagesPage() {
   const { conversationId } = useParams()
   const navigate = useNavigate()
   const { user, userProfile } = useAuthentication()
-  const messagesEndRef = useRef(null)
+  const messageListRef = useRef(null)
   const conversationListHeadingRef = useRef(null)
   const mobileBackRef = useRef(null)
   const readMarkersRef = useRef(new Set())
@@ -256,8 +256,11 @@ function MessagesPage() {
   }, [conversationAttempt, conversationId, conversationRequest, t, user.uid])
 
   useEffect(() => {
+    const history = messageListRef.current
+    if (!history || messages.length === 0) return
+
     const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-    messagesEndRef.current?.scrollIntoView({ behavior })
+    history.scrollTo({ top: history.scrollHeight, behavior })
   }, [messages])
 
   useEffect(() => {
@@ -265,7 +268,7 @@ function MessagesPage() {
 
     const frame = window.requestAnimationFrame(() => {
       const focusTarget = conversationId ? mobileBackRef.current : conversationListHeadingRef.current
-      focusTarget?.focus()
+      focusTarget?.focus({ preventScroll: true })
     })
     return () => window.cancelAnimationFrame(frame)
   }, [conversationId, conversationLoadStatus])
@@ -550,6 +553,7 @@ function MessagesPage() {
                 aria-live="polite"
                 aria-relevant="additions"
                 className="message-list"
+                ref={messageListRef}
                 role="log"
               >
                 {messages.length > 0 ? messages.map((message) => {
@@ -595,7 +599,7 @@ function MessagesPage() {
                     <span>{t('messages.startConversation')}</span>
                   </li>
                 )}
-                <li aria-hidden="true" className="message-list__end" ref={messagesEndRef} />
+                <li aria-hidden="true" className="message-list__end" />
               </ol>
 
               {!business.profileAvailable && (
