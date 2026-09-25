@@ -8,8 +8,9 @@ export function safeActionContinue(value) {
   if (typeof value !== 'string' || !value.startsWith('https://www.holalocal.es/') || [...value].some(char => char === '\\' || char.charCodeAt(0) <= 32)) return '/login'
   try {
     // Validate the original encoding before URLSearchParams can normalize it.
-    // Discard decoded text: only the original URL is parsed for navigation.
-    decodeURIComponent(value)
+    // Consume the validation result so production compression retains decoding.
+    // The decoded text is never parsed or used as the navigation destination.
+    if (!decodeURIComponent(value).startsWith('https://www.holalocal.es/')) return '/login'
     const url = new URL(value)
     if (url.origin !== 'https://www.holalocal.es' || url.username || url.password) return '/login'
     const path = decodeURIComponent(url.pathname)

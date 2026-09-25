@@ -59,5 +59,36 @@ test('valid continuation encodings preserve existing navigation semantics', () =
     ['/profile?next=%2Fservices%3Fx%3D1%26y%3D2', '/profile?next=%2Fservices%3Fx%3D1%26y%3D2'],
     ['/profile?literal=%25ZZ', '/profile?literal=%25ZZ'],
     ['/profile#%252F%252Fevil.example', '/profile#%252F%252Fevil.example'],
-  ]) assert.equal(safeActionContinue(`https://www.holalocal.es${input}`), expected)
+  ]) {
+    const continuation = `https://www.holalocal.es${input}`
+    assert.equal(safeActionContinue(continuation), expected)
+    const outer = new URLSearchParams({ mode: 'verifyEmail', oobCode: 'synthetic-code', apiKey: 'fixture-key', continueUrl: continuation })
+    assert.equal(parseEmailAction(`?${outer}`, 'fixture-key').destination, expected)
+  }
+})
+
+// Exercise the page parser after production compression, not only source helpers.
+test('production compressor preserves nested continuation validation', async () => {
+  const { minifySync } = await import('rolldown/utils')
+  const vm = await import('node:vm')
+  const source = fs.readFileSync(new URL('../src/utils/emailActionModel.js', import.meta.url), 'utf8')
+  const script = source.replace(/export /g, '') + ';globalThis.parse = parseEmailAction;'
+  const context = { URL, URLSearchParams, decodeURIComponent }
+  vm.runInNewContext(minifySync('emailActionModel.js', script, {}).code, context)
+  const check = (continuation, expected) => {
+    const outer = new URLSearchParams({ mode: 'verifyEmail', oobCode: 'synthetic-code', apiKey: 'fixture-key', continueUrl: continuation })
+    assert.equal(context.parse(`?${outer}`, 'fixture-key').destination, expected)
+  }
+  for (const bad of ['%ZZ', '%', '%A', '%FF', '%E0%A4']) {
+    for (const suffix of [`/profile/${bad}`, `/profile?ok=1&next=${bad}&last=2`, `/profile#${bad}`]) check(`https://www.holalocal.es${suffix}`, '/login')
+  }
+  for (const [suffix, expected] of [
+    ['/profile', '/profile'], ['/profile/a%20b', '/profile/a%20b'],
+    ['/profile?name=%D0%A2', '/profile?name=%D0%A2'],
+    ['/profile?next=%2Fservices%3Fx%3D1', '/profile?next=%2Fservices%3Fx%3D1'],
+    ['/profile#hello%20world', '/profile#hello%20world'],
+    ['/profile#%D0%A2', '/profile#%D0%A2'],
+    ['/profile?literal=%25ZZ', '/profile?literal=%25ZZ'],
+  ]) check(`https://www.holalocal.es${suffix}`, expected)
+  for (const url of ['http://www.holalocal.es/profile', 'https://holalocal.es/profile', 'https://evil.holalocal.es/profile', 'https://www.holalocal.es.evil.example/profile', 'https://www.holalocal.es@evil.example/profile', 'https://user:pass@www.holalocal.es/profile', 'https://www.holalocal.es:444/profile', '//www.holalocal.es/profile', 'javascript:alert(1)', 'data:text/plain,x', 'http://localhost:19041/profile']) check(url, '/login')
 })
