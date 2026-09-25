@@ -19,6 +19,7 @@ import { clearBusinessMediaPresentationCache } from '../services/businessMediaPr
 const AdminCustomerReviewsPage = lazy(() => import('../pages/admin/AdminCustomerReviewsPage.jsx'))
 const MyReviewsPage = lazy(() => import('../pages/customer/MyReviewsPage.jsx'))
 const CompleteProfilePage = lazy(() => import('../pages/auth/CompleteProfilePage.jsx'))
+const EmailActionPage = lazy(() => import('../pages/auth/EmailActionPage.jsx'))
 const ForgotPasswordPage = lazy(() => import('../pages/auth/ForgotPasswordPage.jsx'))
 const LoginPage = lazy(() => import('../pages/auth/LoginPage.jsx'))
 const LegalConsentPage = lazy(() => import('../pages/auth/LegalConsentPage.jsx'))
@@ -116,6 +117,10 @@ function AppRoutes() {
               </Route>
             </Route>
           </Route>
+        </Route>
+
+        <Route element={<AuthLayout />}>
+          <Route path="auth/action" element={<EmailActionPage />} />
         </Route>
 
         <Route element={<PublicRoute />}>

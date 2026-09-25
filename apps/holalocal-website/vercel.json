@@ -14,6 +14,7 @@
     { "source": "/privacy", "destination": "/index.html" },
     { "source": "/terms", "destination": "/index.html" },
 
+    { "source": "/auth/action", "destination": "/index.html" },
     { "source": "/login", "destination": "/index.html" },
     { "source": "/sign-in", "destination": "/index.html" },
     { "source": "/register", "destination": "/index.html" },
