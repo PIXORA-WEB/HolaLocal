@@ -655,8 +655,8 @@ function MessagesPage() {
             <h2 id="remove-conversation-title">{t('messages.removeTitle')}</h2>
             <button aria-label={t('common.close')} disabled={hiding} onClick={() => setConfirmRemove(false)} type="button">×</button>
           </header>
-          <p id="remove-conversation-description">{t('messages.removeDescription')}</p>
-          <div className="profile-edit-form__actions">
+          <p className="confirmation-dialog__description" id="remove-conversation-description">{t('messages.removeDescription')}</p>
+          <div className="confirmation-dialog__actions">
             <button className="button button--secondary" disabled={hiding} onClick={() => setConfirmRemove(false)} type="button">{t('common.cancel')}</button>
             <button className="button button--primary" disabled={hiding} onClick={() => void handleHideConversation()} type="button">{hiding ? t('messages.removing') : t('messages.remove')}</button>
           </div>
