@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile, readdir } from 'node:fs/promises'
 import test from 'node:test'
+import postcss from 'postcss'
 import { SERVICE_TAXONOMY_GROUPS } from '../../../shared/firebase-contract/index.js'
 
 const homeUrl = new URL('../src/pages/HomePage.jsx', import.meta.url)
@@ -511,16 +512,156 @@ test('homepage hero search stacks narrowly and uses normal two-region flow on wi
   assert.ok(contentPosition < formPosition && formPosition < actionsPosition)
 })
 
-test('homepage hero keeps its responsive picture scene visible at tablet and mobile widths', async () => {
-  const styles = await readFile(stylesUrl, 'utf8')
-  const tabletStart = styles.indexOf('@media (max-width: 71.999rem)')
-  const mobileStart = styles.indexOf('@media (max-width: 47.999rem)', tabletStart)
-  const tabletStyles = styles.slice(tabletStart, mobileStart)
-  const mobileStyles = styles.slice(mobileStart)
-
+// Parse only the approved exception; keep the original broad mobile protections
+// on the remaining CSS. Compare declarations, not serialization/ordering.
+function assertShortMobileHeroSpacing(styles, source) {
+  const root = postcss.parse(styles)
+  const exceptions = []
+  root.walkAtRules('media', (rule) => {
+    const conditions = rule.params.toLowerCase().replace(/\s+/g, '').split('and').sort()
+    if (JSON.stringify(conditions) === JSON.stringify(['(max-height:50rem)', '(max-width:47.999rem)'])) {
+      exceptions.push(rule)
+    }
+  })
+  assert.equal(exceptions.length, 1, 'one short-mobile spacing exception is required')
+  const exception = exceptions[0]
+  assert.equal(exception.parent, root, 'exception must not acquire another enclosing condition')
+  const expected = {
+    '.marketing-hero__inner': { gap: '0.75rem', 'padding-block': '1rem' },
+    '.marketing-hero .marketing-actions': { 'margin-top': '0' },
+  }
+  const rules = exception.nodes.filter(node => node.type !== 'comment')
+  assert.equal(rules.length, 2)
+  const seen = new Set()
+  for (const rule of rules) {
+    assert.equal(rule.type, 'rule')
+    const selector = rule.selector.trim().replace(/\s+/g, ' ')
+    assert.ok(Object.hasOwn(expected, selector), `unapproved selector: ${selector}`)
+    assert.ok(!seen.has(selector), 'duplicate hero override')
+    seen.add(selector)
+    const declarations = rule.nodes.filter(node => node.type !== 'comment')
+    assert.equal(declarations.length, Object.keys(expected[selector]).length)
+    const values = {}
+    for (const declaration of declarations) {
+      assert.equal(declaration.type, 'decl')
+      assert.ok(!declaration.important)
+      assert.ok(!Object.hasOwn(values, declaration.prop), 'duplicate property')
+      values[declaration.prop] = declaration.value.trim()
+    }
+    // Exact allowlist excludes typography, negative margins, positioning,
+    // viewport dimensions, custom-property workarounds and control changes.
+    assert.deepEqual(values, expected[selector])
+  }
+  exception.remove()
+  // Catch a generic phone override wherever it is placed, not just near the
+  // existing responsive section (the legacy source-slice checks below).
+  root.walkAtRules('media', (media) => {
+    const width = media.params.match(/max-width\s*:\s*([\d.]+)(rem|px)/i)
+    if (!width || Number(width[1]) * (width[2].toLowerCase() === 'rem' ? 16 : 1) > 768) return
+    media.walkRules(rule => assert.doesNotMatch(rule.selector, /\.marketing-hero(?:__|\b)|\.marketing-actions/))
+  })
+  const remaining = root.toString()
+  const tabletStart = remaining.indexOf('@media (max-width: 71.999rem)')
+  const mobileStart = remaining.indexOf('@media (max-width: 47.999rem)', tabletStart)
+  assert.ok(tabletStart >= 0 && mobileStart > tabletStart)
+  const tabletStyles = remaining.slice(tabletStart, mobileStart)
+  const mobileStyles = remaining.slice(mobileStart)
   assert.doesNotMatch(tabletStyles, /\.marketing-hero__scene|height: min\(|top: auto|opacity:/)
   assert.doesNotMatch(mobileStyles, /\.marketing-hero__scene\s*\{[\s\S]*?display: none;/)
-  assert.doesNotMatch(mobileStyles, /\.marketing-hero__(?:content|lead)|\.marketing-hero h1|\.marketing-actions/)
+  assert.doesNotMatch(mobileStyles, /\.marketing-hero(?:__|\b)|\.marketing-actions/)
+  assert.equal(source.match(/<section className="marketing-hero">/g)?.length, 1)
+  assert.doesNotMatch(source, /innerHeight|visualViewport|ResizeObserver|addEventListener\s*\(\s*['"]resize['"]|useLayoutEffect/)
+}
+
+test('homepage hero keeps its scene and typography with only the short-mobile spacing exception', async () => {
+  assertShortMobileHeroSpacing(await readFile(stylesUrl, 'utf8'), await readFile(homeUrl, 'utf8'))
+})
+
+// Mutation targets are found through parsed nodes, never source indentation.
+function shortMobileMutationTargets(styles) {
+  const root = postcss.parse(styles)
+  const media = []
+  root.walkAtRules('media', rule => {
+    const conditions = rule.params.toLowerCase().replace(/\s+/g, '').split('and').sort()
+    if (JSON.stringify(conditions) === JSON.stringify(['(max-height:50rem)', '(max-width:47.999rem)'])) media.push(rule)
+  })
+  assert.equal(media.length, 1)
+  const findRule = selector => {
+    const matches = media[0].nodes.filter(node => node.type === 'rule'
+      && node.selector.trim().replace(/\s+/g, ' ') === selector)
+    assert.equal(matches.length, 1)
+    return matches[0]
+  }
+  return { root, media: media[0], actions: findRule('.marketing-hero .marketing-actions'), inner: findRule('.marketing-hero__inner') }
+}
+
+function changeMediaCondition(media, feature, value) {
+  const conditions = media.params.split(/\band\b/i).map(condition => {
+    const match = condition.match(/^\s*\(\s*([\w-]+)\s*:\s*([^)]*)\)\s*$/)
+    assert.ok(match)
+    return [match[1].toLowerCase(), match[2].trim()]
+  })
+  assert.equal(conditions.filter(([name]) => name === feature).length, 1)
+  media.params = conditions.flatMap(([name, oldValue]) => name === feature && value === null
+    ? [] : [`(${name}: ${name === feature ? value : oldValue})`]).join(' and ')
+}
+
+test('short-mobile hero protection rejects semantic mutations even after harmless reformatting', async (t) => {
+  const styles = await readFile(stylesUrl, 'utf8')
+  const source = await readFile(homeUrl, 'utf8')
+  const mutations = [
+    ['generic mobile override', ({ root, actions }) => {
+      root.append(postcss.atRule({ name: 'media', params: '(max-width: 47.999rem)' })
+        .append(actions.clone({ selector: '.marketing-actions' })))
+    }],
+    ['negative CTA margin', ({ actions }) => {
+      const margins = actions.nodes.filter(node => node.type === 'decl' && node.prop === 'margin-top')
+      assert.equal(margins.length, 1)
+      margins[0].value = '-1rem'
+    }],
+    ...[
+      ['font shrinking', 'font-size', '0.5rem'],
+      ['absolute positioning', 'position', 'absolute'],
+      ['fixed positioning', 'position', 'fixed'],
+      ['vh sizing', 'height', '100vh'],
+      ['dvh sizing', 'min-height', '100dvh'],
+      ['svh sizing', 'height', '100svh'],
+    ].map(([name, prop, value]) => [name, ({ actions }) => actions.append(postcss.decl({ prop, value }))]),
+    ['broader width', ({ media }) => changeMediaCondition(media, 'max-width', '80rem')],
+    ['broader height', ({ media }) => changeMediaCondition(media, 'max-height', '60rem')],
+    ['missing height limit', ({ media }) => changeMediaCondition(media, 'max-height', null)],
+  ]
+  const variants = [['original', styles]]
+  for (const compact of [true, false]) {
+    const { root, media, inner } = shortMobileMutationTargets(styles)
+    media.params = '( max-height : 50rem ) and ( max-width : 47.999rem )'
+    const declarations = [...inner.nodes]
+    inner.removeAll()
+    inner.append(...declarations.reverse())
+    media.walk(node => {
+      node.raws.before = compact ? ' ' : '\n\t\t'
+      if (node.type === 'decl') node.raws.between = compact ? ':' : ' : '
+      if (node.type === 'rule') {
+        node.raws.between = compact ? '' : '\n'
+        node.raws.after = compact ? ' ' : '\n\t'
+      }
+    })
+    variants.push([compact ? 'compact same-line' : 'reindented/reordered', root.toString()])
+  }
+  for (const [format, original] of variants) {
+    assertShortMobileHeroSpacing(original, source)
+    for (const [name, mutate] of mutations) {
+      const targets = shortMobileMutationTargets(original)
+      const before = targets.root.toString()
+      mutate(targets)
+      const changed = targets.root.toString()
+      assert.notEqual(changed, before, `${format}: ${name} must change the AST`)
+      assert.throws(() => assertShortMobileHeroSpacing(changed, source), { name: 'AssertionError' }, `${format}: ${name}`)
+      t.diagnostic(`${format}: rejected ${name}`)
+    }
+    assert.throws(() => assertShortMobileHeroSpacing(original, source + '\nwindow.innerHeight'))
+    t.diagnostic(`${format}: valid formatting accepted; viewport JS rejected`)
+  }
 })
 
 test('homepage hero search replaces the customer CTA while preserving business access', async () => {
