@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
 import useAuthentication from '../../hooks/useAuthentication.js'
-import { POLICY_VERSION } from '../../services/userPayloads.js'
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from '@holalocal/firebase-contract'
 
 function RegisterPage() {
   const { i18n, t } = useTranslation()
@@ -35,9 +35,9 @@ function RegisterPage() {
     try {
       const registration = await signUp(email.trim(), password, {
         termsAccepted: true,
-        termsVersion: POLICY_VERSION,
+        termsVersion: CURRENT_TERMS_VERSION,
         privacyAccepted: true,
-        privacyVersion: POLICY_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
         preferredLocale: i18n.resolvedLanguage,
       })
       navigate('/verify-email', { replace: true, state: registration })

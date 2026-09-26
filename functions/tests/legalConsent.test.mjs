@@ -234,3 +234,36 @@ test('callable boundary forwards displayed versions and retains the legacy paylo
   assert.equal(db.store.get('users/user-1').termsVersion,expected)
  }
 })
+
+test('historical and current recovery never rewrite recognized evidence or timestamps', async () => {
+  for (const termsVersion of ['1.0', '1.1']) for (const privacyVersion of ['1.0', '1.1']) {
+    const oldTime = { seconds: 1000, nanoseconds: 0, toMillis: () => 1000000 }
+    const profile = existingProfile({ termsAccepted: true, termsVersion, termsAcceptedAt: oldTime,
+      privacyAccepted: true, privacyVersion, privacyAcceptedAt: oldTime })
+    const db = database(profile)
+    await accept(db)
+    assert.equal(db.writePaths.length, 0)
+    assert.equal(db.data('users/user-1'), profile)
+    assert.equal(profile.termsAcceptedAt, oldTime)
+    assert.equal(profile.privacyAcceptedAt, oldTime)
+  }
+})
+
+test('missing Privacy recovery retains recognized Terms evidence exactly', async () => {
+  const oldTime = { seconds: 1000, nanoseconds: 0, toMillis: () => 1000000 }
+  const db = database(existingProfile({ termsAccepted: true, termsVersion: '1.1', termsAcceptedAt: oldTime }))
+  await accept(db)
+  const stored = db.data('users/user-1')
+  assert.equal(stored.termsAcceptedAt, oldTime)
+  assert.equal(stored.termsVersion, '1.1')
+  assert.equal(stored.privacyAcceptedAt, timestamp)
+  assert.equal(stored.privacyVersion, CURRENT_PRIVACY_VERSION)
+})
+
+test('server rejects unsupported and malformed requested versions without writes', async () => {
+  for (const value of ['99', '0.9', '', null, 1.1, {}, []]) for (const field of ['termsVersion', 'privacyVersion']) {
+    const db = database(existingProfile())
+    await assert.rejects(() => accept(db, { [field]: value }), error => error.message === 'unsupported-legal-version')
+    assert.equal(db.writePaths.length, 0)
+  }
+})

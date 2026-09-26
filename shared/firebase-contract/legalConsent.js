@@ -4,9 +4,18 @@ export const CURRENT_PRIVACY_VERSION = '1.1'
 export const CURRENT_TERMS_EFFECTIVE_DATE = '2026-09-13'
 export const CURRENT_PRIVACY_EFFECTIVE_DATE = '2026-09-13'
 
-// Approved publication date; historical acknowledgments retain their original versions.
-const historicalTermsVersions = Object.freeze(['1.0'])
-const historicalPrivacyVersions = Object.freeze(['1.0'])
+// Recognized evidence is independent of whichever document is currently published.
+// Keep published historical versions here; never derive this list from CURRENT_*.
+// Firestore Rules mirror these bounded lists, checked by the legal foundation tests.
+export const SUPPORTED_TERMS_VERSIONS = Object.freeze(['1.0', '1.1'])
+export const SUPPORTED_PRIVACY_VERSIONS = Object.freeze(['1.0', '1.1'])
+
+// Today's access policy, not a decision about any future publication/renewal.
+// A future policy change must be reviewed separately from evidence recognition.
+export const LEGAL_ACCESS_VERSION_REQUIREMENTS = Object.freeze({
+  terms: Object.freeze(['1.0', '1.1']),
+  privacy: Object.freeze(['1.0', '1.1']),
+})
 
 function isFirestoreTimestamp(value) {
   try {
@@ -35,15 +44,22 @@ function hasPrivacyEvidence(profile, versions) {
   return Boolean(profile?.privacyAccepted === true && isFirestoreTimestamp(profile.privacyAcceptedAt) && versions.includes(profile.privacyVersion))
 }
 export function hasValidTermsAcceptance(profile) {
-  return hasTermsEvidence(profile, [...historicalTermsVersions, CURRENT_TERMS_VERSION])
+  return hasTermsEvidence(profile, SUPPORTED_TERMS_VERSIONS)
 }
 export function hasValidPrivacyAcknowledgment(profile) {
-  return hasPrivacyEvidence(profile, [...historicalPrivacyVersions, CURRENT_PRIVACY_VERSION])
+  return hasPrivacyEvidence(profile, SUPPORTED_PRIVACY_VERSIONS)
 }
 
-// Access eligibility is distinct from agreement to the current published text.
-export function hasValidLegalConsent(profile) {
+// Recovery fills missing evidence; it must not renew valid historical records.
+export function hasHistoricalLegalEvidence(profile) {
   return hasValidTermsAcceptance(profile) && hasValidPrivacyAcknowledgment(profile)
+}
+
+// Access eligibility is distinct from evidence recognition and current agreement.
+export function hasValidLegalConsent(profile) {
+  return hasHistoricalLegalEvidence(profile)
+    && hasTermsEvidence(profile, LEGAL_ACCESS_VERSION_REQUIREMENTS.terms)
+    && hasPrivacyEvidence(profile, LEGAL_ACCESS_VERSION_REQUIREMENTS.privacy)
 }
 
 export function hasCurrentLegalConsent(profile) {
@@ -51,6 +67,6 @@ export function hasCurrentLegalConsent(profile) {
 }
 
 export function isSupportedLegalVersionPair(termsVersion, privacyVersion) {
-  return [...historicalTermsVersions, CURRENT_TERMS_VERSION].includes(termsVersion)
-    && [...historicalPrivacyVersions, CURRENT_PRIVACY_VERSION].includes(privacyVersion)
+  return SUPPORTED_TERMS_VERSIONS.includes(termsVersion)
+    && SUPPORTED_PRIVACY_VERSIONS.includes(privacyVersion)
 }

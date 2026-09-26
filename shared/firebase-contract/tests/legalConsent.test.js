@@ -91,3 +91,83 @@ test('historical evidence permits access without asserting current agreement or 
  for(const patch of [{termsVersion:'0.9'},{termsVersion:'99'},{privacyVersion:'1.2'},{termsAccepted:false},{privacyAcceptedAt:null}]) assert.equal(hasValidLegalConsent({...profile,...patch}),false)
  assert.equal(hasValidLegalConsent(currentConsent()),true)
 })
+
+// Evidence recognition and access policy must not implicitly follow publication.
+const {
+  SUPPORTED_TERMS_VERSIONS, SUPPORTED_PRIVACY_VERSIONS,
+  LEGAL_ACCESS_VERSION_REQUIREMENTS, hasHistoricalLegalEvidence,
+  hasValidTermsAcceptance, hasValidPrivacyAcknowledgment, isSupportedLegalVersionPair,
+  CURRENT_TERMS_EFFECTIVE_DATE, CURRENT_PRIVACY_EFFECTIVE_DATE,
+} = await import('../index.js')
+const { readFile } = await import('node:fs/promises')
+
+test('current dates and bounded evidence/access lists remain unchanged', () => {
+  assert.equal(CURRENT_TERMS_EFFECTIVE_DATE, '2026-09-13')
+  assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE, '2026-09-13')
+  for (const versions of [SUPPORTED_TERMS_VERSIONS, SUPPORTED_PRIVACY_VERSIONS,
+    LEGAL_ACCESS_VERSION_REQUIREMENTS.terms, LEGAL_ACCESS_VERSION_REQUIREMENTS.privacy]) {
+    assert.deepEqual(versions, ['1.0', '1.1'])
+    assert.equal(Object.isFrozen(versions), true)
+  }
+})
+
+test('all recognized mixed pairs retain independent valid evidence and today access', () => {
+  for (const termsVersion of SUPPORTED_TERMS_VERSIONS) for (const privacyVersion of SUPPORTED_PRIVACY_VERSIONS) {
+    const p = Object.freeze(currentConsent({ termsVersion, privacyVersion }))
+    assert.equal(isSupportedLegalVersionPair(termsVersion, privacyVersion), true)
+    assert.equal(hasHistoricalLegalEvidence(p), true)
+    assert.equal(hasValidLegalConsent(p), true)
+    assert.equal(hasCurrentLegalConsent(p), termsVersion === CURRENT_TERMS_VERSION && privacyVersion === CURRENT_PRIVACY_VERSION)
+    assert.equal(p.termsAcceptedAt, timestamp)
+    assert.equal(p.privacyAcceptedAt, timestamp)
+  }
+})
+
+test('missing evidence is distinct from recognized historical evidence', () => {
+  assert.equal(hasHistoricalLegalEvidence(null), false)
+  const p = currentConsent({ termsVersion: '1.0', privacyAcceptedAt: null })
+  assert.equal(hasValidTermsAcceptance(p), true)
+  assert.equal(hasValidPrivacyAcknowledgment(p), false)
+  assert.equal(hasHistoricalLegalEvidence(p), false)
+})
+
+test('unsupported and malformed pairs fail closed independently', () => {
+  for (const version of ['0.9', '99', '', null, 1.1, {}, []]) {
+    assert.equal(isSupportedLegalVersionPair(version, CURRENT_PRIVACY_VERSION), false)
+    assert.equal(isSupportedLegalVersionPair(CURRENT_TERMS_VERSION, version), false)
+    assert.equal(hasHistoricalLegalEvidence(currentConsent({ termsVersion: version })), false)
+    assert.equal(hasHistoricalLegalEvidence(currentConsent({ privacyVersion: version })), false)
+  }
+})
+
+test('publication edits alone cannot erase evidence or choose a new access requirement', async () => {
+  const source = await readFile(new URL('../legalConsent.js', import.meta.url), 'utf8')
+  // Hypothetical publication only, in memory: no future version added to runtime.
+  const changed = source.replace("CURRENT_TERMS_VERSION = '1.1'", "CURRENT_TERMS_VERSION = 'unpublished-test'")
+  const contract = await import('data:text/javascript,' + encodeURIComponent(changed))
+  const p = Object.freeze(currentConsent())
+  assert.equal(contract.hasHistoricalLegalEvidence(p), true)
+  assert.equal(contract.hasValidLegalConsent(p), true)
+  assert.equal(contract.hasCurrentLegalConsent(p), false)
+  assert.equal(contract.isSupportedLegalVersionPair('unpublished-test', CURRENT_PRIVACY_VERSION), false)
+})
+
+test('a separate hypothetical access policy cannot make recovery overwrite historical evidence', async () => {
+  const source = await readFile(new URL('../legalConsent.js', import.meta.url), 'utf8')
+  const changed = source.replace("terms: Object.freeze(['1.0', '1.1'])", "terms: Object.freeze(['1.1'])")
+  const contract = await import('data:text/javascript,' + encodeURIComponent(changed))
+  const p = currentConsent({ termsVersion: '1.0' })
+  assert.equal(contract.hasHistoricalLegalEvidence(p), true)
+  assert.equal(contract.hasValidLegalConsent(p), false)
+  assert.equal(contract.hasValidTermsAcceptance(p), true)
+})
+
+test('Rules bounded version helpers mirror canonical evidence lists', async () => {
+  const rules = await readFile(new URL('../../../firestore.rules', import.meta.url), 'utf8')
+  for (const [name, versions] of [['Terms', SUPPORTED_TERMS_VERSIONS], ['Privacy', SUPPORTED_PRIVACY_VERSIONS]]) {
+    const match = rules.match(new RegExp(`function supported${name}Version\\(version\\) \\{\\s*return version in (\\[[^;]+\\]);`))
+    assert.ok(match, name)
+    assert.deepEqual(JSON.parse(match[1].replaceAll("'", '"')), versions)
+    assert.equal(rules.split(`supported${name}Version(request.resource.data.${name.toLowerCase()}Version)`).length - 1, 2)
+  }
+})

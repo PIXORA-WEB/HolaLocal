@@ -1,6 +1,4 @@
-import { ISSUE_CODES, SUPPORTED_LANGUAGE_CODES, normalizeLanguage } from '@holalocal/firebase-contract'
-
-export const POLICY_VERSION = '1.0'
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION, ISSUE_CODES, SUPPORTED_LANGUAGE_CODES, normalizeLanguage } from '@holalocal/firebase-contract'
 
 const profileFields = new Set([
   'displayName', 'firstName', 'lastName', 'photoURL', 'profilePhoto',
@@ -25,7 +23,7 @@ export function buildRegistrationProfile(uid, profileData = {}, serverTimestamp)
   if (!profileData.termsAccepted || !profileData.privacyAccepted) {
     throw new Error('Current Terms and Privacy consent is required.')
   }
-  if (profileData.termsVersion !== POLICY_VERSION || profileData.privacyVersion !== POLICY_VERSION) {
+  if (profileData.termsVersion !== CURRENT_TERMS_VERSION || profileData.privacyVersion !== CURRENT_PRIVACY_VERSION) {
     throw new Error('The current policy version is required.')
   }
   const displayName = String(profileData.displayName ?? '').trim()
@@ -39,8 +37,8 @@ export function buildRegistrationProfile(uid, profileData = {}, serverTimestamp)
     profileCompleted: false, onboardingCompleted: false, businessProfileRequired: false,
     businessProfileCompleted: false, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     lastActiveAt: serverTimestamp(), termsAccepted: true, termsAcceptedAt: serverTimestamp(),
-    termsVersion: POLICY_VERSION, privacyAccepted: true, privacyAcceptedAt: serverTimestamp(),
-    privacyVersion: POLICY_VERSION, deletionRequestedAt: null, deletionScheduledFor: null,
+    termsVersion: CURRENT_TERMS_VERSION, privacyAccepted: true, privacyAcceptedAt: serverTimestamp(),
+    privacyVersion: CURRENT_PRIVACY_VERSION, deletionRequestedAt: null, deletionScheduledFor: null,
     anonymizedAt: null,
   }
 }

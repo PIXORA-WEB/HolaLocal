@@ -4,7 +4,7 @@ import {
   CURRENT_PRIVACY_VERSION,
   CURRENT_TERMS_VERSION,
   hasCurrentLegalConsent,
-  hasValidLegalConsent,
+  hasHistoricalLegalEvidence,
   isSupportedLegalVersionPair,
   hasValidTermsAcceptance,
   hasValidPrivacyAcknowledgment,
@@ -96,7 +96,7 @@ export async function acceptLegalConsent({
     if (profile && (profile.accountStatus !== 'active' || profile.deletionRequestedAt != null)) {
       throw new HttpsError('failed-precondition', 'account-not-active')
     }
-    if (hasValidLegalConsent(profile)) return result(profile)
+    if (hasHistoricalLegalEvidence(profile)) return result(profile)
 
     const timestamp = timestampFactory()
     const consent = consentUpdate(timestamp, profile, termsVersion, privacyVersion)

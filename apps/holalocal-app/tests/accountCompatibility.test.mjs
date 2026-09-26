@@ -5,9 +5,8 @@ import { toMobileUserProfile } from '../src/services/userCompatibility.js'
 import { toWebsiteUserProfile } from '../../holalocal-website/src/services/firebaseCompatibility.js'
 import { completeRegistration } from '../src/firebase/registrationFlow.js'
 import { protectedAccountDecision, publicAccountDestination } from '../src/routes/accountRoutePolicy.js'
-import { hasCompleteUserProfile } from '@holalocal/firebase-contract'
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION, hasCompleteUserProfile } from '@holalocal/firebase-contract'
 import {
-  POLICY_VERSION,
   buildProfileUpdates,
   buildRegistrationProfile,
   resolveRegistrationLocale,
@@ -52,14 +51,15 @@ test('canonical roles win conflicts', () => {
 test('registration payload is explicit and rule-compatible', () => {
   const payload = buildRegistrationProfile('user-1', {
     email: 'synthetic@example.invalid', password: 'must-not-leak', surprise: true,
-    termsAccepted: true, termsVersion: POLICY_VERSION,
-    privacyAccepted: true, privacyVersion: POLICY_VERSION,
+    termsAccepted: true, termsVersion: CURRENT_TERMS_VERSION,
+    privacyAccepted: true, privacyVersion: CURRENT_PRIVACY_VERSION,
   }, fakeTimestamp)
   assert.equal(payload.uid, 'user-1')
   assert.deepEqual(payload.roles, ['customer'])
   assert.equal(payload.accountStatus, 'active')
   assert.equal(payload.preferredLocale, 'en')
-  assert.equal(payload.termsVersion, '1.0')
+  assert.equal(payload.termsVersion, CURRENT_TERMS_VERSION)
+  assert.equal(payload.privacyVersion, CURRENT_PRIVACY_VERSION)
   assert.equal(payload.termsAcceptedAt, timestamp)
   assert.equal(payload.businessId, null)
   for (const field of ['password', 'surprise', 'isVerified', 'isPremium', 'preferredLanguage', 'deletedAt']) {
@@ -70,8 +70,8 @@ test('registration payload is explicit and rule-compatible', () => {
 test('registration preserves supported locales and explicitly handles invalid values', () => {
   for (const locale of ['es', 'uk']) {
     const payload = buildRegistrationProfile(`user-${locale}`, {
-      preferredLocale: locale, termsAccepted: true, termsVersion: POLICY_VERSION,
-      privacyAccepted: true, privacyVersion: POLICY_VERSION,
+      preferredLocale: locale, termsAccepted: true, termsVersion: CURRENT_TERMS_VERSION,
+      privacyAccepted: true, privacyVersion: CURRENT_PRIVACY_VERSION,
     }, fakeTimestamp)
     assert.equal(payload.preferredLocale, locale)
   }
@@ -205,4 +205,24 @@ test('mobile account type changes use trusted callable instead of direct role wr
   assert.doesNotMatch(businessServiceSource, /createBusinessProfile|ensureBusinessProfile|transaction\.set/)
   assert.doesNotMatch(payloadSource, /buildRoleUpdates/)
   assert.doesNotMatch(payloadSource, /validateRoles/)
+})
+
+test('website and mobile registration select independently owned canonical current versions', async () => {
+  assert.equal(CURRENT_TERMS_VERSION, '1.1')
+  assert.equal(CURRENT_PRIVACY_VERSION, '1.1')
+  for (const relative of ['../src/pages/auth/RegisterPage.jsx', '../../holalocal-website/src/pages/auth/RegisterPage.jsx']) {
+    const source = await readFile(new URL(relative, import.meta.url), 'utf8')
+    assert.match(source, /termsVersion: CURRENT_TERMS_VERSION/)
+    assert.match(source, /privacyVersion: CURRENT_PRIVACY_VERSION/)
+    assert.doesNotMatch(source, /(?:termsVersion|privacyVersion):\s*['"]/)
+  }
+  const payload = await readFile(new URL('../src/services/userPayloads.js', import.meta.url), 'utf8')
+  assert.doesNotMatch(payload, /POLICY_VERSION|(?:CURRENT_(?:TERMS|PRIVACY)_VERSION)\s*=/)
+  assert.match(payload, /CURRENT_TERMS_VERSION.*CURRENT_PRIVACY_VERSION.*from '@holalocal\/firebase-contract'/)
+})
+
+test('mobile rejects stale registration versions rather than mislabeling displayed current text', () => {
+  assert.throws(() => buildRegistrationProfile('user', {
+    termsAccepted: true, privacyAccepted: true, termsVersion: '1.0', privacyVersion: '1.0',
+  }, fakeTimestamp), /current policy version/)
 })
