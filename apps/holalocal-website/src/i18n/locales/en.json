@@ -200,6 +200,7 @@
     }
   },
   "profile": {
+    "messageTranslation": {"title": "Automatically translate messages", "description": "Translate new incoming messages into your preferred language so you can communicate with people who use other languages.", "privacy": "When enabled, eligible message text is processed by Google Cloud Translation. You can always view the original."},
     "title": "Profile",
     "edit": "Edit profile",
     "businessTools": "Business tools",

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import MessageTranslationPreference from '../../components/common/MessageTranslationPreference.jsx'
 import SelectField from '../../components/common/SelectField.jsx'
 import AccessibleDialog from '../../components/common/AccessibleDialog.jsx'
 import { EditableImageAvatar, ImageAvatar } from '../../components/common/PublicBusinessCard.jsx'
@@ -376,6 +377,7 @@ function ProfilePage() {
               <dd>{userProfile?.country || t('common.notSet')}</dd>
             </div>
           </dl>
+          <MessageTranslationPreference key={JSON.stringify([user?.uid, Boolean(userProfile)])} uid={user?.uid} profile={userProfile} t={t} onSaved={() => refreshUserProfile(user, { background: true })} />
         </section>
 
         {hasBusinessAccess ? (

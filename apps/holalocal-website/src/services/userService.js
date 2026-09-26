@@ -1,3 +1,4 @@
+import { normalizeMessageTranslationPreference } from '@holalocal/firebase-contract'
 // Owns all reads and writes for Firestore user profile documents.
 // Authentication credentials remain the responsibility of Firebase Auth.
 import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
@@ -205,5 +206,33 @@ export async function updateLastActive(uid) {
   await updateDoc(userDocument(uid), {
     lastActiveAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+  })
+}
+
+// Dedicated narrow preference write; never route this through profile repair/defaults.
+export async function saveMessageTranslationPreference(uid, enabled) {
+  if (typeof uid !== 'string' || !uid || uid.includes('/') || typeof enabled !== 'boolean') {
+    throw createApplicationError('invalid-argument')
+  }
+  return runTransaction(db, async (transaction) => {
+    const reference = userDocument(uid)
+    const snapshot = await transaction.get(reference)
+    if (!snapshot.exists()) throw createApplicationError('profile-not-found')
+    const profile = snapshot.data()
+    if (profile.accountStatus && profile.accountStatus !== 'active') throw createApplicationError('permission-denied')
+    const current = normalizeMessageTranslationPreference(profile, { exists: true })
+    // A malformed cutoff cannot be repaired safely through this UI. Invalid booleans
+    // may be repaired OFF -> ON, which the rules treat as requiring request.time.
+    if (!normalizeMessageTranslationPreference({ ...profile, messageTranslationEnabled: false }, { exists: true }).valid) {
+      throw createApplicationError('invalid-argument')
+    }
+    if (current.enabled === enabled) return { enabled, changed: false }
+    // Existing profile rules require updatedAt == request.time for every update.
+    transaction.update(reference, {
+      messageTranslationEnabled: enabled,
+      ...(enabled ? { messageTranslationEnabledSince: serverTimestamp() } : {}),
+      updatedAt: serverTimestamp(),
+    })
+    return { enabled, changed: true }
   })
 }
