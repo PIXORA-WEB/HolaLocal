@@ -140,10 +140,30 @@ service cloud.firestore {
         && contact.allowCallbackRequests is bool;
     }
 
+    function validMessageTranslationPreferenceType() {
+      return !request.resource.data.keys().hasAny(['messageTranslationEnabled'])
+        || request.resource.data.messageTranslationEnabled is bool;
+    }
+
+    function validMessageTranslationPreferenceUpdate() {
+      let oldEnabled = resource.data.get('messageTranslationEnabled', true) == true;
+      let newEnabled = request.resource.data.get('messageTranslationEnabled', true) == true;
+      let cutoffChanged = request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['messageTranslationEnabledSince']);
+      return validMessageTranslationPreferenceType()
+        && (!request.resource.data.keys().hasAny(['messageTranslationEnabledSince'])
+          || request.resource.data.messageTranslationEnabledSince is timestamp)
+        && ((!oldEnabled && newEnabled)
+          ? (cutoffChanged
+            && request.resource.data.get('messageTranslationEnabledSince', null) == request.time)
+          : !cutoffChanged);
+    }
+
     function validUserCreate(userId) {
       return request.resource.data.keys().hasOnly([
           'uid', 'email', 'displayName', 'displayNameNormalized', 'firstName', 'lastName',
           'photoURL', 'profilePhoto', 'preferredLocale', 'accountType', 'roles', 'city',
+          'messageTranslationEnabled', 'messageTranslationEnabledSince',
           'country', 'accountStatus', 'profileCompleted', 'onboardingCompleted',
           'businessProfileRequired', 'businessProfileCompleted', 'businessId',
           'createdAt', 'updatedAt', 'lastActiveAt', 'termsAccepted', 'termsAcceptedAt',
@@ -157,6 +177,8 @@ service cloud.firestore {
           'createdAt', 'updatedAt', 'termsAccepted', 'termsAcceptedAt', 'termsVersion',
           'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion'
         ])
+        && validMessageTranslationPreferenceType()
+        && !request.resource.data.keys().hasAny(['messageTranslationEnabledSince'])
         && request.resource.data.uid == userId
         && request.resource.data.email is string
         && request.resource.data.roles == ['customer']
@@ -248,11 +270,13 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'displayName', 'displayNameNormalized', 'firstName', 'lastName',
           'photoURL', 'profilePhoto', 'preferredLocale', 'city', 'country',
+          'messageTranslationEnabled', 'messageTranslationEnabledSince',
           'profileCompleted', 'accountType', 'onboardingCompleted',
           'termsAccepted', 'termsAcceptedAt', 'termsVersion',
           'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion',
           'lastActiveAt', 'updatedAt'
         ])
+        && validMessageTranslationPreferenceUpdate()
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.email == resource.data.email
         && (!resource.data.keys().hasAny(['emailVerified'])

@@ -18,6 +18,9 @@ export const USER_CONTRACT = Object.freeze({
     emailVerified: field('boolean', 'trusted_only', 'private_internal', 'required'),
     roles: field('string[]', 'owner_writable_limited', 'private_internal', 'required'),
     preferredLocale: field('language_code', 'owner_writable', 'private_internal', 'required'),
+    // Absence defaults ON only for an existing account. Cutoff is not consent metadata.
+    messageTranslationEnabled: field('boolean', 'owner_writable', 'private_internal'),
+    messageTranslationEnabledSince: field('Timestamp', 'owner_writable_transition_only', 'private_internal'),
     profilePhoto: field('media|null', 'owner_writable', 'private_internal'),
     city: field('string', 'owner_writable', 'private_internal'),
     country: field('string', 'owner_writable', 'private_internal'),
