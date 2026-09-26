@@ -7,7 +7,7 @@ export default createOperational({
       'Olvasatlan üzenetet tartalmazó beszélgetések: {{count}}', 'Még nincsenek beszélgetéseid.', 'Vissza a kezdőlapra', 'Privát üzeneteid', 'Válassz beszélgetést az olvasáshoz és válaszadáshoz.',
       'A beszélgetés nem érhető el', 'Térj vissza az üzenetekhez, és válassz másik beszélgetést.', 'Vissza a beszélgetésekhez', 'Aktív profil', 'Eltávolítás', 'Eltávolítás…', 'Eltávolítod a beszélgetést?',
       'A beszélgetés eltűnik a postaládádból. A másik fél továbbra is látja, és egyetlen üzenet sem törlődik véglegesen.', 'A beszélgetést eltávolítottuk a postaládádból.',
-      '{{language}} nyelven ír. Az automatikus fordítás még nincs bekapcsolva, ezért az eredeti szöveg jelenik meg.', 'Fordítás…', 'Fordítás kész', 'A fordítás sikertelen', 'Eredeti megtekintése', 'Fordítás megtekintése',
+      'Az eredeti üzenetek mindig elérhetők.', 'Fordítás folyamatban…', 'Gépi fordítás', 'A fordítás sikertelen', 'Eredeti megtekintése', 'Fordítás megtekintése',
       'Beszélgetés indítása', 'Üzenet', 'Írj üzenetet…', 'Küldés…', 'Küldés', 'A választott nyelved', 'A vállalkozás nyelve',
       'Nem sikerült betölteni a beszélgetéseket.', 'Nem sikerült betölteni az üzeneteket.', 'Nem sikerült megnyitni a beszélgetést.', 'Nem sikerült elküldeni az üzenetet.', 'Nem sikerült eltávolítani a beszélgetést.',
     ],

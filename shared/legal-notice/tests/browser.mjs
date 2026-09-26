@@ -16,7 +16,7 @@ await writeFile(path.join(fixture,'entry.jsx'),`
 import React from 'react'; import {createRoot} from 'react-dom/client';
 import Website from '${root}apps/holalocal-website/src/components/common/LegalUpdateNotice.jsx';
 import Mobile from '${root}apps/holalocal-app/src/components/common/LegalUpdateNotice.jsx';
-window.state={uid:'owner',locale:'en',pathname:'/profile',surface:'website',fail:false,hold:false,loading:false};
+window.state={uid:new URLSearchParams(location.search).has('signedOut')?null:'owner',locale:'en',pathname:'/profile',surface:'website',fail:false,hold:false,loading:false};
 window.profile={accountStatus:'active',privacyVersion:'1.0',termsVersion:'1.0',privacyAcceptedAt:10,termsAcceptedAt:20};
 window.publication={privacyVersion:'1.2',termsVersion:'1.2',privacyEffectiveDate:'2026-09-13',termsEffectiveDate:'2026-09-13'};
 window.writes=[];window.listeners=new Set();
@@ -55,6 +55,31 @@ try {
  await page.route('**/*',route=>{if(new URL(route.request().url()).hostname!=='127.0.0.1'){external.push(route.request().url());return route.abort()}return route.continue()})
  const reset=async(surface='website',locale='en',width=390,height=844)=>{await page.setViewportSize({width,height});await page.goto('http://127.0.0.1:18771');await page.waitForFunction(()=>!!window.render);await page.evaluate(({surface,locale})=>{window.state.surface=surface;window.state.locale=locale;window.render()},{surface,locale});await page.locator('dialog[open]').waitFor()}
  async function check(name,fn){if(process.env.NOTICE_BROWSER_FILTER && !name.includes(process.env.NOTICE_BROWSER_FILTER))return;await fn();records.push({name,passed:true})}
+ await check('website lazy boundary waits for authentication, loads automatically and restores focus',async()=>{
+  const heavy=[];const record=r=>{if(r.url().includes('/LegalUpdateNoticeContent.jsx'))heavy.push(r.url())};page.on('request',record)
+  await page.goto('http://127.0.0.1:18771/?signedOut');await page.waitForFunction(()=>!!window.render);await page.waitForTimeout(150)
+  assert.equal(heavy.length,0);assert.equal(await page.locator('dialog').count(),0)
+  await page.evaluate(()=>{window.state.uid='owner';window.state.loading=true;window.render()});await page.waitForTimeout(100);assert.equal(heavy.length,0)
+  await page.locator('#outside').focus()
+  await page.evaluate(()=>{window.state.loading=false;window.render()});await page.locator('dialog[open]').waitFor()
+  assert.equal(heavy.length,1);assert.equal(await page.locator('dialog').count(),1)
+  assert.ok(await page.locator('dialog').evaluate(d=>d.contains(document.activeElement)))
+  await page.getByRole('button',{name:'Remind me later'}).click()
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'outside');assert.equal(await page.evaluate(()=>window.writes.length),0)
+  page.off('request',record)
+ })
+ await check('website chunk load failure remains nonblocking and never acknowledges',async()=>{
+  await page.route('**/LegalUpdateNoticeContent.jsx*',r=>r.abort())
+  await page.goto('http://127.0.0.1:18771/?signedOut');await page.waitForFunction(()=>!!window.render)
+  await page.evaluate(()=>{window.state.uid='owner';window.render()});await page.waitForTimeout(3500)
+  await page.locator('#outside').click();assert.equal(await page.locator('dialog').count(),0);assert.equal(await page.evaluate(()=>window.writes.length),0)
+  await page.unroute('**/LegalUpdateNoticeContent.jsx*')
+ })
+ await check('website lightweight wrapper import structure',async()=>{
+  const s=await readFile(path.join(root,'apps/holalocal-website/src/components/common/LegalUpdateNotice.jsx'),'utf8')
+  assert.match(s,/import\('\.\/LegalUpdateNoticeContent\.jsx'\)/)
+  assert.doesNotMatch(s,/from ['"][^'"]*(?:firestore|legal-notice|LegalUpdateNoticeContent)/)
+ })
  for(const surface of ['website','mobile'])for(const [width,height]of [[1280,900],[390,844],[320,700]])for(const locale of ['en','de','es',...(surface==='website'?['uk']:[])])await check(surface+' '+locale+' '+width,async()=>{
   await reset(surface,locale,width,height)
   const dialog=page.getByRole('dialog');assert.ok(await dialog.getAttribute('aria-labelledby'))

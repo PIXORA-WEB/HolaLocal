@@ -3,7 +3,7 @@ import { detectUnsafePublicContact } from './contact.js'
 import { ISSUE_CODES, issue } from './issues.js'
 import { normalizePrimaryLanguage, normalizeServiceAreas } from './normalization.js'
 import { normalizeBusinessSubscription } from './subscriptions.js'
-import { hasCompleteUserProfile } from './account.js'
+import { hasCompleteUserProfile, normalizeMessageTranslationPreference } from './account.js'
 
 function clone(value) {
   if (Array.isArray(value)) return value.map(clone)
@@ -29,9 +29,15 @@ function isRecord(value) {
 
 const ACCOUNT_TYPE_ROLES = Object.freeze({ customer: ['customer'], business: ['business'], both: ['customer', 'business'] })
 
-export function adaptUserDocument(documentId, rawDocument = {}) {
+export function adaptUserDocument(documentId, rawDocument) {
   const raw = isRecord(rawDocument) ? rawDocument : {}
+  const translationPreference = normalizeMessageTranslationPreference(rawDocument, {
+    exists: Boolean(string(documentId)) && isRecord(rawDocument),
+  })
   const issues = []
+  if (translationPreference.exists && !translationPreference.valid) {
+    issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_VALUE, { field: 'messageTranslationPreference' }))
+  }
   if (!isRecord(rawDocument)) issues.push(issue(ISSUE_CODES.VALIDATION_INVALID_TYPE, { field: 'userDocument' }))
   const declaredRoles = Array.isArray(raw.roles) ? raw.roles.filter((role) => USER_ROLES.includes(role)) : []
   const accountTypeRoles = ACCOUNT_TYPE_ROLES[raw.accountType] ?? []
@@ -80,6 +86,8 @@ export function adaptUserDocument(documentId, rawDocument = {}) {
       emailVerified: typeof raw.emailVerified === 'boolean' ? raw.emailVerified : null,
       roles,
       preferredLocale: language.value,
+      messageTranslationEnabled: translationPreference.enabled,
+      messageTranslationEnabledSince: translationPreference.enabledSince,
       profilePhoto: clone(raw.profilePhoto ?? null),
       photoURL: raw.photoURL ?? raw.profilePhoto?.downloadUrl ?? null,
       businessId: typeof raw.businessId === 'string' && raw.businessId.trim() ? raw.businessId.trim() : null,

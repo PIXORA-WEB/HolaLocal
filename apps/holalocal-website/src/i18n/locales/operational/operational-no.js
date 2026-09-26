@@ -7,7 +7,7 @@ export default createOperational({
       'Du har ingen samtaler ennå.', 'Tilbake til forsiden', 'Dine private meldinger', 'Velg en samtale for å lese og svare.', 'Samtalen er utilgjengelig',
       'Gå tilbake til meldinger og velg en annen samtale.', 'Tilbake til samtaler', 'Aktiv profil', 'Fjern', 'Fjerner…', 'Fjerne samtalen?',
       'Samtalen fjernes fra innboksen din. Den andre personen kan fortsatt se den, og ingen meldinger slettes permanent.', 'Samtalen er fjernet fra innboksen din.',
-      'Du skriver på {{language}}. Automatisk oversettelse er ikke aktivert ennå, så originalteksten vises.', 'Oversetter…', 'Oversettelse fullført', 'Oversettelsen mislyktes', 'Vis original', 'Vis oversettelse',
+      'De opprinnelige meldingene er alltid tilgjengelige.', 'Oversetter…', 'Maskinoversettelse', 'Oversettelsen mislyktes', 'Vis original', 'Vis oversettelse',
       'Start samtale', 'Melding', 'Skriv en melding…', 'Sender…', 'Send', 'Ditt foretrukne språk', 'Bedriftens språk',
       'Samtalene kunne ikke lastes inn.', 'Meldingene kunne ikke lastes inn.', 'Samtalen kunne ikke åpnes.', 'Meldingen kunne ikke sendes.', 'Samtalen kunne ikke fjernes.',
     ],

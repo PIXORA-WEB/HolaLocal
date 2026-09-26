@@ -137,10 +137,10 @@
     "removeTitle": "Remove conversation?",
     "removeDescription": "This removes the conversation from your inbox. It remains available to the other participant and no messages are permanently deleted.",
     "removeSuccess": "Conversation removed from your inbox.",
-    "translationNote": "You are messaging in {{language}}. Automatic translation is not enabled yet, so original text is shown.",
+    "translationNote": "Original messages are always available.",
     "translation": {
-      "processing": "Translation pending",
-      "completed": "Translated",
+      "processing": "Translating…",
+      "completed": "Machine translation",
       "failed": "Translation unavailable. Original shown.",
       "viewOriginal": "View original",
       "viewTranslation": "View translation"
@@ -200,6 +200,7 @@
     }
   },
   "profile": {
+    "messageTranslation": {"title": "Automatically translate messages", "description": "Translate new incoming messages into your preferred language so you can communicate with people who use other languages.", "privacy": "When enabled, eligible message text is processed by Google Cloud Translation. You can always view the original."},
     "title": "Profile",
     "edit": "Edit profile",
     "businessTools": "Business tools",

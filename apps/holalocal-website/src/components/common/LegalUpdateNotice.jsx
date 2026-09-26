@@ -1,19 +1,31 @@
-import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import useAuthentication from '../../hooks/useAuthentication.js'
-import { db } from '../../firebase/firestoreClient.js'
-import NoticeCoordinator from '../../../../../shared/legal-notice/NoticeCoordinator.jsx'
-import { createLegalNoticeClient } from '../../../../../shared/legal-notice/client.js'
-import { noticeLocales } from '../../../../../shared/legal-notice/locales.js'
 
-const client = createLegalNoticeClient(db)
 export default function LegalUpdateNotice() {
-  const { user, userProfile, loading, profileLoading, emailVerified } = useAuthentication()
-  const { pathname } = useLocation()
-  const { i18n } = useTranslation()
-  const locale = i18n.resolvedLanguage?.split('-')[0] || 'en'
-  if (!user) return null
-  return <NoticeCoordinator key={user.uid} uid={user.uid} client={client}
-    eligible={!loading && !profileLoading && emailVerified && userProfile?.accountStatus === 'active'} pathname={pathname}
-    locale={locale} copy={noticeLocales[locale] || noticeLocales.en} />
+  const { user, loading } = useAuthentication()
+  const [Content, setContent] = useState(null)
+  const uid = user?.uid
+
+  useEffect(() => {
+    if (loading || !uid || Content) return
+    let cancelled = false
+    let timer
+    let attempts = 0
+    const load = async () => {
+      try {
+        const module = await import('./LegalUpdateNoticeContent.jsx')
+        if (!cancelled) setContent(() => module.default)
+      } catch {
+        // A notice chunk failure must not block routes or acknowledge anything.
+        if (!cancelled && ++attempts < 3) timer = setTimeout(load, attempts * 1000)
+      }
+    }
+    void load()
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [uid, loading, Content])
+
+  // Keep an already mounted coordinator through background auth/profile refresh:
+  // unmounting it would discard its session-only "Remind me later" state.
+  if (!uid || !Content) return null
+  return <Content key={uid} />
 }

@@ -187,6 +187,15 @@ const englishResource = composeEnglishTranslationResource({
   serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
 })
 const referenceRoot = englishResource
+// This authenticated subtree is owned by English base JSON, while other
+// languages provide it in their authenticated packs. Compare the same scope.
+const authenticatedEnglishReference = {
+  ...authenticatedTranslations.en,
+  profile: {
+    ...authenticatedTranslations.en.profile,
+    messageTranslation: englishResource.profile.messageTranslation,
+  },
+}
 const failures = []
 const resources = { en: { translation: englishResource } }
 const countAwareKeys = await countAwareTranslationKeys()
@@ -234,7 +243,7 @@ for (const { code } of supportedUILanguages) {
     continue
   }
 
-  const authenticatedIssues = compare(authenticatedTranslations.en, authenticated, code)
+  const authenticatedIssues = compare(authenticatedEnglishReference, authenticated, code)
   const resource = composeLocaleTranslationResource({
     englishFallbackJson: english,
     baseLocale: base,

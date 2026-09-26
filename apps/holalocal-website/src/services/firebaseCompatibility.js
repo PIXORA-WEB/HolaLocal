@@ -69,6 +69,8 @@ export function toWebsiteUserProfile(documentId, rawDocument) {
     photoURL: profile.photoURL,
     profilePhoto: profile.profilePhoto,
     preferredLocale: profile.preferredLocale,
+    messageTranslationEnabled: profile.messageTranslationEnabled,
+    messageTranslationEnabledSince: profile.messageTranslationEnabledSince,
     accountType: ACCOUNT_TYPES.has(raw.accountType) ? raw.accountType : accountTypeForRoles(profile.roles),
     roles: [...profile.roles],
     city: typeof raw.city === 'string' ? raw.city : '',

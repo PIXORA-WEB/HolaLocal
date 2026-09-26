@@ -1,5 +1,5 @@
 export { adaptBusinessDocument, adaptUserDocument } from './adapters.js'
-export { hasCompleteUserProfile } from './account.js'
+export { hasCompleteUserProfile, normalizeMessageTranslationPreference } from './account.js'
 export {
   CURRENT_PRIVACY_EFFECTIVE_DATE,
   CURRENT_PRIVACY_VERSION,

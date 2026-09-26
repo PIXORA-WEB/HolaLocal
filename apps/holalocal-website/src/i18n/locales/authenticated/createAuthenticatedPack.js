@@ -22,6 +22,7 @@ function createPack(d) {
     mediaFeedback: { immediate: d.mediaImmediate, saved: d.saved },
     language: { saveError: retryError },
     profile: {
+      ...(d.messageTranslation ? { messageTranslation: d.messageTranslation } : {}),
       title: d.profile, edit: d.editProfile, businessTools: d.businessTools,
       businessDashboard: d.myBusiness, editBusiness: d.editBusiness, yourAccount: d.account,
       changeImage: d.changeImage, imageUpdated: d.saved, imageUploadError: retryError,

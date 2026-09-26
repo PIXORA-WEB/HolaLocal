@@ -370,10 +370,12 @@ test('shared residual interface and fuller-locale gaps are localized', async () 
 
   for (const code of completionLocales) {
     const resource = resourceForLocale(code, english, await readBaseLocale(code, english))
+    assert.equal(typeof resource.messages.translationNote, 'string')
+    assert.ok(resource.messages.translationNote.trim(), `${code}: neutral translation note exists`)
     assert.deepEqual(
       interpolationVariables(resource.messages.translationNote),
-      ['language'],
-      `${code}: translation note preserves the preferred-language placeholder`,
+      [],
+      `${code}: neutral translation note does not interpolate the preferred language`,
     )
     for (const path of [
       'nav.business',

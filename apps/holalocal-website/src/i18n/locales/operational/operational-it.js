@@ -7,7 +7,7 @@ export default createOperational({
       'Non hai ancora conversazioni.', 'Torna alla home', 'I tuoi messaggi privati', 'Seleziona una conversazione per leggere e rispondere.', 'Conversazione non disponibile',
       'Torna ai messaggi e scegli un’altra conversazione.', 'Torna alle conversazioni', 'Profilo attivo', 'Rimuovi', 'Rimozione…', 'Rimuovere la conversazione?',
       'La conversazione verrà rimossa dalla tua casella. L’altra persona potrà ancora vederla e nessun messaggio sarà eliminato definitivamente.', 'La conversazione è stata rimossa dalla tua casella.',
-      'Stai scrivendo in {{language}}. La traduzione automatica non è ancora attiva, quindi viene mostrato il testo originale.', 'Traduzione…', 'Traduzione completata', 'Traduzione non riuscita', 'Vedi originale', 'Vedi traduzione',
+      'I messaggi originali sono sempre disponibili.', 'Traduzione in corso…', 'Traduzione automatica', 'Traduzione non riuscita', 'Vedi originale', 'Vedi traduzione',
       'Inizia conversazione', 'Messaggio', 'Scrivi un messaggio…', 'Invio…', 'Invia', 'La tua lingua preferita', 'Lingua dell’attività',
       'Impossibile caricare le conversazioni.', 'Impossibile caricare i messaggi.', 'Impossibile aprire la conversazione.', 'Impossibile inviare il messaggio.', 'Impossibile rimuovere la conversazione.',
     ],
