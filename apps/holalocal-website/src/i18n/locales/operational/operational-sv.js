@@ -7,7 +7,7 @@ export default createOperational({
       'Du har inga konversationer ännu.', 'Tillbaka till startsidan', 'Dina privata meddelanden', 'Välj en konversation för att läsa och svara.', 'Konversationen är inte tillgänglig',
       'Gå tillbaka till meddelanden och välj en annan konversation.', 'Tillbaka till konversationer', 'Aktiv profil', 'Ta bort', 'Tar bort…', 'Ta bort konversationen?',
       'Konversationen tas bort från din inkorg. Den andra personen kan fortfarande se den och inga meddelanden raderas permanent.', 'Konversationen har tagits bort från din inkorg.',
-      'Du skriver på {{language}}. Automatisk översättning är inte aktiverad ännu, så originaltexten visas.', 'Översätter…', 'Översättning klar', 'Översättningen misslyckades', 'Visa original', 'Visa översättning',
+      'Originalmeddelandena är alltid tillgängliga.', 'Översätter…', 'Maskinöversättning', 'Översättningen misslyckades', 'Visa original', 'Visa översättning',
       'Starta konversation', 'Meddelande', 'Skriv ett meddelande…', 'Skickar…', 'Skicka', 'Ditt föredragna språk', 'Företagets språk',
       'Det gick inte att läsa in konversationerna.', 'Det gick inte att läsa in meddelandena.', 'Det gick inte att öppna konversationen.', 'Det gick inte att skicka meddelandet.', 'Det gick inte att ta bort konversationen.',
     ],

@@ -7,7 +7,7 @@ export default createOperational({
       'Zatím nemáte žádné konverzace.', 'Zpět na domovskou stránku', 'Vaše soukromé zprávy', 'Vyberte konverzaci, kterou chcete číst a odpovědět.', 'Konverzace není dostupná',
       'Vraťte se ke zprávám a vyberte jinou konverzaci.', 'Zpět ke konverzacím', 'Aktivní profil', 'Odstranit', 'Odstraňování…', 'Odstranit konverzaci?',
       'Konverzace se odstraní z vaší schránky. Druhá osoba ji stále uvidí a žádné zprávy nebudou trvale smazány.', 'Konverzace byla odstraněna z vaší schránky.',
-      'Píšete v jazyce {{language}}. Automatický překlad zatím není zapnutý, proto se zobrazuje původní text.', 'Překládání…', 'Překlad dokončen', 'Překlad se nezdařil', 'Zobrazit originál', 'Zobrazit překlad',
+      'Původní zprávy jsou vždy dostupné.', 'Překládání…', 'Strojový překlad', 'Překlad se nezdařil', 'Zobrazit originál', 'Zobrazit překlad',
       'Zahájit konverzaci', 'Zpráva', 'Napište zprávu…', 'Odesílání…', 'Odeslat', 'Váš preferovaný jazyk', 'Jazyk firmy',
       'Konverzace se nepodařilo načíst.', 'Zprávy se nepodařilo načíst.', 'Konverzaci se nepodařilo otevřít.', 'Zprávu se nepodařilo odeslat.', 'Konverzaci se nepodařilo odstranit.',
     ],

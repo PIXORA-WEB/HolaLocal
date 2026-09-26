@@ -1,12 +1,11 @@
+import MessageTranslationText from '../components/common/MessageTranslationText.jsx'
+import { recipientTranslationLanguage } from '../utils/messageTranslationPresentation.js'
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   isConversationUnreadForUser,
   isParticipantDeletedConversation,
-  normalizeMessageTranslation,
-  selectMessageDisplayText,
-  shouldShowTranslatedMessage,
 } from '@holalocal/firebase-contract'
 import AccessibleDialog from '../components/common/AccessibleDialog.jsx'
 import { ImageAvatar } from '../components/common/PublicBusinessCard.jsx'
@@ -80,7 +79,6 @@ function MessagesPage() {
   const conversationRequest = useMemo(() => ({ conversationId, userId: user.uid, conversationAttempt, t }),
     [conversationId, user.uid, conversationAttempt, t])
   const [confirmRemove, setConfirmRemove] = useState(false)
-  const [originalMessageIds, setOriginalMessageIds] = useState(() => new Set())
   const activeInboxState = selectInboxView(inboxState, user.uid)
   const {
     error: inboxError,
@@ -362,23 +360,12 @@ function MessagesPage() {
     }
   }
 
-  function toggleOriginalMessage(messageId) {
-    setOriginalMessageIds((current) => {
-      const next = new Set(current)
-      if (next.has(messageId)) next.delete(messageId)
-      else next.add(messageId)
-      return next
-    })
-  }
-
-  const customerLanguage = userProfile?.preferredLocale ?? t('messages.preferredLanguageFallback')
-  const businessLanguage = business?.primaryLanguage ?? business?.languages?.[0] ?? t('messages.businessLanguageFallback')
+  const targetLanguage = recipientTranslationLanguage(userProfile)
   const isBusinessParticipant = Boolean(conversation && conversation.customerId !== user.uid)
   const participantDeleted = isParticipantDeletedConversation(conversation)
   const participantPresentation = conversationParticipantPresentation(conversation, user.uid, {
     deletedUser: t('messages.deletedUser'),
   })
-  const activeLanguage = isBusinessParticipant ? businessLanguage : customerLanguage
   const otherParticipantName = isBusinessParticipant
     ? participantPresentation.deleted ? participantPresentation.label : t('messages.customerFallback')
     : business?.name ?? t('messages.businessFallback')
@@ -542,9 +529,7 @@ function MessagesPage() {
 
               <div className="conversation-translation-note">
                 <span aria-hidden="true">🌐</span>
-                <p>
-                  {t('messages.translationNote', { language: activeLanguage })}
-                </p>
+                <p>{t('messages.translationNote')}</p>
               </div>
 
               <ol
@@ -564,32 +549,16 @@ function MessagesPage() {
                     t('messages.you'),
                     otherParticipantName,
                   )
-                  const translation = normalizeMessageTranslation(message.translation)
-                  const canShowTranslation = shouldShowTranslatedMessage(message, user.uid)
-                  const showOriginal = originalMessageIds.has(message.messageId)
-                  const visibleText = selectMessageDisplayText(message, user.uid, showOriginal)
                   return (
                     <li className={isOwn ? 'message-bubble is-own' : 'message-bubble'} key={message.messageId}>
                       <span className="visually-hidden">{t('messages.sentBy', { name: senderName })}</span>
-                      <p>{visibleText}</p>
-                      {canShowTranslation && (
-                        <div className="message-translation-controls">
-                          <span>{t('messages.translation.completed')}</span>
-                          <button
-                            aria-label={showOriginal ? t('messages.translation.viewTranslation') : t('messages.translation.viewOriginal')}
-                            onClick={() => toggleOriginalMessage(message.messageId)}
-                            type="button"
-                          >
-                            {showOriginal ? t('messages.translation.viewTranslation') : t('messages.translation.viewOriginal')}
-                          </button>
-                        </div>
-                      )}
-                      {!isOwn && translation.status === 'processing' && (
-                        <small className="message-translation-status">{t('messages.translation.processing')}</small>
-                      )}
-                      {!isOwn && translation.status === 'failed' && (
-                        <small className="message-translation-status">{t('messages.translation.failed')}</small>
-                      )}
+                      <MessageTranslationText
+                        key={JSON.stringify([user.uid, conversationId, message.messageId, targetLanguage])}
+                        message={message}
+                        viewerId={user.uid}
+                        targetLanguage={targetLanguage}
+                        t={t}
+                      />
                       <time>{formatMessageTime(message.createdAt)}</time>
                     </li>
                   )

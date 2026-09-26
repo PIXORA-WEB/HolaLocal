@@ -7,7 +7,7 @@ export default createOperational({
       'Sinulla ei ole vielä keskusteluja.', 'Palaa etusivulle', 'Yksityiset viestisi', 'Valitse keskustelu lukeaksesi ja vastataksesi.', 'Keskustelu ei ole saatavilla',
       'Palaa viesteihin ja valitse toinen keskustelu.', 'Takaisin keskusteluihin', 'Aktiivinen profiili', 'Poista', 'Poistetaan…', 'Poistetaanko keskustelu?',
       'Keskustelu poistetaan postilaatikostasi. Toinen henkilö näkee sen edelleen, eikä viestejä poisteta pysyvästi.', 'Keskustelu poistettiin postilaatikostasi.',
-      'Kirjoitat kielellä {{language}}. Automaattinen käännös ei ole vielä käytössä, joten alkuperäinen teksti näytetään.', 'Käännetään…', 'Käännös valmis', 'Käännös epäonnistui', 'Näytä alkuperäinen', 'Näytä käännös',
+      'Alkuperäiset viestit ovat aina saatavilla.', 'Käännetään…', 'Konekäännös', 'Käännös epäonnistui', 'Näytä alkuperäinen', 'Näytä käännös',
       'Aloita keskustelu', 'Viesti', 'Kirjoita viesti…', 'Lähetetään…', 'Lähetä', 'Haluamasi kieli', 'Yrityksen kieli',
       'Keskusteluja ei voitu ladata.', 'Viestejä ei voitu ladata.', 'Keskustelua ei voitu avata.', 'Viestiä ei voitu lähettää.', 'Keskustelua ei voitu poistaa.',
     ],

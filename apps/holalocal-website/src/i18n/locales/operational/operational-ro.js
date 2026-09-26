@@ -7,7 +7,7 @@ export default createOperational({
       'Conversații cu mesaje necitite: {{count}}', 'Nu ai încă nicio conversație.', 'Înapoi la pagina principală', 'Mesajele tale private', 'Selectează o conversație pentru a citi și a răspunde.',
       'Conversație indisponibilă', 'Revino la mesaje și alege altă conversație.', 'Înapoi la conversații', 'Profil activ', 'Elimină', 'Se elimină…', 'Elimini conversația?',
       'Conversația va fi eliminată din căsuța ta. Cealaltă persoană o va putea vedea în continuare, iar mesajele nu vor fi șterse definitiv.', 'Conversația a fost eliminată din căsuța ta.',
-      'Scrii în {{language}}. Traducerea automată nu este încă activată, așa că este afișat textul original.', 'Se traduce…', 'Traducere finalizată', 'Traducerea a eșuat', 'Vezi originalul',
+      'Mesajele originale sunt întotdeauna disponibile.', 'Se traduce…', 'Traducere automată', 'Traducerea a eșuat', 'Vezi originalul',
       'Vezi traducerea', 'Începe conversația', 'Mesaj', 'Scrie un mesaj…', 'Se trimite…', 'Trimite', 'Limba ta preferată', 'Limba firmei',
       'Conversațiile nu au putut fi încărcate.', 'Mesajele nu au putut fi încărcate.', 'Conversația nu a putut fi deschisă.', 'Mesajul nu a putut fi trimis.', 'Conversația nu a putut fi eliminată.',
     ],
