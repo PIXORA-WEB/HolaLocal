@@ -79,6 +79,8 @@ export function toWebsiteUserProfile(documentId, rawDocument) {
     businessProfileRequired: profile.completion.businessProfileRequired,
     businessProfileCompleted: profile.completion.businessProfileCompleted,
     businessId: profile.businessId,
+    privacyNoticeVersion: profile.privacyNoticeVersion,
+    termsNoticeVersion: profile.termsNoticeVersion,
     termsAccepted: profile.consent.termsAccepted,
     termsAcceptedAt: profile.consent.termsAcceptedAt,
     termsVersion: profile.consent.termsVersion,

@@ -1,0 +1,10 @@
+.legal-update-notice { box-sizing: border-box; width: min(32rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; margin: auto; padding: 1.5rem; border: 1px solid #cbd5e1; border-radius: 1rem; background: #fff; color: #182329; font: inherit; overflow-wrap: anywhere; }
+.legal-update-notice::backdrop { background: rgb(0 0 0 / 50%); }
+.legal-update-notice h2 { font-size: 1.35rem; margin: 0 0 1rem; }
+.legal-update-notice a { display: inline-flex; align-items: center; min-height: 44px; color: #005747; text-decoration: underline; }
+.legal-update-date { display: block; font-size: .9rem; }
+.legal-update-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
+.legal-update-actions button { min-height: 44px; max-width: 100%; padding: .65rem 1rem; border: 1px solid #65756f; border-radius: .5rem; font: inherit; cursor: pointer; background: #fff; color: #182329; }
+.legal-update-actions button:first-child { background: #005747; color: #fff; }
+.legal-update-actions button:disabled { opacity: .65; cursor: wait; }
+.legal-update-notice :focus-visible { outline: 3px solid #246bcc; outline-offset: 3px; }

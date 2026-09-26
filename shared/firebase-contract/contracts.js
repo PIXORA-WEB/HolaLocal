@@ -29,6 +29,8 @@ export const USER_CONTRACT = Object.freeze({
     privacyAccepted: field('boolean', 'owner_writable_monotonic', 'private_internal'),
     privacyAcceptedAt: field('Timestamp|null', 'owner_writable_monotonic', 'private_internal'),
     privacyVersion: field('string|null', 'owner_writable_monotonic', 'private_internal'),
+    privacyNoticeVersion: field('supported_legal_version', 'owner_writable', 'private_internal'),
+    termsNoticeVersion: field('supported_legal_version', 'owner_writable', 'private_internal'),
     lastActiveAt: field('Timestamp|null', 'derived', 'private_internal'),
     deletionRequestedAt: field('Timestamp|null', 'owner_writable_request', 'private_internal'),
     deletionScheduledFor: field('Timestamp|null', 'trusted_only', 'private_internal'),

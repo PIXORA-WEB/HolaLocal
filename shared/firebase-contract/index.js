@@ -159,3 +159,5 @@ export {
 } from './subscriptions.js'
 
 export * from './retention.js'
+
+export { LEGAL_PUBLICATION_PATH, NOTICE_INTRODUCTION, BUNDLED_LEGAL_PUBLICATION, createLegalNoticeContract, legalNoticeContract, registrationNoticeBaseline } from './legalNotice.js'

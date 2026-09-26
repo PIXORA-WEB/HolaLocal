@@ -1,3 +1,4 @@
+import { registrationNoticeBaseline } from '@holalocal/firebase-contract'
 // Owns all reads and writes for Firestore user profile documents.
 // Authentication credentials remain the responsibility of Firebase Auth.
 import { doc, getDoc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore'
@@ -108,7 +109,7 @@ export async function createUserProfile(uid, profileData = {}) {
     const snapshot = await transaction.get(reference)
 
     if (!snapshot.exists()) {
-      transaction.set(reference, buildNewProfile(uid, profileData))
+      transaction.set(reference, { ...buildNewProfile(uid, profileData), ...registrationNoticeBaseline(profileData) })
     }
   })
 

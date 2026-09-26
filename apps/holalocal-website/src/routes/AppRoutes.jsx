@@ -1,3 +1,4 @@
+import LegalUpdateNotice from '../components/common/LegalUpdateNotice.jsx'
 import AnalyticsConsent from '../components/common/AnalyticsConsent.jsx'
 import { lazy, Suspense, useLayoutEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, matchPath, useLocation, useParams } from 'react-router-dom'
@@ -82,6 +83,7 @@ function LegacyBusinessRedirect() {
 function AppRoutes() {
   return (
     <BrowserRouter>
+      <LegalUpdateNotice />
       <AnalyticsConsent />
       <ScrollToTopOnNavigation />
       <BusinessMediaPresentationCleanup />

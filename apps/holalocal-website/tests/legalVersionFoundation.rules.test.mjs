@@ -3,16 +3,19 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing'
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
-import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from '@holalocal/firebase-contract'
+import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION, BUNDLED_LEGAL_PUBLICATION } from '@holalocal/firebase-contract'
 import { buildRegistrationProfile } from '../../holalocal-app/src/services/userPayloads.js'
 import { protectedAccountDecision } from '../src/routes/accountRoutePolicy.js'
 
 let environment, db, service
 const versions = { termsVersion: CURRENT_TERMS_VERSION, privacyVersion: CURRENT_PRIVACY_VERSION }
 function profile(uid = 'owner', extra = {}) {
-  return { ...buildRegistrationProfile(uid, {
+  const result = { ...buildRegistrationProfile(uid, {
     email: `${uid}@example.invalid`, termsAccepted: true, privacyAccepted: true, ...versions,
   }, serverTimestamp), ...extra }
+  // Historical registration fixtures do not claim current-document notice exposure.
+  for (const kind of ['privacy', 'terms']) if (result[kind + 'Version'] !== versions[kind + 'Version']) delete result[kind + 'NoticeVersion']
+  return result
 }
 const ref = () => doc(db, 'users', 'owner')
 const stored = async () => (await getDoc(ref())).data()
@@ -29,7 +32,10 @@ before(async () => {
   service = await import('../src/services/userService.js')
 })
 after(async () => { await environment?.cleanup(); delete globalThis.__legalTestDatabase })
-beforeEach(async () => { await environment.clearFirestore() })
+beforeEach(async () => {
+  await environment.clearFirestore()
+  await environment.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'legalPublications', 'current'), BUNDLED_LEGAL_PUBLICATION))
+})
 
 test('actual website registration writer persists canonical current versions under Rules', async () => {
   await assertSucceeds(service.createUserProfile('owner', {

@@ -90,6 +90,8 @@ export function adaptUserDocument(documentId, rawDocument = {}) {
         businessProfileRequired: raw.businessProfileRequired === true,
         businessProfileCompleted: raw.businessProfileCompleted === true,
       },
+      privacyNoticeVersion: raw.privacyNoticeVersion,
+      termsNoticeVersion: raw.termsNoticeVersion,
       consent: {
         termsAccepted: typeof raw.termsAccepted === 'boolean' ? raw.termsAccepted : null,
         termsAcceptedAt: clone(raw.termsAcceptedAt ?? null),

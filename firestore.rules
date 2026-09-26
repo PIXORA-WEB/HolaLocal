@@ -12,6 +12,52 @@ service cloud.firestore {
       return version in ['1.0', '1.1'];
     }
 
+    // Notice acknowledgement is separate from acceptance evidence.
+    function currentNoticeVersion(kind, value) {
+      let published = get(/databases/$(database)/documents/legalPublications/current).data;
+      return value is string
+        && ((kind == 'privacy' && supportedPrivacyVersion(value) && value == published.privacyVersion)
+          || (kind == 'terms' && supportedTermsVersion(value) && value == published.termsVersion));
+    }
+
+    function validNoticeCreate() {
+      let next = request.resource.data;
+      return (!next.keys().hasAny(['privacyNoticeVersion'])
+          || (next.privacyNoticeVersion == next.privacyVersion && currentNoticeVersion('privacy', next.privacyNoticeVersion)))
+        && (!next.keys().hasAny(['termsNoticeVersion'])
+          || (next.termsNoticeVersion == next.termsVersion && currentNoticeVersion('terms', next.termsNoticeVersion)));
+    }
+
+    function noticeVersionRank(kind, value) {
+      // Independent bounded orders; keep aligned with shared supported version lists.
+      let privacyOrder = {'1.0': 0, '1.1': 1};
+      let termsOrder = {'1.0': 0, '1.1': 1};
+      return !(value is string) ? -1
+        : (kind == 'privacy' ? privacyOrder.get(value, -1) : termsOrder.get(value, -1));
+    }
+
+    function noticeDoesNotRegress(kind, previous, next) {
+      return noticeVersionRank(kind, next) >= noticeVersionRank(kind, previous);
+    }
+
+    function validNoticeUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasAny(['privacyNoticeVersion', 'termsNoticeVersion'])
+        && changed.hasOnly(['privacyNoticeVersion', 'termsNoticeVersion', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && (!changed.hasAny(['privacyNoticeVersion'])
+          || (currentNoticeVersion('privacy', request.resource.data.privacyNoticeVersion)
+            && noticeDoesNotRegress('privacy', resource.data.get('privacyNoticeVersion', null), request.resource.data.privacyNoticeVersion)))
+        && (!changed.hasAny(['termsNoticeVersion'])
+          || (currentNoticeVersion('terms', request.resource.data.termsNoticeVersion)
+            && noticeDoesNotRegress('terms', resource.data.get('termsNoticeVersion', null), request.resource.data.termsNoticeVersion)));
+    }
+
+    match /legalPublications/current {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
     function signedIn() {
       return request.auth != null;
     }
@@ -158,7 +204,8 @@ service cloud.firestore {
           'businessProfileRequired', 'businessProfileCompleted', 'businessId',
           'createdAt', 'updatedAt', 'lastActiveAt', 'termsAccepted', 'termsAcceptedAt',
           'termsVersion', 'privacyAccepted', 'privacyAcceptedAt', 'privacyVersion',
-          'deletionRequestedAt', 'deletionScheduledFor', 'anonymizedAt'
+          'deletionRequestedAt', 'deletionScheduledFor', 'anonymizedAt',
+          'privacyNoticeVersion', 'termsNoticeVersion'
         ])
         && request.resource.data.keys().hasAll([
           'uid', 'email', 'displayName', 'displayNameNormalized', 'preferredLocale',
@@ -581,6 +628,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isOwner(userId)
         && validUserCreate(userId)
+        && validNoticeCreate()
         && request.resource.data.roles == ['customer']
         && request.resource.data.accountStatus == 'active'
         && request.resource.data.termsAccepted == true
@@ -592,7 +640,7 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow update: if isOwner(userId)
         && hasActiveAccount()
-        && validUserOwnerUpdate(userId);
+        && (validUserOwnerUpdate(userId) || validNoticeUpdate());
       allow delete: if false;
 
       match /savedBusinesses/{businessId} {

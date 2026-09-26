@@ -1,3 +1,4 @@
+import LegalUpdateNotice from '../components/common/LegalUpdateNotice.jsx'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AuthLayout from '../layouts/AuthLayout.jsx'
 import BusinessLayout from '../layouts/BusinessLayout.jsx'
@@ -25,6 +26,7 @@ import PublicRoute from './PublicRoute.jsx'
 function AppRoutes() {
   return (
     <BrowserRouter>
+      <LegalUpdateNotice />
       <Routes>
         <Route element={<MainLayout />}>
           <Route index element={<HomePage />} />

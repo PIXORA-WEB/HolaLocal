@@ -1,4 +1,4 @@
-import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION, ISSUE_CODES, SUPPORTED_LANGUAGE_CODES, normalizeLanguage } from '@holalocal/firebase-contract'
+import { registrationNoticeBaseline, CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION, ISSUE_CODES, SUPPORTED_LANGUAGE_CODES, normalizeLanguage } from '@holalocal/firebase-contract'
 
 const profileFields = new Set([
   'displayName', 'firstName', 'lastName', 'photoURL', 'profilePhoto',
@@ -29,6 +29,7 @@ export function buildRegistrationProfile(uid, profileData = {}, serverTimestamp)
   const displayName = String(profileData.displayName ?? '').trim()
   const preferredLocale = resolveRegistrationLocale(profileData.preferredLocale).locale
   return {
+    ...registrationNoticeBaseline(profileData),
     uid, email: String(profileData.email ?? '').trim(), displayName,
     displayNameNormalized: normalizeName(displayName), firstName: '', lastName: '',
     photoURL: null, profilePhoto: null, preferredLocale, accountType: 'customer',
