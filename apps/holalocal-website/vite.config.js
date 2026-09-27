@@ -25,6 +25,9 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      dedupe: ['react', 'react-dom', 'firebase'],
+    },
     build: {
       rolldownOptions: {
         output: {
