@@ -1,6 +1,6 @@
 # Legal update notice foundation — not a release authorization
 
-Current Privacy and Terms remain 1.1, effective 2026-09-13. No legal text changes.
+This local release candidate publishes Privacy and Terms 1.2, effective 2026-09-27, only after separate release authorization. Production remains 1.1 until that coordinated release. See ../../docs/legal/LEGAL_1_2_RELEASE_PLAN.md. Notice introduction remains fixed at 1.1.
 
 ## State and publication contract
 
@@ -12,9 +12,9 @@ Missing/malformed notice state uses fixed 1.1 introduction baselines for due log
 no migration or login/repair write occurs. Privacy/Terms remain independent.
 
 `legalPublications/current` is a single public GET-only registry, no client writes.
-Its exact four-field schema/initial values are in
+Its exact four-field schema/proposed 1.2 publication values are in
 `../firebase-contract/fixtures/legalPublications.current.json`. This fixture is NOT
-published by the application. Admin/trusted release tooling must bootstrap it later.
+published by the application. Admin/trusted release tooling must inspect existing state and advance it only after publication. For an initial foundation bootstrap, use 1.1/2026-09-13 for both documents, not this proposed 1.2 fixture.
 Current supported version ordering comes from the bounded shared legal contract;
 unknown, malformed, missing, older-than-bundled or same-version/different-date
 registries are ignored, not turned into notices. The snapshot subscription retries

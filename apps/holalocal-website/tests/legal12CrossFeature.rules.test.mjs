@@ -1,0 +1,19 @@
+import {BUNDLED_LEGAL_PUBLICATION} from '../../../shared/firebase-contract/legalNotice.js';
+import { test, before, after, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
+import {doc,setDoc,getDoc,updateDoc,serverTimestamp} from 'firebase/firestore';
+import {buildRegistrationProfile} from '../../holalocal-app/src/services/userPayloads.js';
+import {createLegalNoticeClient} from '../../../shared/legal-notice/client.js';
+let env,db,save,client;const user=()=>doc(db,'users','owner');
+before(async()=>{assert.match(process.env.FIRESTORE_EMULATOR_HOST,/^(127\.0\.0\.1|localhost):/);env=await initializeTestEnvironment({projectId:'demo-holalocal-combined',firestore:{rules:await readFile(new URL('../../../firestore.rules',import.meta.url),'utf8')}});db=env.authenticatedContext('owner').firestore();globalThis.__legalTestDatabase=db;save=(await import('../src/services/userService.js')).saveMessageTranslationPreference;client=createLegalNoticeClient(db)});
+after(async()=>{await env.cleanup()});
+beforeEach(async()=>{await env.clearFirestore();await env.withSecurityRulesDisabled(async c=>{await setDoc(doc(c.firestore(),'legalPublications/current'),BUNDLED_LEGAL_PUBLICATION);const p=buildRegistrationProfile('owner',{email:'x@example.invalid',privacyAccepted:true,termsAccepted:true,privacyVersion:BUNDLED_LEGAL_PUBLICATION.privacyVersion,termsVersion:BUNDLED_LEGAL_PUBLICATION.termsVersion},serverTimestamp);delete p.privacyNoticeVersion;delete p.termsNoticeVersion;await setDoc(doc(c.firestore(),'users','owner'),{...p,messageTranslationEnabled:false})})});
+test('mixed notice and preference denied',async()=>assertFails(updateDoc(user(),{privacyNoticeVersion:'1.2',messageTranslationEnabled:true,messageTranslationEnabledSince:serverTimestamp(),updatedAt:serverTimestamp()})));
+test('actual notice transaction preserves preference and all acceptance',async()=>{const a=(await getDoc(user())).data();await client.acknowledge('owner',{privacy:'1.2',terms:'1.2'});const b=(await getDoc(user())).data();for(const k of Object.keys(a))if(k!=='updatedAt')assert.deepEqual(b[k],a[k]);});
+test('actual preference transition preserves notice and acceptance',async()=>{await client.acknowledge('owner',{privacy:'1.2',terms:'1.2'});const a=(await getDoc(user())).data();await save('owner',true);const b=(await getDoc(user())).data();assert(b.messageTranslationEnabledSince.isEqual(b.updatedAt));for(const k of Object.keys(a))if(!['updatedAt','messageTranslationEnabled'].includes(k))assert.deepEqual(b[k],a[k]);await save('owner',false);assert((await getDoc(user())).data().messageTranslationEnabledSince.isEqual(b.messageTranslationEnabledSince))});
+test('ordinary profile write preserves all four fields',async()=>{await client.acknowledge('owner',{privacy:'1.2',terms:'1.2'});await save('owner',true);const a=(await getDoc(user())).data();await assertSucceeds(updateDoc(user(),{city:'Madrid',updatedAt:serverTimestamp()}));const b=(await getDoc(user())).data();for(const k of ['privacyNoticeVersion','termsNoticeVersion','messageTranslationEnabled','messageTranslationEnabledSince'])assert.deepEqual(b[k],a[k])});
+test('current mobile registration accepted with registry',async()=>{const other=env.authenticatedContext('new').firestore();await assertSucceeds(setDoc(doc(other,'users','new'),buildRegistrationProfile('new',{email:'new@example.invalid',privacyAccepted:true,termsAccepted:true,privacyVersion:BUNDLED_LEGAL_PUBLICATION.privacyVersion,termsVersion:BUNDLED_LEGAL_PUBLICATION.termsVersion},serverTimestamp)))});
+
+test('unsupported future legal and notice versions remain denied',async()=>{await assertFails(updateDoc(user(),{privacyNoticeVersion:'1.3',updatedAt:serverTimestamp()}));await assertFails(updateDoc(user(),{privacyVersion:'1.3',updatedAt:serverTimestamp()}))});

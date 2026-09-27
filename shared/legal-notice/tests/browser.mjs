@@ -18,7 +18,7 @@ import Website from '${root}apps/holalocal-website/src/components/common/LegalUp
 import Mobile from '${root}apps/holalocal-app/src/components/common/LegalUpdateNotice.jsx';
 window.state={uid:new URLSearchParams(location.search).has('signedOut')?null:'owner',locale:'en',pathname:'/profile',surface:'website',fail:false,hold:false,loading:false};
 window.profile={accountStatus:'active',privacyVersion:'1.0',termsVersion:'1.0',privacyAcceptedAt:10,termsAcceptedAt:20};
-window.publication={privacyVersion:'1.2',termsVersion:'1.2',privacyEffectiveDate:'2026-09-13',termsEffectiveDate:'2026-09-13'};
+window.publication={privacyVersion:'1.2',termsVersion:'1.2',privacyEffectiveDate:'2026-09-27',termsEffectiveDate:'2026-09-27'};
 window.writes=[];window.listeners=new Set();
 window.client={subscribe(uid,fn){window.listeners.add(fn);fn({profile:{...window.profile},publication:{...window.publication}});return()=>window.listeners.delete(fn)},async acknowledge(uid,shown){
 window.writes.push({uid,shown});if(window.state.hold)await new Promise(r=>window.release=r);if(window.state.fail)throw Error('offline');

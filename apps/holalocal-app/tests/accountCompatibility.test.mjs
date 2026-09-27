@@ -208,8 +208,8 @@ test('mobile account type changes use trusted callable instead of direct role wr
 })
 
 test('website and mobile registration select independently owned canonical current versions', async () => {
-  assert.equal(CURRENT_TERMS_VERSION, '1.1')
-  assert.equal(CURRENT_PRIVACY_VERSION, '1.1')
+  assert.equal(CURRENT_TERMS_VERSION, '1.2')
+  assert.equal(CURRENT_PRIVACY_VERSION, '1.2')
   for (const relative of ['../src/pages/auth/RegisterPage.jsx', '../../holalocal-website/src/pages/auth/RegisterPage.jsx']) {
     const source = await readFile(new URL(relative, import.meta.url), 'utf8')
     assert.match(source, /termsVersion: CURRENT_TERMS_VERSION/)

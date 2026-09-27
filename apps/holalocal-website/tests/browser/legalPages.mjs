@@ -17,8 +17,8 @@ await server.listen()
 const browser=await chromium.launch({args:['--disable-dev-shm-usage']})
 const results=[]
 try {
- for(const width of [390,1440]) {
-  const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===390,isMobile:width===390})
+ for(const width of [1280,390,320]) {
+  const context=await browser.newContext({viewport:{width,height:width===390?844:width===320?700:900},hasTouch:width===390,isMobile:width===390})
   await context.route('**/*',route=>/^http:\/\/127\.0\.0\.1:/.test(route.request().url())?route.continue():route.abort())
   const page=await context.newPage()
   await page.goto('http://127.0.0.1:4193/privacy')
@@ -27,10 +27,11 @@ try {
    for(const route of ['privacy','terms']) {
     await page.goto(`http://127.0.0.1:4193/${route}`)
     await page.locator('.legal-content__contents').waitFor()
-    await page.waitForFunction(label=>document.querySelector('.placeholder__label')?.textContent===label,`${content.revisionNotice} · 1.1 · ${CURRENT_TERMS_EFFECTIVE_DATE}`)
+    await page.waitForFunction(label=>document.querySelector('.placeholder__label')?.textContent===label,`${content.revisionNotice} · 1.2 · ${CURRENT_TERMS_EFFECTIVE_DATE}`)
     const headings=page.locator('.legal-content__sections h2')
     assert.deepEqual(await headings.allTextContents(),content[route].sections.map(s=>s.title),`${code}/${route}`)
     assert.equal(await page.locator('h1').count(),1)
+    assert.ok(await page.locator('h1').evaluate(el=>el.scrollWidth<=el.clientWidth+1),`${code}/${route}/${width} clipped heading`)
     assert.equal(await page.locator('.legal-content__contents a').count(),await headings.count())
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${code}/${route}/${width} overflow`)
     const link=page.locator('.legal-content__contents a').last()
@@ -52,7 +53,7 @@ try {
      assert.equal(await page.evaluate(()=>localStorage.getItem('holalocal.analyticsChoice.v1')),'rejected')
      assert.equal(await page.locator('.analytics-choice').count(),0)
     }
-    if(code==='en') {await page.goto(`http://127.0.0.1:4193/${route}`);await page.locator('.legal-content__contents').waitFor();await page.screenshot({path:resolve(output,`${route}-${width}.png`),fullPage:true});await page.screenshot({path:resolve(output,`${route}-${width}-top.png`)})}
+    if(['en','es','de','uk'].includes(code)) {await page.goto(`http://127.0.0.1:4193/${route}`);await page.locator('.legal-content__contents').waitFor();await page.screenshot({path:resolve(output,`${code}-${route}-${width}.png`),fullPage:true});await page.screenshot({path:resolve(output,`${code}-${route}-${width}-top.png`)})}
     results.push({code,route,width,headings:content[route].sections.length,anchorReload:true,keyboardAnchor:true,overflow:false})
    }
   }

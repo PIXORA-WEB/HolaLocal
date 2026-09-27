@@ -5,11 +5,11 @@ service cloud.firestore {
     // Bounded mirror of shared/firebase-contract/legalConsent.js.
     // Publication, historical evidence and access policy are separate decisions.
     function supportedTermsVersion(version) {
-      return version in ['1.0', '1.1'];
+      return version in ['1.0', '1.1', '1.2'];
     }
 
     function supportedPrivacyVersion(version) {
-      return version in ['1.0', '1.1'];
+      return version in ['1.0', '1.1', '1.2'];
     }
 
     // Notice acknowledgement is separate from acceptance evidence.
@@ -30,8 +30,8 @@ service cloud.firestore {
 
     function noticeVersionRank(kind, value) {
       // Independent bounded orders; keep aligned with shared supported version lists.
-      let privacyOrder = {'1.0': 0, '1.1': 1};
-      let termsOrder = {'1.0': 0, '1.1': 1};
+      let privacyOrder = {'1.0': 0, '1.1': 1, '1.2': 2};
+      let termsOrder = {'1.0': 0, '1.1': 1, '1.2': 2};
       return !(value is string) ? -1
         : (kind == 'privacy' ? privacyOrder.get(value, -1) : termsOrder.get(value, -1));
     }

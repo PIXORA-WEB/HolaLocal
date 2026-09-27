@@ -647,6 +647,10 @@
 }
 
 /* Legal pages share their existing renderer; other information pages keep their layout. */
+.placeholder:has(.legal-content) .placeholder__header h1 {
+  overflow-wrap: anywhere;
+}
+
 .legal-content {
   min-width: 0;
   text-align: left;

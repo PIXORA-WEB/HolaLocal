@@ -26,8 +26,8 @@ function currentConsent(overrides = {}) {
 }
 
 test('current policy versions are independently addressable', () => {
-  assert.equal(CURRENT_TERMS_VERSION, '1.1')
-  assert.equal(CURRENT_PRIVACY_VERSION, '1.1')
+  assert.equal(CURRENT_TERMS_VERSION, '1.2')
+  assert.equal(CURRENT_PRIVACY_VERSION, '1.2')
 })
 
 test('hasCurrentLegalConsent accepts only exact current consent', () => {
@@ -88,7 +88,7 @@ test('historical evidence permits access without asserting current agreement or 
  assert.equal(hasValidLegalConsent(profile),true)
  assert.equal(hasCurrentLegalConsent(profile),false)
  assert.deepEqual(profile,before)
- for(const patch of [{termsVersion:'0.9'},{termsVersion:'99'},{privacyVersion:'1.2'},{termsAccepted:false},{privacyAcceptedAt:null}]) assert.equal(hasValidLegalConsent({...profile,...patch}),false)
+ for(const patch of [{termsVersion:'0.9'},{termsVersion:'99'},{privacyVersion:'1.3'},{termsAccepted:false},{privacyAcceptedAt:null}]) assert.equal(hasValidLegalConsent({...profile,...patch}),false)
  assert.equal(hasValidLegalConsent(currentConsent()),true)
 })
 
@@ -102,11 +102,11 @@ const {
 const { readFile } = await import('node:fs/promises')
 
 test('current dates and bounded evidence/access lists remain unchanged', () => {
-  assert.equal(CURRENT_TERMS_EFFECTIVE_DATE, '2026-09-13')
-  assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE, '2026-09-13')
+  assert.equal(CURRENT_TERMS_EFFECTIVE_DATE, '2026-09-27')
+  assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE, '2026-09-27')
   for (const versions of [SUPPORTED_TERMS_VERSIONS, SUPPORTED_PRIVACY_VERSIONS,
     LEGAL_ACCESS_VERSION_REQUIREMENTS.terms, LEGAL_ACCESS_VERSION_REQUIREMENTS.privacy]) {
-    assert.deepEqual(versions, ['1.0', '1.1'])
+    assert.deepEqual(versions, ['1.0', '1.1', '1.2'])
     assert.equal(Object.isFrozen(versions), true)
   }
 })
@@ -143,7 +143,7 @@ test('unsupported and malformed pairs fail closed independently', () => {
 test('publication edits alone cannot erase evidence or choose a new access requirement', async () => {
   const source = await readFile(new URL('../legalConsent.js', import.meta.url), 'utf8')
   // Hypothetical publication only, in memory: no future version added to runtime.
-  const changed = source.replace("CURRENT_TERMS_VERSION = '1.1'", "CURRENT_TERMS_VERSION = 'unpublished-test'")
+  const changed = source.replace("CURRENT_TERMS_VERSION = '1.2'", "CURRENT_TERMS_VERSION = 'unpublished-test'")
   const contract = await import('data:text/javascript,' + encodeURIComponent(changed))
   const p = Object.freeze(currentConsent())
   assert.equal(contract.hasHistoricalLegalEvidence(p), true)
@@ -154,7 +154,7 @@ test('publication edits alone cannot erase evidence or choose a new access requi
 
 test('a separate hypothetical access policy cannot make recovery overwrite historical evidence', async () => {
   const source = await readFile(new URL('../legalConsent.js', import.meta.url), 'utf8')
-  const changed = source.replace("terms: Object.freeze(['1.0', '1.1'])", "terms: Object.freeze(['1.1'])")
+  const changed = source.replace("terms: Object.freeze(['1.0', '1.1', '1.2'])", "terms: Object.freeze(['1.1'])")
   const contract = await import('data:text/javascript,' + encodeURIComponent(changed))
   const p = currentConsent({ termsVersion: '1.0' })
   assert.equal(contract.hasHistoricalLegalEvidence(p), true)

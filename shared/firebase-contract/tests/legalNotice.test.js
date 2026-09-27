@@ -6,10 +6,12 @@ import { toWebsiteUserProfile, toPublicBusinessView } from '../../../apps/holalo
 import { toMobileUserProfile } from '../../../apps/holalocal-app/src/services/userCompatibility.js'
 import { buildRegistrationProfile } from '../../../apps/holalocal-app/src/services/userPayloads.js'
 import { noticeLocales } from '../../legal-notice/locales.js'
-const future = createLegalNoticeContract({ privacy: ['1.0','1.1','1.2','1.3'], terms: ['1.0','1.1','1.2','1.3'] })
-const publication = (privacy='1.1',terms='1.1') => ({ ...bundled, privacyVersion:privacy,termsVersion:terms })
+const introduction = {...bundled, privacyVersion:'1.1',termsVersion:'1.1',privacyEffectiveDate:'2026-09-13',termsEffectiveDate:'2026-09-13'}
+const historical = createLegalNoticeContract({privacy:['1.0','1.1'],terms:['1.0','1.1']},introduction)
+const future = createLegalNoticeContract({ privacy: ['1.0','1.1','1.2','1.3'], terms: ['1.0','1.1','1.2','1.3'] },introduction)
+const publication = (privacy='1.1',terms='1.1') => ({ ...introduction, privacyVersion:privacy,termsVersion:terms })
 for (const profile of [{},{privacyVersion:'1.0',termsVersion:'1.0'},{privacyNoticeVersion:'1.1',termsNoticeVersion:'1.1'}]) {
- test('introduction preserves no-notice behavior '+JSON.stringify(profile),()=>assert.deepEqual(live.pending(profile,bundled),{privacy:false,terms:false}))
+ test('introduction preserves no-notice behavior '+JSON.stringify(profile),()=>assert.deepEqual(historical.pending(profile,introduction),{privacy:false,terms:false}))
 }
 for (const [p,t,expected] of [['1.2','1.1',{privacy:true,terms:false}],['1.1','1.2',{privacy:false,terms:true}],['1.2','1.2',{privacy:true,terms:true}],['1.3','1.2',{privacy:true,terms:false}]]) {
  test('bounded synthetic update '+p+'/'+t,()=>assert.deepEqual(future.pending({privacyNoticeVersion:'1.1',termsNoticeVersion:t==='1.2'&&p==='1.3'?'1.2':'1.1'},publication(p,t)),expected))
@@ -33,8 +35,8 @@ test('no arbitrary acknowledgement keys',()=>assert.throws(()=>live.acknowledgem
 test('registration baseline independent of repair/current accept history',()=>{
  assert.deepEqual(registrationNoticeBaseline({}),{})
  assert.deepEqual(registrationNoticeBaseline({privacyAccepted:true,termsAccepted:true,privacyVersion:'1.0',termsVersion:'1.0'}),{})
- const p=buildRegistrationProfile('u',{privacyAccepted:true,termsAccepted:true,privacyVersion:'1.1',termsVersion:'1.1'},()=>123)
- assert.equal(p.privacyNoticeVersion,'1.1');assert.equal(p.termsNoticeVersion,'1.1')
+ const p=buildRegistrationProfile('u',{privacyAccepted:true,termsAccepted:true,privacyVersion:bundled.privacyVersion,termsVersion:bundled.termsVersion},()=>123)
+ assert.equal(p.privacyNoticeVersion,bundled.privacyVersion);assert.equal(p.termsNoticeVersion,bundled.termsVersion)
 })
 test('private projections preserve notice values',()=>{
  for(const project of [toWebsiteUserProfile,toMobileUserProfile]) {
@@ -78,6 +80,6 @@ test('Rules independent bounded notice ranks match shared supported ordering',()
  const rules=readFileSync(new URL('../../../firestore.rules',import.meta.url),'utf8')
  for(const kind of ['privacy','terms']) {
   const values=[...rules.match(new RegExp('let '+kind+'Order = \{([^}]+)\}'))[1].matchAll(/'([^']+)': (\d+)/g)].map(m=>[m[1],Number(m[2])])
-  assert.deepEqual(values,[['1.0',0],['1.1',1]])
+  assert.deepEqual(values,[['1.0',0],['1.1',1],['1.2',2]])
  }
 })

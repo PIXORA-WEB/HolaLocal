@@ -42,7 +42,7 @@ test('actual website registration writer persists canonical current versions und
     email: 'owner@example.invalid', termsAccepted: true, privacyAccepted: true, ...versions,
   }))
   const p = await stored()
-  assert.equal(p.termsVersion, '1.1'); assert.equal(p.privacyVersion, '1.1')
+  assert.equal(p.termsVersion, CURRENT_TERMS_VERSION); assert.equal(p.privacyVersion, CURRENT_PRIVACY_VERSION)
   assert.ok(p.termsAcceptedAt instanceof Timestamp); assert.ok(p.privacyAcceptedAt instanceof Timestamp)
 })
 test('actual mobile registration payload persists the same canonical versions under Rules', async () => {
@@ -50,12 +50,12 @@ test('actual mobile registration payload persists the same canonical versions un
   const p = await stored()
   assert.equal(p.termsVersion, CURRENT_TERMS_VERSION); assert.equal(p.privacyVersion, CURRENT_PRIVACY_VERSION)
 })
-for (const termsVersion of ['1.0', '1.1']) for (const privacyVersion of ['1.0', '1.1']) {
+for (const termsVersion of ['1.0', '1.1', '1.2']) for (const privacyVersion of ['1.0', '1.1', '1.2']) {
   test(`Rules retain supported independent registration pair ${termsVersion}/${privacyVersion}`, async () => {
     await assertSucceeds(setDoc(ref(), profile('owner', { termsVersion, privacyVersion })))
   })
 }
-for (const field of ['termsVersion', 'privacyVersion']) for (const value of ['99', '0.9', '', 1.1, null]) {
+for (const field of ['termsVersion', 'privacyVersion']) for (const value of ['1.3', '99', '0.9', '', 1.1, null]) {
   test(`Rules reject create ${field}=${JSON.stringify(value)}`, async () => {
     await assertFails(setDoc(ref(), profile('owner', { [field]: value })))
   })

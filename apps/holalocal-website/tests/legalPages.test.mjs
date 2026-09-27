@@ -16,8 +16,8 @@ test('legal content has matching sections in all languages, no publication place
   const retention=content.privacy.sections.find(s=>s.key==='cloud-retention').paragraphs.join(' ')
   for(const days of ['30','7','400'])assert.ok(retention.includes(days),code)
  }
- assert.equal(CURRENT_TERMS_VERSION,'1.1')
- assert.equal(CURRENT_PRIVACY_VERSION,'1.1')
+ assert.equal(CURRENT_TERMS_VERSION,'1.2')
+ assert.equal(CURRENT_PRIVACY_VERSION,'1.2')
 })
 
 
@@ -52,10 +52,10 @@ test('approved account age is consistent and approved publication dates match', 
   const account = content.terms.sections.find(section => section.key === 'account')
   assert.match(account.paragraphs[0], /18/, code)
  }
- assert.equal(CURRENT_TERMS_VERSION, '1.1')
- assert.equal(CURRENT_PRIVACY_VERSION, '1.1')
- assert.equal(CURRENT_TERMS_EFFECTIVE_DATE,'2026-09-13')
- assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,'2026-09-13')
+ assert.equal(CURRENT_TERMS_VERSION, '1.2')
+ assert.equal(CURRENT_PRIVACY_VERSION, '1.2')
+ assert.equal(CURRENT_TERMS_EFFECTIVE_DATE,'2026-09-27')
+ assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,'2026-09-27')
 })
 
 test('automatic update notice is absent without changing required legal acknowledgment copy',async()=>{
@@ -94,16 +94,16 @@ test('approved retention criteria appear once in each locale with distinct autom
  assert.match(copy,/Manual conversation and acknowledgment cleanup and automatic account-deletion recovery remain disabled/)
  assert.match(copy,/responsible reviewer, next review date and ending condition/)
  assert.match(copy,/does not automatically end or renew/)
- assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,'2026-09-13')
+ assert.equal(CURRENT_PRIVACY_EFFECTIVE_DATE,'2026-09-27')
 })
 
 test('all locales distinguish service, interests, legal duties, consent and transfer safeguards',()=>{
  for(const [code,content] of Object.entries(legalPageContent)){
   const purpose=content.privacy.sections.find(s=>s.key==='purpose')
   const providers=content.privacy.sections.find(s=>s.key==='providers')
-  assert.equal(purpose.paragraphs.length,1,code)
+  assert.equal(purpose.paragraphs.length,2,code)
   assert.ok(purpose.paragraphs[0].includes('Analytics'),code)
-  assert.equal(providers.paragraphs.length,2,code)
+  assert.equal(providers.paragraphs.length,3,code)
   assert.ok(providers.paragraphs[1].includes('<email>hello@holalocal.es</email>'),code)
  }
  const purpose=legalPageContent.en.privacy.sections.find(s=>s.key==='purpose').paragraphs[0]
