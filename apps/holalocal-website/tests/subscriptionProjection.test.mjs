@@ -51,7 +51,7 @@ test('business dashboard preserves managed profiles and exposes a non-blocking r
   assert.match(dashboard, /loadOwnerSubscriptionProjection/)
   assert.match(dashboard, /subscriptionProjectionUnavailable/)
   assert.match(dashboard, /retrySubscriptionProjection/)
-  assert.match(dashboard, /subscriptionProjection\.unavailable/)
+  assert.match(dashboard, /workflow\.errors\.networkUnavailable/)
 
   assert.doesNotMatch(subscription, /loadOwnerSubscriptionProjection/)
   assert.doesNotMatch(subscription, /getOwnerSubscriptionStatus/)

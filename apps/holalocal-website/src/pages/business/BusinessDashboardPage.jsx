@@ -94,38 +94,79 @@ function BusinessDashboardPage() {
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [recoveryPending, setRecoveryPending] = useState(false)
   const [subscriptionProjectionUnavailable, setSubscriptionProjectionUnavailable] = useState(false)
-  const [subscriptionProjectionPending, setSubscriptionProjectionPending] = useState(false)
+  const [subscriptionProjectionPending, setSubscriptionProjectionPending] = useState(true)
+  const businessLoadRef = useRef(null)
+  const subscriptionRequestRef = useRef(null)
+  const submissionRequestRef = useRef(null)
+  const accountScopeRef = useRef(null)
   const attemptedProfileRefreshBusinessIdRef = useRef(null)
   const userId = user.uid
   const userBusinessId = userProfile?.businessId ?? null
   const hasBusinessRole = userProfile?.roles?.includes('business') === true
 
+  accountScopeRef.current = { userId, userBusinessId, hasBusinessRole }
+
+  function ownsLoad(load) {
+    const scope = accountScopeRef.current
+    return load?.active && businessLoadRef.current === load
+      && load.userId === scope.userId && load.userBusinessId === scope.userBusinessId
+      && load.hasBusinessRole === scope.hasBusinessRole
+  }
+
+  async function loadSubscriptionProjection(businessId, load) {
+    if (!ownsLoad(load) || (subscriptionRequestRef.current?.load === load && subscriptionRequestRef.current.pending)) return
+    const request = { load, pending: true }
+    subscriptionRequestRef.current = request
+    setSubscriptionProjectionPending(true)
+    const isCurrent = () => ownsLoad(load) && subscriptionRequestRef.current === request
+    try {
+      const result = await loadOwnerSubscriptionProjection(() => getOwnerSubscriptionStatus(businessId))
+      if (!isCurrent()) return
+      setSubscriptionProjectionUnavailable(result.unavailable || !result.projection)
+      if (result.projection) {
+        setBusinessProfile((current) => isCurrent() && current?.businessId === businessId
+          ? { ...current, entitlements: { ...current.entitlements, ...result.projection } }
+          : current)
+      }
+    } catch (projectionError) {
+      if (isCurrent()) setError(classifyFrontendError(projectionError, {
+        domain: 'workflow', fallbackType: 'BUSINESS_CREATE_FAILED',
+      }))
+    } finally {
+      if (isCurrent()) {
+        request.pending = false
+        setSubscriptionProjectionPending(false)
+      }
+    }
+  }
+
   useEffect(() => {
-    let active = true
+    const load = { active: true, userId, userBusinessId, hasBusinessRole }
+    businessLoadRef.current = load
+    subscriptionRequestRef.current = null
+    submissionRequestRef.current = null
 
     async function loadBusinessProfile() {
       setError(null)
+      setSubmitError(null)
+      setSubmitSuccess('')
+      setSubmittingForReview(false)
       setLoading(true)
+      setSubscriptionProjectionPending(true)
+      setSubscriptionProjectionUnavailable(false)
       try {
         const profile = await ensureBusinessProfile(userId, {
           businessId: userBusinessId,
           roles: hasBusinessRole ? ['business'] : [],
-        })
-        if (active) {
-          setBusinessProfile(profile)
-          setLoading(false)
-        }
-        const subscriptionResult = profile?.businessId
-          ? await loadOwnerSubscriptionProjection(() => getOwnerSubscriptionStatus(profile.businessId))
-          : { projection: null, unavailable: false }
-        if (active) {
-          setSubscriptionProjectionUnavailable(subscriptionResult.unavailable)
-          if (subscriptionResult.projection) {
-            setBusinessProfile({
-              ...profile,
-              entitlements: { ...profile.entitlements, ...subscriptionResult.projection },
-            })
-          }
+        }, { includeSubscription: false })
+        if (!ownsLoad(load)) return
+        setBusinessProfile(profile)
+        setLoading(false)
+        if (profile?.businessId) {
+          void loadSubscriptionProjection(profile.businessId, load)
+        } else {
+          setSubscriptionProjectionPending(false)
+          setSubscriptionProjectionUnavailable(true)
         }
         if (
           profile?.businessId
@@ -136,68 +177,58 @@ function BusinessDashboardPage() {
           await refreshUserProfile({ uid: userId }, { background: true }).catch(() => undefined)
         }
       } catch (loadError) {
-        if (active) {
+        if (ownsLoad(load)) {
           setError(classifyFrontendError(loadError, {
             domain: 'workflow',
             fallbackType: 'BUSINESS_CREATE_FAILED',
           }))
         }
       } finally {
-        if (active) setLoading(false)
+        if (ownsLoad(load)) setLoading(false)
       }
     }
 
     void loadBusinessProfile()
-    return () => { active = false }
+    return () => { load.active = false }
   }, [hasBusinessRole, loadAttempt, refreshUserProfile, t, userBusinessId, userId])
 
   async function handleSubmitForReview() {
-    if (!businessProfile?.businessId) return
+    const businessId = businessProfile?.businessId
+    const load = businessLoadRef.current
+    if (!businessId || !ownsLoad(load) || submissionRequestRef.current?.pending) return
+    const request = { load, pending: true }
+    submissionRequestRef.current = request
+    const isCurrent = () => ownsLoad(load) && submissionRequestRef.current === request
     setSubmittingForReview(true)
     setSubmitError(null)
     setSubmitSuccess('')
     try {
-      const submittedBusiness = await submitBusinessForReview(businessProfile.businessId)
-      setBusinessProfile({
-        ...submittedBusiness,
-        entitlements: businessProfile.entitlements,
-      })
+      const submittedBusiness = await submitBusinessForReview(businessId)
+      if (!isCurrent() || submittedBusiness?.businessId !== businessId) return
+      setBusinessProfile((current) => isCurrent() && current?.businessId === businessId
+        ? { ...submittedBusiness, entitlements: current.entitlements }
+        : current)
       setSubmitSuccess(t('business.control.submitSuccess'))
     } catch (submissionError) {
-      setSubmitError(classifyFrontendError(submissionError, {
+      if (isCurrent()) setSubmitError(classifyFrontendError(submissionError, {
         domain: 'workflow',
         operation: 'submit-business',
         fallbackType: 'BUSINESS_SUBMIT_FAILED',
       }))
     } finally {
-      setSubmittingForReview(false)
-    }
-  }
-
-  async function retrySubscriptionProjection() {
-    if (!businessProfile?.businessId || subscriptionProjectionPending) return
-    setSubscriptionProjectionPending(true)
-    try {
-      const result = await loadOwnerSubscriptionProjection(
-        () => getOwnerSubscriptionStatus(businessProfile.businessId),
-      )
-      setSubscriptionProjectionUnavailable(result.unavailable)
-      if (result.projection) {
-        setBusinessProfile((current) => ({
-          ...current,
-          entitlements: { ...current.entitlements, ...result.projection },
-        }))
+      if (isCurrent()) {
+        request.pending = false
+        setSubmittingForReview(false)
       }
-    } catch (projectionError) {
-      setError(classifyFrontendError(projectionError, {
-        domain: 'workflow', fallbackType: 'BUSINESS_CREATE_FAILED',
-      }))
-    } finally {
-      setSubscriptionProjectionPending(false)
     }
   }
 
-  if (loading) return <BusinessDashboardSkeleton message={t('business.control.loading')} />
+  function retrySubscriptionProjection() {
+    if (!businessProfile?.businessId) return
+    return loadSubscriptionProjection(businessProfile.businessId, businessLoadRef.current)
+  }
+
+  if (loading || !ownsLoad(businessLoadRef.current)) return <BusinessDashboardSkeleton message={t('business.control.loading')} />
   if (error) {
     const handleAccountRecovery = async () => {
       setRecoveryPending(true)
@@ -298,8 +329,8 @@ function BusinessDashboardPage() {
     <section className="business-dashboard">
       {subscriptionProjectionUnavailable && (
         <div className="admin-alert admin-alert--notice" role="status">
-          <p>{t('subscriptionProjection.unavailable')}</p>
-          <button className="button button--secondary" disabled={subscriptionProjectionPending} onClick={() => void retrySubscriptionProjection()} type="button">{t(subscriptionProjectionPending ? 'subscriptionProjection.retrying' : 'common.retry')}</button>
+          <p>{t('workflow.errors.networkUnavailable')}</p>
+          <button className="button button--secondary" disabled={subscriptionProjectionPending} onClick={() => void retrySubscriptionProjection()} type="button">{t(subscriptionProjectionPending ? 'common.loading' : 'common.retry')}</button>
         </div>
       )}
       <header className="business-summary">
@@ -434,7 +465,13 @@ function BusinessDashboardPage() {
             <h2>{t('business.control.accountTitle')}</h2>
           </header>
           <div className="business-account-chips">
-            <div className="is-info"><span>{t('business.control.subscriptionLabel')}</span><strong>{t(`subscription.plans.${subscriptionTier}`, { defaultValue: subscriptionTier })}</strong></div>
+            <div className="is-info"><span>{t('business.control.subscriptionLabel')}</span><strong aria-live="polite" aria-busy={subscriptionProjectionPending}>
+              {subscriptionProjectionPending
+                ? t('common.loading')
+                : subscriptionProjectionUnavailable
+                  ? t('common.requestFailed')
+                  : t(`subscription.plans.${subscriptionTier}`, { defaultValue: subscriptionTier })}
+            </strong></div>
             <div className={verificationStatus === 'verified' ? 'is-positive' : 'is-attention'}><span>{t('business.control.verificationLabel')}</span><strong>{t(`business.control.verification.${verificationStatus}`)}</strong></div>
             <div className={status === 'active' ? 'is-positive' : 'is-attention'}><span>{t('business.control.visibilityEyebrow')}</span><strong>{t(`business.control.status.${status}`)}</strong></div>
             <div className={completion.ready ? 'is-positive' : 'is-info'}><span>{t('business.control.completionEyebrow')}</span><strong>{completion.percentage}%</strong></div>

@@ -59,9 +59,10 @@ export async function finalizeBusinessMedia(action, businessId, storagePath, opt
   return result.data
 }
 
-async function presentManagedBusiness(business) {
+async function presentManagedBusiness(business, { includeSubscription = true } = {}) {
   if (!business?.businessId) return business
   const presented = await resolveBusinessMediaPresentation(business.businessId, business)
+  if (!includeSubscription) return presented
   try {
     return { ...presented, entitlements: await getOwnerSubscriptionStatus(business.businessId) }
   } catch {
@@ -187,7 +188,7 @@ export async function getBusinessById(businessId) {
   return snapshot.exists() ? presentManagedBusiness(toManagedBusinessView(snapshot.id, snapshot.data())) : null
 }
 
-async function getManagedBusinessById(businessId) {
+async function getManagedBusinessById(businessId, options) {
   const [businessSnapshot, privateSnapshot] = await Promise.all([
     getDoc(businessDocument(businessId)),
     getDoc(privateBusinessDocument(businessId)),
@@ -197,7 +198,7 @@ async function getManagedBusinessById(businessId) {
     businessSnapshot.id,
     businessSnapshot.data(),
     privateSnapshot.exists() ? privateSnapshot.data() : null,
-  ))
+  ), options)
 }
 
 async function candidateById(businessId, source, { missingIsInvalid = false, permissionDeniedIsInvalid = false } = {}) {
@@ -269,11 +270,11 @@ export async function getBusinessByOwnerId(ownerId, userBusinessId = null) {
   throw error
 }
 
-export async function createBusinessProfile() {
+export async function createBusinessProfile(options) {
   const result = await ensureOwnerBusinessCallable()
   const businessId = result.data?.businessId
   if (!businessId) throw createApplicationError('business-create-failed')
-  return getManagedBusinessById(businessId)
+  return getManagedBusinessById(businessId, options)
 }
 
 export async function updateBusinessProfile(businessId, updates) {
@@ -404,17 +405,17 @@ export async function deleteBusinessGalleryImage(businessId, image, dependencies
   return updatedBusiness
 }
 
-export async function ensureBusinessProfile(ownerId, userProfile) {
+export async function ensureBusinessProfile(ownerId, userProfile, options) {
   if (!userProfile?.roles?.includes('business')) {
     throw new Error('A business role is required to create a business profile.')
   }
 
   if (userProfile.businessId) {
-    const existingBusiness = await getManagedBusinessById(userProfile.businessId)
+    const existingBusiness = await getManagedBusinessById(userProfile.businessId, options)
     if (existingBusiness) return existingBusiness
     const error = new Error('Business ownership could not be resolved safely.')
     error.code = 'business/invalid-ownership'
     throw error
   }
-  return createBusinessProfile()
+  return createBusinessProfile(options)
 }

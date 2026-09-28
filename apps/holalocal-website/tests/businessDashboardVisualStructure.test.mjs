@@ -13,7 +13,7 @@ test('business dashboard keeps its data, conditions, and destinations unchanged'
   assert.match(source, /getBusinessProfileCompletion\(businessProfile\)/)
   assert.match(source, /isOwnerEditableBusinessStatus\(status\)/)
   assert.match(source, /loadOwnerSubscriptionProjection/)
-  assert.match(source, /<BusinessInsightsPanel businessId=\{businessProfile\.businessId\} status=\{status\} \/>/)
+  assert.match(source, /<BusinessInsightsPanel business=\{businessProfile\} businessId=\{businessProfile\.businessId\} status=\{status\} \/>/)
   assert.match(source, /to="\/business\/edit"/)
   assert.match(source, /to="\/business\/edit#business-contact-title"/)
   assert.match(source, /to="\/subscription"/)
@@ -36,14 +36,14 @@ test('dashboard cards use natural height and balanced responsive placement', asy
   assert.match(styles, /\.business-summary \.image-avatar--business-logo \{[\s\S]*?width: 6rem;/)
 })
 
-test('dashboard loading uses one accessible layout skeleton without changing readiness logic', async () => {
+test('dashboard loading uses one accessible layout skeleton while guarding loading and account scope', async () => {
   const [source, styles] = await Promise.all([readFile(dashboardUrl, 'utf8'), readFile(stylesUrl, 'utf8')])
 
   assert.match(source, /function BusinessDashboardSkeleton\(\{ message \}\)/)
   assert.match(source, /aria-busy="true" aria-live="polite" role="status"/)
   assert.match(source, /<p className="visually-hidden">\{message\}<\/p>/)
   assert.match(source, /<div className="business-dashboard-skeleton__grid" aria-hidden="true">/)
-  assert.match(source, /if \(loading\) return <BusinessDashboardSkeleton message=\{t\('business\.control\.loading'\)\} \/>/)
+  assert.match(source, /if \(loading \|\| !ownsLoad\(businessLoadRef\.current\)\) return <BusinessDashboardSkeleton message=\{t\('business\.control\.loading'\)\} \/>/)
   assert.doesNotMatch(source, /setTimeout|artificialDelay/)
   assert.match(styles, /\.business-dashboard-skeleton__grid \{[\s\S]*?display: grid;/)
   assert.match(styles, /@media \(min-width: 64rem\) \{[\s\S]*?\.business-dashboard-skeleton__grid \{[\s\S]*?grid-template-columns: repeat\(12, minmax\(0, 1fr\)\)/)
