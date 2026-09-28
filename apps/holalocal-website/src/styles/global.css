@@ -6029,6 +6029,20 @@
 }
 
 @media (min-width: 64rem) {
+  .profile-dashboard__card--preferences > .profile-details {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 0.75rem;
+  }
+
+  .profile-dashboard__card--preferences > .profile-details > div {
+    min-width: 0;
+    border-bottom: 0;
+  }
+
+  .profile-dashboard__card--preferences > .profile-translation-preference {
+    margin-top: 0.75rem;
+  }
+
   .business-dashboard__grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));
   }
