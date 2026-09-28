@@ -29,7 +29,7 @@ import {
   toManagedBusinessView,
 } from './firebaseCompatibility.js'
 import { isOwnerEditableBusinessStatus } from '../utils/business.js'
-import { clearBusinessMediaPresentationCache, resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
+import { clearBusinessMediaPresentationCache, prepareBusinessMediaPresentation, resolveBusinessMediaPresentation } from './businessMediaPresentation.js'
 import {
   runBusinessGalleryUploads,
   runBusinessLogoUpload,
@@ -59,9 +59,11 @@ export async function finalizeBusinessMedia(action, businessId, storagePath, opt
   return result.data
 }
 
-async function presentManagedBusiness(business, { includeSubscription = true } = {}) {
+async function presentManagedBusiness(business, { includeSubscription = true, resolveMedia = true } = {}) {
   if (!business?.businessId) return business
-  const presented = await resolveBusinessMediaPresentation(business.businessId, business)
+  const presented = resolveMedia
+    ? await resolveBusinessMediaPresentation(business.businessId, business)
+    : prepareBusinessMediaPresentation(business.businessId, business)
   if (!includeSubscription) return presented
   try {
     return { ...presented, entitlements: await getOwnerSubscriptionStatus(business.businessId) }

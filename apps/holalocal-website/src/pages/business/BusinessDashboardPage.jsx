@@ -10,6 +10,7 @@ import {
   getOwnerSubscriptionStatus,
   submitBusinessForReview,
 } from '../../services/businessService.js'
+import { prepareBusinessMediaPresentation, resolveBusinessMediaPresentation } from '../../services/businessMediaPresentation.js'
 import { formatLanguageList, getLanguageNameFromCode } from '../../utils/languages.js'
 import { getBusinessProfileCompletion } from '../../utils/businessCompletion.js'
 import {
@@ -86,6 +87,8 @@ function BusinessDashboardPage() {
   const navigate = useNavigate()
   const { refreshUserProfile, signOutUser, user, userProfile } = useAuthentication()
   const [businessProfile, setBusinessProfile] = useState(null)
+  const [businessProfileLoad, setBusinessProfileLoad] = useState(null)
+  const [logoPresentation, setLogoPresentation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [submitError, setSubmitError] = useState(null)
@@ -158,8 +161,9 @@ function BusinessDashboardPage() {
         const profile = await ensureBusinessProfile(userId, {
           businessId: userBusinessId,
           roles: hasBusinessRole ? ['business'] : [],
-        }, { includeSubscription: false })
+        }, { includeSubscription: false, resolveMedia: false })
         if (!ownsLoad(load)) return
+        setBusinessProfileLoad(load)
         setBusinessProfile(profile)
         setLoading(false)
         if (profile?.businessId) {
@@ -191,6 +195,39 @@ function BusinessDashboardPage() {
     void loadBusinessProfile()
     return () => { load.active = false }
   }, [hasBusinessRole, loadAttempt, refreshUserProfile, t, userBusinessId, userId])
+
+  // Only stable, validated logo inputs restart presentation. Subscription/status
+  // updates must not download media again or replace authoritative business data.
+  const preparedLogo = prepareBusinessMediaPresentation(businessProfile?.businessId, {
+    logoStoragePath: businessProfile?.logoStoragePath,
+    logoUrl: businessProfile?.logoUrl,
+  }, { includeGallery: false })
+  const logoKey = JSON.stringify([
+    businessProfile?.businessId ?? null, preparedLogo.logoStoragePath, preparedLogo.logoUrl,
+  ])
+
+  useEffect(() => {
+    const load = businessLoadRef.current
+    if (loading || businessProfileLoad !== load || !ownsLoad(load)) return undefined
+    const [businessId, logoStoragePath, logoUrl] = JSON.parse(logoKey)
+    if (!businessId || !logoStoragePath) return undefined
+    const controller = new AbortController()
+    // Passing a signal selects page-owned URLs, independent of the shared cache.
+    // Abort releases these URLs (including late arrivals), not the Storage request.
+    void resolveBusinessMediaPresentation(businessId, { logoStoragePath, logoUrl }, {
+      includeGallery: false, signal: controller.signal,
+    }).then((presentation) => {
+      if (!controller.signal.aborted && ownsLoad(load)) {
+        setLogoPresentation({ load, key: logoKey, url: presentation.logoUrl })
+      }
+    }).catch(() => {
+      // Valid stored media remains completion evidence even if transport fails.
+    })
+    return () => controller.abort()
+  }, [loading, businessProfileLoad, logoKey, loadAttempt, userId, userBusinessId, hasBusinessRole])
+
+  const displayedLogoUrl = ownsLoad(logoPresentation?.load) && logoPresentation?.key === logoKey
+    ? logoPresentation.url : preparedLogo.logoUrl
 
   async function handleSubmitForReview() {
     const businessId = businessProfile?.businessId
@@ -335,7 +372,7 @@ function BusinessDashboardPage() {
       )}
       <header className="business-summary">
         <div className="business-summary__media">
-          <ImageAvatar alt={t('business.form.media.logoAlt', { name: businessName })} className="image-avatar--business-logo" name={businessName} src={businessProfile?.logoUrl} />
+          <ImageAvatar alt={t('business.form.media.logoAlt', { name: businessName })} className="image-avatar--business-logo" name={businessName} src={displayedLogoUrl} />
         </div>
         <div className="business-summary__identity">
           <p className="placeholder-page__eyebrow">{t('account.business')}</p>
