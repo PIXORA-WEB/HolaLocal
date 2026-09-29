@@ -1,3 +1,4 @@
+import { createApplicationError } from '../utils/frontendErrors.js'
 import { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from '../utils/policies.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -35,6 +36,29 @@ function AuthenticationProvider({ children }) {
   const verificationIdRef = useRef(0)
   const consentIdRef = useRef(0)
   const profileRetryPromiseRef = useRef(null)
+  const registrationPromiseRef = useRef(null)
+  const registrationAttemptRef = useRef(null)
+  const registrationSequenceRef = useRef(0)
+  const providerActiveRef = useRef(true)
+  const [registrationAttempt, setRegistrationAttempt] = useState(null)
+  const publishRegistration = useCallback((attempt) => {
+    if (providerActiveRef.current && registrationAttemptRef.current === attempt) {
+      setRegistrationAttempt(attempt ? { ...attempt } : null)
+    }
+  }, [])
+  const releaseRegistration = useCallback((owner) => {
+    const attempt = registrationAttemptRef.current
+    if (!attempt || (owner && attempt.uiOwner !== owner)) return
+    attempt.uiOwner = null
+    if (attempt.status === 'pending' || attempt.status === 'ready') attempt.status = 'superseded'
+    publishRegistration(attempt)
+  }, [publishRegistration])
+  const ownsRegistration = useCallback((owner) => {
+    const attempt = registrationAttemptRef.current
+    return Boolean(providerActiveRef.current && attempt?.uiOwner === owner
+      && attempt.status !== 'superseded'
+      && (!attempt.createdUser || sessionRef.current.user?.uid === attempt.createdUser.uid))
+  }, [])
   // undefined means unknown/unavailable; null is a successful absence result.
   const settledProfileRef = useRef(undefined)
   const isCurrent = useCallback((owner) => owner.active && sessionRef.current === owner, [])
@@ -42,12 +66,25 @@ function AuthenticationProvider({ children }) {
   // Invalidate synchronously, and publish every new owner through React state:
   // identical repeated errors must still replace consumers' captured callbacks.
   const replaceSession = useCallback((firebaseUser) => {
+    const attempt = registrationAttemptRef.current
+    const previousUid = sessionRef.current.user?.uid
+    if (attempt?.status === 'pending' && !attempt.createdUser && firebaseUser) {
+      attempt.observedUids.add(firebaseUser.uid)
+    }
+    if (attempt?.createdUser && firebaseUser?.uid !== attempt.createdUser.uid) {
+      attempt.status = 'superseded'
+      attempt.uiOwner = null
+      publishRegistration(attempt)
+    } else if (attempt?.status === 'unknown' && previousUid !== firebaseUser?.uid) {
+      attempt.uiOwner = null
+      publishRegistration(attempt)
+    }
     sessionRef.current.active = false
     const owner = { active: true, user: firebaseUser }
     sessionRef.current = owner
     setSession(owner)
     return owner
-  }, [])
+  }, [publishRegistration])
 
   // Reads are latest-started. Mutations supersede by successful operation ID,
   // not merely by starting: a failed newer attempt cannot strand a valid result.
@@ -117,6 +154,7 @@ function AuthenticationProvider({ children }) {
 
   useEffect(() => {
     let active = true
+    providerActiveRef.current = true
     // A subscription callback publishes its own owner, including on effect replay.
     const unsubscribe = observeAuthentication(async (firebaseUser) => {
       if (!active) return
@@ -171,11 +209,13 @@ function AuthenticationProvider({ children }) {
     })
     return () => {
       active = false
+      providerActiveRef.current = false
+      releaseRegistration()
       sessionRef.current.active = false
       profileRetryPromiseRef.current = null
       unsubscribe()
     }
-  }, [applyProfile, finishProfileLoading, isCurrent, replaceSession])
+  }, [applyProfile, finishProfileLoading, isCurrent, replaceSession, releaseRegistration])
 
   const mutateProfile = useCallback(async (operation) => {
     if (!isCurrent(session)) throw new Error('Authentication session changed.')
@@ -203,12 +243,63 @@ function AuthenticationProvider({ children }) {
     }
   }, [applyProfile, finishProfileLoading, isCurrent, session])
 
-  const signUp = useCallback(
-    (email, password, policyConsent) => registerUser(email, password, policyConsent),
-    [],
-  )
-  const signIn = useCallback((email, password) => loginUser(email, password), [])
-  const signOutUser = useCallback(() => logoutUser(), [])
+  const signUp = useCallback((email, password, policyConsent, uiOwner = null) => {
+    if (registrationPromiseRef.current) return registrationPromiseRef.current
+    const previous = registrationAttemptRef.current
+    if (sessionRef.current.user || (previous?.status === 'unknown' && previous.uiOwner)) {
+      return Promise.reject(createApplicationError('registration-recovery-required'))
+    }
+    const attempt = {
+      id: ++registrationSequenceRef.current, uiOwner, status: 'pending', createdUser: null,
+      observedUids: new Set(),
+    }
+    if (uiOwner) uiOwner.attemptId = attempt.id
+    registrationAttemptRef.current = attempt
+    publishRegistration(attempt)
+    const onUserCreated = (createdUser) => {
+      attempt.createdUser = createdUser
+      // Observer timing is not credential provenance. Only this callback binds the UID.
+      if (attempt.status !== 'superseded'
+        && ((sessionRef.current.user && sessionRef.current.user.uid !== createdUser.uid)
+          || [...attempt.observedUids].some(uid => uid !== createdUser.uid))) {
+        attempt.status = 'superseded'
+        attempt.uiOwner = null
+      }
+      publishRegistration(attempt)
+    }
+    const registrationPromise = Promise.resolve()
+      .then(() => registerUser(email, password, policyConsent, { onUserCreated }))
+      .then((result) => {
+        if (attempt.status !== 'superseded') {
+          attempt.status = 'ready'
+          attempt.verificationEmailSent = result?.verificationEmailSent
+        }
+        publishRegistration(attempt)
+        return result
+      }, (error) => {
+        if (attempt.status !== 'superseded') {
+          attempt.status = attempt.createdUser ? 'partial'
+            : sessionRef.current.user || error?.code === 'auth/network-request-failed' ? 'unknown' : 'failed'
+        }
+        publishRegistration(attempt)
+        throw error
+      })
+      .finally(() => {
+        if (registrationPromiseRef.current === registrationPromise) registrationPromiseRef.current = null
+      })
+    registrationPromiseRef.current = registrationPromise
+    return registrationPromise
+  }, [publishRegistration])
+  const signIn = useCallback((email, password) => {
+    releaseRegistration()
+    return loginUser(email, password)
+  }, [releaseRegistration])
+  const signOutUser = useCallback(async () => {
+    releaseRegistration()
+    await logoutUser()
+    registrationAttemptRef.current = null
+    publishRegistration(null)
+  }, [publishRegistration, releaseRegistration])
   const resetPassword = useCallback((email) => sendPasswordReset(email), [])
   const resendVerificationEmail = useCallback(async () => {
     await resendEmailVerification(user)
@@ -270,6 +361,9 @@ function AuthenticationProvider({ children }) {
 
   const value = useMemo(
     () => ({
+      registrationAttempt,
+      ownsRegistration,
+      releaseRegistration,
       acceptLegalConsent,
       authSession: session,
       completeUserProfile,
@@ -293,6 +387,9 @@ function AuthenticationProvider({ children }) {
       userProfile,
     }),
     [
+      registrationAttempt,
+      ownsRegistration,
+      releaseRegistration,
       session,
       acceptLegalConsent,
       completeUserProfile,

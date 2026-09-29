@@ -17,7 +17,7 @@ const baseline = process.argv.includes('--baseline')
 const comparisonDirectory = process.argv.find(arg => arg.startsWith('--compare='))?.slice('--compare='.length)
 const replacements = {
   'firebase/config.js': 'export const getFirebaseApp=()=>({});',
-  'firebase/auth.js': `const h=()=>window.h;export const observeAuthentication=(cb,err)=>{h().subscriptions++;h().observers.push(cb);h().observer=cb;h().authError=err;return()=>{h().cleanups++;h().observer=null}};export const logoutUser=()=>h().emit(null);export const reloadAuthenticationUser=()=>h().call('verify');export const loginUser=()=>h().call('login');export const registerUser=()=>h().call('register');export const resendEmailVerification=()=>Promise.resolve();export const sendPasswordReset=()=>Promise.resolve();export const getAuthenticationErrorMessage=e=>e.code;`,
+  'firebase/auth.js': `const h=()=>window.h;export const observeAuthentication=(cb,err)=>{h().subscriptions++;h().observers.push(cb);h().observer=cb;h().authError=err;return()=>{h().cleanups++;h().observer=null}};export const logoutUser=()=>h().emit(null);export const reloadAuthenticationUser=()=>h().call('verify');export const loginUser=()=>h().call('login');export const registerUser=(email,password,consent,options)=>{h().created=options?.onUserCreated;return h().call('register')};export const resendEmailVerification=()=>Promise.resolve();export const sendPasswordReset=()=>Promise.resolve();export const getAuthenticationErrorMessage=e=>e.code;`,
   'services/userService.js': `export const getUserProfile=uid=>window.h.call('read',uid);export const ensureUserProfile=u=>window.h.call('ensure',u.uid).then(v=>v??window.h.profiles[u.uid]);export const updateLastActive=uid=>window.h.call('active',uid);export const updateUserProfile=(uid)=>window.h.call('mutation',uid);export const completeAbsentUserProfile=u=>window.h.call('mutation',u.uid);export const enableBusinessRole=uid=>window.h.call('mutation',uid);export const configureAccountType=uid=>window.h.call('mutation',uid);`,
   'firebase/functionsClient.js': `export const acceptLegalConsentCallable=payload=>{window.h.consentPayload=payload;return window.h.call('consent')};`,
 }
@@ -286,6 +286,93 @@ await scenario('correction: current consent can return confirmed absence', async
   await finish(p, 'r', null); await done(p, 'acceptLegalConsent')
   assert.deepEqual(await p.evaluate(() => window.h.done.acceptLegalConsent.value), { status: 'current', consent: { accepted: true }, profile: null })
   await state(p, { status: 'absent', profileLoading: false })
+})
+// Registration exclusion is provider-owned, independent of form/route lifecycle.
+for (const rejects of [false, true]) await scenario(`registration: shared flight and later fresh attempt / rejects=${rejects}`, async p => {
+  await emit(p, null)
+  await p.evaluate(() => {
+    window.h.defer('register', 'first')
+    window.h.firstRegistration = window.h.api.signUp('synthetic@example.invalid', 'synthetic', {})
+    window.h.secondRegistration = window.h.api.signUp('synthetic@example.invalid', 'synthetic', {})
+    window.h.registrationResults = Promise.allSettled([window.h.firstRegistration, window.h.secondRegistration])
+  })
+  await pending(p, 'first')
+  assert.equal(await p.evaluate(() => window.h.firstRegistration === window.h.secondRegistration), true)
+  assert.equal(await p.evaluate(() => window.h.events.filter(e => e.kind === 'register').length), 1)
+  // Observer-driven provider rerenders must not release a pending registration.
+  await emit(p, 'B')
+  assert.equal(await p.evaluate(() => window.h.api.signUp('synthetic@example.invalid', 'synthetic', {}) === window.h.firstRegistration), true)
+  await finish(p, 'first', rejects ? 'auth/network-request-failed' : { verificationEmailSent: true }, rejects)
+  assert.equal(await p.evaluate(async () => {
+    const [a, b] = await window.h.registrationResults
+    return a.status === b.status && (a.status === 'fulfilled' ? a.value === b.value : a.reason === b.reason)
+  }), true)
+  await assert.rejects(() => p.evaluate(() => window.h.api.signUp('synthetic@example.invalid', 'synthetic', {})))
+  await emit(p, null)
+  await p.evaluate(() => {
+    window.h.defer('register', 'fresh')
+    window.h.freshRegistration = window.h.api.signUp('synthetic@example.invalid', 'synthetic', {})
+  })
+  await pending(p, 'fresh')
+  assert.equal(await p.evaluate(() => window.h.freshRegistration === window.h.firstRegistration), false)
+  assert.equal(await p.evaluate(() => window.h.events.filter(e => e.kind === 'register').length), 2)
+  await finish(p, 'fresh', { verificationEmailSent: true })
+})
+await scenario('registration: synchronous service throw releases shared flight', async p => {
+  await emit(p, null)
+  await p.evaluate(() => {
+    const original = window.h.call.bind(window.h)
+    let first = true
+    window.h.call = (kind, uid) => {
+      if (kind === 'register' && first) {
+        first = false
+        throw Object.assign(new Error('synthetic synchronous failure'), { code: 'auth/network-request-failed' })
+      }
+      return original(kind, uid)
+    }
+    window.h.syncFirst = window.h.api.signUp('synthetic@example.invalid', 'synthetic', {})
+    window.h.syncSecond = window.h.api.signUp('synthetic@example.invalid', 'synthetic', {})
+    window.h.syncResults = Promise.allSettled([window.h.syncFirst, window.h.syncSecond])
+  })
+  assert.equal(await p.evaluate(async () => {
+    const [a, b] = await window.h.syncResults
+    return window.h.syncFirst === window.h.syncSecond && a.status === 'rejected' && a.reason === b.reason
+  }), true)
+  await p.evaluate(() => window.h.api.signUp('synthetic@example.invalid', 'synthetic', {}))
+  assert.equal(await p.evaluate(() => window.h.events.filter(e => e.kind === 'register').length), 1)
+})
+await scenario('registration: credential callback owns partial state and blocks another signup', async p => {
+  await emit(p, null)
+  await p.evaluate(() => { window.h.owner = {}; window.h.defer('register', 'partial'); window.h.result = window.h.api.signUp('synthetic@example.invalid', 'synthetic', {}, window.h.owner).catch(e => e) })
+  await pending(p, 'partial')
+  await emit(p, 'A', false)
+  await p.evaluate(() => window.h.created({ uid: 'A' }))
+  await finish(p, 'partial', 'unavailable', true)
+  assert.equal(await p.evaluate(() => window.h.api.registrationAttempt.status), 'partial')
+  assert.equal(await p.evaluate(() => window.h.api.ownsRegistration(window.h.owner)), true)
+  await assert.rejects(() => p.evaluate(() => window.h.api.signUp('synthetic@example.invalid', 'synthetic', {})))
+  assert.equal(await p.evaluate(() => window.h.events.filter(e => e.kind === 'register').length), 1)
+  await p.evaluate(() => window.h.api.signOutUser())
+  await flush(p)
+  assert.equal(await p.evaluate(() => window.h.api.registrationAttempt), null)
+})
+await scenario('registration: observer alone never identifies an unknown credential', async p => {
+  await emit(p, null)
+  await p.evaluate(() => { window.h.owner = {}; window.h.defer('register', 'unknown'); window.h.result = window.h.api.signUp('synthetic@example.invalid', 'synthetic', {}, window.h.owner).catch(e => e) })
+  await pending(p, 'unknown'); await emit(p, 'B', false)
+  await finish(p, 'unknown', 'auth/network-request-failed', true)
+  assert.equal(await p.evaluate(() => window.h.api.registrationAttempt.createdUser), null)
+  assert.equal(await p.evaluate(() => window.h.api.registrationAttempt.status), 'unknown')
+})
+await scenario('registration: different observed session cannot be adopted by a later credential callback', async p => {
+  await emit(p, null)
+  await p.evaluate(() => { window.h.owner = {}; window.h.defer('register', 'identity'); window.h.result = window.h.api.signUp('synthetic@example.invalid', 'synthetic', {}, window.h.owner).catch(e => e) })
+  await pending(p, 'identity'); await emit(p, 'B', false)
+  await p.evaluate(() => window.h.created({ uid: 'A' }))
+  assert.equal(await p.evaluate(() => window.h.api.ownsRegistration(window.h.owner)), false)
+  await finish(p, 'identity', 'unavailable', true)
+  assert.equal(await p.evaluate(() => window.h.api.registrationAttempt.status), 'superseded')
+  assert.equal(await p.evaluate(() => window.h.api.user.uid), 'B')
 })
 await browser.close()
 await writeFile(resolve(out, 'results.json'), JSON.stringify({ baseline, comparisonDirectory, developmentStrictMode: true, results, blocked }, null, 2))

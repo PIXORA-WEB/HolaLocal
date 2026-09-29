@@ -8,6 +8,7 @@ import { normalizeInternalLocation } from '../../utils/internalNavigation.js'
 function VerificationPendingPage() {
   const { t } = useTranslation()
   const {
+    registrationAttempt,
     emailVerified,
     refreshEmailVerification,
     resendVerificationEmail,
@@ -21,11 +22,20 @@ function VerificationPendingPage() {
   const [resending, setResending] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState(
-    location.state?.verificationEmailSent === false
+  // History state survives a reload; only a live matching attempt confirms a send.
+  const initialSend = registrationAttempt?.id === location.state?.registrationAttemptId
+    && registrationAttempt?.createdUser?.uid === user?.uid
+    ? registrationAttempt?.verificationEmailSent : undefined
+  const [messageState, setMessageState] = useState({
+    uid: user?.uid,
+    text: initialSend === false
       ? t('auth.verification.initialSendFailed')
-      : t('auth.verification.sent'),
-  )
+      : initialSend === true
+        ? t('auth.verification.sent') : t('auth.verification.unknown'),
+  })
+  const setMessage = (text) => setMessageState({ uid: user?.uid, text })
+  const message = messageState.uid === user?.uid
+    ? messageState.text : t('auth.verification.unknown')
   const intent = searchParams.get('intent')
   const destination = intent ? `/complete-profile?intent=${intent}` : '/complete-profile'
   const returnLocation = useMemo(
@@ -87,7 +97,7 @@ function VerificationPendingPage() {
       <div className="auth-card__heading">
         <p className="auth-card__eyebrow">{t('auth.verification.eyebrow')}</p>
         <h1 id="verification-title">{t('auth.verification.title')}</h1>
-        <p>{t('auth.verification.description', { email: user?.email })}</p>
+        <p>{t('auth.verification.neutralDescription', { email: user?.email })}</p>
       </div>
 
       {message && <p className="form-message form-message--success" role="status">{message}</p>}

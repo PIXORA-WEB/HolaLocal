@@ -68,7 +68,7 @@ for (const width of [1440, 390]) {
     await page.keyboard.press('Enter')
     await page.getByTestId('verified-destination').waitFor()
     const fixture = await page.evaluate(() => window.registrationFixture)
-    assert.deepEqual(fixture.calls, [['synthetic@example.invalid', 'Synthetic-password-123', { ageConfirmed: true, termsAccepted: true, termsVersion: fixture.termsVersion, privacyAccepted: true, privacyVersion: fixture.privacyVersion }]])
+    assert.deepEqual(fixture.calls, [['synthetic@example.invalid', 'Synthetic-password-123', { ageConfirmed: true, termsAccepted: true, termsVersion: fixture.termsVersion, privacyAccepted: true, privacyVersion: fixture.privacyVersion }, {}]])
   })
   await scenario(width, 'each required acknowledgment blocks submission', async page => {
     await fill(page)

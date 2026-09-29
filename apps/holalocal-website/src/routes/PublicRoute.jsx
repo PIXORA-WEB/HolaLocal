@@ -9,6 +9,7 @@ import { authenticatedPublicDecision } from './accountRoutePolicy.js'
 
 function PublicRoute() {
   const {
+    registrationAttempt,
     emailVerified,
     loading,
     profileLoading,
@@ -25,6 +26,11 @@ function PublicRoute() {
     user,
     userProfile,
   })
+
+  // Preserve only this registration owner's form, including observer loading.
+  if (location.pathname === '/register' && registrationAttempt?.uiOwner
+    && registrationAttempt.status !== 'superseded'
+    && !['blocked', 'account_deletion'].includes(decision)) return <Outlet />
 
   if (decision === 'loading') return <LoadingScreen />
 

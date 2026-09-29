@@ -1,3 +1,4 @@
+import { registrationHandoffEnglish } from './registrationHandoffEnglish.js'
 import { analyticsEnglish } from './analyticsEnglish.js'
 import {adminCustomerReviewNavigation} from './adminCustomerReviewNavigation.js'
 import { customerReviewEnglishTranslations } from './customerReviewEnglishTranslations.js'
@@ -77,6 +78,8 @@ const englishResource = composeEnglishTranslationResource({
   productLandingTranslations: productLandingEnglishTranslations,
   serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
 })
+Object.assign(englishResource.auth.registration, registrationHandoffEnglish.registration)
+Object.assign(englishResource.auth.verification, registrationHandoffEnglish.verification)
 englishResource.analytics = analyticsEnglish
 englishResource.adminCustomerReviews = {...adminCustomerReviewNavigation.en}
 englishResource.customerReviews = customerReviewEnglishTranslations
@@ -218,6 +221,7 @@ export async function loadLocale(languageCode) {
     import('./locales/nonEnglishTranslationPacks.js'),
     import('./locales/analyticsTranslations.js'),
     import('./customerReviewTranslations.js'),
+    import('./locales/registrationHandoffTranslations.js'),
   ]).then(([
     { default: baseLocale },
     { default: authenticatedTranslations },
@@ -230,6 +234,7 @@ export async function loadLocale(languageCode) {
     { getNonEnglishTranslationSlices },
     { analyticsTranslations },
     { customerReviewTranslations },
+    { registrationHandoffTranslations },
   ]) => {
     const translationPacks = getNonEnglishTranslationSlices(code)
     const resource = composeLocaleTranslationResource({
@@ -256,6 +261,8 @@ export async function loadLocale(languageCode) {
       legalPageContent: { legalPages: legalPageContent },
       serviceAreaLabels: { locations: { areas: serviceAreaLabels } },
     })
+    Object.assign(resource.auth.registration, registrationHandoffTranslations[code].registration)
+    Object.assign(resource.auth.verification, registrationHandoffTranslations[code].verification)
     resource.analytics = analyticsTranslations[code]
     resource.adminCustomerReviews = {...adminCustomerReviewNavigation[code]}
     resource.customerReviews = customerReviewTranslations[code]

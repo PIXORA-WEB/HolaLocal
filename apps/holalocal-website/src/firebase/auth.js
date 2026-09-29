@@ -4,7 +4,6 @@ import {
   browserLocalPersistence,
   connectAuthEmulator,
   createUserWithEmailAndPassword,
-  deleteUser,
   EmailAuthProvider,
   getAuth,
   onAuthStateChanged,
@@ -49,7 +48,7 @@ function configurePersistence() {
   return persistencePromise
 }
 
-export async function registerUser(email, password, policyConsent) {
+export async function registerUser(email, password, policyConsent, { onUserCreated } = {}) {
   // A registration-only self-declaration; never a login or existing-account gate.
   if (policyConsent?.ageConfirmed !== true) {
     const error = new Error('Confirm you are at least 18 before creating an account.')
@@ -63,6 +62,7 @@ export async function registerUser(email, password, policyConsent) {
   await configurePersistence()
   const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email, password)
   const { user } = credential
+  onUserCreated?.(user)
 
   try {
     const { createUserProfile } = await loadUserService()
@@ -76,7 +76,8 @@ export async function registerUser(email, password, policyConsent) {
       privacyVersion: policyConsent.privacyVersion,
     })
   } catch (error) {
-    await deleteUser(user).catch(() => undefined)
+    // Do not delete through shared Auth: it can sign out a newer session.
+    // Keep a possible partial registration for explicit recovery instead.
     throw error
   }
 

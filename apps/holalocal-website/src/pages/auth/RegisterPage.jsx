@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { getAuthenticationErrorMessage } from '../../firebase/auth.js'
@@ -21,7 +21,7 @@ const registrationFieldIds = {
 
 function RegisterPage() {
   const { t } = useTranslation()
-  const { signUp } = useAuthentication()
+  const { signUp, registrationAttempt, ownsRegistration, releaseRegistration } = useAuthentication()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
@@ -35,8 +35,35 @@ function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
 
+  const submitInFlightRef = useRef(false)
+  const ownerRef = useRef({})
+  const mountedRef = useRef(true)
+  const handoffStartedRef = useRef(false)
+  useLayoutEffect(() => {
+    mountedRef.current = true
+    const owner = ownerRef.current
+    return () => { mountedRef.current = false; releaseRegistration?.(owner) }
+  }, [releaseRegistration])
+  const attempt = registrationAttempt?.uiOwner === ownerRef.current ? registrationAttempt : null
+  const recoveryRequired = attempt?.status === 'partial'
+  const outcomeUnknown = attempt?.status === 'unknown'
+  const registrationBlocked = recoveryRequired || outcomeUnknown || attempt?.status === 'ready'
+  const stillOwns = () => mountedRef.current && !handoffStartedRef.current
+    && window.location.pathname === location.pathname && window.location.search === location.search
+    && (window.history.state?.key ?? 'default') === location.key
+    && (ownsRegistration?.(ownerRef.current) ?? true)
+  function continueRegistration() {
+    if (!recoveryRequired || !stillOwns()) return
+    handoffStartedRef.current = true
+    const intent = searchParams.get('intent')
+    navigate(intent ? `/verify-email?intent=${intent}` : '/verify-email', {
+      replace: true, state: { from: normalizeInternalLocation(location.state?.from) },
+    })
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
+    if (submitInFlightRef.current || registrationBlocked) return
     setError('')
     const nextErrors = {}
 
@@ -54,6 +81,7 @@ function RegisterPage() {
       return
     }
 
+    submitInFlightRef.current = true
     setSubmitting(true)
 
     try {
@@ -63,19 +91,24 @@ function RegisterPage() {
         termsVersion: CURRENT_TERMS_VERSION,
         privacyAccepted,
         privacyVersion: CURRENT_PRIVACY_VERSION,
-      })
+      }, ownerRef.current)
+      if (!stillOwns()) return
+      handoffStartedRef.current = true
       const intent = searchParams.get('intent')
       navigate(intent ? `/verify-email?intent=${intent}` : '/verify-email', {
         replace: true,
         state: {
           from: normalizeInternalLocation(location.state?.from),
           verificationEmailSent: registration.verificationEmailSent,
+          registrationAttemptId: ownerRef.current.attemptId,
         },
       })
     } catch (submissionError) {
+      if (!stillOwns()) return
       setError(getAuthenticationErrorMessage(submissionError, t))
     } finally {
-      setSubmitting(false)
+      submitInFlightRef.current = false
+      if (mountedRef.current) setSubmitting(false)
     }
   }
 
@@ -88,6 +121,13 @@ function RegisterPage() {
       </div>
 
       {error && <p className="form-message form-message--error" role="alert">{error}</p>}
+
+      {(recoveryRequired || outcomeUnknown) && <div className="form-message" role="status">
+        <p>{t(recoveryRequired ? 'auth.registration.partial' : 'auth.registration.unknown')}</p>
+        {recoveryRequired && <button className="button button--secondary" onClick={continueRegistration} type="button">
+          {t('auth.registration.continueAccount')}
+        </button>}
+      </div>}
 
       <form className="auth-form" onSubmit={handleSubmit}>
         <label htmlFor="register-email">{t('auth.email')}</label>
@@ -196,7 +236,7 @@ function RegisterPage() {
 
         <button
           className="button button--primary"
-          disabled={submitting || !ageConfirmed || !termsAccepted || !privacyAccepted}
+          disabled={submitting || registrationBlocked || !ageConfirmed || !termsAccepted || !privacyAccepted}
           type="submit"
         >
           {submitting ? t('common.loading') : t('auth.register')}
